@@ -28,11 +28,16 @@ const REQUIRED_PERMISSIONS = [
 	'input_nilai_asesmen_kokurikuler',
 	'input_nilai_nilai_ekstrakurikuler',
 	'administrasi_absen',
+	'administrasi_rpm',
 	'administrasi_jurnal_mengajar',
 	'administrasi_catatan_wali_kelas',
 	'administrasi_rekap_nilai',
 	'administrasi_keputusan',
 	'administrasi_buku_tamu',
+	'administrasi_presensi_guru',
+	'administrasi_sppd',
+	'administrasi_dinas_luar',
+	'administrasi_sinkronisasi',
 	'cetak_dokumen'
 ];
 

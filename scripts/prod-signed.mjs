@@ -132,6 +132,14 @@ async function main() {
 					candidates.push(path.join(d, `Inno Setup ${v}`, 'ISCC.exe'));
 				}
 			}
+			// Per-user installs (winget --scope user) land in %LOCALAPPDATA%\Programs.
+			if (process.env.LOCALAPPDATA) {
+				for (const v of versions) {
+					candidates.push(
+						path.join(process.env.LOCALAPPDATA, 'Programs', `Inno Setup ${v}`, 'ISCC.exe')
+					);
+				}
+			}
 			if (process.env.SystemRoot)
 				candidates.push(path.join(process.env.SystemRoot, 'System32', 'iscc.exe'));
 			for (const c of candidates) {

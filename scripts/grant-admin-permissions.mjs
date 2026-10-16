@@ -1,4 +1,6 @@
 import { createClient } from '@libsql/client';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // fs/path imports were previously used to derive permissions from source, but we
 // now use a canonical list embedded below to avoid brittle parsing.
@@ -31,11 +33,16 @@ const REQUIRED_PERMISSIONS = [
 	'input_nilai_asesmen_kokurikuler',
 	'input_nilai_nilai_ekstrakurikuler',
 	'administrasi_absen',
+	'administrasi_rpm',
 	'administrasi_jurnal_mengajar',
 	'administrasi_catatan_wali_kelas',
 	'administrasi_rekap_nilai',
 	'administrasi_keputusan',
 	'administrasi_buku_tamu',
+	'administrasi_presensi_guru',
+	'administrasi_sppd',
+	'administrasi_dinas_luar',
+	'administrasi_sinkronisasi',
 	'cetak_dokumen'
 ];
 
@@ -46,6 +53,46 @@ const dbUrl = process.env.DB_URL || DEFAULT_DB_URL;
 const REMOVED_LEGACY_PERMISSIONS = ['mata_pelajaran_keasramaan', 'input_nilai_asesmen_keasramaan'];
 
 const client = createClient({ url: dbUrl });
+
+/**
+ * Bandingkan daftar kanonik di atas dengan `src/routes/pengguna/permissions.ts`.
+ * Hanya peringatan: menjalankan skrip di mesin user tanpa source tetap aman.
+ */
+function warnIfDrifted() {
+	try {
+		const sourcePath = path.resolve(process.cwd(), 'src/routes/pengguna/permissions.ts');
+		if (!fs.existsSync(sourcePath)) return;
+		const source = fs.readFileSync(sourcePath, 'utf8');
+		const start = source.indexOf('groupedUserPermissions = {');
+		const end = source.indexOf('} as const;', start);
+		if (start < 0 || end < 0) return;
+
+		const canonical = [];
+		let group = null;
+		for (const line of source.slice(start, end).split('\n')) {
+			const groupMatch = line.match(/^\t([a-z_]+): \{/);
+			if (groupMatch) {
+				group = groupMatch[1];
+				continue;
+			}
+			if (!group) continue;
+			for (const valueMatch of line.matchAll(/\[(?:\[)?'([a-z_]+)',/g)) {
+				canonical.push(`${group}_${valueMatch[1]}`);
+			}
+		}
+		if (!canonical.length) return;
+
+		const missing = canonical.filter((p) => !REQUIRED_PERMISSIONS.includes(p));
+		const extra = REQUIRED_PERMISSIONS.filter((p) => !canonical.includes(p));
+		if (!missing.length && !extra.length) return;
+
+		console.warn('[grant-admin-perms] Daftar izin TIDAK sinkron dengan permissions.ts');
+		if (missing.length) console.warn('[grant-admin-perms] Kurang:', missing.join(', '));
+		if (extra.length) console.warn('[grant-admin-perms] Berlebih:', extra.join(', '));
+	} catch (err) {
+		console.warn('[grant-admin-perms] Gagal memeriksa izin kanonik:', err?.message || err);
+	}
+}
 
 async function mergePermissions(existingJson) {
 	let existing = [];
@@ -63,6 +110,7 @@ async function mergePermissions(existingJson) {
 
 async function main() {
 	console.info('[grant-admin-perms] Target DB:', dbUrl);
+	warnIfDrifted();
 
 	// Find admin and kepala_sekolah users (both have full administrative access;
 	// kepala_sekolah is admin-equivalent but scoped to one sekolah).
