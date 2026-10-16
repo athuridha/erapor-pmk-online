@@ -571,9 +571,14 @@ export async function approveCloudPackage(
 	// Update di Cloud D1 jika terhubung
 	const config = await getD1Config(sekolahId);
 	if (config?.accountId && config.apiToken) {
-		await executeD1Query(config, `UPDATE packages SET status = 'APPROVED' WHERE id = ?`, [
-			packageId
-		]);
+		const d1Res = await executeD1Query(
+			config,
+			`UPDATE packages SET status = 'APPROVED' WHERE id = ?`,
+			[packageId]
+		);
+		if (!d1Res.success) {
+			console.warn('[cloudflare-d1] status paket APPROVED tidak tersinkron ke D1:', d1Res.error);
+		}
 	}
 
 	return {
@@ -611,11 +616,16 @@ export async function rejectCloudPackage(
 
 	const config = await getD1Config(sekolahId);
 	if (config?.accountId && config.apiToken) {
-		await executeD1Query(
+		// Update di Cloud D1 jika terhubung. Tabel `packages` di cloud tidak punya
+		// kolom catatan, jadi alasan penolakan hanya tersimpan di database lokal.
+		const d1Res = await executeD1Query(
 			config,
-			`UPDATE packages SET status = 'REJECTED', notes = ? WHERE id = ?`,
-			[notes, packageId]
+			`UPDATE packages SET status = 'REJECTED' WHERE id = ?`,
+			[packageId]
 		);
+		if (!d1Res.success) {
+			console.warn('[cloudflare-d1] status paket REJECTED tidak tersinkron ke D1:', d1Res.error);
+		}
 	}
 
 	return {
