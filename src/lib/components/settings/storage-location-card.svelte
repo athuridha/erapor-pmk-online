@@ -45,15 +45,15 @@
 					<Icon name="alert" />
 					<span
 						>Pada instalasi Windows, pengaturan ini disimpan ke file Installer
-						<code>%LOCALAPPDATA%\Rapkumer-data\data-root.txt</code> dan diterapkan saat aplikasi
+						<code>%LOCALAPPDATA%\erapor-pmk-data\data-root.txt</code> dan diterapkan saat aplikasi
 						dimulai ulang. Basis data tetap berada di
-						<code>%LOCALAPPDATA%\Rapkumer-data\database.sqlite3</code>.</span
+						<code>%LOCALAPPDATA%\erapor-pmk-data\database.sqlite3</code>.</span
 					>
 				</div>
 			{/if}
 
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend">Root data (RAPKUMER_DATA_DIR)</legend>
+				<legend class="fieldset-legend">Root data (ERAPOR_PMK_DATA_DIR)</legend>
 				<div class="join w-full">
 					<input
 						class="input bg-base-200 dark:bg-base-300 join-item w-full dark:border-none"

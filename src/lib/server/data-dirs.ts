@@ -4,20 +4,20 @@ import { env as dynamicEnv } from '$env/dynamic/private';
 /**
  * Root directory for all user data (uploads, ttd, dinas-luar, sounds,
  * csrf-origins, ...). On Windows installs this must live in
- * %LOCALAPPDATA%\Rapkumer-data (outside the app install dir) so it survives
+ * %LOCALAPPDATA%\erapor-pmk-data (outside the app install dir) so it survives
  * upgrades/uninstalls; elsewhere it falls back to <cwd>/data next to the DB.
  *
  * Resolution order:
- *   1. RAPKUMER_DATA_DIR env (explicit override, e.g. set by the installer)
- *   2. Windows: %LOCALAPPDATA%\Rapkumer-data
+ *   1. ERAPOR_PMK_DATA_DIR env (explicit override, e.g. set by the installer)
+ *   2. Windows: %LOCALAPPDATA%\erapor-pmk-data
  *   3. Fallback: <cwd>/data
  */
 export function dataRoot(): string {
 	const override =
 		dynamicEnv.ERAPOR_PMK_DATA_DIR ||
 		process.env.ERAPOR_PMK_DATA_DIR ||
-		dynamicEnv.RAPKUMER_DATA_DIR ||
-		process.env.RAPKUMER_DATA_DIR;
+		dynamicEnv.ERAPOR_PMK_DATA_DIR ||
+		process.env.ERAPOR_PMK_DATA_DIR;
 	if (override) return path.resolve(override);
 	return defaultDataRoot();
 }

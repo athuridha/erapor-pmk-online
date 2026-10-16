@@ -46,9 +46,7 @@ export async function load({ url, locals }) {
 		.from(u)
 		.leftJoin(tablePegawai, eq(u.pegawaiId, tablePegawai.id))
 		.leftJoin(tableKelas, eq(u.kelasId, tableKelas.id))
-		.where(
-			q ? sql` lower(${u.username}) like ${'%' + q.toLowerCase() + '%'}` : undefined
-		)
+		.where(q ? sql` lower(${u.username}) like ${'%' + q.toLowerCase() + '%'}` : undefined)
 		.orderBy(u.id)
 		.limit(1000);
 

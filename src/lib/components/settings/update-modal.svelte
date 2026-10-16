@@ -259,7 +259,7 @@
 		const showSuccess = () =>
 			toast({
 				message:
-					'Server dihentikan. Tutup jendela Rapkumer ini lalu jalankan ulang bila diperlukan.',
+					'Server dihentikan. Tutup jendela e-Rapor SMK Pratama Mulya ini lalu jalankan ulang bila diperlukan.',
 				type: 'info',
 				persist: true
 			});
@@ -279,7 +279,7 @@
 			);
 			toast({
 				message:
-					'Gagal menghentikan server otomatis. Tutup Rapkumer secara manual sebelum melanjutkan pemasangan.',
+					'Gagal menghentikan server otomatis. Tutup e-Rapor SMK Pratama Mulya secara manual sebelum melanjutkan pemasangan.',
 				type: 'warning',
 				persist: true
 			});
@@ -394,7 +394,9 @@
 					<section class="space-y-3">
 						<div>
 							<p class="text-base-content/70 text-sm">Versi terbaru</p>
-							<h3 class="text-lg font-semibold">Rapkumer v{latestRelease.version}</h3>
+							<h3 class="text-lg font-semibold">
+								e-Rapor SMK Pratama Mulya v{latestRelease.version}
+							</h3>
 							<p class="text-base-content/60 text-xs">
 								Dirilis {formatDateTime(latestRelease.publishedAt)}
 							</p>
@@ -423,7 +425,9 @@
 					</section>
 				{:else if !checkingUpdate}
 					<div class="rounded-box bg-base-200/60 space-y-1 p-4 text-sm">
-						<p class="font-medium">Anda sudah menggunakan versi terbaru Rapkumer.</p>
+						<p class="font-medium">
+							Anda sudah menggunakan versi terbaru e-Rapor SMK Pratama Mulya.
+						</p>
 						<p class="text-base-content/70 text-xs">Tetap cek berkala untuk fitur terbaru.</p>
 					</div>
 				{/if}
@@ -463,7 +467,8 @@
 							<div class="alert alert-info">
 								<Icon name="info" />
 								<span>
-									Installer telah dibuka. Ikuti petunjuk pemasangan, lalu jalankan ulang Rapkumer.
+									Installer telah dibuka. Ikuti petunjuk pemasangan, lalu jalankan ulang e-Rapor SMK
+									Pratama Mulya.
 								</span>
 							</div>
 						{/if}

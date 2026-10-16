@@ -1,4 +1,4 @@
-# Strix — AI pentest untuk Rapkumer
+# Strix — AI pentest untuk e-Rapor SMK Pratama Mulya
 
 ## Instalasi
 

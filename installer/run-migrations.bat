@@ -1,5 +1,5 @@
 @echo off
-REM Simple wrapper to manually run migrations against the installed Rapkumer-data DB
+REM Simple wrapper to manually run migrations against the installed erapor-pmk-data DB
 REM This is optional for users who want to re-run migrations after an update
 REM For post-install migrations, the installer directly calls: node scripts\migrate-installed-db.mjs
 
@@ -11,11 +11,11 @@ if not defined LOCALAPPDATA (
   exit /b 1
 )
 
-set DBFILE=%LOCALAPPDATA%\Rapkumer-data\database.sqlite3
+set DBFILE=%LOCALAPPDATA%\erapor-pmk-data\database.sqlite3
 set "DB_URL=file:%DBFILE%"
 
 echo.
-echo Rapkumer Database Migration Helper
+echo e-Rapor SMK Pratama Mulya Database Migration Helper
 echo ===================================
 echo Using DB: %DBFILE%
 echo.
@@ -23,7 +23,7 @@ echo.
 REM Verify database exists
 if not exist "%DBFILE%" (
   echo ERROR: Database file not found at %DBFILE%
-  echo Please run the Rapkumer installer first.
+  echo Please run the e-Rapor SMK Pratama Mulya installer first.
   pause
   exit /b 1
 )

@@ -107,11 +107,7 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'cetak_dokumen',
 		'kelas_pindah'
 	],
-	wali_asuh: [
-		'cetak_dokumen',
-		'kelas_pindah',
-		'administrasi_dinas_luar'
-	],
+	wali_asuh: ['cetak_dokumen', 'kelas_pindah', 'administrasi_dinas_luar'],
 	user: [
 		'informasi_umum_murid',
 		'informasi_umum_kelas',

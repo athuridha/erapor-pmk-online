@@ -50,7 +50,7 @@ function resolveInstalledDbUrl() {
 	// local development and packaged runs default to `data/database.sqlite3`.
 	return defaultDbUrl;
 }
-const clientKey = '__rapkumerLibsqlClient';
+const clientKey = '__eraporPmkLibsqlClient';
 
 async function enableWAL(client: Client) {
 	try {

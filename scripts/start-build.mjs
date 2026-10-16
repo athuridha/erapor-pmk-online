@@ -38,7 +38,7 @@ try {
 
 // Resolve the built server entry (`build/index.js`) from a few likely locations
 // so this script works both in-repo (scripts/) and when installed to a
-// top-level `Rapkumer` folder (where `start-build.mjs` may live alongside `build/`).
+// top-level `e-Rapor SMK Pratama Mulya` folder (where `start-build.mjs` may live alongside `build/`).
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -78,7 +78,7 @@ const candidates = [
 			console.error('Kemungkinan penyebab: Microsoft Visual C++ Redistributable');
 			console.error('2015-2022 (x64) belum terinstall di komputer ini.');
 			console.error('');
-			console.error('Solusi: Jalankan ulang installer Rapkumer, atau unduh dan');
+			console.error('Solusi: Jalankan ulang installer e-Rapor SMK Pratama Mulya, atau unduh dan');
 			console.error('install langsung dari Microsoft:');
 			console.error('  https://aka.ms/vs/17/release/vc_redist.x64.exe');
 			console.error('=====================================================================');

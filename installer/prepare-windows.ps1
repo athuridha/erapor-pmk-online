@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $absOutput = Join-Path $projectRoot $OutputDir
 $stageRoot = Join-Path $absOutput 'stage'
-$appName = 'Rapkumer'
+$appName = 'erapor-pmk'
 $appStage = Join-Path $stageRoot $appName
 
 Write-Host "Preparing Windows staging layout for $appName" -ForegroundColor Cyan
@@ -57,7 +57,7 @@ if (Test-Path $staticSource) {
 
 $iconSource = Join-Path $projectRoot 'static/logo.ico'
 if (Test-Path $iconSource) {
-    $iconTarget = Join-Path $appStage 'rapkumer.ico'
+    $iconTarget = Join-Path $appStage 'erapor-pmk.ico'
     Copy-Item $iconSource -Destination $iconTarget -Force
 } else {
     Write-Warning 'File static/logo.ico tidak ditemukan; ikon installer tidak akan diperbarui.'
@@ -110,10 +110,10 @@ Set-Content -Path (Join-Path $appStage 'package.json') -Value $runtimeJson -Enco
 
 Write-Host 'Copying runtime helper scripts...'
 # Also include the new ESM starter so shortcuts can point to .mjs
-$startMjs = Join-Path $projectRoot 'installer/files/start-rapkumer.mjs'
-if (Test-Path $startMjs) { Copy-Item $startMjs (Join-Path $appStage 'start-rapkumer.mjs') -Force }
+$startMjs = Join-Path $projectRoot 'installer/files/start-erapor-pmk.mjs'
+if (Test-Path $startMjs) { Copy-Item $startMjs (Join-Path $appStage 'start-erapor-pmk.mjs') -Force }
 
-# Ensure start-build.mjs (used by start-rapkumer.mjs) is available at the app root
+# Ensure start-build.mjs (used by start-erapor-pmk.mjs) is available at the app root
 $startBuildSrc = Join-Path $projectRoot 'scripts/start-build.mjs'
 if (Test-Path $startBuildSrc) { Copy-Item $startBuildSrc (Join-Path $appStage 'start-build.mjs') -Force }
 
@@ -173,7 +173,7 @@ if (Test-Path $envSample) {
 # location. Do not overwrite an existing .env in the staged app.
 $envTarget = Join-Path $appStage '.env'
 if (-not (Test-Path $envTarget)) {
-    $envContent = 'DB_URL=file:%LOCALAPPDATA%/Rapkumer-data/database.sqlite3'
+    $envContent = 'DB_URL=file:%LOCALAPPDATA%/erapor-pmk-data/database.sqlite3'
     $envContent += "`nBODY_SIZE_LIMIT=5M"
     Set-Content -Path $envTarget -Value $envContent -Encoding UTF8
     Write-Host "Wrote default .env to $envTarget" -ForegroundColor Green

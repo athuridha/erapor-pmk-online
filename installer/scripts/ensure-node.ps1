@@ -50,7 +50,7 @@ function Install-NodeRelease {
     $zipUrl = "https://nodejs.org/dist/$versionTag/node-$($versionTag)-win-x64.zip"
     Write-Host "Downloading Node.js $versionTag from $zipUrl"
 
-    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("rapkumer-node-" + [System.Guid]::NewGuid().ToString())
+    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("erapor-pmk-node-" + [System.Guid]::NewGuid().ToString())
     $null = New-Item -ItemType Directory -Path $tempRoot -Force
     $tempZip = Join-Path $tempRoot 'node.zip'
 

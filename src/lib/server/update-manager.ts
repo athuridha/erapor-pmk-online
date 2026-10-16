@@ -9,16 +9,16 @@ import { join, dirname } from 'node:path';
 import { getAppVersion } from './app-info';
 
 const releasesEndpoint = 'https://api.github.com/repos/athuridha/eraport/releases/latest';
-const userAgent = 'RapkumerUpdater/1.0';
+const userAgent = 'ERaporPMKUpdater/1.0';
 
 const downloads = new Map<string, DownloadRecord>();
 
 const updateBaseDir = (() => {
-	if (process.env.RAPKUMER_UPDATE_DIR) return process.env.RAPKUMER_UPDATE_DIR;
+	if (process.env.ERAPOR_PMK_UPDATE_DIR) return process.env.ERAPOR_PMK_UPDATE_DIR;
 	const localAppData = process.env.LOCALAPPDATA;
-	if (localAppData) return join(localAppData, 'Rapkumer', 'updates');
+	if (localAppData) return join(localAppData, 'erapor-pmk', 'updates');
 	const home = homedir() || process.cwd();
-	return join(home, '.rapkumer', 'updates');
+	return join(home, '.erapor-pmk', 'updates');
 })();
 
 async function ensureDir(pathname: string) {

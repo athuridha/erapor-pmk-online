@@ -1,4 +1,4 @@
-# Rapkumer (Administrasi guru terpadu)
+# e-Rapor SMK Pratama Mulya (Administrasi guru terpadu)
 
 ## Commands
 
@@ -55,7 +55,7 @@ strix -n -t ./ --scan-mode quick   # AI pentest (install & usage: docs/SKILLS.md
 ## Auth & data
 
 - Custom session auth (not Lucia). Session TTL 12h, refresh threshold 2h.
-- Cookie names from `$lib/utils.ts` `cookieNames`: `rapkumer-session`, `active-sekolah-id`, `active-kelas-id`.
+- Cookie names from `$lib/utils.ts` `cookieNames`: `erapor-pmk-session`, `active-sekolah-id`, `active-kelas-id`.
 - Default admin: `Admin` / `Admin123` (created by `ensureDefaultAdmin()` on first start).
 - User types: `admin`, `wali_kelas`, `wali_asuh`, `user`. Permissions stored as JSON array on `auth_user.permissions`.
 - Three hooks composed via `sequence(csrfGuard, authGuard, cookieParser)` in `src/hooks.server.ts`.
@@ -70,15 +70,15 @@ strix -n -t ./ --scan-mode quick   # AI pentest (install & usage: docs/SKILLS.md
 - `pnpm db:push` applies schema changes (custom orchestration, not raw `drizzle-kit push`).
 - Use `db.query.tableX` with Drizzle query builder. Avoid raw SQL.
 - Logos: `Uint8Array` blob + mime type string on `tableSekolah`.
-- **Signatures (tanda tangan / paraf):** stored as transparent PNG files under `<dataRoot()>/ttd/<kategori>/` (`guru` = presensi guru, `tamu` = buku tamu), NOT inline base64 in the DB. `dataRoot()` lives in `src/lib/server/data-dirs.ts` (env `RAPKUMER_DATA_DIR` → `%LOCALAPPDATA%\Rapkumer-data` on Windows → `<cwd>/data`); same helper also centralizes `uploadsDir()` (honors `photo` env) and `soundsDir()` (honors `sounds` env). The DB `tanda_tangan` column holds a rel path like `guru/27_2026-08-04.png` (legacy inline data URLs still render). Guru filenames include a timestamp (e.g. `27_2026-08-04_1722660000000.png`) so replacing a paraf yields a fresh URL (the old file is deleted by the admin handler); `/api/ttd` serves with `Cache-Control: immutable`. Helpers in `src/lib/server/ttd.ts` (`saveSignatureFile`, `readSignatureFile`, `deleteSignatureFile`, `signatureToDataUrl`, `migrateLegacySignatures`). Files are served via `/api/ttd/[...path]`; client-side `signatureDisplaySrc()` in `$lib/utils.ts` maps stored values to displayable `<img>` srcs. Guru canvas is 400×400 (1:1, for paraf only, `bg-white` CSS); tamu canvas uses 2× DPI. `migrateLegacySignatures()` runs once per process from the ensure-* scripts.
+- **Signatures (tanda tangan / paraf):** stored as transparent PNG files under `<dataRoot()>/ttd/<kategori>/` (`guru` = presensi guru, `tamu` = buku tamu), NOT inline base64 in the DB. `dataRoot()` lives in `src/lib/server/data-dirs.ts` (env `ERAPOR_PMK_DATA_DIR` → `%LOCALAPPDATA%\erapor-pmk-data` on Windows → `<cwd>/data`); same helper also centralizes `uploadsDir()` (honors `photo` env) and `soundsDir()` (honors `sounds` env). The DB `tanda_tangan` column holds a rel path like `guru/27_2026-08-04.png` (legacy inline data URLs still render). Guru filenames include a timestamp (e.g. `27_2026-08-04_1722660000000.png`) so replacing a paraf yields a fresh URL (the old file is deleted by the admin handler); `/api/ttd` serves with `Cache-Control: immutable`. Helpers in `src/lib/server/ttd.ts` (`saveSignatureFile`, `readSignatureFile`, `deleteSignatureFile`, `signatureToDataUrl`, `migrateLegacySignatures`). Files are served via `/api/ttd/[...path]`; client-side `signatureDisplaySrc()` in `$lib/utils.ts` maps stored values to displayable `<img>` srcs. Guru canvas is 400×400 (1:1, for paraf only, `bg-white` CSS); tamu canvas uses 2× DPI. `migrateLegacySignatures()` runs once per process from the ensure-* scripts.
 - `.env` loaders exist in `db/index.ts`, `start-build.mjs`, and `prepare-windows.mjs` — each handles its own subset; don't rely on a single loader.
 
 ## Windows installer
 
 - InnoSetup bundles **VC++ Redistributable 2015-2022 (x64)** for `@libsql/win32-x64-msvc`.
 - `scripts/prepare-windows.mjs` downloads `vc_redist.x64.exe` to `dist/windows/`.
-- Build on Linux via Wine: install InnoSetup 7+, then `wine ISCC.exe installer/rapkumer.iss`. Run `pnpm build` first.
-- **Data root override:** `installer/files/start-rapkumer.mjs` resolves the user-data root as `RAPKUMER_DATA_DIR` env → `%LOCALAPPDATA%\Rapkumer-data\data-root.txt` (written by the "Lokasi Data" page) → default `%LOCALAPPDATA%\Rapkumer-data`. The **database stays in the fixed launcher home** (`%LOCALAPPDATA%\Rapkumer-data\database.sqlite3`, set via `DB_URL`) and never follows the movable root — moving an open WAL SQLite file is unsafe. `storage-settings.ts` mirrors this via `launcherHome()`/`launcherDataRootConfigPath()`/`writeLauncherDataRootOverride()`. **Uploads/sounds always follow the root** (default `<root>/uploads|sounds`); the "Lokasi Data" form only edits the root and the handler clears any `photo`/`sounds` pin in `.env` on save (also consolidating legacy custom folders into the new root). The installer's fresh `.env` only contains `DB_URL` + `BODY_SIZE_LIMIT` — no photo/sounds pins.
+- Build on Linux via Wine: install InnoSetup 7+, then `wine ISCC.exe installer/erapor-pmk.iss`. Run `pnpm build` first.
+- **Data root override:** `installer/files/start-erapor-pmk.mjs` resolves the user-data root as `ERAPOR_PMK_DATA_DIR` env → `%LOCALAPPDATA%\erapor-pmk-data\data-root.txt` (written by the "Lokasi Data" page) → default `%LOCALAPPDATA%\erapor-pmk-data`. The **database stays in the fixed launcher home** (`%LOCALAPPDATA%\erapor-pmk-data\database.sqlite3`, set via `DB_URL`) and never follows the movable root — moving an open WAL SQLite file is unsafe. `storage-settings.ts` mirrors this via `launcherHome()`/`launcherDataRootConfigPath()`/`writeLauncherDataRootOverride()`. **Uploads/sounds always follow the root** (default `<root>/uploads|sounds`); the "Lokasi Data" form only edits the root and the handler clears any `photo`/`sounds` pin in `.env` on save (also consolidating legacy custom folders into the new root). The installer's fresh `.env` only contains `DB_URL` + `BODY_SIZE_LIMIT` — no photo/sounds pins.
 
 ## Gotchas
 

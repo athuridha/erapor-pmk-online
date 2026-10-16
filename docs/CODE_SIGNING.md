@@ -1,6 +1,6 @@
-# Code Signing Setup dan Workflow - Rapkumer
+# Code Signing Setup dan Workflow - e-Rapor SMK Pratama Mulya
 
-Dokumentasi ini menjelaskan cara mengatur dan menggunakan code signing untuk proyek Rapkumer menggunakan Windows SignTool.
+Dokumentasi ini menjelaskan cara mengatur dan menggunakan code signing untuk proyek e-Rapor menggunakan Windows SignTool.
 
 ## 🔧 Prerequisites
 
@@ -149,7 +149,7 @@ Script akan otomatis sign:
 
 - **Executables**: Semua `.exe` files di staging area
 - **DLLs**: Semua `.dll` files di staging area
-- **Installer**: File `RapkumerSetup.exe` final
+- **Installer**: File `ERaporPMKSetup.exe` final
 
 ## 🔄 Workflow Production
 

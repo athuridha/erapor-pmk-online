@@ -1,6 +1,6 @@
 # Hasil Audit Keamanan (White-box)
 
-- **Target:** Rapkumer, instance dev lokal `http://localhost:5173`
+- **Target:** e-Rapor, instance dev lokal `http://localhost:5173`
 - **Tanggal:** 31 Aug 2026
 - **Metode:** tinjauan sumber + verifikasi manual via curl terhadap instance dev lokal
 - **Lingkup:** hanya instance dev lokal, tanpa aksi destruktif. Semua artefak uji (sesi audit, file probe) dibersihkan.

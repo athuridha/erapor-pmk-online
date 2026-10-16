@@ -37,7 +37,7 @@ function main() {
 
 	const absOutput = path.resolve(projectRoot, outputDir);
 	const stageRoot = path.join(absOutput, 'stage');
-	const appStage = path.join(stageRoot, 'Rapkumer');
+	const appStage = path.join(stageRoot, 'erapor-pmk');
 
 	const hasPnpm = hasCommand('pnpm');
 
@@ -47,7 +47,7 @@ function main() {
 	const appVersion = typeof pkgJson.version === 'string' ? pkgJson.version.trim() : '';
 	const installerVersion = appVersion.replace(/-[0-9A-Za-z.-]+$/, '');
 	if (appVersion) {
-		const issPath = path.join(projectRoot, 'installer', 'rapkumer.iss');
+		const issPath = path.join(projectRoot, 'installer', 'erapor-pmk.iss');
 		const issContent = fs.readFileSync(issPath, 'utf-8');
 		if (/#define\s+AppVersion\s+"[^"]*"/.test(issContent)) {
 			const updated = issContent.replace(
@@ -105,7 +105,7 @@ function main() {
 	// 5) Copy icon
 	const icoPath = path.join(projectRoot, 'static', 'logo.ico');
 	if (fs.existsSync(icoPath)) {
-		fs.copyFileSync(icoPath, path.join(appStage, 'rapkumer.ico'));
+		fs.copyFileSync(icoPath, path.join(appStage, 'erapor-pmk.ico'));
 	} else {
 		console.warn('File static/logo.ico tidak ditemukan; ikon installer tidak akan diperbarui.');
 	}
@@ -152,8 +152,9 @@ function main() {
 	console.info('Copying runtime helper scripts...');
 	const installerDir = path.join(projectRoot, 'installer');
 
-	const startMjs = path.join(installerDir, 'files', 'start-rapkumer.mjs');
-	if (fs.existsSync(startMjs)) fs.copyFileSync(startMjs, path.join(appStage, 'start-rapkumer.mjs'));
+	const startMjs = path.join(installerDir, 'files', 'start-erapor-pmk.mjs');
+	if (fs.existsSync(startMjs))
+		fs.copyFileSync(startMjs, path.join(appStage, 'start-erapor-pmk.mjs'));
 
 	const startBuildSrc = path.join(projectRoot, 'scripts', 'start-build.mjs');
 	if (fs.existsSync(startBuildSrc))
@@ -215,7 +216,7 @@ function main() {
 	const envTarget = path.join(appStage, '.env');
 	if (!fs.existsSync(envTarget)) {
 		const envContent =
-			'DB_URL=file:%LOCALAPPDATA%/Rapkumer-data/database.sqlite3\nBODY_SIZE_LIMIT=5M\n';
+			'DB_URL=file:%LOCALAPPDATA%/erapor-pmk-data/database.sqlite3\nBODY_SIZE_LIMIT=5M\n';
 		fs.writeFileSync(envTarget, envContent);
 		console.info('Wrote default .env to', envTarget);
 	} else {

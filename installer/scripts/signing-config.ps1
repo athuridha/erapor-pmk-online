@@ -1,4 +1,4 @@
-# Code Signing Configuration for Rapkumer
+# Code Signing Configuration for e-Rapor SMK Pratama Mulya
 # This script manages signtool paths and certificate configuration
 
 # Detect the appropriate signtool.exe path
@@ -35,7 +35,7 @@ $CertConfig = @{
     PasswordFile = "$PSScriptRoot\..\cert\password.txt"
     
     # Subject name search (if using certificate store)
-    SubjectName = "Apoxicam"  # Adjust this to match your certificate
+    SubjectName = "e-Rapor SMK Pratama Mulya"  # Adjust this to match your certificate
     
     # Timestamping - list of fallback servers (will be tried in order)
     TimestampUrls = @(
@@ -51,7 +51,7 @@ $CertConfig = @{
     
     # Description for signed files
     Description = "Administrasi guru terpadu"
-    DescriptionUrl = "https://github.com/sira313/raporkumer"
+    DescriptionUrl = "https://github.com/athuridha/eraport"
 }
 
 # Get the signing command based on available certificate

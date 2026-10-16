@@ -1,7 +1,6 @@
 <script lang="ts">
 	/* eslint-disable svelte/no-navigation-without-resolve -- static link(s) to external/about pages */
 	import Icon from '$lib/components/icon.svelte';
-	import { openQrisImage } from '$lib/components/qris-image-modal';
 	import type { PageData } from './$types';
 
 	const { data } = $props<{ data: PageData }>();
@@ -20,7 +19,8 @@
 				<h1 class="text-base-content text-2xl font-bold md:text-3xl">e-Rapor SMK Pratama Mulya</h1>
 				<p class="text-base-content/70 mt-1 text-sm">Karawang - v{appVersion}</p>
 				<p class="text-base-content/80 mt-4">
-					Sistem Informasi Penilaian dan Administrasi Hasil Belajar Peserta Didik khusus SMK Pratama Mulya Karawang.
+					Sistem Informasi Penilaian dan Administrasi Hasil Belajar Peserta Didik khusus SMK Pratama
+					Mulya Karawang.
 				</p>
 				<div class="mt-6 flex flex-wrap justify-center gap-2">
 					<a
@@ -93,7 +93,7 @@
 
 	<section class="card bg-base-100 rounded-box shadow-md">
 		<div class="card-body gap-4">
-			<h2 class="card-title">Mengapa Rapkumer?</h2>
+			<h2 class="card-title">Mengapa e-Rapor SMK Pratama Mulya?</h2>
 			<p class="text-base-content/80">
 				Aplikasi ini kami kembangkan sebagai solusi terpadu untuk tugas administrasi guru: presensi
 				harian, jurnal mengajar, nilai harian, nilai STS, dan nilai SAS yang dihitung otomatis
@@ -112,24 +112,11 @@
 				<h2 class="card-title">Tim Pengembang</h2>
 				<ul class="menu bg-base-200 rounded-box w-full">
 					<li>
-						<a href="https://apoxi.cam/" target="_blank" rel="noreferrer">
-							<span class="font-semibold">Aris Pratama</span>
+						<a href="https://athuridha.my.id" target="_blank" rel="noreferrer">
+							<span class="font-semibold">Amara Thuridha</span>
 							<span class="text-base-content/60">Founder &amp; Maintainer</span>
 						</a>
 					</li>
-					<li>
-						<a href="https://mustofa.id" target="_blank" rel="noreferrer">
-							<span class="font-semibold">Habib Mustofa</span>
-							<span class="text-base-content/60">Mentor &amp; Advisor</span>
-						</a>
-					</li>
-				</ul>
-
-				<h3 class="card-title mt-1">Tester</h3>
-				<ul class="menu bg-base-200 rounded-box w-full">
-					{#each ['Hamdani, S.Pd., Gr.', 'Rudiansyah, S.Pd., Gr.', 'Putra Panji Prasetiyo, S.Pd., Gr.'] as name (name)}
-						<li><span class="pointer-events-none cursor-default">{name}</span></li>
-					{/each}
 				</ul>
 			</div>
 		</div>
@@ -175,36 +162,6 @@
 						<span class="text-base-content/60 text-xs">PDF: Google Drive</span>
 					</li>
 				</ul>
-			</div>
-		</div>
-	</section>
-
-	<section class="card bg-base-100 rounded-box shadow-md">
-		<div class="card-body gap-4">
-			<h2 class="card-title">Terima Kasih</h2>
-			<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-				<div class="bg-base-200 rounded-box p-4">
-					<span class="badge badge-primary badge-soft badge-sm">UI &amp; UX</span>
-					<p class="mt-2 font-semibold">Noffie Suryanti Mandasari, S.Pd.</p>
-					<p class="text-base-content/70 text-sm">Ide dan saran pengembangan antarmuka.</p>
-				</div>
-				<div class="bg-base-200 rounded-box p-4">
-					<span class="badge badge-secondary badge-soft badge-sm">Asesmen</span>
-					<p class="mt-2 text-sm font-bold">Saran alur penilaian:</p>
-					<ul class="text-base-content/80 mt-1 text-sm">
-						<li>Saipul Anam, S.Pd.</li>
-						<li>Anistoga, S.Pd., Gr.</li>
-						<li>Fathonah Nilawidya, S.Pd.</li>
-						<li>Rudiansyah, S.Pd., Gr.</li>
-					</ul>
-				</div>
-				<div class="bg-base-200 rounded-box p-4">
-					<span class="badge badge-accent badge-soft badge-sm">Donasi</span>
-					<p class="mt-2 text-sm">
-						Dukungan komunitas melalui
-						<button type="button" class="link link-primary" onclick={openQrisImage}>QRIS</button>.
-					</p>
-				</div>
 			</div>
 		</div>
 	</section>

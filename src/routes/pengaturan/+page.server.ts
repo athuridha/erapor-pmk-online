@@ -300,12 +300,12 @@ export const actions: Actions = {
 		const oldRoot = dataRoot();
 		const oldUploads = uploadsDir();
 		const oldSounds = soundsDir();
-		// On Windows the launcher (start-rapkumer.mjs) forces the root on every
+		// On Windows the launcher (start-erapor-pmk.mjs) forces the root on every
 		// start, so the setting is persisted there instead of `.env`; uploads and
-		// sounds still go through `.env`. On other platforms RAPKUMER_DATA_DIR is
+		// sounds still go through `.env`. On other platforms ERAPOR_PMK_DATA_DIR is
 		// written to `.env` directly.
 		const launcherManagedRoot =
-			process.platform === 'win32' && Boolean(process.env.RAPKUMER_DATA_DIR);
+			process.platform === 'win32' && Boolean(process.env.ERAPOR_PMK_DATA_DIR);
 		const newRoot = effectiveDataRoot(rootValue);
 		const newUploads = uploadsValue ?? path.join(newRoot, 'uploads');
 		const newSounds = soundsValue ?? path.join(newRoot, 'sounds');
@@ -316,7 +316,7 @@ export const actions: Actions = {
 				sounds: soundsValue ? `file:${soundsValue}` : ''
 			};
 			if (!launcherManagedRoot) {
-				envUpdates.RAPKUMER_DATA_DIR = rootValue ?? '';
+				envUpdates.ERAPOR_PMK_DATA_DIR = rootValue ?? '';
 			}
 			// Persist `.env` first — on launcher installs `{app}\.env` is the more
 			// likely write to fail — then the launcher override, so a failure never

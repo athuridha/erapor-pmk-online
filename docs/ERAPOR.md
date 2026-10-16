@@ -633,7 +633,7 @@ konsolidasi nasional. UI: `resources/js/pages/sinkronisasi/erapor.vue`; command:
 
 ---
 
-## 7. Lampiran Reimplementasi — Peta Data & Endpoint (untuk proyek lain, mis. rapkumer/Svelte)
+## 7. Lampiran Reimplementasi — Peta Data & Endpoint (untuk proyek lain, mis. e-Rapor/Svelte)
 
 > Bagian ini menjawab: _"data apa saja yang harus disimpan sistem pengganti?"_ Semua pemetaan
 > diekstrak dari fungsi `simpan_*` (`app/Helpers/functions.php:537-1030`) dan

@@ -4,7 +4,7 @@ import { networkInterfaces } from 'node:os';
 import { env } from '$env/dynamic/private';
 import { dataRoot } from '$lib/server/data-dirs';
 
-// Use the shared user-data root (RAPKUMER_DATA_DIR -> LOCALAPPDATA\Rapkumer-data
+// Use the shared user-data root (ERAPOR_PMK_DATA_DIR -> LOCALAPPDATA\erapor-pmk-data
 // on Windows -> <cwd>/data), so trusted origins persist across upgrades.
 const dataDir = dataRoot();
 
@@ -88,7 +88,7 @@ export async function writeFileTrustedOrigins(origins: string[]): Promise<void> 
 }
 
 export async function readCombinedOriginsFromEnvAndFile(): Promise<Set<string>> {
-	const envRaw = env.RAPKUMER_CSRF_TRUSTED_ORIGINS || '';
+	const envRaw = env.ERAPOR_PMK_CSRF_TRUSTED_ORIGINS || '';
 	const envEntries = envRaw
 		.split(',')
 		.map((s) => s.trim())
@@ -114,7 +114,7 @@ export async function readCombinedOriginsFromEnvAndFile(): Promise<Set<string>> 
 	// to the trusted origins set so LAN access works without manual editing.
 	// Construct origins for both http/https and with/without port for
 	// compatibility.
-	const port = (env.RAPKUMER_PORT || env.PORT || '3000').toString();
+	const port = (env.ERAPOR_PMK_PORT || env.PORT || '3000').toString();
 	const detected = new Set<string>();
 	try {
 		const nets = networkInterfaces();

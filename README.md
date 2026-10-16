@@ -1,16 +1,16 @@
-# E-Raport
+# e-Rapor SMK Pratama Mulya
 
 ![screenshot](static/image.png)
 
 <a href='https://nodejs.org/en' target="_blank"><img alt='node.js' src='https://img.shields.io/badge/Node.JS-100000?style=for-the-badge&logo=node.js&logoColor=35C354&labelColor=000000&color=35C354'/></a> <a href='https://svelte.dev/' target="_blank"><img alt='Svelte' src='https://img.shields.io/badge/Svelte-100000?style=for-the-badge&logo=Svelte&logoColor=F45A20&labelColor=000000&color=F45A20'/></a> <a href='https://orm.drizzle.team/' target="_blank"><img alt='Drizzle' src='https://img.shields.io/badge/Drizzle_ORM-100000?style=for-the-badge&logo=Drizzle&logoColor=FAF61D&labelColor=000000&color=FAF61D'/></a> <a href='https://sqlite.org/' target="_blank"><img alt='Sqlite' src='https://img.shields.io/badge/SQLite3-100000?style=for-the-badge&logo=Sqlite&logoColor=5EA765&labelColor=000000&color=5EA765'/></a> <a href='https://tailwindcss.com/' target="_blank"><img alt='tailwindcss' src='https://img.shields.io/badge/Tailwind_CSS-100000?style=for-the-badge&logo=tailwindcss&logoColor=36DBFF&labelColor=000000&color=36DBFF'/></a> <a href='https://daisyui.com/' target="_blank"><img alt='DaisyUI' src='https://img.shields.io/badge/Daisy_UI-100000?style=for-the-badge&logo=DaisyUI&logoColor=FFEC25&labelColor=000000&color=FFEC25'/></a>
 
-> E-Raport awalnya dibuat sebagai alternatif E-Rapor Kurikulum Merdeka.
+> e-Rapor SMK Pratama Mulya awalnya dibuat sebagai alternatif E-Rapor Kurikulum Merdeka.
 
-Seiring perkembangannya, E-Raport kini menjadi aplikasi terpadu yang membantu berbagai kebutuhan administrasi guru dan sekolah.
+Seiring perkembangannya, e-Rapor SMK Pratama Mulya kini menjadi aplikasi terpadu yang membantu berbagai kebutuhan administrasi guru dan sekolah.
 
-> **Mengapa masih menggunakan E-Raport jika pemerintah sudah menyediakan E-Rapor resmi?**
+> **Mengapa masih menggunakan e-Rapor SMK Pratama Mulya jika pemerintah sudah menyediakan E-Rapor resmi?**
 
-Karena E-Rapor resmi berfokus pada input nilai akhir serta penentuan Tujuan Pembelajaran (TP) yang tercapai atau belum tercapai secara manual. E-Raport hadir sebagai pelengkap proses tersebut dengan menyediakan pencatatan penilaian harian, pengolahan nilai, hingga rekapitulasi secara otomatis sehingga pekerjaan guru menjadi lebih praktis.
+Karena E-Rapor resmi berfokus pada input nilai akhir serta penentuan Tujuan Pembelajaran (TP) yang tercapai atau belum tercapai secara manual. e-Rapor SMK Pratama Mulya hadir sebagai pelengkap proses tersebut dengan menyediakan pencatatan penilaian harian, pengolahan nilai, hingga rekapitulasi secara otomatis sehingga pekerjaan guru menjadi lebih praktis.
 
 Dokumentasi lengkap aplikasi ini disusun dalam bahasa Indonesia. File README ini memberikan gambaran singkat untuk pengguna dan pengembang, sedangkan pembahasan teknis serta panduan kontribusi tersedia di folder `docs/`.
 
@@ -33,7 +33,7 @@ Dokumentasi lengkap aplikasi ini disusun dalam bahasa Indonesia. File README ini
 - Tarik data dari Dapodik (sinkronisasi sekolah, guru, kelas, murid, dan jadwal pembelajaran secara otomatis dari aplikasi Dapodik Desktop)
 - Kirim nilai akhir dan mata evaluasi (matev) langsung ke Dapodik
 
-## Siapa yang Cocok Menggunakan E-Raport?
+## Siapa yang Cocok Menggunakan e-Rapor SMK Pratama Mulya?
 
 - Sekolah yang tidak dapat menggunakan E-Rapor Kemdikdas karena alasan tertentu.
 - Sekolah yang sudah menggunakan E-Rapor tetapi ingin seluruh proses penilaian harian tercatat secara elektronik sehingga rekapitulasi nilai tidak lagi dilakukan secara manual di Excel. Nilai akhir cukup diimpor ke E-Rapor.
@@ -45,7 +45,7 @@ Dokumentasi lengkap aplikasi ini disusun dalam bahasa Indonesia. File README ini
 
 1. Kunjungi halaman rilis:
    https://github.com/athuridha/eraport/releases
-2. Unduh file `E-RaportSetup.exe`.
+2. Unduh file `ERaporPMKSetup.exe`.
 3. Jalankan installer dan ikuti proses instalasi.
 4. Setelah selesai, buka aplikasi melalui shortcut yang tersedia.
 
@@ -170,7 +170,7 @@ Informasi lisensi dan kredit selengkapnya tersedia di:
 
 ## Kontribusi
 
-Terima kasih atas minat Anda untuk berkontribusi pada E-Raport.
+Terima kasih atas minat Anda untuk berkontribusi pada e-Rapor SMK Pratama Mulya.
 
 Sebelum mengirim Pull Request, mohon perhatikan beberapa hal berikut:
 

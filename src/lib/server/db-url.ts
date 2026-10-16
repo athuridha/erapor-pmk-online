@@ -20,7 +20,7 @@ const DEFAULT_DB_URL = 'file:./data/database.sqlite3';
  *
  * The Windows fallback only comes into play when `DB_URL` is NOT set at all:
  * in that case the repository-local default resolves to a (usually missing)
- * file, and we fall back to the installer's fixed `%LOCALAPPDATA%\Rapkumer-data`
+ * file, and we fall back to the installer's fixed `%LOCALAPPDATA%\erapor-pmk-data`
  * path so backup/reset/import still target a live database.
  */
 export function resolveDatabasePath() {
@@ -45,7 +45,7 @@ export function resolveDatabasePath() {
 	// live database.
 	if (process.platform === 'win32') {
 		const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-		const winFallback = path.join(localAppData, 'Rapkumer-data', 'database.sqlite3');
+		const winFallback = path.join(localAppData, 'erapor-pmk-data', 'database.sqlite3');
 		if (fs.existsSync(winFallback)) return winFallback;
 	}
 

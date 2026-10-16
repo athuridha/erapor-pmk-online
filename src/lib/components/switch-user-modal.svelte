@@ -87,7 +87,9 @@
 		<div class="modal-box rounded-2xl max-w-lg p-6">
 			<div class="flex items-center justify-between pb-3 border-b border-base-200">
 				<div class="flex items-center gap-2.5">
-					<div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+					<div
+						class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold"
+					>
 						<Icon name="repeat" class="w-5 h-5 text-emerald-700" />
 					</div>
 					<div>
@@ -139,7 +141,9 @@
 							class="flex items-center justify-between p-3 rounded-xl border border-base-200 bg-base-100 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors gap-3"
 						>
 							<div class="flex items-center gap-3 overflow-hidden">
-								<div class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 flex items-center justify-center shrink-0 font-bold text-xs">
+								<div
+									class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 flex items-center justify-center shrink-0 font-bold text-xs"
+								>
 									<Icon name="user" class="w-4 h-4" />
 								</div>
 								<div class="overflow-hidden">
@@ -153,7 +157,9 @@
 											{u.roleLabel}
 										</span>
 										{#if u.kelasName}
-											<span class="text-emerald-700 dark:text-emerald-400 font-medium">({u.kelasName})</span>
+											<span class="text-emerald-700 dark:text-emerald-400 font-medium"
+												>({u.kelasName})</span
+											>
 										{/if}
 									</div>
 								</div>

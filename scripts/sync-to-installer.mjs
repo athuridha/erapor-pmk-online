@@ -65,11 +65,11 @@ async function main() {
 		}
 	}
 
-	// Also ensure installer-only files (like start-rapkumer.mjs) are placed into the staged application
+	// Also ensure installer-only files (like start-erapor-pmk.mjs) are placed into the staged application
 	try {
-		const stagedDir = path.join(root, 'dist', 'windows', 'stage', 'Rapkumer');
-		const srcSpecial = path.join(root, 'installer', 'files', 'start-rapkumer.mjs');
-		const destSpecial = path.join(stagedDir, 'start-rapkumer.mjs');
+		const stagedDir = path.join(root, 'dist', 'windows', 'stage', 'erapor-pmk');
+		const srcSpecial = path.join(root, 'installer', 'files', 'start-erapor-pmk.mjs');
+		const destSpecial = path.join(stagedDir, 'start-erapor-pmk.mjs');
 		if (existsSync(srcSpecial) && existsSync(stagedDir)) {
 			await fs.copyFile(srcSpecial, destSpecial);
 			try {
@@ -78,10 +78,12 @@ async function main() {
 			} catch {
 				void 0;
 			}
-			console.info('[sync-to-installer] copied installer file to stage:', 'start-rapkumer.mjs');
-			results.copied.push('installer/files/start-rapkumer.mjs -> stage');
+			console.info('[sync-to-installer] copied installer file to stage:', 'start-erapor-pmk.mjs');
+			results.copied.push('installer/files/start-erapor-pmk.mjs -> stage');
 		} else if (existsSync(srcSpecial) && !existsSync(stagedDir)) {
-			console.warn('[sync-to-installer] stage dir not found, skipping copy of start-rapkumer.mjs');
+			console.warn(
+				'[sync-to-installer] stage dir not found, skipping copy of start-erapor-pmk.mjs'
+			);
 			results.missing.push('stage-dir');
 		}
 	} catch (err) {
@@ -89,7 +91,7 @@ async function main() {
 			'[sync-to-installer] failed to copy installer special files:',
 			err && (err.message || err)
 		);
-		results.failed.push('installer/files/start-rapkumer.mjs');
+		results.failed.push('installer/files/start-erapor-pmk.mjs');
 	}
 
 	console.info('\n[sync-to-installer] Summary:');

@@ -1,4 +1,4 @@
-# Integrasi Rapkumer dengan WebService Dapodik Desktop
+# Integrasi e-Rapor SMK Pratama Mulya dengan WebService Dapodik Desktop
 
 Dokumentasi teknis modul `src/lib/server/dapodik.ts` — klien GET/POST untuk WebService
 aplikasi Dapodik desktop yang berjalan di jaringan lokal sekolah.
@@ -7,13 +7,13 @@ aplikasi Dapodik desktop yang berjalan di jaringan lokal sekolah.
 
 ## 1. Gambaran Umum
 
-Rapkumer berkomunikasi **langsung** dengan WebService Dapodik desktop (bukan server pusat PUSDATIN).
+e-Rapor berkomunikasi **langsung** dengan WebService Dapodik desktop (bukan server pusat PUSDATIN).
 Aplikasi Dapodik desktop membuka HTTP server lokal (default port `5774`) yang menyediakan endpoint
 REST untuk membaca dan menulis data pokok pendidikan.
 
 ```
 ┌─────────────┐    HTTP (GET/POST)      ┌──────────────────────┐
-│  Rapkumer   │ ────────────────────▶  │  Dapodik Desktop     │
+│  e-Rapor   │ ────────────────────▶  │  Dapodik Desktop     │
 │  (server)   │ ◀────────────────────  │  http://ip:5774/     │
 └─────────────┘    JSON response        │  WebService/         │
                                        	└──────────────────────┘
@@ -509,11 +509,11 @@ Form disimpan **sebelum** probe koneksi agar user tidak perlu mengisi ulang saat
 
 ## 8. ID Deterministik (UUID Stabil)
 
-Untuk data yang harus stabil antar-run tanpa mengandalkan Dapodik, Rapkumer menggunakan
+Untuk data yang harus stabil antar-run tanpa mengandalkan Dapodik, e-Rapor menggunakan
 UUID v5 deterministik berbasis SHA-1 (`uuidDeterministic()`, baris 2377-2383):
 
-- **`id_evaluasi`**: seed = `rapkumer-matev:{rombelId}:{mapelId}:{pbId}:{mpId}`
-- **`nilai_id`**: seed = `rapkumer-nilai:{mapelId}:{muridId}`
+- **`id_evaluasi`**: seed = `erapor-pmk-matev:{rombelId}:{mapelId}:{pbId}:{mpId}`
+- **`nilai_id`**: seed = `erapor-pmk-nilai:{mapelId}:{muridId}`
 
 Format: RFC 4122 UUID v5 (versi 5, varian 10xx).
 
@@ -522,4 +522,4 @@ Format: RFC 4122 UUID v5 (versi 5, varian 10xx).
 ## 9. Referensi
 
 - `docs/erapor.md` — Analisis lengkap protokol Dapodik dari proyek e-Rapor
-- `src/lib/server/dapodik.ts` — Implementasi klien dalam Rapkumer
+- `src/lib/server/dapodik.ts` — Implementasi klien dalam e-Rapor

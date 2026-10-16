@@ -115,7 +115,7 @@ function New-SelfSignedCodeSigningCert {
         # Generate self-signed certificate
         $cert = New-SelfSignedCertificate `
             -Type CodeSigningCert `
-            -Subject "CN=Apoxicam, E=me@apoxi.cam, O=Rapkumer, C=ID" `
+            -Subject "CN=e-Rapor SMK Pratama Mulya, O=e-Rapor SMK Pratama Mulya, C=ID" `
             -KeyAlgorithm RSA `
             -KeyLength 2048 `
             -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
@@ -128,7 +128,7 @@ function New-SelfSignedCodeSigningCert {
         Write-StatusMessage "Thumbprint: $($cert.Thumbprint)" "INFO" "Gray"
         
         # Export to PFX
-        $password = "rapkumer-dev-2024"
+        $password = "erapor-pmk-dev-2024"
         $securePassword = ConvertTo-SecureString -String $password -Force -AsPlainText
         $pfxPath = $CertConfig.PfxPath
         

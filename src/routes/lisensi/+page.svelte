@@ -67,7 +67,7 @@
 					<p class="font-semibold">Kontribusi</p>
 					<p class="text-base-content/70 text-sm">
 						Boleh mengirimkan perbaikan bug, fitur baru, atau kontribusi lainnya ke repositori resmi
-						Rapkumer.
+						e-Rapor SMK Pratama Mulya.
 					</p>
 				</li>
 				<li class="flex flex-col gap-1 p-4">
@@ -106,8 +106,8 @@
 			<div role="alert" class="alert alert-warning alert-soft alert-sm">
 				<Icon name="alert" class="h-4 w-4 shrink-0" />
 				<span>
-					Ingin menggunakan Rapkumer untuk keperluan komersial? Hubungi tim pengembang untuk
-					memperoleh izin tertulis.
+					Ingin menggunakan e-Rapor SMK Pratama Mulya untuk keperluan komersial? Hubungi tim
+					pengembang untuk memperoleh izin tertulis.
 				</span>
 			</div>
 		</div>
@@ -124,13 +124,13 @@
 					<li class="flex flex-col gap-1 p-4">
 						<p class="font-semibold">Kredit pengembang</p>
 						<p class="text-base-content/70 text-xs">
-							Cantumkan nama Rapkumer sebagai pengembang asli.
+							Cantumkan nama e-Rapor SMK Pratama Mulya sebagai pengembang asli.
 						</p>
 					</li>
 					<li class="flex flex-col gap-1 p-4">
 						<p class="font-semibold">Tautan repositori</p>
 						<p class="text-base-content/70 text-xs">
-							Sertakan tautan ke repositori resmi Rapkumer.
+							Sertakan tautan ke repositori resmi e-Rapor SMK Pratama Mulya.
 						</p>
 					</li>
 					<li class="flex flex-col gap-1 p-4">

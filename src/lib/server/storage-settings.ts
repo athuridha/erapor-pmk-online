@@ -8,12 +8,12 @@ export interface StorageInfo {
 	dataRoot: string;
 	envFile: string;
 	envFileExists: boolean;
-	/** True when the running process overrides RAPKUMER_DATA_DIR (Windows launcher). */
+	/** True when the running process overrides ERAPOR_PMK_DATA_DIR (Windows launcher). */
 	rootManagedByLauncher: boolean;
 }
 
 /**
- * Fixed launcher home on Windows (`%LOCALAPPDATA%\Rapkumer-data`): holds the DB,
+ * Fixed launcher home on Windows (`%LOCALAPPDATA%\erapor-pmk-data`): holds the DB,
  * logs and the data-root override file. Must not depend on the (movable) data
  * root. Returns null on non-Windows platforms.
  */
@@ -25,8 +25,8 @@ export function launcherHome(): string | null {
 
 /**
  * Path to the Windows launcher's data-root override file (`data-root.txt`),
- * or null on non-Windows. The launcher (start-rapkumer.mjs) reads this on every
- * start and forces the resolved root onto RAPKUMER_DATA_DIR.
+ * or null on non-Windows. The launcher (start-erapor-pmk.mjs) reads this on every
+ * start and forces the resolved root onto ERAPOR_PMK_DATA_DIR.
  */
 export function launcherDataRootConfigPath(): string | null {
 	const home = launcherHome();
@@ -35,7 +35,7 @@ export function launcherDataRootConfigPath(): string | null {
 
 /**
  * Persist the data-root override for the Windows launcher. A `null`/empty value
- * resets to the default (`%LOCALAPPDATA%\Rapkumer-data`). No-op off Windows.
+ * resets to the default (`%LOCALAPPDATA%\erapor-pmk-data`). No-op off Windows.
  */
 export async function writeLauncherDataRootOverride(root: string | null): Promise<void> {
 	const cfg = launcherDataRootConfigPath();
@@ -58,10 +58,10 @@ export async function getStorageInfo(): Promise<StorageInfo> {
 		dataRoot: dataRoot(),
 		envFile,
 		envFileExists,
-		// The Windows launcher (start-rapkumer.mjs) forces the root on every
+		// The Windows launcher (start-erapor-pmk.mjs) forces the root on every
 		// start; on Windows it is configured through its own `data-root.txt`
-		// file, while on other platforms RAPKUMER_DATA_DIR comes from `.env`.
-		rootManagedByLauncher: process.platform === 'win32' && Boolean(process.env.RAPKUMER_DATA_DIR)
+		// file, while on other platforms ERAPOR_PMK_DATA_DIR comes from `.env`.
+		rootManagedByLauncher: process.platform === 'win32' && Boolean(process.env.ERAPOR_PMK_DATA_DIR)
 	};
 }
 

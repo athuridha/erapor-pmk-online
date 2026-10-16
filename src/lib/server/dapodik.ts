@@ -2583,7 +2583,7 @@ async function runMatev(
 		const idEvaluasi =
 			existingByPbMp.get(`${candidate.pembelajaranId}|${candidate.mataPelajaranId}`) ??
 			uuidDeterministic(
-				`rapkumer-matev:${kelasDapodikId}:${candidate.mapelId}:${candidate.pembelajaranId}:${candidate.mataPelajaranId}`
+				`erapor-pmk-matev:${kelasDapodikId}:${candidate.mapelId}:${candidate.pembelajaranId}:${candidate.mataPelajaranId}`
 			);
 		const call = await dapodikPost(
 			base,
@@ -2598,7 +2598,7 @@ async function runMatev(
 				nm_mata_evaluasi: candidate.namaMapel.slice(0, 40),
 				a_dari_template: 1,
 				no_urut: candidate.noUrut,
-				// KKM tunggal rapkumer dipakai untuk kognitif & psikomotorik.
+				// KKM tunggal e-Rapor dipakai untuk kognitif & psikomotorik.
 				kkm_kognitif: candidate.kkm,
 				kkm_psikomotorik: candidate.kkm,
 				create_date: nowIso,
@@ -2856,7 +2856,7 @@ export async function runDapodikKirim(options: {
 
 	// PAPB (varian agama yang dipakai di kelas ini) selalu menempati posisi
 	// teratas saat dikirim ke Dapodik (no_urut = 1). Sort stabil — mapel lain
-	// tetap mengikuti nomor urut rapkumer tanpa perubahan urutan relatif.
+	// tetap mengikuti nomor urut e-Rapor tanpa perubahan urutan relatif.
 	const agamaMapelIds = new Set(agamaFamily.map((f) => f.id));
 	allCandidates.sort(
 		(a, b) => Number(agamaMapelIds.has(b.mapelId)) - Number(agamaMapelIds.has(a.mapelId))
@@ -3029,7 +3029,7 @@ export async function runDapodikKirim(options: {
 				'postNilai',
 				{ npsn, semester_id: semesterId, table: 'rapor' },
 				{
-					nilai_id: uuidDeterministic(`rapkumer-nilai:${candidate.mapelId}:${muridId}`),
+					nilai_id: uuidDeterministic(`erapor-pmk-nilai:${candidate.mapelId}:${muridId}`),
 					id_evaluasi: idEvaluasi,
 					anggota_rombel_id: anggotaRombelId,
 					nilai_kognitif_angka: Number(nilai.nilaiAkhir!.toFixed(2)),

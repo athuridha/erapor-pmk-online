@@ -530,7 +530,6 @@ async function main() {
 			{ table: 'sekolah', column: 'naungan', type: "TEXT NOT NULL DEFAULT 'kemendikbud'" },
 			{ table: 'sekolah', column: 'naungan', type: 'TEXT' },
 			{ table: 'auth_user', column: 'sekolah_id', type: 'INTEGER' },
-			{ table: 'feature_unlock', column: 'sekolah_id', type: 'INTEGER' },
 			{ table: 'tahun_ajaran', column: 'sekolah_id', type: 'INTEGER' }
 		];
 

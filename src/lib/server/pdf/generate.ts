@@ -94,7 +94,7 @@ export async function generateBulkPDF(items: BulkItem[]): Promise<Uint8Array> {
 	if (!items.length) throw new Error('No items to generate PDF for.');
 	if (items.length === 1) return generatePDF(items[0].docType, items[0].data, items[0].template);
 
-	const tmpDir = await mkdtemp(join(tmpdir(), 'rapkumer-bulk-'));
+	const tmpDir = await mkdtemp(join(tmpdir(), 'erapor-pmk-bulk-'));
 
 	try {
 		let batch = await generateAllPDFs(items, tmpDir);

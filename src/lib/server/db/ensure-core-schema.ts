@@ -94,15 +94,6 @@ export async function ensureCoreSchema() {
 			created_at TEXT NOT NULL,
 			updated_at TEXT
 		)`,
-		`CREATE TABLE IF NOT EXISTS feature_unlock (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			sekolah_id INTEGER NOT NULL REFERENCES sekolah(id) ON DELETE CASCADE,
-			feature_key TEXT NOT NULL,
-			unlocked_at TEXT NOT NULL,
-			created_at TEXT NOT NULL,
-			updated_at TEXT,
-			UNIQUE(sekolah_id, feature_key)
-		)`,
 		`CREATE TABLE IF NOT EXISTS tahun_ajaran (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			sekolah_id INTEGER NOT NULL REFERENCES sekolah(id),

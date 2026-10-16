@@ -165,7 +165,7 @@ async function main() {
 			);
 		}
 
-		run(iscc.cmd, [...iscc.args, path.join('installer', 'rapkumer.iss')], {
+		run(iscc.cmd, [...iscc.args, path.join('installer', 'erapor-pmk.iss')], {
 			cwd: projectRoot
 		});
 

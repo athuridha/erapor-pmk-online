@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rapkumer-static-v1';
+const CACHE_NAME = 'erapor-pmk-static-v1';
 const STATIC_PATTERN = /\.(js|css|woff2?|ttf|eot)(\?.*)?$/;
 
 self.addEventListener('install', () => {

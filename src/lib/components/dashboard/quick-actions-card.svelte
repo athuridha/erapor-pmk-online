@@ -80,10 +80,7 @@
 			Tindakan Cepat
 		</h2>
 		<div class="grid grid-cols-1 gap-2">
-			<a
-				href={resolve('/sinkronisasi')}
-				class="btn btn-primary w-full shadow-none font-bold"
-			>
+			<a href={resolve('/sinkronisasi')} class="btn btn-primary w-full shadow-none font-bold">
 				<Icon name="repeat" />
 				Sinkronisasi Cloud
 			</a>

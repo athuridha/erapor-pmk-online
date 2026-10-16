@@ -38,7 +38,7 @@ try {
 
 // Resolve the built server entry (`build/index.js`) from a few likely locations
 // so this script works both in-repo (scripts/) and when installed to a
-// top-level `Rapkumer` folder (where `start-build.mjs` may live alongside `build/`).
+// top-level `e-Rapor SMK Pratama Mulya` folder (where `start-build.mjs` may live alongside `build/`).
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

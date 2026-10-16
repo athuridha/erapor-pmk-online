@@ -154,22 +154,6 @@ export const tableSekolah = sqliteTable('sekolah', {
 	...audit
 });
 
-export const tableFeatureUnlock = sqliteTable(
-	'feature_unlock',
-	{
-		id: int().primaryKey({ autoIncrement: true }),
-		sekolahId: int()
-			.references(() => tableSekolah.id, { onDelete: 'cascade' })
-			.notNull(),
-		featureKey: text().notNull(),
-		unlockedAt: text()
-			.$defaultFn(() => new Date().toISOString())
-			.notNull(),
-		...audit
-	},
-	(table) => [unique().on(table.sekolahId, table.featureKey)]
-);
-
 export const tableTahunAjaran = sqliteTable(
 	'tahun_ajaran',
 	{
@@ -258,15 +242,7 @@ export const tableSekolahRelations = relations(tableSekolah, ({ one, many }) => 
 	}),
 	tahunAjaran: many(tableTahunAjaran),
 	tasks: many(tableTasks),
-	featureUnlocks: many(tableFeatureUnlock),
 	presensiSettings: one(tablePresensiSettings)
-}));
-
-export const tableFeatureUnlockRelations = relations(tableFeatureUnlock, ({ one }) => ({
-	sekolah: one(tableSekolah, {
-		fields: [tableFeatureUnlock.sekolahId],
-		references: [tableSekolah.id]
-	})
 }));
 
 export const tableTahunAjaranRelations = relations(tableTahunAjaran, ({ one, many }) => ({

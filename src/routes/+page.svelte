@@ -258,7 +258,7 @@
 	// via Escape, or the page was reloaded while the modal was open).
 	let presensiWarningVisible = $state(false);
 
-	const SIMULASI_STORAGE_KEY = 'rapkumer-simulasi-tanggal-jam';
+	const SIMULASI_STORAGE_KEY = 'erapor-pmk-simulasi-tanggal-jam';
 
 	function presensiApiUrl() {
 		const override =

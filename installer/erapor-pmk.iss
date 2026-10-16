@@ -1,20 +1,19 @@
-#define AppName "Rapkumer - Aplikasi administrasi guru terpadu"
+#define AppName "e-Rapor SMK Pratama Mulya - Aplikasi administrasi guru terpadu"
 #define AppVersion "2.1.7"
-#define StagePath "..\\dist\\windows\\stage\\Rapkumer"
+#define StagePath "..\\dist\\windows\\stage\\erapor-pmk"
 
 [Setup]
 AppId={{06E10F9F-0AD2-4F31-A64B-7C3B36F2D0D6}}
 AppName={#AppName}
 AppVersion={#AppVersion}
-AppPublisher="Rapkumer"
-AppPublisherURL="https://github.com/sira313/rapkumer"
-AppContact="me@apoxi.cam"
+AppPublisher="e-Rapor SMK Pratama Mulya"
+AppPublisherURL="https://github.com/athuridha/eraport"
 ; Install under the current user's Local AppData so admin privileges are not required
-DefaultDirName={localappdata}\Rapkumer
-DefaultGroupName=Rapkumer
+DefaultDirName={localappdata}\erapor-pmk
+DefaultGroupName=e-Rapor SMK Pratama Mulya
 DisableProgramGroupPage=yes
 OutputDir=..\dist\windows
-OutputBaseFilename=RapkumerSetup
+OutputBaseFilename=ERaporPMKSetup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -22,9 +21,9 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 ; Do not require administrator privileges when installing to per-user LocalAppData
 PrivilegesRequired=lowest
-UninstallDisplayIcon={app}\rapkumer.ico
+UninstallDisplayIcon={app}\erapor-pmk.ico
 VersionInfoVersion={#AppVersion}
-SetupIconFile={#StagePath}\rapkumer.ico
+SetupIconFile={#StagePath}\erapor-pmk.ico
 LicenseFile="..\LICENSE"
 ; Code signing configuration (commented out by default)
 ; Uncomment and configure these lines if you want Inno Setup to sign the installer
@@ -33,15 +32,15 @@ LicenseFile="..\LICENSE"
 
 [Files]
 Source:"{#StagePath}\\*"; DestDir:"{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source:"files\\start-rapkumer.mjs"; DestDir:"{app}"; Flags: ignoreversion
+Source:"files\\start-erapor-pmk.mjs"; DestDir:"{app}"; Flags: ignoreversion
 Source:"..\dist\windows\vc_redist.x64.exe"; DestDir:"{tmp}"; Flags: ignoreversion deleteafterinstall
 
 [Run]
 Filename:"node"; Parameters:"""{app}\scripts\migrate-installed-db.mjs"""; WorkingDir:"{app}"; StatusMsg:"Menjalankan migrasi database (drizzle-kit) pada mesin ini..."; Flags: runhidden waituntilterminated
 
 [Icons]
-Name:"{autoprograms}\Rapkumer\Rapkumer"; Filename:"{sys}\cmd.exe"; Parameters:"/c ""node ""{app}\start-rapkumer.mjs"""; WorkingDir:"{app}"; IconFilename:"{app}\rapkumer.ico"
-Name:"{autodesktop}\Rapkumer"; Filename:"{sys}\cmd.exe"; Parameters:"/c ""node ""{app}\start-rapkumer.mjs"""; WorkingDir:"{app}"; IconFilename:"{app}\rapkumer.ico"
+Name:"{autoprograms}\erapor-pmk\e-Rapor SMK Pratama Mulya"; Filename:"{sys}\cmd.exe"; Parameters:"/c ""node ""{app}\start-erapor-pmk.mjs"""; WorkingDir:"{app}"; IconFilename:"{app}\erapor-pmk.ico"
+Name:"{autodesktop}\e-Rapor SMK Pratama Mulya"; Filename:"{sys}\cmd.exe"; Parameters:"/c ""node ""{app}\start-erapor-pmk.mjs"""; WorkingDir:"{app}"; IconFilename:"{app}\erapor-pmk.ico"
 
 [Code]
 
@@ -100,12 +99,12 @@ begin
 	if CurStep = ssPostInstall then
 	begin
 		InstallVcRedist;
-		DbPath := ExpandConstant('{localappdata}\Rapkumer-data\database.sqlite3');
+		DbPath := ExpandConstant('{localappdata}\erapor-pmk-data\database.sqlite3');
 		DbDir := ExtractFileDir(DbPath);
 		if not DirExists(DbDir) then
 			ForceDirectories(DbDir);
 			// If the user doesn't already have a DB in their user state, copy the packaged one
-			SrcDb := ExpandConstant('{localappdata}\Rapkumer\data\database.sqlite3');
+			SrcDb := ExpandConstant('{localappdata}\erapor-pmk\data\database.sqlite3');
 			if (not FileExists(DbPath)) and FileExists(SrcDb) then
 			begin
 				if not CopyFile(SrcDb, DbPath, False) then
@@ -113,14 +112,14 @@ begin
 			end;
 
 			// Ensure log directory and empty log file exist
-			LogDir := ExpandConstant('{localappdata}\Rapkumer-data\logs');
+			LogDir := ExpandConstant('{localappdata}\erapor-pmk-data\logs');
 			if not DirExists(LogDir) then
 				ForceDirectories(LogDir);
-			LogFile := LogDir + '\\rapkumer.log';
+			LogFile := LogDir + '\\erapor-pmk.log';
 			if not FileExists(LogFile) then
 				SaveStringToFile(LogFile, '', False);
 		// Ensure sounds directory exists
-			SoundDir := ExpandConstant('{localappdata}\Rapkumer-data\sounds');
+			SoundDir := ExpandConstant('{localappdata}\erapor-pmk-data\sounds');
 			if not DirExists(SoundDir) then
 				ForceDirectories(SoundDir);
 
@@ -129,7 +128,7 @@ begin
 		// install writes the initial .env here. Uploads/sounds are NOT pinned:
 		// they follow the data root automatically (default <root>/uploads and
 		// <root>/sounds), and the root itself lives in the launcher override
-		// file (%LOCALAPPDATA%\Rapkumer-data\data-root.txt), not in .env.
+		// file (%LOCALAPPDATA%\erapor-pmk-data\data-root.txt), not in .env.
 		EnvPath := ExpandConstant('{app}\.env');
 		if FileExists(EnvPath) then
 			Log(Format('Menjaga .env yang sudah ada: %s', [EnvPath]))

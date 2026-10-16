@@ -1,4 +1,4 @@
-# Analisis Bottleneck Performa — Rapkumer
+# Analisis Bottleneck Performa — e-Rapor SMK Pratama Mulya
 
 **Tanggal:** 2 September 2026
 **Hardware server:** Acer Aspire 5 A514-52K — i3-8130U, 4GB RAM, HDD 930GB (btrfs), Arch Linux

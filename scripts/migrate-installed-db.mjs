@@ -16,7 +16,7 @@ function resolveLocalAppData() {
 }
 
 function joinDbPath(base) {
-	return path.join(base, 'Rapkumer-data', 'database.sqlite3');
+	return path.join(base, 'erapor-pmk-data', 'database.sqlite3');
 }
 
 function run(cmd, args, opts = {}) {
@@ -95,7 +95,7 @@ async function main() {
 		const localLower = String(localAppData).toLowerCase();
 		const looksInstalled =
 			projLower.startsWith(localLower + path.sep) ||
-			path.basename(projectRoot).toLowerCase() === 'rapkumer';
+			path.basename(projectRoot).toLowerCase() === 'erapor-pmk';
 
 		const projectLocal = path.join(projectRoot, 'data', 'database.sqlite3');
 		const installedCandidate = joinDbPath(localAppData);
@@ -182,7 +182,6 @@ async function main() {
 					{ table: 'kelas', column: 'sekolah_id', type: 'INTEGER' },
 					{ table: 'mata_pelajaran', column: 'kelas_id', type: 'INTEGER' },
 					{ table: 'auth_user', column: 'sekolah_id', type: 'INTEGER' },
-					{ table: 'feature_unlock', column: 'sekolah_id', type: 'INTEGER' },
 					{ table: 'tahun_ajaran', column: 'sekolah_id', type: 'INTEGER' }
 				];
 				for (const c of checks) {

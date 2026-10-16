@@ -3,7 +3,6 @@ import { ensureAsesmenSumatifSchema } from '$lib/server/db/ensure-asesmen-sumati
 import {
 	tableAsesmenSumatif,
 	tableAsesmenSumatifTujuan,
-	tableFeatureUnlock,
 	tableKelas,
 	tableMataPelajaran,
 	tableMurid,
@@ -19,8 +18,6 @@ import {
 	namaVarianUntukMurid
 } from '$lib/server/mapel-picker';
 import { bolehAksesMapel, getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
-
-const CHEAT_FEATURE_KEY = 'cheat-asesmen-sumatif';
 
 const DEFAULT_LINGKUP = 'Tanpa lingkup materi';
 
@@ -210,14 +207,6 @@ export async function load({ url, locals, depends, parent }) {
 		picker = buildMapelPicker(mapelRows, mapel.id);
 	}
 
-	const featureUnlock = await db.query.tableFeatureUnlock.findFirst({
-		columns: { id: true },
-		where: and(
-			eq(tableFeatureUnlock.sekolahId, sekolahId),
-			eq(tableFeatureUnlock.featureKey, CHEAT_FEATURE_KEY)
-		)
-	});
-
 	await ensureAsesmenSumatifSchema();
 
 	const tujuanPembelajaran = await db.query.tableTujuanPembelajaran.findMany({
@@ -290,7 +279,6 @@ export async function load({ url, locals, depends, parent }) {
 		hasTujuan: entries.length > 0,
 		hasLingkupComplete,
 		entries,
-		cheatUnlocked: Boolean(featureUnlock),
 		sumatifWeights: {
 			lingkup: Number(locals.sekolah?.sumatifBobotLingkup ?? 60),
 			sts: Number(locals.sekolah?.sumatifBobotSts ?? 20),

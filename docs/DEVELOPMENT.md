@@ -1,7 +1,7 @@
-# Pengembangan — Rapkumer
+# Pengembangan — e-Rapor SMK Pratama Mulya
 
 Dokumen ini berisi pedoman singkat untuk pengembang yang ingin menjalankan, membangun, atau
-mengontribusikan kode ke proyek Rapkumer.
+mengontribusikan kode ke proyek e-Rapor.
 
 Catatan utama (ikuti pedoman ini untuk konsistensi proyek):
 

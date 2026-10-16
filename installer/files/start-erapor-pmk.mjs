@@ -20,7 +20,7 @@ async function ensureDir(dir) {
 
 // Copy a directory tree, keeping destination files that already exist.
 // Used to migrate legacy user data (ttd, dinas-luar, uploads) from the old
-// install-dir location (<install>/data/<sub>) into %LOCALAPPDATA%\Rapkumer-data
+// install-dir location (<install>/data/<sub>) into %LOCALAPPDATA%\erapor-pmk-data
 // on first run after an upgrade. Returns the number of files copied.
 async function copyTreeIfMissing(src, dst, logFile) {
 	try {
@@ -100,14 +100,14 @@ async function main() {
 
 	// Fixed launcher home: holds the DB, logs and the data-root override file.
 	const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-	const LAUNCHER_HOME = path.join(localAppData, 'Rapkumer-data');
+	const LAUNCHER_HOME = path.join(localAppData, 'erapor-pmk-data');
 	const LOG_DIR = path.join(LAUNCHER_HOME, 'logs');
-	const LOG_FILE = path.join(LOG_DIR, 'rapkumer.log');
+	const LOG_FILE = path.join(LOG_DIR, 'erapor-pmk.log');
 
 	// User-data root (ttd, dinas-luar, uploads, sounds). Administrators can move
 	// it elsewhere (e.g. another drive) from the "Lokasi Data" page, which writes
 	// data-root.txt inside the launcher home. Resolution order:
-	//   1. RAPKUMER_DATA_DIR env (explicit override)
+	//   1. ERAPOR_PMK_DATA_DIR env (explicit override)
 	//   2. data-root.txt in LAUNCHER_HOME (written by the app UI)
 	//   3. default: LAUNCHER_HOME
 	function readDataRootOverride() {
@@ -121,11 +121,11 @@ async function main() {
 	}
 
 	function resolveUserStateRoot() {
-		// NOTE: an explicit RAPKUMER_DATA_DIR env wins over data-root.txt (the
+		// NOTE: an explicit ERAPOR_PMK_DATA_DIR env wins over data-root.txt (the
 		// file written by the app UI). This matters if a Windows user-level or
 		// system env var of that name exists: the launcher will silently ignore
 		// whatever the "Lokasi Data" page stored in data-root.txt.
-		const envOverride = (process.env.RAPKUMER_DATA_DIR || '').trim();
+		const envOverride = (process.env.ERAPOR_PMK_DATA_DIR || '').trim();
 		if (envOverride) return path.resolve(envOverride);
 		const fileOverride = readDataRootOverride();
 		if (fileOverride) return path.resolve(fileOverride);
@@ -137,7 +137,7 @@ async function main() {
 	await ensureDir(LOG_DIR);
 	await ensureDir(USER_STATE_ROOT);
 
-	await appendLog(LOG_FILE, `Starting Rapkumer (app home: ${APP_HOME})`);
+	await appendLog(LOG_FILE, `Starting e-Rapor SMK Pratama Mulya (app home: ${APP_HOME})`);
 	await appendLog(LOG_FILE, `User-data root: ${USER_STATE_ROOT}`);
 
 	// Ensure database exists in the fixed launcher home. The DB deliberately does
@@ -202,10 +202,10 @@ async function main() {
 
 	await appendLog(LOG_FILE, `Using DB_URL=${DB_URL}`);
 
-	console.log(`Menjalankan Rapkumer pada http://localhost:${PORT}`);
+	console.log(`Menjalankan e-Rapor SMK Pratama Mulya pada http://localhost:${PORT}`);
 	await appendLog(
 		LOG_FILE,
-		`Starting Rapkumer using node start-build.mjs on port ${PORT} with DB_URL=${DB_URL}`
+		`Starting e-Rapor SMK Pratama Mulya using node start-build.mjs on port ${PORT} with DB_URL=${DB_URL}`
 	);
 
 	const childEnv = {
@@ -215,7 +215,7 @@ async function main() {
 		BODY_SIZE_LIMIT: '5242880',
 		DB_URL,
 		DATABASE_URL: DB_URL,
-		RAPKUMER_DATA_DIR: USER_STATE_ROOT
+		ERAPOR_PMK_DATA_DIR: USER_STATE_ROOT
 	};
 	const nodeBin = process.execPath || 'node';
 
@@ -233,7 +233,7 @@ async function main() {
 			});
 			if (result.error) {
 				await appendLog(LOG_FILE, `Migrasi database error: ${result.error.message}`);
-				console.error('[start-rapkumer] Database migration error:', result.error.message);
+				console.error('[start-erapor-pmk] Database migration error:', result.error.message);
 			} else if (result.status === 0) {
 				await appendLog(LOG_FILE, 'Migrasi database berhasil');
 			} else {
@@ -243,11 +243,11 @@ async function main() {
 					LOG_FILE,
 					`Migrasi database gagal (exit code ${result.status}): ${stderr}${stdout}`
 				);
-				console.error('[start-rapkumer] Database migration failed:', stderr || stdout);
+				console.error('[start-erapor-pmk] Database migration failed:', stderr || stdout);
 			}
 		} catch (err) {
 			await appendLog(LOG_FILE, `Error saat migrasi database: ${String(err)}`);
-			console.error('[start-rapkumer] Database migration error:', err);
+			console.error('[start-erapor-pmk] Database migration error:', err);
 		}
 	} else {
 		await appendLog(LOG_FILE, `Script migrasi tidak ditemukan di ${migrateScript}, dilewati`);
@@ -297,7 +297,7 @@ async function main() {
 		await appendLog(LOG_FILE, 'Server is listening on port ' + PORT);
 		if (process.platform === 'win32') {
 			const url = `http://localhost:${PORT}`;
-			console.log('Sedang membuka Rapkumer...');
+			console.log('Sedang membuka e-Rapor SMK Pratama Mulya...');
 			await appendLog(LOG_FILE, `Opening browser to ${url}`);
 			const cmdPath = process.env.ComSpec || 'cmd.exe';
 			try {
@@ -327,7 +327,7 @@ async function main() {
 
 main().catch(async (err) => {
 	const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-	const LOG_FILE = path.join(localAppData, 'Rapkumer-data', 'logs', 'rapkumer.log');
+	const LOG_FILE = path.join(localAppData, 'erapor-pmk-data', 'logs', 'erapor-pmk.log');
 	try {
 		await appendLog(LOG_FILE, `Fatal: ${String(err)}`);
 	} catch {
@@ -348,7 +348,7 @@ main().catch(async (err) => {
 		console.error('Kemungkinan penyebab: Microsoft Visual C++ Redistributable');
 		console.error('2015-2022 (x64) belum terinstall di komputer ini.');
 		console.error('');
-		console.error('Solusi: Jalankan ulang installer Rapkumer, atau unduh dan');
+		console.error('Solusi: Jalankan ulang installer e-Rapor SMK Pratama Mulya, atau unduh dan');
 		console.error('install langsung dari Microsoft:');
 		console.error('  https://aka.ms/vs/17/release/vc_redist.x64.exe');
 		console.error('=====================================================================');

@@ -1,4 +1,4 @@
-# Alur Kerja Installer RapkumerSetup.exe
+# Alur Kerja Installer ERaporPMKSetup.exe
 
 ## ⚡ Cheat Sheet (Jangan Lupa!)
 
@@ -6,7 +6,7 @@
 >
 > 1. Jalankan: `node scripts/sync-to-installer.mjs`
 > 2. Test: `pnpm package:win`
-> 3. Cek: `ls dist/windows/stage/Rapkumer/scripts/` (file wajib ada?)
+> 3. Cek: `ls dist/windows/stage/erapor-pmk/scripts/` (file wajib ada?)
 > 4. Deploy: `pnpm prod` atau `pnpm prod:signed`
 
 > **File-file penting (jangan sampai hilang dari installer):**
@@ -29,7 +29,7 @@
 
 ## Overview
 
-Folder `installer/` isinya konfigurasi untuk membuat **RapkumerSetup.exe** (installer Windows).
+Folder `installer/` isinya konfigurasi untuk membuat **ERaporPMKSetup.exe** (installer Windows).
 
 Keunikan installer ini:
 
@@ -41,7 +41,7 @@ Keunikan installer ini:
 
 ## File-File Penting
 
-### 1. **rapkumer.iss** - Resep Installer
+### 1. **erapor-pmk.iss** - Resep Installer
 
 File ini berisi "resep" cara membuat installer:
 
@@ -56,7 +56,7 @@ File ini berisi "resep" cara membuat installer:
 **Pengaturan penting:**
 
 ```ini
-DefaultDirName={localappdata}\Rapkumer         # Folder user, bukan C:\Program Files
+DefaultDirName={localappdata}\erapor-pmk         # Folder user, bukan C:\Program Files
 PrivilegesRequired=lowest                      # Tidak perlu admin
 ArchitecturesAllowed=x64compatible             # Hanya 64-bit
 ```
@@ -67,15 +67,15 @@ ArchitecturesAllowed=x64compatible             # Hanya 64-bit
 
 ### **Tahap 1: Wizard Instalasi**
 
-User jalankan `RapkumerSetup.exe` → Muncul kotak dialog:
+User jalankan `ERaporPMKSetup.exe` → Muncul kotak dialog:
 
-- Pilih mau install di mana (default: `AppData\Local\Rapkumer`)
-- Pilih folder Start Menu (default: Rapkumer)
+- Pilih mau install di mana (default: `AppData\Local\erapor-pmk`)
+- Pilih folder Start Menu (default: e-Rapor)
 - Klik "Install"
 
 ### **Tahap 2: Kopiin File**
 
-Installer kopiin file dari `dist/windows/stage/Rapkumer/` ke folder instalasi user:
+Installer kopiin file dari `dist/windows/stage/erapor-pmk/` ke folder instalasi user:
 
 ```
 Folder yang dikopiin:
@@ -86,24 +86,24 @@ Folder yang dikopiin:
 └── drizzle/                ← File database schema
 ```
 
-Semua file ini masuk ke: **`%LOCALAPPDATA%\Rapkumer`**
+Semua file ini masuk ke: **`%LOCALAPPDATA%\erapor-pmk`**
 
 ### **Tahap 3: Setup Folder Data User**
 
 Setelah file dikopiin, Inno Setup menjalankan script Pascal untuk:
 
-1. **Buat folder data terpisah** di `%LOCALAPPDATA%\Rapkumer-data\`
+1. **Buat folder data terpisah** di `%LOCALAPPDATA%\erapor-pmk-data\`
    - Di sini nanti tempat database asli user
    - Terpisah dari aplikasi (jadi bisa update app tanpa khawatir data hilang)
 
 2. **Kopiin database template** ke folder data user
-   - Dari: `%LOCALAPPDATA%\Rapkumer\data\database.sqlite3`
-   - Ke: `%LOCALAPPDATA%\Rapkumer-data\database.sqlite3`
+   - Dari: `%LOCALAPPDATA%\erapor-pmk\data\database.sqlite3`
+   - Ke: `%LOCALAPPDATA%\erapor-pmk-data\database.sqlite3`
 
-3. **Buat folder logs** di `%LOCALAPPDATA%\Rapkumer-data\logs\`
+3. **Buat folder logs** di `%LOCALAPPDATA%\erapor-pmk-data\logs\`
    - Nanti untuk nyimpan log aplikasi
 
-4. **Bikin file `.env`** di `%LOCALAPPDATA%\Rapkumer\.env`
+4. **Bikin file `.env`** di `%LOCALAPPDATA%\erapor-pmk\.env`
    - Berisi konfigurasi database path, ukuran upload file, dll
 
 ### **Tahap 4: Migrasi Database**
@@ -137,12 +137,12 @@ Ini tahap kritis! Installer menjalankan script untuk:
 
 Kedua-duanya pakai script yang sama (`migrate-installed-db.mjs`), tapi ada perbedaan:
 
-| Hal                  | Development (`pnpm db:push`)                      | Saat Install                                      |
-| -------------------- | ------------------------------------------------- | ------------------------------------------------- |
-| **Database Mana**    | Database lokal di `data/database.sqlite3`         | Database user di `Rapkumer-data/database.sqlite3` |
-| **Deteksi Otomatis** | Cek apakah ada `data/database.sqlite3` di project | Cek apakah script running dari folder `AppData`   |
-| **Kalau Ada Error**  | Langsung stop, tampilkan error                    | Coba ulang, bersihkan index lama, coba lagi       |
-| **Cek Kolom**        | Cek kolom yang diperlukan                         | Cek 6 kolom yang diperlukan, tambah jika kurang   |
+| Hal                  | Development (`pnpm db:push`)                      | Saat Install                                        |
+| -------------------- | ------------------------------------------------- | --------------------------------------------------- |
+| **Database Mana**    | Database lokal di `data/database.sqlite3`         | Database user di `erapor-pmk-data/database.sqlite3` |
+| **Deteksi Otomatis** | Cek apakah ada `data/database.sqlite3` di project | Cek apakah script running dari folder `AppData`     |
+| **Kalau Ada Error**  | Langsung stop, tampilkan error                    | Coba ulang, bersihkan index lama, coba lagi         |
+| **Cek Kolom**        | Cek kolom yang diperlukan                         | Cek 6 kolom yang diperlukan, tambah jika kurang     |
 
 **Hasilnya:**
 
@@ -210,7 +210,7 @@ Ini kopiin file dari `scripts/` ke `installer/scripts/`:
 pnpm package:win
 ```
 
-Ini langsung kopiin dari `scripts/` ke **staging folder** (`dist/windows/stage/Rapkumer/scripts/`):
+Ini langsung kopiin dari `scripts/` ke **staging folder** (`dist/windows/stage/erapor-pmk/scripts/`):
 
 1. Build aplikasi
 2. Jalankan migrasi database (untuk template DB)
@@ -233,11 +233,11 @@ Ini langsung kopiin dari `scripts/` ke **staging folder** (`dist/windows/stage/R
 
 #### **Perbedaan Keduanya**
 
-|                         | `sync-to-installer.mjs`          | `prepare-windows.ps1`                  |
-| ----------------------- | -------------------------------- | -------------------------------------- |
-| **Kopiin ke mana?**     | `installer/scripts/`             | `dist/windows/stage/Rapkumer/scripts/` |
-| **Kapan dijalankan?**   | `pnpm prod` / `pnpm prod:signed` | `pnpm package:win`                     |
-| **Masuk ke installer?** | Belum (perlu `package:win` juga) | Ya (via Inno Setup)                    |
+|                         | `sync-to-installer.mjs`          | `prepare-windows.ps1`                    |
+| ----------------------- | -------------------------------- | ---------------------------------------- |
+| **Kopiin ke mana?**     | `installer/scripts/`             | `dist/windows/stage/erapor-pmk/scripts/` |
+| **Kapan dijalankan?**   | `pnpm prod` / `pnpm prod:signed` | `pnpm package:win`                       |
+| **Masuk ke installer?** | Belum (perlu `package:win` juga) | Ya (via Inno Setup)                      |
 
 ---
 
@@ -250,11 +250,11 @@ Ubah script di scripts/
     ↓
 pnpm package:win kopiin
     ↓
-File masuk ke dist/windows/stage/Rapkumer/scripts/
+File masuk ke dist/windows/stage/erapor-pmk/scripts/
     ↓
 Inno Setup ambil dari sini
     ↓
-RapkumerSetup.exe include
+ERaporPMKSetup.exe include
     ↓
 User install → File ada ✓
 ```
@@ -270,11 +270,11 @@ File kopiin ke installer/scripts/
     ↓
 pnpm prod jalankan package:win
     ↓
-File kopiin ke dist/windows/stage/Rapkumer/scripts/
+File kopiin ke dist/windows/stage/erapor-pmk/scripts/
     ↓
 Inno Setup ambil dari sini
     ↓
-RapkumerSetup.exe include
+ERaporPMKSetup.exe include
     ↓
 User install → File ada ✓
 ```
@@ -294,7 +294,7 @@ node scripts/sync-to-installer.mjs
 pnpm package:win
 
 # 4. Cek hasilnya
-ls dist/windows/stage/Rapkumer/scripts/
+ls dist/windows/stage/erapor-pmk/scripts/
 # Pastikan ensure-columns.mjs ada di sini
 
 # 5. Kalau production release:
@@ -307,13 +307,13 @@ pnpm prod          # atau pnpm prod:signed
 
 Installer membuat 2 shortcut untuk menjalankan aplikasi:
 
-1. **Start Menu** → `Programs → Rapkumer → Rapkumer`
-2. **Desktop** → `Rapkumer` icon
+1. **Start Menu** → `Programs → e-Rapor → e-Rapor`
+2. **Desktop** → `e-Rapor` icon
 
 Ketika diklik shortcut, jalankan:
 
 ```cmd
-node start-rapkumer.mjs
+node start-erapor-pmk.mjs
 ```
 
 **Bonus: `run-migrations.bat`** (Optional untuk pengguna)
@@ -330,22 +330,22 @@ node scripts\migrate-installed-db.mjs
 
 ## Saat User Klik Shortcut
 
-### **Script `start-rapkumer.mjs` Melakukan:**
+### **Script `start-erapor-pmk.mjs` Melakukan:**
 
 1. **Pastikan folder ada**
-   - Logs folder di `Rapkumer-data/logs/`
-   - Data folder di `Rapkumer-data/`
+   - Logs folder di `erapor-pmk-data/logs/`
+   - Data folder di `erapor-pmk-data/`
 
 2. **Kopiin database kalau belum ada**
-   - Dari: `Rapkumer/data/database.sqlite3` (template)
-   - Ke: `Rapkumer-data/database.sqlite3` (data asli)
+   - Dari: `erapor-pmk/data/database.sqlite3` (template)
+   - Ke: `erapor-pmk-data/database.sqlite3` (data asli)
 
 3. **Setup konfigurasi**
 
    ```
    PORT = 3000
    NODE_ENV = production
-   DB_URL = file:C:\Users\...\Rapkumer-data\database.sqlite3
+   DB_URL = file:C:\Users\...\erapor-pmk-data\database.sqlite3
    BODY_SIZE_LIMIT = 5MB
    ```
 
@@ -358,7 +358,7 @@ node scripts\migrate-installed-db.mjs
    - Cek port 3000 aktif (max 10x percobaan)
 
 6. **Catat semua di log**
-   - Semua output ke: `Rapkumer-data/logs/rapkumer.log`
+   - Semua output ke: `erapor-pmk-data/logs/erapor-pmk.log`
 
 ### **Script `start-build.mjs` Melakukan:**
 
@@ -377,39 +377,39 @@ Semua log tercatat di file log user.
 ## Struktur Folder Setelah Install
 
 ```
-Folder Instalasi (C:\Users\...\AppData\Local\Rapkumer\):
+Folder Instalasi (C:\Users\...\AppData\Local\erapor-pmk\):
 ├── build/                     ← Aplikasi sudah compiled
 ├── static/                    ← Asset gambar, CSS, font
 ├── data/
 │   └── database.sqlite3       ← Template database awal
 ├── scripts/                   ← Script migrasi
 ├── drizzle/                   ← Database schema & migration
-├── rapkumer.ico               ← Icon aplikasi
-├── start-rapkumer.mjs         ← Launcher aplikasi
+├── erapor-pmk.ico               ← Icon aplikasi
+├── start-erapor-pmk.mjs         ← Launcher aplikasi
 ├── .env                       ← Konfigurasi (dibikin saat install)
 └── package.json               ← Dependencies untuk production
 
-Folder Data User (C:\Users\...\AppData\Local\Rapkumer-data\):
+Folder Data User (C:\Users\...\AppData\Local\erapor-pmk-data\):
 ├── database.sqlite3           ← Database asli yang dipakai
 ├── uploads/                   ← Tempat user upload foto, dokumen
 └── logs/
-    └── rapkumer.log           ← Log aplikasi setiap hari
+    └── erapor-pmk.log           ← Log aplikasi setiap hari
 ```
 
 ---
 
 ## Yang Perlu Diketahui
 
-| Hal                     | Penjelasan                                                                        |
-| ----------------------- | --------------------------------------------------------------------------------- |
-| **Per-User Install**    | Setiap user punya instalasi sendiri, data sendiri                                 |
-| **Tidak Perlu Admin**   | User biasa bisa install tanpa privilege khusus                                    |
-| **Data Terpisah**       | App di `Rapkumer/`, data di `Rapkumer-data/` (jadi update app gak menghapus data) |
-| **Node.js Wajib**       | Installer tidak bawa Node.js, user harus install sendiri                          |
-| **Aplikasi Background** | Launcher keluar, tapi app tetap jalan background                                  |
-| **Log Tersimpan**       | Semua output ke file, bukan di console yang terlihat user                         |
-| **Database Bundled**    | Database template disertakan, dicopy per-user saat pertama kali run               |
-| **Auto-Migrate**        | Database schema otomatis diupgrade via Drizzle                                    |
+| Hal                     | Penjelasan                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------- |
+| **Per-User Install**    | Setiap user punya instalasi sendiri, data sendiri                                     |
+| **Tidak Perlu Admin**   | User biasa bisa install tanpa privilege khusus                                        |
+| **Data Terpisah**       | App di `erapor-pmk/`, data di `erapor-pmk-data/` (jadi update app gak menghapus data) |
+| **Node.js Wajib**       | Installer tidak bawa Node.js, user harus install sendiri                              |
+| **Aplikasi Background** | Launcher keluar, tapi app tetap jalan background                                      |
+| **Log Tersimpan**       | Semua output ke file, bukan di console yang terlihat user                             |
+| **Database Bundled**    | Database template disertakan, dicopy per-user saat pertama kali run                   |
+| **Auto-Migrate**        | Database schema otomatis diupgrade via Drizzle                                        |
 
 ---
 
@@ -423,7 +423,7 @@ Artinya: User belum install Node.js atau tidak di PATH
 
 ### ❌ Aplikasi tidak jalan setelah install
 
-Cek: `C:\Users\USERNAME\AppData\Local\Rapkumer-data\logs\rapkumer.log`
+Cek: `C:\Users\USERNAME\AppData\Local\erapor-pmk-data\logs\erapor-pmk.log`
 
 - Lihat error message di file log
 
@@ -431,12 +431,12 @@ Cek: `C:\Users\USERNAME\AppData\Local\Rapkumer-data\logs\rapkumer.log`
 
 Lihat: Apakah script migrasi berhasil jalankan?
 
-- Cek log: `Rapkumer-data\logs\rapkumer.log`
+- Cek log: `erapor-pmk-data\logs\erapor-pmk.log`
 
 ### ✅ Mau reinstall atau update
 
 - Jalankan installer lagi
-- App akan terupdate, data user tetap aman di `Rapkumer-data/`
+- App akan terupdate, data user tetap aman di `erapor-pmk-data/`
 
 ---
 
@@ -458,7 +458,7 @@ pnpm build
 pnpm package:win
 
 # 5. Verifikasi file penting ada
-ls dist/windows/stage/Rapkumer/scripts/ | grep -E "(ensure-columns|start-build)"
+ls dist/windows/stage/erapor-pmk/scripts/ | grep -E "(ensure-columns|start-build)"
 # Output harus:
 # ensure-columns.mjs
 # start-build.mjs
@@ -468,7 +468,7 @@ ls -lh data/database.sqlite3
 # Size harus > 100KB
 
 # 7. Cek .env di staging
-cat dist/windows/stage/Rapkumer/.env
+cat dist/windows/stage/erapor-pmk/.env
 # Harus ada: DB_URL, BODY_SIZE_LIMIT
 ```
 
@@ -495,7 +495,7 @@ pnpm prod:signed         # Dengan digital signature
 
 ## File-File Penting
 
-### 1. **rapkumer.iss** - Resep Installer
+### 1. **erapor-pmk.iss** - Resep Installer
 
 File ini berisi "resep" cara membuat installer:
 
@@ -510,12 +510,12 @@ File ini berisi "resep" cara membuat installer:
 **Konfigurasi Penting:**
 
 ```ini
-DefaultDirName={localappdata}\Rapkumer
+DefaultDirName={localappdata}\erapor-pmk
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ```
 
-- **Instalasi per-user**: App disimpan di `%LOCALAPPDATA%\Rapkumer` (folder pengguna, bukan C:\Program Files)
+- **Instalasi per-user**: App disimpan di `%LOCALAPPDATA%\erapor-pmk` (folder pengguna, bukan C:\Program Files)
 - **Tidak perlu admin**: Dengan `PrivilegesRequired=lowest`, installer berjalan tanpa privilege khusus
 - **64-bit only**: Hanya untuk arsitektur x64compatible
 
@@ -525,16 +525,16 @@ ArchitecturesAllowed=x64compatible
 
 ### **Fase 1: Pre-Installation (Wizard)**
 
-User menjalankan `RapkumerSetup.exe` → Inno Setup wizard ditampilkan:
+User menjalankan `ERaporPMKSetup.exe` → Inno Setup wizard ditampilkan:
 
-- Pilih folder instalasi (default: `%LOCALAPPDATA%\Rapkumer`)
-- Pilih Start Menu group (default: Rapkumer)
+- Pilih folder instalasi (default: `%LOCALAPPDATA%\erapor-pmk`)
+- Pilih Start Menu group (default: e-Rapor)
 - Konfirmasi instalasi
 
 ### **Fase 2: File Copying**
 
-**Source**: `dist/windows/stage/Rapkumer/`
-**Destination**: `%LOCALAPPDATA%\Rapkumer/`
+**Source**: `dist/windows/stage/erapor-pmk/`
+**Destination**: `%LOCALAPPDATA%\erapor-pmk/`
 
 File yang disalin:
 
@@ -542,8 +542,8 @@ File yang disalin:
 ├── build/              (SvelteKit production build)
 ├── static/             (Assets statis)
 ├── data/database.sqlite3  (Database template awal)
-├── rapkumer.ico        (Icon aplikasi)
-└── start-rapkumer.mjs  (Script launcher)
+├── erapor-pmk.ico        (Icon aplikasi)
+└── start-erapor-pmk.mjs  (Script launcher)
 ```
 
 ### **Fase 3: Post-Install Script (Inno Setup [Code])**
@@ -551,7 +551,7 @@ File yang disalin:
 Di bagian **[Code]**, procedure `CurStepChanged()` dijalankan saat `ssPostInstall`:
 
 ```pascal
-DbPath := ExpandConstant('{localappdata}\Rapkumer-data\database.sqlite3');
+DbPath := ExpandConstant('{localappdata}\erapor-pmk-data\database.sqlite3');
 DbDir := ExtractFileDir(DbPath);
 if not DirExists(DbDir) then
     ForceDirectories(DbDir);
@@ -559,21 +559,21 @@ if not DirExists(DbDir) then
 
 **Yang terjadi:**
 
-1. **Buat folder data pengguna**: `%LOCALAPPDATA%\Rapkumer-data\`
+1. **Buat folder data pengguna**: `%LOCALAPPDATA%\erapor-pmk-data\`
    - Folder ini menyimpan database & logs per-user (terpisah dari app folder)
 
 2. **Copy database awal** (jika belum ada):
 
    ```
-   Sumber: %LOCALAPPDATA%\Rapkumer\data\database.sqlite3
-   Tujuan: %LOCALAPPDATA%\Rapkumer-data\database.sqlite3
+   Sumber: %LOCALAPPDATA%\erapor-pmk\data\database.sqlite3
+   Tujuan: %LOCALAPPDATA%\erapor-pmk-data\database.sqlite3
    ```
 
-3. **Buat folder logs**: `%LOCALAPPDATA%\Rapkumer-data\logs\`
+3. **Buat folder logs**: `%LOCALAPPDATA%\erapor-pmk-data\logs\`
 
-4. **Generate file `.env`** di `%LOCALAPPDATA%\Rapkumer\.env` (**hanya saat fresh install**; saat upgrade file `.env` yang sudah ada dipertahankan). `photo`/`sounds` **tidak lagi di-pin** di sini — uploads/sounds otomatis mengikuti root data (default `<root>/uploads` dan `<root>/sounds`), dan root sendiri disimpan di file launcher `%LOCALAPPDATA%\Rapkumer-data\data-root.txt` yang tidak pernah disentuh installer:
+4. **Generate file `.env`** di `%LOCALAPPDATA%\erapor-pmk\.env` (**hanya saat fresh install**; saat upgrade file `.env` yang sudah ada dipertahankan). `photo`/`sounds` **tidak lagi di-pin** di sini — uploads/sounds otomatis mengikuti root data (default `<root>/uploads` dan `<root>/sounds`), dan root sendiri disimpan di file launcher `%LOCALAPPDATA%\erapor-pmk-data\data-root.txt` yang tidak pernah disentuh installer:
    ```env
-   DB_URL="file:C:\Users\USERNAME\AppData\Local\Rapkumer-data\database.sqlite3"
+   DB_URL="file:C:\Users\USERNAME\AppData\Local\erapor-pmk-data\database.sqlite3"
    BODY_SIZE_LIMIT=5M
    ```
    > Upgrade dari versi lama: `.env` lama (yang mungkin memuat `photo=`/`sounds=`) dipertahankan, dan akan otomatis dibersihkan saat admin menyimpan form "Lokasi Data" (handler menulis `photo=''`/`sounds=''`, lalu data dipindahkan ke root baru).
@@ -588,7 +588,7 @@ node "{app}\scripts\migrate-installed-db.mjs"
 
 **Yang dilakukan oleh migration script (`migrate-installed-db.mjs`):**
 
-1. **Deteksi database path**: Tentukan lokasi database user di `Rapkumer-data/`
+1. **Deteksi database path**: Tentukan lokasi database user di `erapor-pmk-data/`
 
 2. **Pre-check kolom**: Cek apakah kolom yang diperlukan sudah ada:
    - `tasks.sekolah_id`
@@ -623,15 +623,15 @@ Di instalasi, jalankan langsung via: `node scripts/migrate-installed-db.mjs`
 
 #### **Perbedaan Utama**
 
-| Aspek                     | Development (`pnpm db:push`)                                        | Fase 4 (Installer)                                                                                                  |
-| ------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Context Deteksi**       | Script di `project-root/scripts/` → gunakan `data/database.sqlite3` | Script mendeteksi folder app di `%LOCALAPPDATA%/Rapkumer` → gunakan `%LOCALAPPDATA%/Rapkumer-data/database.sqlite3` |
-| **DB_URL**                | Tidak ada env → gunakan project-local DB                            | Env `DB_URL` sudah di-set oleh batch/PowerShell → gunakan installed path                                            |
-| **Detect Path Logic**     | Cek: `project-root/data/database.sqlite3` ada?                      | Cek: project path di dalam `%LOCALAPPDATA%`? → looksInstalled = true                                                |
-| **Database Target**       | Dev: `repo-root/data/database.sqlite3`                              | Installed: `%LOCALAPPDATA%/Rapkumer-data/database.sqlite3`                                                          |
-| **Error Handling**        | Standar: fail jika ada error                                        | **Lebih ketat**: Coba drop index lama (cleanup), re-try push, baru fail                                             |
-| **Pre-Migration Cleanup** | Minimal                                                             | **Aggressive**: Drop legacy indexes (e.g. `auth_user_usernameNormalized_unique` dari versi lama)                    |
-| **Kolom Missing**         | Fix jika diperlukan                                                 | **Pre-check ekstensif**: Pastikan `sekolah_id`, `kelas_id` dll ada sebelum push                                     |
+| Aspek                     | Development (`pnpm db:push`)                                        | Fase 4 (Installer)                                                                                                      |
+| ------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Context Deteksi**       | Script di `project-root/scripts/` → gunakan `data/database.sqlite3` | Script mendeteksi folder app di `%LOCALAPPDATA%/erapor-pmk` → gunakan `%LOCALAPPDATA%/erapor-pmk-data/database.sqlite3` |
+| **DB_URL**                | Tidak ada env → gunakan project-local DB                            | Env `DB_URL` sudah di-set oleh batch/PowerShell → gunakan installed path                                                |
+| **Detect Path Logic**     | Cek: `project-root/data/database.sqlite3` ada?                      | Cek: project path di dalam `%LOCALAPPDATA%`? → looksInstalled = true                                                    |
+| **Database Target**       | Dev: `repo-root/data/database.sqlite3`                              | Installed: `%LOCALAPPDATA%/erapor-pmk-data/database.sqlite3`                                                            |
+| **Error Handling**        | Standar: fail jika ada error                                        | **Lebih ketat**: Coba drop index lama (cleanup), re-try push, baru fail                                                 |
+| **Pre-Migration Cleanup** | Minimal                                                             | **Aggressive**: Drop legacy indexes (e.g. `auth_user_usernameNormalized_unique` dari versi lama)                        |
+| **Kolom Missing**         | Fix jika diperlukan                                                 | **Pre-check ekstensif**: Pastikan `sekolah_id`, `kelas_id` dll ada sebelum push                                         |
 
 #### **Logika Deteksi Path (Kunci Perbedaan)**
 
@@ -643,14 +643,14 @@ let dbPath;
 
 if (envDb) {
 	// Fase 4: batch/PS sudah set DB_URL
-	dbPath = envDb; // → %LOCALAPPDATA%/Rapkumer-data/database.sqlite3
+	dbPath = envDb; // → %LOCALAPPDATA%/erapor-pmk-data/database.sqlite3
 } else {
 	// Development: tidak ada env, deteksi secara otomatis
 	const looksInstalled = projectRoot.startsWith(localAppData);
 
 	if (looksInstalled) {
 		// Installer case
-		dbPath = `file://${localAppData}/Rapkumer-data/database.sqlite3`;
+		dbPath = `file://${localAppData}/erapor-pmk-data/database.sqlite3`;
 	} else {
 		// Dev case
 		dbPath = `file://${projectRoot}/data/database.sqlite3`;
@@ -685,7 +685,7 @@ pnpm db:push
 //    - Jika masih fail: run fix-drizzle-indexes.mjs, retry lagi
 ```
 
-**Alasan:** Installed DB bisa berasal dari versi Rapkumer lama yang punya index structure berbeda. Installer harus robust agar tidak gagal di user machines.
+**Alasan:** Installed DB bisa berasal dari versi e-Rapor lama yang punya index structure berbeda. Installer harus robust agar tidak gagal di user machines.
 
 #### **Pre-Migration Checks: Installer Lebih Lengkap**
 
@@ -705,7 +705,6 @@ const checks = [
   { table: 'kelas', column: 'sekolah_id' },
   { table: 'mata_pelajaran', column: 'kelas_id' },
   { table: 'auth_user', column: 'sekolah_id' },
-  { table: 'feature_unlock', column: 'sekolah_id' },
   { table: 'tahun_ajaran', column: 'sekolah_id' }
 ];
 
@@ -720,12 +719,12 @@ for (const check of checks) {
 
 #### **Kapan Digunakan Masing-Masing**
 
-| Situasi                                          | Gunakan                                   | Alasan                                                            |
-| ------------------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------- |
-| Developer sedang develop & test di local         | `pnpm db:push`                            | Simple, cepat, target `data/database.sqlite3` lokal               |
-| Prepare Windows release (build stage)            | `pnpm db:push`                            | Populate `data/database.sqlite3` yang akan di-bundle di installer |
-| User install RapkumerSetup.exe                   | `migrate-installed-db.mjs` (via batch/PS) | Robust, handle legacy data, fix indexes, pre-check kolom          |
-| User jalankan `pnpm db:push` di installed folder | Auto-detect ke Rapkumer-data DB           | Script smart: kalau `$PWD` di AppData, gunakan Rapkumer-data path |
+| Situasi                                          | Gunakan                                   | Alasan                                                              |
+| ------------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------------- |
+| Developer sedang develop & test di local         | `pnpm db:push`                            | Simple, cepat, target `data/database.sqlite3` lokal                 |
+| Prepare Windows release (build stage)            | `pnpm db:push`                            | Populate `data/database.sqlite3` yang akan di-bundle di installer   |
+| User install ERaporPMKSetup.exe                  | `migrate-installed-db.mjs` (via batch/PS) | Robust, handle legacy data, fix indexes, pre-check kolom            |
+| User jalankan `pnpm db:push` di installed folder | Auto-detect ke erapor-pmk-data DB         | Script smart: kalau `$PWD` di AppData, gunakan erapor-pmk-data path |
 
 ### **⚠️ Critical Issue: Missing `ensure-columns.mjs` di Installer**
 
@@ -773,7 +772,7 @@ Saat user jalankan installer:
 2. Saat prepare installer, hanya file di `installer/scripts/` yang di-copy:
    ```powershell
    # installer/prepare-windows.ps1
-   # Hanya copy installer/scripts/ → dist/windows/stage/Rapkumer/scripts/
+   # Hanya copy installer/scripts/ → dist/windows/stage/erapor-pmk/scripts/
    ```
 3. Dev punya akses ke `scripts/ensure-columns.mjs` (di project root)
 4. Installer tidak punya akses, fallback ke inline checks (tapi inline tidak lengkap)
@@ -837,7 +836,7 @@ Dipanggil otomatis oleh:
 
 #### **2. `prepare-windows.ps1` (Development/Staging)**
 
-Script ini copy file dari `scripts/` **langsung ke staging folder** (`dist/windows/stage/Rapkumer/scripts/`):
+Script ini copy file dari `scripts/` **langsung ke staging folder** (`dist/windows/stage/erapor-pmk/scripts/`):
 
 ```bash
 pnpm package:win
@@ -868,12 +867,12 @@ $requiredScripts = @(
 
 #### **Perbedaan Kritis**
 
-| Aspek                    | `sync-to-installer.mjs`          | `prepare-windows.ps1`                  |
-| ------------------------ | -------------------------------- | -------------------------------------- |
-| **Copy Ke**              | `installer/scripts/`             | `dist/windows/stage/Rapkumer/scripts/` |
-| **Dipanggil**            | `pnpm prod` / `pnpm prod:signed` | `pnpm package:win`                     |
-| **Include ke Installer** | ✗ Tidak otomatis                 | ✓ Ya (via Inno Setup)                  |
-| **Urutan**               | Sebelum staging                  | Saat staging                           |
+| Aspek                    | `sync-to-installer.mjs`          | `prepare-windows.ps1`                    |
+| ------------------------ | -------------------------------- | ---------------------------------------- |
+| **Copy Ke**              | `installer/scripts/`             | `dist/windows/stage/erapor-pmk/scripts/` |
+| **Dipanggil**            | `pnpm prod` / `pnpm prod:signed` | `pnpm package:win`                       |
+| **Include ke Installer** | ✗ Tidak otomatis                 | ✓ Ya (via Inno Setup)                    |
+| **Urutan**               | Sebelum staging                  | Saat staging                             |
 
 ---
 
@@ -886,13 +885,13 @@ scripts/ensure-columns.mjs
     ↓
 prepare-windows.ps1 copy
     ↓
-dist/windows/stage/Rapkumer/scripts/ensure-columns.mjs
+dist/windows/stage/erapor-pmk/scripts/ensure-columns.mjs
     ↓
 Inno Setup [Files] section copy
     ↓
-RapkumerSetup.exe include
+ERaporPMKSetup.exe include
     ↓
-%LOCALAPPDATA%\Rapkumer\scripts\ensure-columns.mjs ✓
+%LOCALAPPDATA%\erapor-pmk\scripts\ensure-columns.mjs ✓
 ```
 
 **Production Release:**
@@ -906,13 +905,13 @@ installer/scripts/ensure-columns.mjs
     ↓
 prepare-windows.ps1 copy (jika package:win juga dijalankan)
     ↓
-dist/windows/stage/Rapkumer/scripts/ensure-columns.mjs
+dist/windows/stage/erapor-pmk/scripts/ensure-columns.mjs
     ↓
 Inno Setup [Files] section copy
     ↓
-RapkumerSetup.exe include
+ERaporPMKSetup.exe include
     ↓
-%LOCALAPPDATA%\Rapkumer\scripts\ensure-columns.mjs ✓
+%LOCALAPPDATA%\erapor-pmk\scripts\ensure-columns.mjs ✓
 ```
 
 ---
@@ -932,14 +931,14 @@ node scripts/sync-to-installer.mjs
 pnpm package:win
 
 # 4. Verify semua file ada di staging
-ls dist/windows/stage/Rapkumer/scripts/
+ls dist/windows/stage/erapor-pmk/scripts/
 
 # 5. Jika akan production release:
 pnpm prod          # atau pnpm prod:signed
 # Script ini akan:
 # - Run sync-to-installer.mjs
 # - Package Windows installer
-# - File akan ter-include ke RapkumerSetup.exe
+# - File akan ter-include ke ERaporPMKSetup.exe
 ```
 
 ---
@@ -955,33 +954,33 @@ pnpm prod          # atau pnpm prod:signed
 Di bagian **[Icons]**:
 
 ```ini
-Name:"{autoprograms}\Rapkumer\Rapkumer"; Filename:"{sys}\cmd.exe"; Parameters:"/c node ""{app}\start-rapkumer.mjs"""; WorkingDir:"{app}"
-Name:"{autodesktop}\Rapkumer"; Filename:"{sys}\cmd.exe"; Parameters:"/c node ""{app}\start-rapkumer.mjs"""; WorkingDir:"{app}"
+Name:"{autoprograms}\erapor-pmk\e-Rapor"; Filename:"{sys}\cmd.exe"; Parameters:"/c node ""{app}\start-erapor-pmk.mjs"""; WorkingDir:"{app}"
+Name:"{autodesktop}\e-Rapor"; Filename:"{sys}\cmd.exe"; Parameters:"/c node ""{app}\start-erapor-pmk.mjs"""; WorkingDir:"{app}"
 ```
 
 Dua shortcut dibuat:
 
-1. **Start Menu**: `Start → Programs → Rapkumer → Rapkumer`
-2. **Desktop**: `Rapkumer` shortcut
+1. **Start Menu**: `Start → Programs → e-Rapor → e-Rapor`
+2. **Desktop**: `e-Rapor` shortcut
 
-Ketika diklik, menjalankan: `node start-rapkumer.mjs`
+Ketika diklik, menjalankan: `node start-erapor-pmk.mjs`
 
 ---
 
 ## Flow Saat User Klik Shortcut
 
-### **start-rapkumer.mjs** (File launcher utama)
+### **start-erapor-pmk.mjs** (File launcher utama)
 
 ```javascript
-const APP_HOME = %LOCALAPPDATA%\Rapkumer
-const USER_STATE_ROOT = %LOCALAPPDATA%\Rapkumer-data
-const DB_URL = file:C:\Users\USERNAME\AppData\Local\Rapkumer-data\database.sqlite3
+const APP_HOME = %LOCALAPPDATA%\erapor-pmk
+const USER_STATE_ROOT = %LOCALAPPDATA%\erapor-pmk-data
+const DB_URL = file:C:\Users\USERNAME\AppData\Local\erapor-pmk-data\database.sqlite3
 ```
 
 **Logika:**
 
 1. **Ensure directories**: Pastikan folder `logs` & data ada
-2. **Copy database jika belum**: Jika `Rapkumer-data/database.sqlite3` tidak ada, copy dari bundle
+2. **Copy database jika belum**: Jika `erapor-pmk-data/database.sqlite3` tidak ada, copy dari bundle
 3. **Set environment variables**:
 
    ```javascript
@@ -1005,7 +1004,7 @@ const DB_URL = file:C:\Users\USERNAME\AppData\Local\Rapkumer-data\database.sqlit
 
 5. **Wait for server**: Cek apakah port 3000 aktif (max 10 attempts × 1 detik)
 
-6. **Log output**: Semua output ditulis ke `%LOCALAPPDATA%\Rapkumer-data\logs\rapkumer.log`
+6. **Log output**: Semua output ditulis ke `%LOCALAPPDATA%\erapor-pmk-data\logs\erapor-pmk.log`
 
 ---
 
@@ -1032,35 +1031,35 @@ Output tercatat di log file pengguna.
 ## Struktur Folder Setelah Instalasi
 
 ```
-%LOCALAPPDATA%\Rapkumer/              ← Folder instalasi app
+%LOCALAPPDATA%\erapor-pmk/              ← Folder instalasi app
 ├── build/                            ← Artefak build SvelteKit
 ├── static/                           ← Assets statis
 ├── data/database.sqlite3             ← Database bundled (template)
-├── rapkumer.ico
-├── start-rapkumer.mjs
+├── erapor-pmk.ico
+├── start-erapor-pmk.mjs
 └── .env                              ← Dihasilkan saat install
 
-%LOCALAPPDATA%\Rapkumer-data/         ← Folder data pengguna (persistent)
+%LOCALAPPDATA%\erapor-pmk-data/         ← Folder data pengguna (persistent)
 ├── database.sqlite3                  ← Database aktual (copy dari template)
 ├── uploads/                          ← Foto & dokumen pengguna
 └── logs/
-    └── rapkumer.log                  ← Log aplikasi
+    └── erapor-pmk.log                  ← Log aplikasi
 ```
 
 ---
 
 ## Key Points
 
-| Aspek                    | Detail                                                                            |
-| ------------------------ | --------------------------------------------------------------------------------- |
-| **Per-user Install**     | Setiap user punya instance terpisah di folder `AppData` mereka                    |
-| **No Admin Required**    | Instalasi & run tanpa privilege administrator                                     |
-| **Separate Data Folder** | App di `Rapkumer/`, data di `Rapkumer-data/` (untuk update app tanpa affect data) |
-| **Node.js Required**     | Installer tidak bundle Node.js; user harus install terpisah                       |
-| **Detached Process**     | Launcher exit setelah app berjalan background                                     |
-| **Logging**              | Semua output ke file log, bukan console yang terlihat user                        |
-| **Database Bundled**     | Template database disertakan, dicopy per-user saat first run                      |
-| **Auto-Migrate**         | Database schema otomatis di-upgrade via Drizzle saat install                      |
+| Aspek                    | Detail                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| **Per-user Install**     | Setiap user punya instance terpisah di folder `AppData` mereka                        |
+| **No Admin Required**    | Instalasi & run tanpa privilege administrator                                         |
+| **Separate Data Folder** | App di `erapor-pmk/`, data di `erapor-pmk-data/` (untuk update app tanpa affect data) |
+| **Node.js Required**     | Installer tidak bundle Node.js; user harus install terpisah                           |
+| **Detached Process**     | Launcher exit setelah app berjalan background                                         |
+| **Logging**              | Semua output ke file log, bukan console yang terlihat user                            |
+| **Database Bundled**     | Template database disertakan, dicopy per-user saat first run                          |
+| **Auto-Migrate**         | Database schema otomatis di-upgrade via Drizzle saat install                          |
 
 ---
 
@@ -1072,7 +1071,7 @@ Output tercatat di log file pengguna.
 
 ### App tidak start setelah install
 
-→ Cek: `%LOCALAPPDATA%\Rapkumer-data\logs\rapkumer.log`
+→ Cek: `%LOCALAPPDATA%\erapor-pmk-data\logs\erapor-pmk.log`
 
 ### Database error setelah install
 
@@ -1080,7 +1079,7 @@ Output tercatat di log file pengguna.
 
 ### Reinstall/Update
 
-→ Jalankan installer lagi; app akan update, data user tetap aman di `Rapkumer-data/`
+→ Jalankan installer lagi; app akan update, data user tetap aman di `erapor-pmk-data/`
 
 ---
 
@@ -1099,7 +1098,7 @@ pnpm db:push
 pnpm build
 
 # 4. Verify staging (setelah package:win)
-ls dist/windows/stage/Rapkumer/scripts/ | grep -E "(ensure-columns|start-build)"
+ls dist/windows/stage/erapor-pmk/scripts/ | grep -E "(ensure-columns|start-build)"
 # Pastikan output:
 # ensure-columns.mjs
 # start-build.mjs
@@ -1109,7 +1108,7 @@ ls -lh data/database.sqlite3
 # Pastikan file ada dan memiliki size > 100KB
 
 # 6. Verify .env di staging
-cat dist/windows/stage/Rapkumer/.env
+cat dist/windows/stage/erapor-pmk/.env
 # Harus ada DB_URL, BODY_SIZE_LIMIT, photo paths
 ```
 

@@ -231,9 +231,14 @@
 	}
 </script>
 
-<div class="navbar bg-base-100/95 backdrop-blur border-b border-emerald-100 dark:border-base-200 sticky top-0 z-30 shadow-xs">
+<div
+	class="navbar bg-base-100/95 backdrop-blur border-b border-emerald-100 dark:border-base-200 sticky top-0 z-30 shadow-xs"
+>
 	<div class="flex-none lg:hidden">
-		<label for="my-drawer-2" class="btn btn-square btn-ghost text-emerald-800 dark:text-emerald-300 drawer-button">
+		<label
+			for="my-drawer-2"
+			class="btn btn-square btn-ghost text-emerald-800 dark:text-emerald-300 drawer-button"
+		>
 			<span class="text-lg">
 				<Icon name="menu-drawer" />
 			</span>
@@ -252,7 +257,10 @@
 			</span>
 		</button>
 	{/if}
-	<span class="mx-2 flex-1 truncate px-2 text-lg font-black tracking-tight text-emerald-950 dark:text-emerald-300">{currentTitle}</span>
+	<span
+		class="mx-2 flex-1 truncate px-2 text-lg font-black tracking-tight text-emerald-950 dark:text-emerald-300"
+		>{currentTitle}</span
+	>
 	<div class="ml-auto flex-none">
 		<ul class="flex items-center px-1">
 			<!-- tasks modal for mobile -->

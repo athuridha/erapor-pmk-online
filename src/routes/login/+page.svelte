@@ -85,22 +85,28 @@
 	}
 </script>
 
-<section class="card bg-base-100 w-full max-w-md overflow-hidden shadow-2xl border border-emerald-100 dark:border-none">
+<section
+	class="card bg-base-100 w-full max-w-md overflow-hidden shadow-2xl border border-emerald-100 dark:border-none"
+>
 	<div class="relative h-36 w-full overflow-hidden bg-emerald-900">
 		<img src="/guru-banner.webp" alt="" class="h-full w-full object-cover opacity-85" />
-		<div class="absolute inset-0 bg-gradient-to-t from-[#064e3b]/90 via-[#064e3b]/40 to-transparent"></div>
+		<div
+			class="absolute inset-0 bg-gradient-to-t from-[#064e3b]/90 via-[#064e3b]/40 to-transparent"
+		></div>
 	</div>
 	<div class="card-body space-y-5 -mt-10 relative z-10 pt-0">
 		<header class="mb-2 space-y-2 text-center">
-			<div class="mx-auto w-20 h-20 rounded-2xl bg-white p-2 shadow-lg border border-emerald-100 flex items-center justify-center">
-				<img
-					src="/logo.png"
-					alt="Logo SMK Pratama Mulya"
-					class="w-full h-full object-contain"
-				/>
+			<div
+				class="mx-auto w-20 h-20 rounded-2xl bg-white p-2 shadow-lg border border-emerald-100 flex items-center justify-center"
+			>
+				<img src="/logo.png" alt="Logo SMK Pratama Mulya" class="w-full h-full object-contain" />
 			</div>
-			<h1 class="text-2xl font-black text-emerald-950 dark:text-emerald-300">e-Rapor SMK Pratama Mulya</h1>
-			<p class="text-emerald-700/80 dark:text-emerald-400 text-xs font-semibold">Sistem Administrasi dan Pelaporan Hasil Belajar</p>
+			<h1 class="text-2xl font-black text-emerald-950 dark:text-emerald-300">
+				e-Rapor SMK Pratama Mulya
+			</h1>
+			<p class="text-emerald-700/80 dark:text-emerald-400 text-xs font-semibold">
+				Sistem Administrasi dan Pelaporan Hasil Belajar
+			</p>
 		</header>
 
 		{#if isLocked}

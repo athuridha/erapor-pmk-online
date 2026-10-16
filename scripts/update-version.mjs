@@ -37,10 +37,10 @@ async function main() {
 	}
 	const versionTag = `v${version}`;
 
-	const installerPath = resolve(rootDir, 'installer/rapkumer.iss');
+	const installerPath = resolve(rootDir, 'installer/erapor-pmk.iss');
 	const installerRegex = /(#define\s+AppVersion\s+")([^"]+)(")/;
 
-	const stagePackagePath = resolve(rootDir, 'dist/windows/stage/Rapkumer/package.json');
+	const stagePackagePath = resolve(rootDir, 'dist/windows/stage/erapor-pmk/package.json');
 	const stageVersionRegex = /("version"\s*:\s*")([^"]+)(")/;
 
 	const updatedFiles = [];
@@ -53,7 +53,7 @@ async function main() {
 			)
 		)
 	) {
-		updatedFiles.push('installer/rapkumer.iss');
+		updatedFiles.push('installer/erapor-pmk.iss');
 	}
 
 	if (
@@ -84,7 +84,7 @@ async function main() {
 			}
 		})
 	) {
-		updatedFiles.push('dist/windows/stage/Rapkumer/package.json');
+		updatedFiles.push('dist/windows/stage/erapor-pmk/package.json');
 	}
 
 	if (updatedFiles.length === 0) {
