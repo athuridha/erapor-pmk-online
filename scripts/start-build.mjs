@@ -2,9 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-function loadDotEnv() {
+/**
+ * Baca file env di cwd. `.env.default` dipakai sebagai pelengkap: nilainya hanya
+ * mengisi kunci yang belum ada, jadi `.env` milik pengguna tetap menang.
+ * Installer selalu memperbarui `.env.default` supaya kredensial yang ditanam
+ * saat packaging tetap sampai ke mesin yang sudah pernah terinstall.
+ */
+function loadDotEnv(fileName = '.env') {
 	try {
-		const envPath = path.resolve(process.cwd(), '.env');
+		const envPath = path.resolve(process.cwd(), fileName);
 		if (!fs.existsSync(envPath)) return;
 		const raw = fs.readFileSync(envPath, 'utf8');
 		for (const line of raw.split(/\r?\n/)) {
@@ -23,11 +29,12 @@ function loadDotEnv() {
 			if (process.env[key] === undefined) process.env[key] = val;
 		}
 	} catch (e) {
-		console.warn('[start-build] failed to read .env file', e);
+		console.warn(`[start-build] failed to read ${fileName} file`, e);
 	}
 }
 
 loadDotEnv();
+loadDotEnv('.env.default');
 
 // Helpful debug: show the BODY_SIZE_LIMIT that will be used by the built server
 try {

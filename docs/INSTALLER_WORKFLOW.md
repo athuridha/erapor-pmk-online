@@ -36,8 +36,8 @@
 >
 > 1. Simpan token baru di `.env` proyek (lihat `.env.example`, bagian `CLOUDFLARE_*`) — `.env` sudah diabaikan git, jadi token tidak pernah ikut ter-commit
 > 2. Jalankan: `pnpm prod` → `prepare-windows.mjs` menanam token ke `dist/windows/stage/erapor-pmk/.env` dan mengecek validitasnya lewat `/user/tokens/verify`
-> 3. Installer memasang `.env` itu ke `{app}\.env` dengan flag `onlyifdoesntexist`, jadi `.env` lama milik pengguna tidak ditimpa saat upgrade
-> 4. Untuk mesin yang sudah terinstall: isi token baru di halaman `/sinkronisasi` → Detail Kredensial Cloud (nilai di database menang atas `.env`), atau jalankan ulang installer
+> 3. Installer memasang `.env` itu ke `{app}\.env` (hanya kalau belum ada) **dan** ke `{app}\.env.default` (selalu diperbarui). `start-build.mjs` membaca `.env` lebih dulu lalu melengkapi kunci yang belum ada dari `.env.default`, jadi `.env` milik pengguna tidak pernah ditimpa tapi token baru tetap sampai
+> 4. Untuk mesin yang sudah terinstall: cukup jalankan installer baru, atau isi token di halaman `/sinkronisasi` → Detail Kredensial Cloud (nilai di database menang atas `.env`)
 > 5. Tanpa `CLOUDFLARE_API_TOKEN`, build tetap jalan tapi sinkronisasi cloud mati sampai token diisi manual di `/sinkronisasi`
 
 ---
@@ -485,6 +485,7 @@ ls -lh data/database.sqlite3
 # 7. Cek .env di staging
 cat dist/windows/stage/erapor-pmk/.env
 # Harus ada: DB_URL, BODY_SIZE_LIMIT, CLOUDFLARE_API_TOKEN (+ ACCOUNT_ID/DATABASE_ID kalau diisi)
+# File yang sama dipasang sebagai .env.default di folder aplikasi terinstall
 ```
 
 **Kalau ada yang kurang:**

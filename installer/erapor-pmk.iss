@@ -38,6 +38,9 @@ Source:"{#StagePath}\\*"; DestDir:"{app}"; Excludes:".env"; Flags: ignoreversion
 ; .env staged by pnpm package:win memuat kredensial cloud. onlyifdoesntexist
 ; menjaga .env milik pengguna tetap utuh saat upgrade.
 Source:"{#StagePath}\\.env"; DestDir:"{app}"; Flags: ignoreversion onlyifdoesntexist
+; Selalu diperbarui tiap instalasi: pelengkap .env (kredensial cloud terbaru).
+; start-build.mjs hanya memakai nilainya untuk kunci yang belum ada di .env.
+Source:"{#StagePath}\\.env"; DestDir:"{app}"; DestName:".env.default"; Flags: ignoreversion
 Source:"files\\start-erapor-pmk.mjs"; DestDir:"{app}"; Flags: ignoreversion
 Source:"..\dist\windows\vc_redist.x64.exe"; DestDir:"{tmp}"; Flags: ignoreversion deleteafterinstall
 
