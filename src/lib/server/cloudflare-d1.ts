@@ -40,6 +40,13 @@ export interface D1Config {
 export const DEFAULT_CLOUDFLARE_ACCOUNT_ID = 'b456e767d6306149a24d6228c8a65b6d';
 export const DEFAULT_CLOUDFLARE_DATABASE_ID = 'adcb638f-9adb-412b-8e61-cd80f1f1e062';
 
+/**
+ * ID D1 milik proyek lain (erapor-d1) yang sempat tertanam sebagai nilai default
+ * di sini. Nilai tersimpan seperti ini diabaikan supaya sinkronisasi tidak
+ * diarahkan ke database dengan skema yang berbeda.
+ */
+const LEGACY_DATABASE_IDS = new Set(['766ffcd4-c49f-4f29-ab20-dddc0215bb89']);
+
 export function sha256(data: unknown): string {
 	return crypto.createHash('sha256').update(JSON.stringify(data), 'utf8').digest('hex');
 }
@@ -81,6 +88,15 @@ export async function getD1Config(sekolahId: number): Promise<D1Config> {
 	const wrangler = readWranglerToken();
 	const storedToken = (stored?.apiToken || '').trim();
 	const envToken = (process.env.CLOUDFLARE_API_TOKEN || '').trim();
+	const storedDatabaseId = (stored?.databaseId || '').trim();
+	const storedAccountId = (stored?.accountId || '').trim();
+
+	if (storedDatabaseId && LEGACY_DATABASE_IDS.has(storedDatabaseId)) {
+		console.warn(
+			'[cloudflare-d1] database_id tersimpan memakai ID D1 lama dari proyek lain, dialihkan ke default:',
+			storedDatabaseId
+		);
+	}
 
 	let apiToken = '';
 	let tokenSource: D1TokenSource = 'none';
@@ -97,9 +113,10 @@ export async function getD1Config(sekolahId: number): Promise<D1Config> {
 
 	return {
 		accountId:
-			stored?.accountId || process.env.CLOUDFLARE_ACCOUNT_ID || DEFAULT_CLOUDFLARE_ACCOUNT_ID,
-		databaseId:
-			stored?.databaseId || process.env.CLOUDFLARE_DATABASE_ID || DEFAULT_CLOUDFLARE_DATABASE_ID,
+			storedAccountId || process.env.CLOUDFLARE_ACCOUNT_ID || DEFAULT_CLOUDFLARE_ACCOUNT_ID,
+		databaseId: LEGACY_DATABASE_IDS.has(storedDatabaseId)
+			? process.env.CLOUDFLARE_DATABASE_ID || DEFAULT_CLOUDFLARE_DATABASE_ID
+			: storedDatabaseId || process.env.CLOUDFLARE_DATABASE_ID || DEFAULT_CLOUDFLARE_DATABASE_ID,
 		apiToken,
 		tokenSource,
 		wranglerTokenExpired: Boolean(wrangler.token) && wrangler.expired
@@ -516,7 +533,7 @@ export async function pullDataFromCloud(
 
 	return {
 		success: true,
-		message: 'Master data terbaru berhasil disinkronkan dengan Database Pusat.',
+		message,
 		recordsCount,
 		details
 	};

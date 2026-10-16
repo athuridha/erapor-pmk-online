@@ -1534,7 +1534,7 @@ export const tableCloudSyncSettings = sqliteTable(
 			.references(() => tableSekolah.id, { onDelete: 'cascade' })
 			.notNull(),
 		accountId: text(),
-		databaseId: text().default('766ffcd4-c49f-4f29-ab20-dddc0215bb89'),
+		databaseId: text().default('adcb638f-9adb-412b-8e61-cd80f1f1e062'),
 		apiToken: text(),
 		lastPulledAt: text(),
 		lastPushedAt: text(),
