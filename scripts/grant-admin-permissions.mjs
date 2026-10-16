@@ -26,12 +26,10 @@ const REQUIRED_PERMISSIONS = [
 	'mata_pelajaran_intrakurikuler',
 	'mata_pelajaran_kokurikuler',
 	'mata_pelajaran_ekstrakurikuler',
-	'mata_pelajaran_keasramaan',
 	'input_nilai_asesmen_formatif',
 	'input_nilai_asesmen_sumatif',
 	'input_nilai_asesmen_kokurikuler',
 	'input_nilai_nilai_ekstrakurikuler',
-	'input_nilai_asesmen_keasramaan',
 	'administrasi_absen',
 	'administrasi_jurnal_mengajar',
 	'administrasi_catatan_wali_kelas',
@@ -44,6 +42,9 @@ const REQUIRED_PERMISSIONS = [
 const DEFAULT_DB_URL = 'file:./data/database.sqlite3';
 const dbUrl = process.env.DB_URL || DEFAULT_DB_URL;
 
+// Izin fitur yang sudah dihapus dari produk — jangan dipertahankan saat merge.
+const REMOVED_LEGACY_PERMISSIONS = ['mata_pelajaran_keasramaan', 'input_nilai_asesmen_keasramaan'];
+
 const client = createClient({ url: dbUrl });
 
 async function mergePermissions(existingJson) {
@@ -55,7 +56,8 @@ async function mergePermissions(existingJson) {
 			existing = [];
 		}
 	}
-	const merged = Array.from(new Set([...existing, ...REQUIRED_PERMISSIONS]));
+	const kept = existing.filter((p) => !REMOVED_LEGACY_PERMISSIONS.includes(p));
+	const merged = Array.from(new Set([...kept, ...REQUIRED_PERMISSIONS]));
 	return merged;
 }
 

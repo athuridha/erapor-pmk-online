@@ -57,7 +57,7 @@ Atau berikan instruksi spesifik ke agent:
 
 ```sh
 strix -n -t ./ \
-  --instruction "Verify the IDOR in /api/keasramaan/export is fixed. Original PoC: set active-kelas-id cookie to other class." \
+  --instruction "Verify the access-control fix on POST /api/sekolah/piagam-bg/1 is still enforced. Original PoC: wali_kelas non-admin without informasi_umum_sekolah got 200." \
   --max-budget 5
 ```
 

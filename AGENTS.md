@@ -38,7 +38,7 @@ strix -n -t ./ --scan-mode quick   # AI pentest (install & usage: docs/SKILLS.md
 - `src/lib/server/db/schema.ts` — all tables + relations.
 - `src/lib/server/db/index.ts` — DB connection (Proxy for HMR, WAL mode, busy timeout). `reloadDbClient()` reconnects.
 - `src/lib/server/db/ensure-*.ts` — schema migration helpers, run on first request.
-- `src/lib/server/pdf/templates/` — PagedJS rapor/cover/biodata/piagam/keasramaan HTML templates.
+- `src/lib/server/pdf/templates/` — PagedJS rapor/cover/biodata/piagam HTML templates.
 - `installer/` — InnoSetup script + packaging config for Windows builds.
 - `docs/` — development reference (setup, daof, development, Strix pentesting: `docs/SKILLS.md`).
 - `.agents/skills/` — Strix pentest skills + bahasa writing skills; opencode discovers these automatically.
@@ -57,12 +57,12 @@ strix -n -t ./ --scan-mode quick   # AI pentest (install & usage: docs/SKILLS.md
 - Custom session auth (not Lucia). Session TTL 12h, refresh threshold 2h.
 - Cookie names from `$lib/utils.ts` `cookieNames`: `erapor-pmk-session`, `active-sekolah-id`, `active-kelas-id`.
 - Default admin: `Admin` / `Admin123` (created by `ensureDefaultAdmin()` on first start).
-- User types: `admin`, `wali_kelas`, `wali_asuh`, `user`. Permissions stored as JSON array on `auth_user.permissions`.
+- User types: `admin`, `kepala_sekolah`, `wali_kelas`, `wali_asuh`, `user`. Permissions stored as JSON array on `auth_user.permissions`. The type only picks the **template** (`defaultPermissionsByType` in `src/routes/pengguna/permissions.ts`), applied at account creation and on "Terapkan template" in `/pengguna`; admin can then toggle any permission per account. `ensure-permission-migration.ts` retires dead keys but **never overwrites** an account that already has permissions.
 - Three hooks composed via `sequence(csrfGuard, authGuard, cookieParser)` in `src/hooks.server.ts`.
 - CSRF: SvelteKit's built-in disabled (`csrf.trustedOrigins: ['*']`). Custom guard checks origin/referer.
 - `event.locals.sekolah` scopes all queries — set by `cookieParser` hook.
 - Body size limit from `process.env.BODY_SIZE_LIMIT` (default 512K).
-- User type `user` accounts are **read-only** (`disableInteraction`) on `/murid`, `/kokurikuler`, `/ekstrakurikuler`, `/keasramaan`, `/asesmen-kokurikuler`, `/nilai-ekstrakurikuler`, `/asesmen-keasramaan`, `/catatan-wali-kelas`, `/keputusan`, `/cetak`. **Exception:** `/absen` exempts `user` type from `disableInteraction` — guru mapel can view all modes and use "Isi Sekaligus" (per-mapel bulk), but individual edit/delete remains blocked via `canUserEditAbsen`.
+- `disableInteraction` (`src/routes/+layout.svelte`) makes `user` accounts read-only on `/catatan-wali-kelas` and `/keputusan`. Other pages are gated by permissions instead, so customize per account rather than relying on the type.
 
 ## DB
 

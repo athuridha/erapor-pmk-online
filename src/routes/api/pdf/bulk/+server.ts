@@ -3,7 +3,6 @@ import { generateBulkPDF, type DocumentType } from '$lib/server/pdf/generate';
 import { getRaporPreviewPayload } from '../../../cetak/rapor/preview-data';
 import { getCoverPreviewPayload } from '../../../cetak/cover/preview-data';
 import { getBiodataPreviewPayload } from '../../../cetak/biodata/preview-data';
-import { getKeasramaanPreviewPayload } from '../../../cetak/keasramaan/preview-data';
 import { getPiagamPreviewPayload } from '../../../cetak/piagam/preview-data';
 import { getLogoSrc } from '$lib/server/pdf/preview-utils';
 
@@ -50,11 +49,6 @@ async function fetchStudentData(
 		case 'biodata': {
 			const p = await getBiodataPreviewPayload({ locals, url });
 			return p.biodataData as unknown as Record<string, unknown>;
-		}
-		case 'keasramaan': {
-			const p = await getKeasramaanPreviewPayload({ locals, url });
-			if (!p) throw error(400, 'Data rapor keasramaan tidak ditemukan.');
-			return p.keasramaanData as unknown as Record<string, unknown>;
 		}
 		case 'piagam': {
 			const p = await getPiagamPreviewPayload({ locals, url });

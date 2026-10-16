@@ -3,7 +3,6 @@ import { storePdfParams } from '$lib/server/pdf/token-store';
 import { getCoverPreviewPayload } from '../../../cetak/cover/preview-data';
 import { getRaporPreviewPayload } from '../../../cetak/rapor/preview-data';
 import { getBiodataPreviewPayload } from '../../../cetak/biodata/preview-data';
-import { getKeasramaanPreviewPayload } from '../../../cetak/keasramaan/preview-data';
 import { getPiagamPreviewPayload } from '../../../cetak/piagam/preview-data';
 import type { RequestHandler } from './$types';
 
@@ -36,11 +35,6 @@ async function resolveNama(docType: string, locals: App.Locals, url: URL): Promi
 			case 'biodata': {
 				const p = await getBiodataPreviewPayload({ locals, url });
 				preview = p.biodataData as unknown as PreviewData | null;
-				break;
-			}
-			case 'keasramaan': {
-				const p = await getKeasramaanPreviewPayload({ locals, url });
-				preview = p ? (p.keasramaanData as unknown as PreviewData | null) : null;
 				break;
 			}
 			case 'piagam': {

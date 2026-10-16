@@ -31,7 +31,9 @@ export const tableAuthUser = sqliteTable(
 		// Login dipaksa untuk mengganti sandi lewat /pengaturan sebelum akses lain.
 		mustChangePassword: int({ mode: 'boolean' }).default(false).notNull(),
 		permissions: text({ mode: 'json' }).notNull().default('[]').$type<UserPermission[]>(),
-		// tipe user: admin (penuh), kepala_sekolah (penuh, per sekolah aktif), wali_kelas (terbatas ke kelas_id), wali_asuh (terbatas ke keasramaan), atau user (default/other)
+		// tipe user menentukan template izin bawaan: admin (penuh), kepala_sekolah
+		// (penuh, per sekolah aktif), wali_kelas (kelas_id-nya), wali_asuh, atau user
+		// (guru mapel). Izin tiap akun tetap bisa disesuaikan admin satu per satu.
 		type: text({ enum: ['admin', 'kepala_sekolah', 'wali_kelas', 'wali_asuh', 'user'] })
 			.notNull()
 			.default('admin'),
@@ -209,7 +211,6 @@ export const tableKelas = sqliteTable(
 		nama: text().notNull(),
 		fase: text(),
 		waliKelasId: int().references(() => tablePegawai.id, { onDelete: 'set null' }),
-		waliAsramaId: int().references(() => tablePegawai.id, { onDelete: 'set null' }),
 		waliAsuhId: int().references(() => tablePegawai.id, { onDelete: 'set null' }),
 		// Per-class rapor criteria. NULL = fall back to school-level values.
 		raporKriteriaCukup: int(),
@@ -328,10 +329,6 @@ export const tableKelasRelations = relations(tableKelas, ({ one, many }) => ({
 		references: [tableSemester.id]
 	}),
 	waliKelas: one(tablePegawai, { fields: [tableKelas.waliKelasId], references: [tablePegawai.id] }),
-	waliAsrama: one(tablePegawai, {
-		fields: [tableKelas.waliAsramaId],
-		references: [tablePegawai.id]
-	}),
 	waliAsuh: one(tablePegawai, {
 		fields: [tableKelas.waliAsuhId],
 		references: [tablePegawai.id]
@@ -963,105 +960,6 @@ export const tablePresensiSettingsRelations = relations(tablePresensiSettings, (
 	tahunAjaran: one(tableTahunAjaran, {
 		fields: [tablePresensiSettings.tahunAjaranId],
 		references: [tableTahunAjaran.id]
-	})
-}));
-
-export const tableKeasramaan = sqliteTable(
-	'keasramaan',
-	{
-		id: int().primaryKey({ autoIncrement: true }),
-		nama: text().notNull(),
-		kelasId: int()
-			.references(() => tableKelas.id)
-			.notNull(),
-		...audit
-	},
-	(table) => [unique().on(table.kelasId, table.nama)]
-);
-
-export const tableKeasramaanIndikator = sqliteTable('keasramaan_indikator', {
-	id: int().primaryKey({ autoIncrement: true }),
-	keasramaanId: int()
-		.references(() => tableKeasramaan.id, { onDelete: 'cascade' })
-		.notNull(),
-	deskripsi: text().notNull(),
-	...audit
-});
-
-export const tableKeasramaanRelations = relations(tableKeasramaan, ({ one, many }) => ({
-	kelas: one(tableKelas, {
-		fields: [tableKeasramaan.kelasId],
-		references: [tableKelas.id]
-	}),
-	indikator: many(tableKeasramaanIndikator),
-	asesmen: many(tableAsesmenKeasramaan)
-}));
-
-export const tableKeasramaanIndikatorRelations = relations(
-	tableKeasramaanIndikator,
-	({ one, many }) => ({
-		keasramaan: one(tableKeasramaan, {
-			fields: [tableKeasramaanIndikator.keasramaanId],
-			references: [tableKeasramaan.id]
-		}),
-		tujuan: many(tableKeasramaanTujuan)
-	})
-);
-
-export const tableKeasramaanTujuan = sqliteTable('keasramaan_tujuan', {
-	id: int().primaryKey({ autoIncrement: true }),
-	indikatorId: int()
-		.references(() => tableKeasramaanIndikator.id, { onDelete: 'cascade' })
-		.notNull(),
-	deskripsi: text().notNull(),
-	...audit
-});
-
-export const tableKeasramaanTujuanRelations = relations(tableKeasramaanTujuan, ({ one, many }) => ({
-	indikator: one(tableKeasramaanIndikator, {
-		fields: [tableKeasramaanTujuan.indikatorId],
-		references: [tableKeasramaanIndikator.id]
-	}),
-	asesmen: many(tableAsesmenKeasramaan)
-}));
-
-export const tableAsesmenKeasramaan = sqliteTable(
-	'asesmen_keasramaan',
-	{
-		id: int().primaryKey({ autoIncrement: true }),
-		muridId: int()
-			.references(() => tableMurid.id, { onDelete: 'cascade' })
-			.notNull(),
-		keasramaanId: int()
-			.references(() => tableKeasramaan.id, { onDelete: 'cascade' })
-			.notNull(),
-		tujuanId: int()
-			.references(() => tableKeasramaanTujuan.id, { onDelete: 'cascade' })
-			.notNull(),
-		kategori: text({ enum: ['sangat-baik', 'baik', 'cukup', 'perlu-bimbingan'] }).notNull(),
-		dinilaiPada: text(),
-		...audit
-	},
-	(table) => [
-		unique().on(table.muridId, table.keasramaanId, table.tujuanId),
-		index('asesmen_keasramaan_murid_idx').on(table.muridId),
-		index('asesmen_keasramaan_keasramaan_idx').on(table.keasramaanId),
-		index('asesmen_keasramaan_tujuan_idx').on(table.tujuanId)
-	]
-);
-
-export const tableAsesmenKeasramaanRelations = relations(tableAsesmenKeasramaan, ({ one }) => ({
-	murid: one(tableMurid, {
-		fields: [tableAsesmenKeasramaan.muridId],
-		references: [tableMurid.id]
-	}),
-	keasramaan: one(tableKeasramaan, {
-		fields: [tableAsesmenKeasramaan.keasramaanId],
-		references: [tableKeasramaan.id]
-	}),
-	tujuan: one(tableKeasramaanTujuan, {
-		fields: [tableAsesmenKeasramaan.tujuanId],
-		references: [tableKeasramaanTujuan.id]
 	})
 }));
 

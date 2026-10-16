@@ -15,8 +15,7 @@ export type MuridData = {
 	nisn?: string | null;
 };
 
-export type DocumentType =
-	'cover' | 'biodata' | 'rapor' | 'piagam' | 'keasramaan' | 'jurnal-mengajar';
+export type DocumentType = 'cover' | 'biodata' | 'rapor' | 'piagam' | 'jurnal-mengajar';
 
 export type { PreviewPayload } from '$lib/preview-types';
 
@@ -44,7 +43,6 @@ const DOCUMENT_PATHS: Record<DocumentType, string> = {
 	biodata: '/cetak/biodata',
 	rapor: '/cetak/rapor',
 	piagam: '/cetak/piagam',
-	keasramaan: '/cetak/keasramaan',
 	'jurnal-mengajar': '/cetak/jurnal-mengajar'
 };
 
@@ -53,7 +51,6 @@ const DOCUMENT_LABELS: Record<DocumentType, string> = {
 	biodata: 'Biodata',
 	rapor: 'Rapor',
 	piagam: 'Piagam',
-	keasramaan: 'Rapor Keasramaan',
 	'jurnal-mengajar': 'Jurnal Mengajar'
 };
 
@@ -107,7 +104,6 @@ export function isPreviewableDocument(value: DocumentType | ''): value is Docume
 		value === 'biodata' ||
 		value === 'rapor' ||
 		value === 'piagam' ||
-		value === 'keasramaan' ||
 		value === 'jurnal-mengajar'
 	);
 }

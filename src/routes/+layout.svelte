@@ -165,12 +165,7 @@
 		});
 	}
 
-	const readonlyRoutes = [
-		'/keasramaan',
-		'/asesmen-keasramaan',
-		'/catatan-wali-kelas',
-		'/keputusan'
-	];
+	const readonlyRoutes = ['/catatan-wali-kelas', '/keputusan'];
 
 	let kodeKegiatanOpen = $state(true);
 	const isReadonlyPage = $derived(

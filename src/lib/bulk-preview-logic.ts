@@ -38,7 +38,6 @@ const DOCUMENT_PATHS: Record<DocumentType, string> = {
 	biodata: '/cetak/biodata',
 	rapor: '/cetak/rapor',
 	piagam: '/cetak/piagam',
-	keasramaan: '/cetak/keasramaan',
 	'jurnal-mengajar': '/cetak/jurnal-mengajar'
 };
 

@@ -4,7 +4,6 @@ import { generatePDF } from '$lib/server/pdf/generate';
 import { getCoverPreviewPayload } from '../../../cover/preview-data';
 import { getRaporPreviewPayload } from '../../../rapor/preview-data';
 import { getBiodataPreviewPayload } from '../../../biodata/preview-data';
-import { getKeasramaanPreviewPayload } from '../../../keasramaan/preview-data';
 import { getPiagamPreviewPayload } from '../../../piagam/preview-data';
 import type { RequestHandler } from './$types';
 import type { DocumentType } from '$lib/server/pdf/generate';
@@ -42,12 +41,6 @@ export const GET = (async ({ locals, params }) => {
 		case 'biodata': {
 			const p = await getBiodataPreviewPayload({ locals, url });
 			data = p.biodataData;
-			break;
-		}
-		case 'keasramaan': {
-			const p = await getKeasramaanPreviewPayload({ locals, url });
-			if (!p) throw error(400, 'Data rapor keasramaan tidak ditemukan.');
-			data = p.keasramaanData;
 			break;
 		}
 		case 'piagam': {

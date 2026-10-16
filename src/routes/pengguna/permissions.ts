@@ -40,8 +40,7 @@ export const groupedUserPermissions = {
 		values: [
 			['intrakurikuler', 'Intrakurikuler'],
 			['kokurikuler', 'Kokurikuler'],
-			['ekstrakurikuler', 'Ekstrakurikuler'],
-			['keasramaan', 'Keasramaan']
+			['ekstrakurikuler', 'Ekstrakurikuler']
 		],
 		description: 'Mata Pelajaran'
 	},
@@ -50,8 +49,7 @@ export const groupedUserPermissions = {
 			['asesmen_formatif', 'Formatif'],
 			['asesmen_sumatif', 'Sumatif'],
 			['asesmen_kokurikuler', 'Kokurikuler'],
-			['nilai_ekstrakurikuler', 'Ekstrakurikuler'],
-			['asesmen_keasramaan', 'Keasramaan']
+			['nilai_ekstrakurikuler', 'Ekstrakurikuler']
 		],
 		description: 'Input Nilai'
 	},
@@ -104,10 +102,9 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'administrasi_keputusan',
 		'administrasi_dinas_luar',
 		'administrasi_sinkronisasi',
-		'cetak_dokumen',
-		'kelas_pindah'
+		'cetak_dokumen'
 	],
-	wali_asuh: ['cetak_dokumen', 'kelas_pindah', 'administrasi_dinas_luar'],
+	wali_asuh: ['cetak_dokumen', 'administrasi_dinas_luar'],
 	user: [
 		'informasi_umum_murid',
 		'informasi_umum_kelas',
@@ -124,8 +121,7 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'administrasi_rekap_nilai',
 		'administrasi_dinas_luar',
 		'administrasi_sinkronisasi',
-		'cetak_dokumen',
-		'kelas_pindah'
+		'cetak_dokumen'
 	]
 };
 
@@ -146,7 +142,10 @@ export const WALI_KELAS_ONLY_PERMISSIONS = new Set(
 export const removedLegacyPermissionKeys = new Set([
 	'sekolah_manage',
 	'rapor_manage',
-	'kelas_manage'
+	'kelas_manage',
+	// Keasramaan dihapus (sekolah tanpa program asrama).
+	'mata_pelajaran_keasramaan',
+	'input_nilai_asesmen_keasramaan'
 ]);
 
 /**
@@ -161,12 +160,10 @@ export const menuRoutePermissions: { path: string; permission: UserPermission }[
 	{ path: '/intrakurikuler', permission: 'mata_pelajaran_intrakurikuler' },
 	{ path: '/kokurikuler', permission: 'mata_pelajaran_kokurikuler' },
 	{ path: '/ekstrakurikuler', permission: 'mata_pelajaran_ekstrakurikuler' },
-	{ path: '/keasramaan', permission: 'mata_pelajaran_keasramaan' },
 	{ path: '/asesmen-formatif', permission: 'input_nilai_asesmen_formatif' },
 	{ path: '/asesmen-sumatif', permission: 'input_nilai_asesmen_sumatif' },
 	{ path: '/asesmen-kokurikuler', permission: 'input_nilai_asesmen_kokurikuler' },
 	{ path: '/nilai-ekstrakurikuler', permission: 'input_nilai_nilai_ekstrakurikuler' },
-	{ path: '/asesmen-keasramaan', permission: 'input_nilai_asesmen_keasramaan' },
 	{ path: '/presensi-murid', permission: 'administrasi_absen' },
 	{ path: '/rpm', permission: 'administrasi_rpm' },
 	{ path: '/jurnal-mengajar', permission: 'administrasi_jurnal_mengajar' },

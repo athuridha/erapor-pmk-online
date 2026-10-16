@@ -259,34 +259,6 @@
 						<span> Biarkan kosong jika wali kelas tidak memiliki NIP. </span>
 					{/if}
 				</div>
-
-				<!-- Wali Asrama -->
-				<div class="fieldset">
-					<legend class="fieldset-legend"
-						>Wali Asrama <span class="text-xs text-gray-500">(Opsional)</span></legend
-					>
-					<input
-						type="text"
-						class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
-						placeholder="Contoh: Ahmad Rahman"
-						name="waliAsrama.nama"
-					/>
-					<span>Khusus sekolah dengan program keasramaan.</span>
-				</div>
-
-				<!-- NIP Wali Asrama -->
-				<div class="fieldset">
-					<legend class="fieldset-legend"
-						>NIP Wali Asrama <span class="text-xs text-gray-500">(Opsional)</span></legend
-					>
-					<input
-						type="text"
-						class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
-						placeholder="Contoh: NIP 19940505 201803 1 008"
-						name="waliAsrama.nip"
-					/>
-					<span> Biarkan kosong jika tidak ada wali asrama atau tidak memiliki NIP. </span>
-				</div>
 			</div>
 			<!-- mobile: 2-col grid -->
 			<div class="mt-6 grid grid-cols-2 gap-2 md:hidden">

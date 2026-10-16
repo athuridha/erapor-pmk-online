@@ -16,7 +16,7 @@ ulang, dan pembatasan rute.
 
 | Topik             | Keputusan                                                                                                 |
 | ----------------- | --------------------------------------------------------------------------------------------------------- |
-| Sumber akun       | Dibuat admin/wali kelas dari halaman pengguna, **bukan** self-service                                     |
+| Sumber akun       | Dibuat admin/kepala sekolah dari halaman pengguna (butuh izin `user_add`), **bukan** self-service         |
 | Username          | **NIS** murid                                                                                             |
 | Pemegang akun     | **Satu akun per murid**, dipakai orang tua maupun murid                                                   |
 | Kata sandi awal   | Di-generate sistem, wajib diganti saat login pertama                                                      |
@@ -159,6 +159,12 @@ kapabilitasnya. Karena itu:
 ## 7. Pembuatan akun & distribusi
 
 Halaman baru: `/pengguna/akun-portal` (izin `user_add`):
+
+> Catatan izin: `/pengguna/**` dijaga izin `user_list`/`user_add`, dan default template hanya
+> memberikannya ke admin/kepala sekolah. Wali kelas tidak bisa membuka halaman ini kecuali
+> admin menyalakan izinnya per akun di `/pengguna/[id]` (lihat `docs/PENGATURAN_IZIN_PENGGUNA.md`).
+> `defaultPermissionsByType` bertipe `Record<AuthUser['type'], …>`, jadi menambah tipe `orang_tua`
+> memaksa template barunya didefinisikan (diperiksa TypeScript saat `pnpm check`).
 
 - pilih kelas → daftar murid + status "belum punya akun / sudah";
 - tombol buat akun satu murid dan "buat untuk semua murid di kelas ini";

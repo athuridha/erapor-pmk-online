@@ -22,7 +22,6 @@ Dokumentasi lengkap aplikasi ini disusun dalam bahasa Indonesia. File README ini
 - Jadwal pembelajaran beserta bell sekolah yang berjalan secara otomatis.
 - Presensi murid dengan cara input langsung secara massal oleh guru mata pelajaran maupun wali kelas.
 - Jurnal harian guru.
-- Nilai dan rapor keasramaan khusus Sekolah Rakyat.
 - Pembuatan rapor, piagam, dan berbagai dokumen pendukung yang siap dicetak.
 - Mendukung penggunaan campuran huruf latin dan arab pada Capaian Pembelajaran (CP) di rapor.
 - Ekspor nilai dan Tujuan Pembelajaran (TP) ke file Excel yang dapat diimpor ke E-Rapor Kemdikdas.

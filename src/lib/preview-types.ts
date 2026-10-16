@@ -1,7 +1,6 @@
 // Shared Types for Preview System
 
-export type DocumentType =
-	'cover' | 'biodata' | 'rapor' | 'piagam' | 'keasramaan' | 'jurnal-mengajar';
+export type DocumentType = 'cover' | 'biodata' | 'rapor' | 'piagam' | 'jurnal-mengajar';
 
 export type MuridData = {
 	id: number;

@@ -58,7 +58,6 @@ declare global {
 			biodataData?: BiodataPrintData;
 			raporData?: RaporPrintData;
 			piagamData?: PiagamPrintData;
-			keasramaanData?: KeasramaanPrintData;
 			piagamRankingOptions?: PiagamRankingOption[];
 			user?: Pick<
 				AuthUser,

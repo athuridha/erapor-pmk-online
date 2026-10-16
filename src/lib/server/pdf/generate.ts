@@ -6,13 +6,12 @@ import { renderPDF } from './pagedpdf';
 import { renderCoverHTML } from './templates/cover';
 import { renderRaporHTML } from './templates/rapor';
 import { renderBiodataHTML } from './templates/biodata';
-import { renderKeasramaanHTML } from './templates/keasramaan';
 import { renderPiagamHTML } from './templates/piagam';
 import { renderJurnalMengajarHTML } from './templates/jurnal-mengajar';
 import { renderBukuTamuHTML } from './templates/buku-tamu';
 
 export type DocumentType =
-	'cover' | 'rapor' | 'biodata' | 'keasramaan' | 'piagam' | 'jurnal-mengajar' | 'buku-tamu';
+	'cover' | 'rapor' | 'biodata' | 'piagam' | 'jurnal-mengajar' | 'buku-tamu';
 
 export function renderHTML(
 	docType: DocumentType,
@@ -26,8 +25,6 @@ export function renderHTML(
 			return renderRaporHTML(data as never);
 		case 'biodata':
 			return renderBiodataHTML(data as never);
-		case 'keasramaan':
-			return renderKeasramaanHTML(data as never);
 		case 'piagam':
 			return renderPiagamHTML(data as never, template ?? '1');
 		case 'jurnal-mengajar':

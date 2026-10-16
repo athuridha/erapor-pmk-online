@@ -12,7 +12,6 @@
 		| 'biodata'
 		| 'rapor'
 		| 'piagam'
-		| 'keasramaan'
 		| 'jurnal-mengajar'
 		| 'buku-tamu'
 		| 'presensi-guru'
@@ -512,7 +511,6 @@
 		muridCount={daftarMurid.length}
 		isRaporSelected={selectedDocument === 'rapor'}
 		isBiodataSelected={selectedDocument === 'biodata'}
-		isKeasramaanSelected={selectedDocument === 'keasramaan'}
 		{kritCukup}
 		{kritBaik}
 		tpMode={fullTP}

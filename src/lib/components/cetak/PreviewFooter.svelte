@@ -20,7 +20,6 @@
 		onToggleFullTP = () => {},
 		kelasId = null,
 		isBiodataSelected = false,
-		isKeasramaanSelected = false,
 		showBgLogo = false,
 		onToggleBgLogo = () => {},
 		isJurnalMengajar = false,
@@ -41,7 +40,6 @@
 		kritBaik: number;
 		kelasId: string | number | null;
 		isBiodataSelected?: boolean;
-		isKeasramaanSelected?: boolean;
 		showBgLogo?: boolean;
 		onToggleBgLogo?: (value: boolean) => void;
 		isJurnalMengajar?: boolean;
@@ -237,7 +235,7 @@
 			</div>
 		{/if}
 
-		{#if isRaporSelected || isKeasramaanSelected}
+		{#if isRaporSelected}
 			<div class="flex flex-row gap-2">
 				<label class="sr-only" for="tp-mode-select">TP mode</label>
 				<select

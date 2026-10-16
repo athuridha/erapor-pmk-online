@@ -23,12 +23,10 @@ const REQUIRED_PERMISSIONS = [
 	'mata_pelajaran_intrakurikuler',
 	'mata_pelajaran_kokurikuler',
 	'mata_pelajaran_ekstrakurikuler',
-	'mata_pelajaran_keasramaan',
 	'input_nilai_asesmen_formatif',
 	'input_nilai_asesmen_sumatif',
 	'input_nilai_asesmen_kokurikuler',
 	'input_nilai_nilai_ekstrakurikuler',
-	'input_nilai_asesmen_keasramaan',
 	'administrasi_absen',
 	'administrasi_jurnal_mengajar',
 	'administrasi_catatan_wali_kelas',
@@ -83,7 +81,14 @@ async function main() {
 			} catch {
 				// ignore parse errors and treat as empty list
 			}
-			const merged = Array.from(new Set([...(existing || []), ...REQUIRED_PERMISSIONS]));
+			const merged = Array.from(
+				new Set([
+					...(existing || []).filter(
+						(p) => !['mata_pelajaran_keasramaan', 'input_nilai_asesmen_keasramaan'].includes(p)
+					),
+					...REQUIRED_PERMISSIONS
+				])
+			);
 			await client.execute({
 				sql: 'UPDATE auth_user SET permissions = ? WHERE id = ?',
 				args: [JSON.stringify(merged), id]

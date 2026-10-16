@@ -9,7 +9,6 @@
 		| 'biodata'
 		| 'rapor'
 		| 'piagam'
-		| 'keasramaan'
 		| 'jurnal-mengajar'
 		| 'buku-tamu'
 		| 'presensi-guru'
@@ -41,8 +40,7 @@
 			{ value: 'cover', label: 'Cover' },
 			{ value: 'biodata', label: 'Biodata' },
 			{ value: 'rapor', label: 'Rapor' },
-			{ value: 'piagam', label: 'Piagam' },
-			{ value: 'keasramaan', label: 'Rapor Keasramaan' }
+			{ value: 'piagam', label: 'Piagam' }
 		],
 		onPreviewMurid,
 		onBulkDownload,
@@ -65,7 +63,6 @@
 		// preview footer props
 		muridCount = 0,
 		isRaporSelected = false,
-		isKeasramaanSelected = false,
 		isBiodataSelected = false,
 		onBgRefresh = () => {},
 		onSetKriteria = () => {},
@@ -104,7 +101,6 @@
 		showTable?: boolean;
 		muridCount?: number;
 		isRaporSelected?: boolean;
-		isKeasramaanSelected?: boolean;
 		isBiodataSelected?: boolean;
 		onBgRefresh?: () => void;
 		onSetKriteria?: (cukup: number | null, baik: number | null) => void;
@@ -468,7 +464,6 @@
 		{kritBaik}
 		{kelasId}
 		{isBiodataSelected}
-		{isKeasramaanSelected}
 		{showBgLogo}
 		{onToggleBgLogo}
 		{isJurnalMengajar}

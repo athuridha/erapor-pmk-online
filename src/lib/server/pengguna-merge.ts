@@ -192,18 +192,14 @@ export async function mergeAccountInto(keepUserId: number, deleteUserId: number)
 
 /**
  * Delete a pegawai record only when nothing references it anymore (no kelas
- * wali/asrama/asuh, no auth account, no sekolah kepala sekolah). Returns whether
+ * wali/asuh, no auth account, no sekolah kepala sekolah). Returns whether
  * the record was deleted.
  */
 export async function deletePegawaiIfOrphaned(pegawaiId: number): Promise<boolean> {
-	const [kelasWaliRef, kelasAsramaRef, kelasAsuhRef, authRef, sekolahRef] = await Promise.all([
+	const [kelasWaliRef, kelasAsuhRef, authRef, sekolahRef] = await Promise.all([
 		db.query.tableKelas.findFirst({
 			columns: { id: true },
 			where: eq(tableKelas.waliKelasId, pegawaiId)
-		}),
-		db.query.tableKelas.findFirst({
-			columns: { id: true },
-			where: eq(tableKelas.waliAsramaId, pegawaiId)
 		}),
 		db.query.tableKelas.findFirst({
 			columns: { id: true },
@@ -218,7 +214,7 @@ export async function deletePegawaiIfOrphaned(pegawaiId: number): Promise<boolea
 			where: eq(tableSekolah.kepalaSekolahId, pegawaiId)
 		})
 	]);
-	if (kelasWaliRef || kelasAsramaRef || kelasAsuhRef || authRef || sekolahRef) return false;
+	if (kelasWaliRef || kelasAsuhRef || authRef || sekolahRef) return false;
 	await db.delete(tablePegawai).where(eq(tablePegawai.id, pegawaiId));
 	return true;
 }

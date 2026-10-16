@@ -1005,17 +1005,16 @@ async function ensureGuruAccounts(sekolahId: number, sections: DapodikSectionLog
 		}
 
 		// Multi-sekolah safety: pegawai yang dirujuk struktur sekolah LAIN
-		// (wali/asrama/pengampu) jangan diberi akun berasal sekolah ini.
+		// (wali/pengampu) jangan diberi akun berasal sekolah ini.
 		// ponytail: pegawai sekolah lain yang belum tertaut apa pun tetap lolos;
 		// perketat bila ada laporan salah-sekolah pada instalasi multi-sekolah.
 		const claimedByOthers = new Set<number>();
 		const otherKelas = await db.query.tableKelas.findMany({
-			columns: { waliKelasId: true, waliAsramaId: true },
+			columns: { waliKelasId: true },
 			where: sql`${tableKelas.sekolahId} != ${sekolahId}`
 		});
 		for (const k of otherKelas) {
 			if (k.waliKelasId) claimedByOthers.add(k.waliKelasId);
-			if (k.waliAsramaId) claimedByOthers.add(k.waliAsramaId);
 		}
 		const otherPengampu = await db
 			.select({ pengampuId: tableMataPelajaran.pengampuId })
