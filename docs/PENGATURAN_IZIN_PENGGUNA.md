@@ -9,13 +9,14 @@ Dua lapis pengaturan, dan keduanya berdiri sendiri:
 
 ## Lokasi
 
-| Bagian                 | Berkas                                                                                                     |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Daftar izin & template | `src/routes/pengguna/permissions.ts:1` (`groupedUserPermissions`), `:84` (`defaultPermissionsByType`)      |
-| Halaman izin per akun  | `src/routes/pengguna/[id]/+page.svelte:73` (form `?/set_permissions`), `:133` (form `?/reset_permissions`) |
-| Server action izin     | `src/routes/pengguna/[id]/+page.server.ts:29` (`set_permissions`), `:37` (`reset_permissions`)             |
-| Pembuatan akun         | `src/routes/pengguna/form/[[id]]/+page.server.ts:210`                                                      |
-| Route guard            | `src/hooks.server.ts:292`                                                                                  |
+| Bagian                    | Berkas                                                                                                     |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Daftar izin & template    | `src/routes/pengguna/permissions.ts:1` (`groupedUserPermissions`), `:84` (`defaultPermissionsByType`)      |
+| Halaman izin per akun     | `src/routes/pengguna/[id]/+page.svelte:73` (form `?/set_permissions`), `:133` (form `?/reset_permissions`) |
+| Server action izin        | `src/routes/pengguna/[id]/+page.server.ts:29` (`set_permissions`), `:37` (`reset_permissions`)             |
+| Pembuatan akun            | `src/routes/pengguna/form/[[id]]/+page.server.ts:210`                                                      |
+| Seksi "Hak Akses" di form | `src/routes/pengguna/form/[[id]]/+page.svelte` (toggle per izin, dikirim sebagai `permissions` JSON)       |
+| Route guard               | `src/hooks.server.ts:292`                                                                                  |
 
 Alur admin:
 
@@ -95,6 +96,8 @@ Catatan:
 ## Kustomisasi Izin per Akun
 
 - Halaman `/pengguna/[id]` menyimpan seluruh centang sebagai set izin akun tersebut, jadi admin bebas menambah **atau** mencabut izin bawaan.
+- Form **Tambah/Edit Pengguna** (`/pengguna/form`) punya seksi **Hak Akses** dengan toggle yang sama. Akun baru mulai dari template role yang dipilih, akun lama mulai dari izin yang tersimpan. Mengganti role me-reset toggle ke template role baru; tombol **Sesuai template** mengembalikannya kapan saja.
+- Izin yang tercentang dikirim sebagai satu nilai `permissions` (JSON array), lalu disaring di server: hanya key yang ada di `userPermissions` yang diterima, dan role `admin`/`kepala_sekolah` selalu ditulis sebagai daftar penuh.
 - Mengubah tipe akun di `/pengguna/form/[[id]]` mengisi ulang izin sesuai template tipe baru (form action, `+page.server.ts:210`).
 - Bila akun `user`/`wali_kelas` dibuat atau diubah untuk lebih dari satu kelas, `kelas_pindah` ditambahkan otomatis (`form/[[id]]/+page.server.ts:213`); bila kelasnya tinggal satu, izin itu dicabut (`:436-441`).
 - Admin tidak bisa dikustomisasi — ia selalu punya semua akses.

@@ -3,6 +3,11 @@
 	import { goto } from '$app/navigation';
 	import FormEnhance from '$lib/components/form-enhance.svelte';
 	import Icon from '$lib/components/icon.svelte';
+	import {
+		defaultPermissionsByType,
+		groupedUserPermissions,
+		userPermissions
+	} from '../../permissions';
 
 	let { data } = $props();
 
@@ -31,6 +36,39 @@
 	// svelte-ignore state_referenced_locally
 	let kelasIds = $state(new Set<number>(data.userDetail?.kelasIds ?? []));
 	let showPassword = $state(false);
+
+	// Akun existing memakai izin yang tersimpan; akun baru mulai dari template role.
+	// svelte-ignore state_referenced_locally
+	let permissions = $state(
+		new Set<string>(
+			data.userDetail?.permissions ??
+				defaultPermissionsByType[(data.userDetail?.type ?? 'user') as AuthUser['type']] ??
+				[]
+		)
+	);
+
+	const isAdminRole = $derived(type === 'admin' || type === 'kepala_sekolah');
+	const multiKelas = $derived(kelasIds.size > 1);
+
+	// Izin yang benar-benar dikirim: kelas_pindah menyusul otomatis untuk akun
+	// dengan lebih dari satu kelas, admin memakai daftar penuh.
+	const effectivePermissions = $derived.by(() => {
+		if (isAdminRole) return new Set<string>(userPermissions);
+		const set = new Set(permissions);
+		if (multiKelas && (type === 'user' || type === 'wali_kelas')) set.add('kelas_pindah');
+		return set;
+	});
+
+	function applyRoleTemplate(role: string) {
+		permissions = new Set<string>(defaultPermissionsByType[role as AuthUser['type']] ?? []);
+	}
+
+	function togglePermission(key: string) {
+		const next = new Set(permissions);
+		if (next.has(key)) next.delete(key);
+		else next.add(key);
+		permissions = next;
+	}
 
 	const isFormValid = $derived.by(() => {
 		const hasNama = nama.trim().length > 0;
@@ -257,6 +295,7 @@
 							class="select bg-base-200 dark:bg-base-300 w-full dark:border-none"
 							name="type"
 							bind:value={type}
+							onchange={(e) => applyRoleTemplate((e.currentTarget as HTMLSelectElement).value)}
 						>
 							<option value="admin">Admin</option>
 							<option value="kepala_sekolah">Kepala Sekolah</option>
@@ -316,6 +355,69 @@
 					</p>
 				</fieldset>
 
+				<!-- Hak Akses Collapse -->
+				<details class="bg-base-200 border-base-300 collapse-arrow collapse">
+					<summary class="collapse-title font-semibold">
+						Hak Akses
+						<span class="badge badge-sm badge-accent">{effectivePermissions.size}</span>
+					</summary>
+					<div class="collapse-content text-sm">
+						<div class="space-y-3">
+							<div class="flex flex-wrap items-center justify-between gap-2">
+								<p class="text-xs opacity-75">
+									Mengikuti template role di atas. Admin bisa menyalakan atau mematikan izin per
+									akun.
+								</p>
+								<button
+									type="button"
+									class="btn btn-xs btn-soft shadow-none"
+									disabled={isAdminRole}
+									onclick={() => applyRoleTemplate(type)}
+								>
+									<Icon name="repeat" /> Sesuai template
+								</button>
+							</div>
+
+							{#if isAdminRole}
+								<p class="text-info text-xs">
+									Admin dan Kepala Sekolah selalu memegang seluruh izin.
+								</p>
+							{/if}
+
+							{#each Object.entries(groupedUserPermissions) as [group, permission] (group)}
+								<div class="bg-base-300/60 rounded-lg p-2.5">
+									<p class="mb-1.5 text-xs font-bold">{permission.description}</p>
+									<div class="grid grid-cols-1 gap-0.5 sm:grid-cols-2">
+										{#each permission.values as [name, desc] (name)}
+											{@const key = `${group}_${name}`}
+											{@const autoPindah = key === 'kelas_pindah' && multiKelas}
+											<label
+												class="flex items-center justify-between gap-2 rounded px-2 py-1 {autoPindah
+													? 'opacity-70'
+													: 'hover:bg-base-200 cursor-pointer'}"
+											>
+												<span class="text-xs">
+													{desc}
+													{#if autoPindah}
+														<span class="badge badge-xs badge-info ml-1">otomatis</span>
+													{/if}
+												</span>
+												<input
+													type="checkbox"
+													class="toggle toggle-primary toggle-xs"
+													checked={effectivePermissions.has(key)}
+													disabled={isAdminRole || autoPindah}
+													onchange={() => togglePermission(key)}
+												/>
+											</label>
+										{/each}
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				</details>
+
 				<!-- Hidden inputs for multi-select -->
 				<input
 					type="hidden"
@@ -323,6 +425,11 @@
 					value={JSON.stringify(Array.from(mataPelajaranIds))}
 				/>
 				<input type="hidden" name="kelasIds" value={JSON.stringify(Array.from(kelasIds))} />
+				<input
+					type="hidden"
+					name="permissions"
+					value={JSON.stringify(Array.from(effectivePermissions))}
+				/>
 			</div>
 
 			<div class="mt-6 flex items-center justify-between gap-2">

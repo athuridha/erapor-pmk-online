@@ -12,7 +12,7 @@ import {
 import { eq, desc } from 'drizzle-orm';
 import { fail, error } from '@sveltejs/kit';
 import { authority } from '../../utils.server';
-import { defaultPermissionsByType } from '../../permissions';
+import { defaultPermissionsByType, userPermissions } from '../../permissions';
 import { ensurePegawaiConsolidation } from '../../consolidation.server';
 import { hashPassword } from '$lib/server/auth';
 import { validatePasswordStrength } from '$lib/server/password-policy';
@@ -20,6 +20,29 @@ import { validatePasswordStrength } from '$lib/server/password-policy';
 const u = tableAuthUser;
 
 const ALLOWED_USER_TYPES = ['admin', 'kepala_sekolah', 'wali_kelas', 'wali_asuh', 'user'] as const;
+
+const VALID_PERMISSION_KEYS = new Set<string>(userPermissions);
+
+/**
+ * Izin dari form bersifat opsional: bila tidak dikirim, pemanggil memakai
+ * template role. Admin/kepala sekolah selalu memakai daftar penuh.
+ */
+function parsePermissions(
+	raw: FormDataEntryValue | null,
+	roleValue: string
+): UserPermission[] | null {
+	if (roleValue === 'admin' || roleValue === 'kepala_sekolah') return [...userPermissions];
+	if (!raw) return null;
+	try {
+		const parsed = JSON.parse(String(raw));
+		if (!Array.isArray(parsed)) return null;
+		return parsed.filter(
+			(p): p is UserPermission => typeof p === 'string' && VALID_PERMISSION_KEYS.has(p)
+		);
+	} catch {
+		return null;
+	}
+}
 
 async function fetchSharedLists() {
 	const [mataPelajaran, sekolahList, kelasListRaw] = await Promise.all([
@@ -89,7 +112,8 @@ export async function load({ params }) {
 				pegawaiId: u.pegawaiId,
 				pegawaiName: tablePegawai.nama,
 				sekolahId: u.sekolahId,
-				kelasId: u.kelasId
+				kelasId: u.kelasId,
+				permissions: u.permissions
 			})
 			.from(u)
 			.leftJoin(tablePegawai, eq(u.pegawaiId, tablePegawai.id))
@@ -207,11 +231,11 @@ async function createUser(request: Request) {
 			}
 		}
 
-		const permissions: string[] = [
+		const permissions: UserPermission[] = parsePermissions(form.get('permissions'), roleValue) ?? [
 			...(defaultPermissionsByType[roleValue as AuthUser['type']] ?? [])
 		];
 		if ((roleValue === 'user' || roleValue === 'wali_kelas') && kelasIds.length > 1) {
-			permissions.push('kelas_pindah');
+			if (!permissions.includes('kelas_pindah')) permissions.push('kelas_pindah');
 		}
 
 		const insertData = {
@@ -380,6 +404,9 @@ async function updateUser(request: Request, id: number) {
 			updateData.updatedAt = new Date().toISOString();
 			updateData.mataPelajaranId = mataPelajaranIds.length === 1 ? mataPelajaranIds[0] : null;
 			updateData.kelasId = kelasIds.length > 0 ? kelasIds[0] : null;
+
+			const submittedPermissions = parsePermissions(form.get('permissions'), roleValue);
+			if (submittedPermissions) updateData.permissions = submittedPermissions;
 
 			if (Object.keys(updateData).length > 0) {
 				await tx.update(u).set(updateData).where(eq(u.id, id));
