@@ -23,6 +23,7 @@
 		"sign:create-cert:force": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/scripts/setup-signing.ps1 -CreateSelfSigned -Force",
 		"prepare": "svelte-kit sync || echo ''",
 		"logo:icons": "node scripts/generate-logo-icons.mjs",
+		"logo:wizard": "node scripts/generate-wizard-images.mjs",
 		"version": "node scripts/update-version.mjs",
 		"check": "svelte-kit sync && node scripts/svelte-check-wrapper.mjs",
 		"check:watch": "svelte-kit sync && node scripts/svelte-check-wrapper.mjs --watch",

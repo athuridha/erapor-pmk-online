@@ -28,8 +28,9 @@
 > **Kalau logo sekolah (`static/logo.png`) diganti:**
 >
 > 1. Jalankan: `pnpm logo:icons` → buat ulang `logo.ico`, `favicon.ico`, `favicon.png` dari `logo.png`
-> 2. Cek hasilnya, lalu: `pnpm prod` → ikon installer, shortcut, dan uninstall ikut berubah
-> 3. Ikon itu dipakai lewat salinan `erapor-pmk.ico` (`SetupIconFile`, `UninstallDisplayIcon`, `IconFilename` di `.iss`)
+> 2. Jalankan: `pnpm logo:wizard` → render ulang `installer/assets/wizard-large.bmp` + `wizard-small.bmp` dari `installer/assets/wizard.html` (butuh Chrome; set `PUPPETEER_EXECUTABLE_PATH` kalau bukan lokasi standar)
+> 3. Lalu: `pnpm prod` → ikon installer, shortcut, uninstall, dan artwork wizard ikut berubah
+> 4. Ikon dipakai lewat salinan `erapor-pmk.ico` (`SetupIconFile`, `UninstallDisplayIcon`, `IconFilename`), artwork lewat `WizardImageFile` / `WizardSmallImageFile` di `.iss`
 
 ---
 

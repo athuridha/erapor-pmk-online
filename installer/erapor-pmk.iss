@@ -17,6 +17,9 @@ OutputBaseFilename=ERaporPMKSetup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+; Artwork wizard (dirender dari installer/assets/wizard.html lewat paket script logo:wizard)
+WizardImageFile=assets\wizard-large.bmp
+WizardSmallImageFile=assets\wizard-small.bmp
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 ; Do not require administrator privileges when installing to per-user LocalAppData

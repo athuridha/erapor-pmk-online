@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="id">
+	<head>
+		<meta charset="utf-8" />
+		<title>Artwork wizard installer e-Rapor SMK Pratama Mulya</title>
+		<style>
+			@font-face {
+				font-family: 'Playfair Display';
+				src: url('../../static/fonts/PlayfairDisplay.woff2') format('woff2');
+				font-weight: 400 900;
+				font-style: normal;
+				font-display: block;
+			}
+			@font-face {
+				font-family: 'EB Garamond';
+				src: url('../../static/fonts/EBGaramond.woff2') format('woff2');
+				font-weight: 400 800;
+				font-style: normal;
+				font-display: block;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+				background: #ffffff;
+				color: #1f2937;
+				font-family: 'EB Garamond', 'Segoe UI', system-ui, sans-serif;
+				-webkit-font-smoothing: antialiased;
+			}
+			.panel {
+				display: none;
+				width: 100%;
+				height: 100%;
+			}
+			body[data-variant='large'] .panel-large,
+			body[data-variant='small'] .panel-small {
+				display: flex;
+			}
+
+			/* Panel kiri halaman Welcome/Finish: 164x314 */
+			.panel-large {
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				gap: 15px;
+				padding: 20px 18px;
+				text-align: center;
+			}
+			.panel-large .logo {
+				width: 64%;
+				height: auto;
+			}
+			.panel-large .rule {
+				width: 30px;
+				height: 2px;
+				border-radius: 2px;
+				background: #059669;
+			}
+			.panel-large .title {
+				font-family: 'Playfair Display', 'EB Garamond', 'Segoe UI', serif;
+				font-size: 13px;
+				font-weight: 700;
+				line-height: 1.35;
+				letter-spacing: 0.2px;
+				color: #111827;
+			}
+			.panel-large .subtitle {
+				margin-top: -6px;
+				font-size: 10px;
+				line-height: 1.4;
+				color: #4b5563;
+			}
+
+			/* Gambar kecil sudut kanan atas header: 55x55 */
+			.panel-small {
+				align-items: center;
+				justify-content: center;
+				padding: 5px;
+			}
+			.panel-small .logo {
+				width: 100%;
+				height: auto;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="panel panel-large">
+			<img class="logo" src="../../static/logo.png" alt="Logo SMK Pratama Mulya" />
+			<span class="rule"></span>
+			<span class="title">e-Rapor SMK Pratama Mulya</span>
+			<span class="subtitle">Administrasi guru terpadu</span>
+		</div>
+		<div class="panel panel-small">
+			<img class="logo" src="../../static/logo.png" alt="Logo SMK Pratama Mulya" />
+		</div>
+		<script>
+			const variant =
+				new URLSearchParams(location.search).get('variant') === 'small' ? 'small' : 'large';
+			document.body.dataset.variant = variant;
+		</script>
+	</body>
+</html>
