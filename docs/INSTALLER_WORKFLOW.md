@@ -32,6 +32,14 @@
 > 3. Lalu: `pnpm prod` → ikon installer, shortcut, uninstall, dan artwork wizard ikut berubah
 > 4. Ikon dipakai lewat salinan `erapor-pmk.ico` (`SetupIconFile`, `UninstallDisplayIcon`, `IconFilename`), artwork lewat `WizardImageFile` / `WizardSmallImageFile` di `.iss`
 
+> **Kalau kredensial cloud sekolah berubah (rotasi API Token Cloudflare):**
+>
+> 1. Simpan token baru di `.env` proyek (lihat `.env.example`, bagian `CLOUDFLARE_*`) — `.env` sudah diabaikan git, jadi token tidak pernah ikut ter-commit
+> 2. Jalankan: `pnpm prod` → `prepare-windows.mjs` menanam token ke `dist/windows/stage/erapor-pmk/.env` dan mengecek validitasnya lewat `/user/tokens/verify`
+> 3. Installer memasang `.env` itu ke `{app}\.env` dengan flag `onlyifdoesntexist`, jadi `.env` lama milik pengguna tidak ditimpa saat upgrade
+> 4. Untuk mesin yang sudah terinstall: isi token baru di halaman `/sinkronisasi` → Detail Kredensial Cloud (nilai di database menang atas `.env`), atau jalankan ulang installer
+> 5. Tanpa `CLOUDFLARE_API_TOKEN`, build tetap jalan tapi sinkronisasi cloud mati sampai token diisi manual di `/sinkronisasi`
+
 ---
 
 ## Overview
@@ -476,7 +484,7 @@ ls -lh data/database.sqlite3
 
 # 7. Cek .env di staging
 cat dist/windows/stage/erapor-pmk/.env
-# Harus ada: DB_URL, BODY_SIZE_LIMIT
+# Harus ada: DB_URL, BODY_SIZE_LIMIT, CLOUDFLARE_API_TOKEN (+ ACCOUNT_ID/DATABASE_ID kalau diisi)
 ```
 
 **Kalau ada yang kurang:**
@@ -1116,7 +1124,7 @@ ls -lh data/database.sqlite3
 
 # 6. Verify .env di staging
 cat dist/windows/stage/erapor-pmk/.env
-# Harus ada DB_URL, BODY_SIZE_LIMIT, photo paths
+# Harus ada DB_URL, BODY_SIZE_LIMIT, CLOUDFLARE_API_TOKEN (+ ACCOUNT_ID/DATABASE_ID kalau diisi)
 ```
 
 **Jika ada yang hilang:**

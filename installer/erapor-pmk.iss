@@ -34,7 +34,10 @@ LicenseFile="..\LICENSE"
 ; SignedUninstaller=yes
 
 [Files]
-Source:"{#StagePath}\\*"; DestDir:"{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source:"{#StagePath}\\*"; DestDir:"{app}"; Excludes:".env"; Flags: ignoreversion recursesubdirs createallsubdirs
+; .env staged by pnpm package:win memuat kredensial cloud. onlyifdoesntexist
+; menjaga .env milik pengguna tetap utuh saat upgrade.
+Source:"{#StagePath}\\.env"; DestDir:"{app}"; Flags: ignoreversion onlyifdoesntexist
 Source:"files\\start-erapor-pmk.mjs"; DestDir:"{app}"; Flags: ignoreversion
 Source:"..\dist\windows\vc_redist.x64.exe"; DestDir:"{tmp}"; Flags: ignoreversion deleteafterinstall
 
@@ -127,11 +130,14 @@ begin
 				ForceDirectories(SoundDir);
 
 		// Preserve an existing .env across upgrades — it may hold custom
-		// photo/sounds overrides or point at a moved data root. Only a fresh
-		// install writes the initial .env here. Uploads/sounds are NOT pinned:
-		// they follow the data root automatically (default <root>/uploads and
-		// <root>/sounds), and the root itself lives in the launcher override
-		// file (%LOCALAPPDATA%\erapor-pmk-data\data-root.txt), not in .env.
+		// photo/sounds overrides, a rotated cloud token, or point at a moved
+		// data root. Only a fresh install writes the initial .env here.
+		// Catatan: .env bawaan (berisi kredensial cloud) sudah dipasang dari
+		// [Files], jadi blok ini hanya jaring pengaman kalau .env hilang.
+		// Uploads/sounds are NOT pinned: they follow the data root
+		// automatically (default <root>/uploads and <root>/sounds), and the
+		// root itself lives in the launcher override file
+		// (%LOCALAPPDATA%\erapor-pmk-data\data-root.txt), not in .env.
 		EnvPath := ExpandConstant('{app}\.env');
 		if FileExists(EnvPath) then
 			Log(Format('Menjaga .env yang sudah ada: %s', [EnvPath]))

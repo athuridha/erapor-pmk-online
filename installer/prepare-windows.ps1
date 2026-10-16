@@ -168,17 +168,44 @@ if (Test-Path $envSample) {
     Copy-Item $envSample (Join-Path $appStage '.env.example') -Force
 }
 
-# Create a default .env for the installed app that points to the user's
-# local appdata folder so the installed app stores its DB in an per-user
-# location. Do not overwrite an existing .env in the staged app.
+# Create a .env for the installed app that points to the user's local appdata
+# folder, and inject the permanent Cloudflare credentials from the project .env
+# so schools do not have to fill them in by hand. The stage folder is a build
+# artifact, so this file is always rewritten. Written without a BOM because the
+# app's own .env loader does not strip one.
 $envTarget = Join-Path $appStage '.env'
-if (-not (Test-Path $envTarget)) {
-    $envContent = 'DB_URL=file:%LOCALAPPDATA%/erapor-pmk-data/database.sqlite3'
-    $envContent += "`nBODY_SIZE_LIMIT=5M"
-    Set-Content -Path $envTarget -Value $envContent -Encoding UTF8
-    Write-Host "Wrote default .env to $envTarget" -ForegroundColor Green
-} else {
-    Write-Host '.env already exists in staged app; skipping creation.' -ForegroundColor Yellow
+$cloudToken = $env:CLOUDFLARE_API_TOKEN
+$cloudAccount = $env:CLOUDFLARE_ACCOUNT_ID
+$cloudDatabase = $env:CLOUDFLARE_DATABASE_ID
+$projectEnv = Join-Path $projectRoot '.env'
+if (Test-Path $projectEnv) {
+    foreach ($line in Get-Content $projectEnv) {
+        if ($line -match '^\s*CLOUDFLARE_API_TOKEN\s*=\s*(.+)$') {
+            if (-not $cloudToken) { $cloudToken = $Matches[1].Trim().Trim('"', "'") }
+        } elseif ($line -match '^\s*CLOUDFLARE_ACCOUNT_ID\s*=\s*(.+)$') {
+            if (-not $cloudAccount) { $cloudAccount = $Matches[1].Trim().Trim('"', "'") }
+        } elseif ($line -match '^\s*CLOUDFLARE_DATABASE_ID\s*=\s*(.+)$') {
+            if (-not $cloudDatabase) { $cloudDatabase = $Matches[1].Trim().Trim('"', "'") }
+        }
+    }
+}
+$envLines = @(
+    'DB_URL=file:%LOCALAPPDATA%/erapor-pmk-data/database.sqlite3',
+    'BODY_SIZE_LIMIT=5M'
+)
+if ($cloudToken) {
+    $envLines += "CLOUDFLARE_API_TOKEN=$cloudToken"
+    if ($cloudAccount) { $envLines += "CLOUDFLARE_ACCOUNT_ID=$cloudAccount" }
+    if ($cloudDatabase) { $envLines += "CLOUDFLARE_DATABASE_ID=$cloudDatabase" }
+}
+[System.IO.File]::WriteAllText(
+    $envTarget,
+    ($envLines -join "`n") + "`n",
+    (New-Object System.Text.UTF8Encoding($false))
+)
+Write-Host "Wrote installer .env to $envTarget" -ForegroundColor Green
+if (-not $cloudToken) {
+    Write-Host 'CLOUDFLARE_API_TOKEN kosong: instalasi hasil build ini tidak bisa sinkronisasi cloud.' -ForegroundColor Yellow
 }
 
 Write-Host 'Installing production dependencies with npm (omit dev)...'

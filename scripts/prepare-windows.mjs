@@ -30,7 +30,51 @@ function hasCommand(cmd) {
 	}
 }
 
-function main() {
+/**
+ * Baca `.env` proyek tanpa dependensi tambahan, supaya kredensial cloud tidak
+ * perlu ikut ter-commit dan tidak perlu diketik ulang setiap kali packaging.
+ */
+function readProjectEnv() {
+	const values = {};
+	const envPath = path.join(projectRoot, '.env');
+	if (!fs.existsSync(envPath)) return values;
+	try {
+		for (const line of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+			const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+			if (!m) continue;
+			values[m[1]] = m[2].replace(/^["']|["']$/g, '');
+		}
+	} catch (e) {
+		console.warn('Gagal membaca .env:', e);
+	}
+	return values;
+}
+
+/**
+ * Verifikasi token sebelum dipaket, supaya installer tidak terkirim dengan
+ * kredensial yang sudah mati. Gagal jaringan hanya jadi peringatan.
+ */
+async function verifyCloudToken(token) {
+	try {
+		const res = await fetch('https://api.cloudflare.com/client/v4/user/tokens/verify', {
+			headers: { Authorization: `Bearer ${token}` }
+		});
+		const data = await res.json().catch(() => null);
+		if (res.ok && data?.success) {
+			console.info('CLOUDFLARE_API_TOKEN valid, status:', data.result?.status ?? 'active');
+		} else {
+			console.warn(
+				'CLOUDFLARE_API_TOKEN ditolak Cloudflare:',
+				data?.errors?.[0]?.message ?? `HTTP ${res.status}`,
+				'- sinkronisasi cloud pada hasil build ini akan gagal.'
+			);
+		}
+	} catch (e) {
+		console.warn('Token cloud tidak bisa diverifikasi (jaringan):', e.message);
+	}
+}
+
+async function main() {
 	const args = process.argv.slice(2);
 	const skipBuild = args.includes('--skip-build');
 	const outputDir = 'dist/windows';
@@ -213,14 +257,39 @@ function main() {
 	const envExample = path.join(projectRoot, '.env.example');
 	if (fs.existsSync(envExample)) fs.copyFileSync(envExample, path.join(appStage, '.env.example'));
 
+	// Token permanen ditanam saat packaging supaya sekolah tidak perlu mengisi
+	// kredensial cloud sendiri. Rotasi tetap bisa lewat halaman /sinkronisasi
+	// karena nilai yang tersimpan di database menang atas nilai .env.
+	const projectEnv = readProjectEnv();
+	const envValue = (key) => (process.env[key] ?? projectEnv[key] ?? '').trim();
+	const cloudToken = envValue('CLOUDFLARE_API_TOKEN');
+	const cloudAccountId = envValue('CLOUDFLARE_ACCOUNT_ID');
+	const cloudDatabaseId = envValue('CLOUDFLARE_DATABASE_ID');
+
+	const envLines = [
+		'DB_URL=file:%LOCALAPPDATA%/erapor-pmk-data/database.sqlite3',
+		'BODY_SIZE_LIMIT=5M'
+	];
+	if (cloudToken) {
+		envLines.push(`CLOUDFLARE_API_TOKEN=${cloudToken}`);
+		if (cloudAccountId) envLines.push(`CLOUDFLARE_ACCOUNT_ID=${cloudAccountId}`);
+		if (cloudDatabaseId) envLines.push(`CLOUDFLARE_DATABASE_ID=${cloudDatabaseId}`);
+	}
+
 	const envTarget = path.join(appStage, '.env');
-	if (!fs.existsSync(envTarget)) {
-		const envContent =
-			'DB_URL=file:%LOCALAPPDATA%/erapor-pmk-data/database.sqlite3\nBODY_SIZE_LIMIT=5M\n';
-		fs.writeFileSync(envTarget, envContent);
-		console.info('Wrote default .env to', envTarget);
+	fs.writeFileSync(envTarget, envLines.join('\n') + '\n');
+	console.info(
+		'Wrote installer .env to',
+		envTarget,
+		cloudToken ? '(dengan kredensial cloud)' : '(tanpa kredensial cloud)'
+	);
+
+	if (cloudToken) {
+		await verifyCloudToken(cloudToken);
 	} else {
-		console.info('.env already exists in staged app; skipping creation.');
+		console.warn(
+			'CLOUDFLARE_API_TOKEN tidak ditemukan di .env; instalasi hasil build ini hanya bisa sinkronisasi setelah token diisi di halaman /sinkronisasi.'
+		);
 	}
 
 	// 12) Install production dependencies (targeting Windows platform so native
@@ -308,4 +377,7 @@ function main() {
 	console.info('\nStaging complete. Contents available at', appStage);
 }
 
-main();
+main().catch((err) => {
+	console.error(err);
+	process.exit(1);
+});
