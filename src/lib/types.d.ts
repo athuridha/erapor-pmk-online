@@ -301,16 +301,44 @@ declare module 'exceljs' {
 	// Minimal typing surface used in the project. Keep conservative types to
 	// avoid pulling a heavy dependency for full typings.
 	export class Workbook {
-		addWorksheet(name: string): Worksheet;
-		xlsx: {
+		constructor();
+		creator: string;
+		title: string;
+		worksheets: Worksheet[];
+		readonly xlsx: {
+			load(buffer: Buffer | ArrayBuffer | Uint8Array): Promise<void>;
 			writeBuffer(): Promise<ArrayBuffer | ArrayBufferView>;
 		};
+		addWorksheet(name?: string): Worksheet;
+		getWorksheet(name: string): Worksheet | undefined;
 	}
 
 	export interface Worksheet {
+		name: string;
+		rowCount: number;
+		columnCount: number;
+		getRow(index: number): Row;
+		getCell(address: string): Cell;
+		addRow(values: Array<unknown>): Row;
 		addRows(rows: Array<unknown>): void;
 		getColumn(index: number): { width?: number };
+		mergeCells(range: string): void;
 		views?: unknown;
+	}
+
+	export interface Row {
+		getCell(index: number | string): Cell;
+		values: Array<unknown>;
+	}
+
+	export interface Cell {
+		value: unknown;
+		text: string;
+		font?: unknown;
+		fill?: unknown;
+		alignment?: unknown;
+		numFmt?: string;
+		dataValidation?: unknown;
 	}
 
 	const ExcelJS: {
