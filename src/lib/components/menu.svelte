@@ -206,8 +206,8 @@
 	{/if}
 {/snippet}
 
-<div class="flex-1 min-w-0">
-	<div class="mb-3 flex gap-1">
+<div class="flex min-h-0 min-w-0 flex-1 flex-col">
+	<div class="mb-3 flex shrink-0 gap-1">
 		<label
 			class="input bg-[#053d2e] border border-[#065f46] text-white rounded-xl flex items-center gap-2 grow px-3 py-1.5 focus-within:border-emerald-400"
 		>
