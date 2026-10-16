@@ -25,6 +25,12 @@
 > - ❌ Error: "start-build.mjs not found" → Script launcher hilang
 > - ✅ Solusi: Jalankan `pnpm package:win` dulu sebelum bikin installer
 
+> **Kalau logo sekolah (`static/logo.png`) diganti:**
+>
+> 1. Jalankan: `pnpm logo:icons` → buat ulang `logo.ico`, `favicon.ico`, `favicon.png` dari `logo.png`
+> 2. Cek hasilnya, lalu: `pnpm prod` → ikon installer, shortcut, dan uninstall ikut berubah
+> 3. Ikon itu dipakai lewat salinan `erapor-pmk.ico` (`SetupIconFile`, `UninstallDisplayIcon`, `IconFilename` di `.iss`)
+
 ---
 
 ## Overview
