@@ -38,6 +38,15 @@ function normalizeUsername(username: string) {
 	return username.trim().toLowerCase();
 }
 
+/**
+ * Username ternormalisasi akun bawaan (Admin/Admin123).
+ *
+ * `ensureDefaultAdmin` sengaja tidak memaksa ganti sandi, jadi akun ini tidak bisa
+ * dibedakan lewat `mustChangePassword`. Dipakai halaman penyiapan supaya instalasi
+ * baru (yang cuma berisi akun bawaan) tetap dianggap kosong.
+ */
+export const defaultAdminUsernameNormalized = normalizeUsername(defaultAdminAccount.username);
+
 function hashToken(token: string) {
 	return createHash('sha256').update(token).digest('hex');
 }

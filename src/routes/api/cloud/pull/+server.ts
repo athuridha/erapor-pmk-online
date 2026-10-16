@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pullDataFromCloud } from '$lib/server/cloudflare-d1';
+import { syncMasterFromCloud } from '$lib/server/cloud-master';
 
 export const POST: RequestHandler = async ({ locals }) => {
 	const user = locals.user;
@@ -14,14 +14,22 @@ export const POST: RequestHandler = async ({ locals }) => {
 	}
 
 	try {
-		const res = await pullDataFromCloud(sekolahId, user.id);
-		return json(res);
+		const res = await syncMasterFromCloud(sekolahId, user.id);
+		if (!res.success) {
+			return json({ success: false, error: res.message }, { status: 400 });
+		}
+		return json({
+			success: true,
+			message: res.message,
+			recordsCount: res.totalRecords,
+			details: res.counts
+		});
 	} catch (err: unknown) {
 		console.error('[cloud pull error]', err);
 		return json(
 			{
 				success: false,
-				error: err instanceof Error ? err.message : 'Gagal mengambil data dari database cloud.'
+				error: err instanceof Error ? err.message : 'Gagal menyinkronkan data dari Database Pusat.'
 			},
 			{ status: 500 }
 		);

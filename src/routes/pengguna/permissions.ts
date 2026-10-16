@@ -65,7 +65,7 @@ export const groupedUserPermissions = {
 			['presensi_guru', 'Presensi Guru'],
 			['sppd', 'SPPD'],
 			['dinas_luar', 'Dinas Luar'],
-			['sinkronisasi', 'Sinkronisasi Cloud']
+			['sinkronisasi', 'Sinkronisasi Database Pusat']
 		],
 		description: 'Administrasi'
 	},

@@ -123,7 +123,11 @@ const PUBLIC_ROUTE_IDS = new Set([
 	'/logout',
 	'/tamu',
 	'/jadwal-pelajaran',
-	'/api/buku-tamu'
+	'/api/buku-tamu',
+	// Penyiapan sebelum login (instalasi baru): menarik master data dari pusat.
+	// Penjaganya ada di route itu sendiri — hanya dari loopback dan hanya saat
+	// database lokal masih kosong.
+	'/siapkan'
 ]);
 
 // Image endpoints exempt from the menu-permission guard. They are fetched by the

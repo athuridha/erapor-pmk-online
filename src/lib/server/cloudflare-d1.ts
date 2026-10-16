@@ -161,7 +161,7 @@ export async function executeD1Query(
 	if (!config.accountId || !config.apiToken) {
 		return {
 			success: false,
-			error: 'Kredensial Cloudflare (Account ID & API Token) belum diisi.'
+			error: 'Kredensial Database Pusat (Account ID & API Token) belum diisi.'
 		};
 	}
 
@@ -195,8 +195,8 @@ export async function executeD1Query(
 				return {
 					success: false,
 					error: config.wranglerTokenExpired
-						? 'Sesi wrangler di komputer ini sudah kedaluwarsa. Masukkan Cloudflare API Token (izin D1 Edit) di Detail Kredensial Cloud, atau jalankan ulang "wrangler login".'
-						: 'Token Cloudflare ditolak (tidak valid atau sudah kedaluwarsa). Periksa kembali API Token di Detail Kredensial Cloud.'
+						? 'Sesi wrangler di komputer ini sudah kedaluwarsa. Masukkan API Token Database Pusat (izin D1 Edit) di Detail Kredensial, atau jalankan ulang "wrangler login".'
+						: 'Token Database Pusat ditolak (tidak valid atau sudah kedaluwarsa). Periksa kembali API Token di Detail Kredensial.'
 				};
 			}
 
@@ -204,7 +204,17 @@ export async function executeD1Query(
 				return {
 					success: false,
 					error:
-						'Token Cloudflare tidak punya izin D1 untuk database ini. Buat API Token dengan izin "D1 Edit".'
+						'Token Database Pusat tidak punya izin D1 untuk database ini. Buat API Token dengan izin "D1 Edit".'
+				};
+			}
+
+			// Cloudflare membalas 7500 "You do not have permission to perform this operation."
+			// ketika token hanya berizin baca (D1 Read) lalu diminta menulis.
+			if (code === 7500 || /permission to perform/i.test(message ?? '')) {
+				return {
+					success: false,
+					error:
+						'Token Database Pusat hanya berizin baca (D1 Read), jadi data tidak bisa dikirim ke pusat. Ganti dengan API Token berizin "D1 Edit" di Detail Kredensial.'
 				};
 			}
 
@@ -218,7 +228,7 @@ export async function executeD1Query(
 	} catch (err: unknown) {
 		return {
 			success: false,
-			error: err instanceof Error ? err.message : 'Koneksi ke Cloudflare D1 gagal.'
+			error: err instanceof Error ? err.message : 'Koneksi ke Database Pusat gagal.'
 		};
 	}
 }
@@ -250,8 +260,8 @@ export async function testD1Connection(sekolahId: number): Promise<D1ConnectionT
 			...base,
 			ok: false,
 			message: config.wranglerTokenExpired
-				? 'Sesi wrangler di komputer ini sudah kedaluwarsa dan belum ada API Token tersimpan. Masukkan Cloudflare API Token (izin D1 Edit) di Detail Kredensial Cloud.'
-				: 'Belum ada API Token Cloudflare. Isi di Detail Kredensial Cloud untuk mengaktifkan sinkronisasi.'
+				? 'Sesi wrangler di komputer ini sudah kedaluwarsa dan belum ada API Token tersimpan. Masukkan API Token Database Pusat (izin D1 Edit) di Detail Kredensial.'
+				: 'Belum ada API Token Database Pusat. Isi di Detail Kredensial untuk mengaktifkan sinkronisasi.'
 		};
 	}
 
@@ -259,7 +269,7 @@ export async function testD1Connection(sekolahId: number): Promise<D1ConnectionT
 	return {
 		...base,
 		ok: res.success,
-		message: res.success ? 'Koneksi ke Cloudflare D1 berhasil.' : res.error || 'Uji koneksi gagal.'
+		message: res.success ? 'Koneksi ke Database Pusat berhasil.' : res.error || 'Uji koneksi gagal.'
 	};
 }
 
@@ -397,9 +407,9 @@ export async function pushDataToCloud(
 
 		if (d1Res.success) {
 			d1Synced = true;
-			syncMessage = `Berhasil Push ${totalRecords} data nilai ke Cloud D1. Status: MENUNGGU PERSETUJUAN OPERATOR.`;
+			syncMessage = `Data nilai berhasil dikirim ke Database Pusat (${totalRecords} baris). Status: MENUNGGU PERSETUJUAN OPERATOR.`;
 		} else {
-			syncMessage = `Tersimpan di antrean lokal (Gagal kirim ke D1: ${d1Res.error}). Status: MENUNGGU PERSETUJUAN OPERATOR.`;
+			syncMessage = `Tersimpan di antrean lokal (gagal kirim ke Database Pusat: ${d1Res.error}). Status: MENUNGGU PERSETUJUAN OPERATOR.`;
 		}
 	} else {
 		syncMessage = `Paket ${totalRecords} data nilai berhasil dibuat dan masuk antrean persetujuan Operator.`;
@@ -446,96 +456,6 @@ export async function pushDataToCloud(
 		totalRecords,
 		packagePayload,
 		d1Synced
-	};
-}
-
-/**
- * PULL: Menarik data master terbaru (sekolah, tahun ajaran, semester, kelas, murid, mapel) dari Cloudflare D1
- */
-export async function pullDataFromCloud(
-	sekolahId: number,
-	userId: number | null
-): Promise<{
-	success: boolean;
-	message: string;
-	recordsCount: number;
-	details: Record<string, number>;
-}> {
-	const nowIso = new Date().toISOString();
-	const config = await getD1Config(sekolahId);
-
-	let recordsCount = 0;
-	const details: Record<string, number> = {};
-	let message = 'Master data terbaru berhasil disinkronkan dengan Database Pusat.';
-
-	if (config?.accountId && config.apiToken) {
-		// Tarik data dari D1
-		const queryRes = await executeD1Query(
-			config,
-			`SELECT * FROM publish_versions WHERE scope = 'master_data' ORDER BY published_at DESC LIMIT 1`
-		);
-
-		if (!queryRes.success) {
-			throw new Error(queryRes.error || 'Gagal menarik data dari Cloudflare D1');
-		}
-
-		recordsCount = 1;
-		details.masterVersion = 1;
-	} else {
-		// Tidak ada kredensial: hanya rekap data lokal, jangan mengaku sudah menarik dari cloud
-		const [kelasCount, muridCount, mapelCount, guruCount] = await Promise.all([
-			db.select({ count: sql<number>`count(*)` }).from(tableKelas),
-			db.select({ count: sql<number>`count(*)` }).from(tableMurid),
-			db.select({ count: sql<number>`count(*)` }).from(tableMataPelajaran),
-			db.select({ count: sql<number>`count(*)` }).from(tablePegawai)
-		]);
-
-		details.kelas = kelasCount[0]?.count ?? 0;
-		details.murid = muridCount[0]?.count ?? 0;
-		details.mapel = mapelCount[0]?.count ?? 0;
-		details.guru = guruCount[0]?.count ?? 0;
-		recordsCount = details.kelas + details.murid + details.mapel + details.guru;
-		message = config.wranglerTokenExpired
-			? 'Sesi wrangler sudah kedaluwarsa, jadi tidak ada data yang ditarik dari Database Pusat. Angka di bawah hanya rekap data lokal.'
-			: 'Kredensial Cloudflare belum diisi, jadi tidak ada data yang ditarik dari Database Pusat. Angka di bawah hanya rekap data lokal.';
-	}
-
-	// Catat log
-	await db.insert(tableCloudSyncLogs).values({
-		sekolahId,
-		userId,
-		action: 'PULL',
-		status: 'SUCCESS',
-		totalRecords: recordsCount,
-		summary: JSON.stringify(details),
-		createdAt: nowIso
-	});
-
-	// Perbarui last_pulled_at di settings
-	const stored = await db.query.tableCloudSyncSettings.findFirst({
-		where: eq(tableCloudSyncSettings.sekolahId, sekolahId)
-	});
-	if (stored) {
-		await db
-			.update(tableCloudSyncSettings)
-			.set({
-				lastPulledAt: nowIso,
-				updatedAt: nowIso
-			})
-			.where(eq(tableCloudSyncSettings.id, stored.id));
-	} else {
-		await db.insert(tableCloudSyncSettings).values({
-			sekolahId,
-			lastPulledAt: nowIso,
-			createdAt: nowIso
-		});
-	}
-
-	return {
-		success: true,
-		message,
-		recordsCount,
-		details
 	};
 }
 

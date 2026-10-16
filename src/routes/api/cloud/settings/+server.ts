@@ -37,5 +37,5 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		apiToken: body.apiToken || ''
 	});
 
-	return json({ success: true, message: 'Pengaturan Cloudflare D1 berhasil disimpan.' });
+	return json({ success: true, message: 'Pengaturan kredensial berhasil disimpan.' });
 };

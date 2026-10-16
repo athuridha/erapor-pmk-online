@@ -45,7 +45,7 @@ export async function load({ locals }) {
 	const d1Config = await getD1Config(sekolahId);
 
 	return {
-		meta: { title: 'Sinkronisasi Cloud' },
+		meta: { title: 'Sinkronisasi Database Pusat' },
 		sekolah,
 		user,
 		totalGrades,

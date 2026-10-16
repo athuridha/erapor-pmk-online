@@ -82,7 +82,7 @@
 		<div class="grid grid-cols-1 gap-2">
 			<a href={resolve('/sinkronisasi')} class="btn btn-primary w-full shadow-none font-bold">
 				<Icon name="repeat" />
-				Sinkronisasi Cloud
+				Sinkronisasi Data
 			</a>
 			<a
 				href={resolve('/pengaturan')}

@@ -337,8 +337,8 @@
 			<Icon name="download" class="h-5 w-5 text-emerald-600 shrink-0" />
 			<span>
 				<strong>Data Master Belum Disinkronkan:</strong> Silakan lakukan
-				<strong>Tarik Data (Pull)</strong> dari Database Pusat agar kelas, mata pelajaran, dan daftar
-				siswa terbarui sesuai pemetaan Operator.
+				<strong>Sinkron Data</strong> dari Database Pusat agar kelas, mata pelajaran, dan daftar siswa
+				terbarui sesuai pemetaan Operator.
 			</span>
 		</div>
 		<a

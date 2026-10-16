@@ -124,9 +124,9 @@ export const appMenuItems: MenuItem[] = [
 				tags: ['dinas', 'luar', 'perjalanan', 'permohonan', 'undangan']
 			},
 			{
-				title: 'Sinkronisasi Cloud',
+				title: 'Sinkronisasi Database Pusat',
 				path: '/sinkronisasi',
-				tags: ['sinkron', 'cloud', 'push', 'pull', 'd1', 'cloudflare', 'kirim nilai', 'tarik data']
+				tags: ['sinkron', 'sinkronisasi', 'database pusat', 'kirim nilai', 'ambil master']
 			}
 		]
 	},

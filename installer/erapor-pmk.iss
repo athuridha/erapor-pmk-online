@@ -24,6 +24,17 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 ; Do not require administrator privileges when installing to per-user LocalAppData
 PrivilegesRequired=lowest
+; Aplikasi ini adalah server lokal: saat upgrade, node.exe sering masih memegang
+; berkas (terutama node_modules\@libsql\win32-x64-msvc\index.node). Tanpa dua baris
+; di bawah, installer berhenti di tengah ("DeleteFile failed; code 5"), rollback,
+; dan menyisakan instalasi campuran lama+baru yang tidak bisa dijalankan.
+; CloseApplications=force menutup proses yang terdeteksi RestartManager tanpa
+; bertanya (instalasi /SILENT tidak bisa menampilkan dialog); RestartApplications=no
+; karena aplikasi tidak boleh dihidupkan lagi diam-diam. Untuk berkas yang tetap
+; terkunci (addon native sering tak terdeteksi RestartManager), flag restartreplace
+; pada [Files] menjadwalkan penggantian setelah reboot, bukan menggagalkan install.
+CloseApplications=force
+RestartApplications=no
 UninstallDisplayIcon={app}\erapor-pmk.ico
 VersionInfoVersion={#AppVersion}
 SetupIconFile={#StagePath}\erapor-pmk.ico
@@ -34,14 +45,14 @@ LicenseFile="..\LICENSE"
 ; SignedUninstaller=yes
 
 [Files]
-Source:"{#StagePath}\\*"; DestDir:"{app}"; Excludes:".env"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source:"{#StagePath}\\*"; DestDir:"{app}"; Excludes:".env"; Flags: ignoreversion restartreplace recursesubdirs createallsubdirs
 ; .env staged by pnpm package:win memuat kredensial cloud. onlyifdoesntexist
 ; menjaga .env milik pengguna tetap utuh saat upgrade.
-Source:"{#StagePath}\\.env"; DestDir:"{app}"; Flags: ignoreversion onlyifdoesntexist
+Source:"{#StagePath}\\.env"; DestDir:"{app}"; Flags: ignoreversion restartreplace onlyifdoesntexist
 ; Selalu diperbarui tiap instalasi: pelengkap .env (kredensial cloud terbaru).
 ; start-build.mjs hanya memakai nilainya untuk kunci yang belum ada di .env.
-Source:"{#StagePath}\\.env"; DestDir:"{app}"; DestName:".env.default"; Flags: ignoreversion
-Source:"files\\start-erapor-pmk.mjs"; DestDir:"{app}"; Flags: ignoreversion
+Source:"{#StagePath}\\.env"; DestDir:"{app}"; DestName:".env.default"; Flags: ignoreversion restartreplace
+Source:"files\\start-erapor-pmk.mjs"; DestDir:"{app}"; Flags: ignoreversion restartreplace
 Source:"..\dist\windows\vc_redist.x64.exe"; DestDir:"{tmp}"; Flags: ignoreversion deleteafterinstall
 
 [Run]

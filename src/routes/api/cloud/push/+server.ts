@@ -21,7 +21,7 @@ export const POST: RequestHandler = async ({ locals }) => {
 		return json(
 			{
 				success: false,
-				error: err instanceof Error ? err.message : 'Gagal melakukan push ke database cloud.'
+				error: err instanceof Error ? err.message : 'Gagal mengirim data ke Database Pusat.'
 			},
 			{ status: 500 }
 		);

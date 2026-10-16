@@ -13,8 +13,11 @@
 	let pullResult = $state<any>(null);
 	let pullError = $state('');
 	let pushError = $state('');
+	let isPushingMaster = $state(false);
+	let pushMasterResult = $state<any>(null);
+	let pushMasterError = $state('');
 
-	// Modal pengaturan Cloudflare D1
+	// Modal pengaturan kredensial
 	let showSettingsModal = $state(false);
 	// svelte-ignore state_referenced_locally
 	let accountId = $state(data.syncSettings.accountId);
@@ -23,7 +26,7 @@
 	let apiToken = $state('');
 	let isSavingConfig = $state(false);
 
-	// Status koneksi (uji nyata ke Cloudflare D1)
+	// Status koneksi (uji nyata ke Database Pusat)
 	let isTestingConnection = $state(false);
 	let connectionResult = $state<{ ok: boolean; message: string } | null>(null);
 
@@ -43,14 +46,14 @@
 					dot: 'bg-amber-500',
 					text: 'text-amber-600 dark:text-amber-400',
 					label: 'PERLU TOKEN BARU',
-					hint: 'Sesi wrangler di komputer ini sudah kedaluwarsa. Isi API Token D1 di Detail Kredensial Cloud.'
+					hint: 'Sesi wrangler di komputer ini sudah kedaluwarsa. Isi API Token Database Pusat di Detail Kredensial.'
 				};
 			}
 			return {
 				dot: 'bg-slate-400',
 				text: 'text-base-content/70',
 				label: 'BELUM DIKONFIGURASI',
-				hint: 'Belum ada API Token Cloudflare, jadi sinkronisasi cloud belum aktif.'
+				hint: 'Belum ada API Token, jadi sinkronisasi ke Database Pusat belum aktif.'
 			};
 		}
 
@@ -124,7 +127,7 @@
 		isPulling = true;
 		pullResult = null;
 		pullError = '';
-		pullStep = 'Menghubungi Cloudflare D1 Database...';
+		pullStep = 'Menghubungi Database Pusat...';
 
 		try {
 			await new Promise((r) => setTimeout(r, 400));
@@ -133,7 +136,7 @@
 			const res = await fetch('/api/cloud/pull', { method: 'POST' });
 			const json = await res.json();
 			if (!res.ok || !json.success) {
-				throw new Error(json.error || 'Gagal mengambil data dari cloud');
+				throw new Error(json.error || 'Gagal menyinkronkan data dari Database Pusat');
 			}
 
 			pullStep = 'Memperbarui database lokal...';
@@ -143,7 +146,7 @@
 			toast(json.message, 'success');
 			await invalidateAll();
 		} catch (err: any) {
-			pullError = err.message || 'Gagal sinkronisasi data dari cloud.';
+			pullError = err.message || 'Gagal menyinkronkan data dari Database Pusat.';
 			toast(pullError, 'error');
 		} finally {
 			isPulling = false;
@@ -155,7 +158,7 @@
 		isPushing = true;
 		pushResult = null;
 		pushError = '';
-		pushStep = 'Memeriksa koneksi Cloudflare D1...';
+		pushStep = 'Memeriksa koneksi Database Pusat...';
 
 		try {
 			await new Promise((r) => setTimeout(r, 500));
@@ -167,21 +170,44 @@
 			const res = await fetch('/api/cloud/push', { method: 'POST' });
 			const json = await res.json();
 			if (!res.ok || !json.success) {
-				throw new Error(json.error || 'Gagal mengirim nilai ke cloud');
+				throw new Error(json.error || 'Gagal mengirim nilai ke Database Pusat');
 			}
 
-			pushStep = 'Menyimpan rekaman ke Cloud Database...';
+			pushStep = 'Menyimpan rekaman ke Database Pusat...';
 			await new Promise((r) => setTimeout(r, 400));
 
 			pushResult = json;
 			toast(json.message, 'success');
 			await invalidateAll();
 		} catch (err: any) {
-			pushError = err.message || 'Gagal mengirim nilai ke cloud.';
+			pushError = err.message || 'Gagal mengirim nilai ke Database Pusat.';
 			toast(pushError, 'error');
 		} finally {
 			isPushing = false;
 			pushStep = '';
+		}
+	}
+
+	async function handlePushMaster() {
+		isPushingMaster = true;
+		pushMasterResult = null;
+		pushMasterError = '';
+
+		try {
+			const res = await fetch('/api/cloud/push-master', { method: 'POST' });
+			const json = await res.json();
+			if (!res.ok || !json.success) {
+				throw new Error(json.message || 'Gagal mengirim master data ke Database Pusat');
+			}
+
+			pushMasterResult = json;
+			toast(json.message, 'success');
+			await invalidateAll();
+		} catch (err: any) {
+			pushMasterError = err.message || 'Gagal mengirim master data ke Database Pusat.';
+			toast(pushMasterError, 'error');
+		} finally {
+			isPushingMaster = false;
 		}
 	}
 
@@ -197,7 +223,7 @@
 			});
 			const json = await res.json();
 			if (!res.ok || !json.success) throw new Error(json.error || 'Gagal menyimpan');
-			toast('Pengaturan Cloudflare D1 berhasil disimpan.', 'success');
+			toast('Pengaturan kredensial berhasil disimpan.', 'success');
 			showSettingsModal = false;
 			apiToken = '';
 			await invalidateAll();
@@ -243,11 +269,11 @@
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 		<div>
 			<h1 class="text-2xl font-black text-emerald-950 dark:text-emerald-300">
-				Sinkronisasi Database Cloud
+				Sinkronisasi Database Pusat
 			</h1>
 			<p class="text-xs text-base-content/70 mt-1">
-				Sistem sinkronisasi dua arah (Push &amp; Pull) antara database SQLite lokal dan Cloudflare
-				D1 Database Pusat SMK Pratama Mulya Karawang.
+				Sistem sinkronisasi dua arah antara database lokal dan Database Pusat SMK Pratama Mulya
+				Karawang.
 			</p>
 		</div>
 
@@ -272,7 +298,7 @@
 					onclick={() => (showSettingsModal = true)}
 				>
 					<Icon name="gear" class="text-emerald-600" />
-					<span>Detail Kredensial Cloud</span>
+					<span>Detail Kredensial</span>
 				</button>
 			</div>
 		{/if}
@@ -286,7 +312,7 @@
 			<div class="flex items-center gap-3 min-w-0">
 				<span class="w-3 h-3 rounded-full shrink-0 {cloudState.dot}"></span>
 				<div class="min-w-0">
-					<div class="text-xs font-bold text-base-content/70">Status Database Cloud:</div>
+					<div class="text-xs font-bold text-base-content/70">Status Database Pusat:</div>
 					<div class="text-sm font-black {cloudState.text}">{cloudState.label}</div>
 					<div class="text-[11px] text-base-content/60 mt-0.5">{cloudState.hint}</div>
 				</div>
@@ -319,9 +345,9 @@
 		{/if}
 	</div>
 
-	<!-- Action Cards: Pull & Push -->
+	<!-- Kartu tindakan sinkronisasi -->
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-		<!-- 1. PULL MASTER DATA -->
+		<!-- 1. Sinkronisasi data master -->
 		<div
 			class="card bg-base-100 rounded-2xl border border-slate-200 dark:border-base-200 shadow-sm p-6 flex flex-col justify-between space-y-4"
 		>
@@ -332,10 +358,10 @@
 					<Icon name="download" class="w-5 h-5" />
 				</div>
 				<h2 class="text-lg font-bold text-emerald-950 dark:text-emerald-300">
-					Tarik Data Master (PULL)
+					Sinkron Data Master
 				</h2>
 				<p class="text-xs text-base-content/70 leading-relaxed">
-					Tarik data referensi rombel, murid, dan mata pelajaran terbaru dari Database Pusat
+					Sinkronkan data referensi rombel, murid, dan mata pelajaran terbaru dari Database Pusat
 					Sekolah. Jalankan saat awal semester atau bila ada pembaruan siswa dan guru baru dari
 					Operator.
 				</p>
@@ -353,7 +379,7 @@
 						<span>{pullStep || 'Mengunduh data...'}</span>
 					{:else}
 						<Icon name="repeat" />
-						<span>Tarik Data Terbaru</span>
+						<span>Sinkron Data Terbaru</span>
 					{/if}
 				</button>
 
@@ -382,7 +408,7 @@
 			</div>
 		</div>
 
-		<!-- 2. PUSH TEACHER GRADES -->
+		<!-- 2. Kirim nilai guru -->
 		<div
 			class="card bg-base-100 rounded-2xl border border-slate-200 dark:border-base-200 shadow-sm p-6 flex flex-col justify-between space-y-4"
 		>
@@ -392,12 +418,10 @@
 				>
 					<Icon name="export" class="w-5 h-5" />
 				</div>
-				<h2 class="text-lg font-bold text-emerald-950 dark:text-emerald-300">
-					Kirim Data Nilai (PUSH)
-				</h2>
+				<h2 class="text-lg font-bold text-emerald-950 dark:text-emerald-300">Kirim Data Nilai</h2>
 				<p class="text-xs text-base-content/70 leading-relaxed">
 					Unggah dan sinkronkan seluruh nilai yang sudah diisi di laptop/perangkat Anda (Formatif,
-					Sumatif, Kokurikuler, Ekskul, dan Presensi) langsung ke Database Pusat Cloud.
+					Sumatif, Kokurikuler, Ekskul, dan Presensi) langsung ke Database Pusat.
 				</p>
 			</div>
 
@@ -413,7 +437,7 @@
 						<span>{pushStep || 'Mengunggah nilai...'}</span>
 					{:else}
 						<Icon name="save" />
-						<span>Kirim Nilai ke Cloud</span>
+						<span>Kirim Nilai</span>
 					{/if}
 				</button>
 
@@ -438,6 +462,56 @@
 				{/if}
 			</div>
 		</div>
+
+		<!-- 3. Kirim data master -->
+		<div
+			class="card bg-base-100 rounded-2xl border border-slate-200 dark:border-base-200 shadow-sm p-6 flex flex-col justify-between space-y-4"
+		>
+			<div class="space-y-2">
+				<div
+					class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold"
+				>
+					<Icon name="database" class="w-5 h-5" />
+				</div>
+				<h2 class="text-lg font-bold text-emerald-950 dark:text-emerald-300">Kirim Master Data</h2>
+				<p class="text-xs text-base-content/70 leading-relaxed">
+					Unggah data induk ke Database Pusat: identitas sekolah, pegawai, kelas, mata pelajaran,
+					siswa, dan akun pengguna. Komputer baru menarik data ini dari halaman penyiapan sebelum
+					login, jadi jalankan setiap kali ada perubahan data induk.
+				</p>
+			</div>
+
+			<div class="space-y-3 pt-2">
+				<button
+					type="button"
+					class="btn btn-primary w-full shadow-none font-bold text-sm rounded-xl flex items-center justify-center gap-2"
+					onclick={handlePushMaster}
+					disabled={isPushingMaster || isPushing || isPulling}
+				>
+					{#if isPushingMaster}
+						<span class="loading loading-spinner loading-xs"></span>
+						<span>Mengirim master data...</span>
+					{:else}
+						<Icon name="database" />
+						<span>Kirim Master</span>
+					{/if}
+				</button>
+
+				{#if pushMasterResult}
+					<div class="alert alert-success alert-soft p-3 rounded-xl text-xs space-y-0.5">
+						<div class="font-bold break-words">{pushMasterResult.message}</div>
+						<div class="text-[11px] opacity-80">
+							Murid: {pushMasterResult.counts?.murid ?? 0} &bull; Kelas: {pushMasterResult.counts
+								?.kelas ?? 0} &bull; Akun: {pushMasterResult.counts?.auth_user ?? 0}
+						</div>
+					</div>
+				{:else if pushMasterError}
+					<div class="alert alert-error alert-soft p-3 rounded-xl text-xs items-start">
+						<div class="font-bold break-words">{pushMasterError}</div>
+					</div>
+				{/if}
+			</div>
+		</div>
 	</div>
 
 	<!-- Approval Panel for Operator/Admin: Konsolidasi Nilai Guru -->
@@ -453,7 +527,7 @@
 					<span>Konsolidasi &amp; Persetujuan Nilai Guru</span>
 				</h2>
 				<p class="text-xs text-base-content/70 mt-0.5">
-					Daftar paket nilai yang di-push oleh guru ke Cloud Database. Operator memverifikasi dan
+					Daftar paket nilai yang dikirim guru ke Database Pusat. Operator memverifikasi dan
 					menyetujui data sebelum disahkan ke Database Rapor Utama.
 				</p>
 			</div>
@@ -621,16 +695,16 @@
 	</div>
 </div>
 
-<!-- Modal Pengaturan Cloudflare D1 -->
+<!-- Modal pengaturan kredensial -->
 {#if showSettingsModal}
 	<div class="modal modal-open">
 		<div class="modal-box rounded-2xl max-w-md">
 			<h3 class="text-lg font-bold text-emerald-950 dark:text-emerald-300">
-				Pengaturan Cloudflare D1
+				Pengaturan Kredensial
 			</h3>
 			<p class="text-xs text-base-content/70 mt-1">
-				Konfigurasi kredensial Cloudflare D1 untuk menghubungkan database lokal dengan Database
-				Cloud SMK Pratama Mulya Karawang.
+				Konfigurasi kredensial untuk menghubungkan database lokal dengan Database Pusat SMK Pratama
+				Mulya Karawang.
 			</p>
 
 			<form onsubmit={saveSettings} class="space-y-4 mt-4">
@@ -639,7 +713,7 @@
 						<Icon name="warning" class="w-4 h-4 text-amber-600 shrink-0" />
 						<span>
 							Sesi <strong>wrangler</strong> di komputer ini sudah kedaluwarsa, jadi tidak dipakai
-							lagi. Masukkan Cloudflare API Token dengan izin <strong>D1 Edit</strong> di bawah.
+							lagi. Masukkan API Token Database Pusat dengan izin <strong>D1 Edit</strong> di bawah.
 						</span>
 					</div>
 				{:else if data.syncSettings.hasToken}
@@ -655,14 +729,14 @@
 					<div class="alert alert-info alert-soft p-3 rounded-xl text-xs items-start gap-2">
 						<Icon name="info" class="w-4 h-4 text-emerald-600 shrink-0" />
 						<span>
-							Belum ada API Token tersimpan. Isi token untuk mengaktifkan Tarik/Kirim data ke
+							Belum ada API Token tersimpan. Isi token untuk mengaktifkan sinkronisasi data ke
 							Database Pusat.
 						</span>
 					</div>
 				{/if}
 
 				<fieldset class="fieldset">
-					<legend class="fieldset-legend text-xs">Cloudflare Account ID</legend>
+					<legend class="fieldset-legend text-xs">Account ID</legend>
 					<input
 						type="text"
 						class="input input-sm w-full bg-base-200 rounded-xl"
@@ -672,7 +746,7 @@
 				</fieldset>
 
 				<fieldset class="fieldset">
-					<legend class="fieldset-legend text-xs">Cloudflare D1 Database ID</legend>
+					<legend class="fieldset-legend text-xs">Database ID</legend>
 					<input
 						type="text"
 						class="input input-sm w-full bg-base-200 rounded-xl"
@@ -682,17 +756,17 @@
 				</fieldset>
 
 				<fieldset class="fieldset">
-					<legend class="fieldset-legend text-xs">Cloudflare API Token / OAuth</legend>
+					<legend class="fieldset-legend text-xs">API Token Database Pusat</legend>
 					<input
 						type="password"
 						class="input input-sm w-full bg-base-200 rounded-xl"
 						placeholder={data.syncSettings.hasToken
 							? '•••••••• (token sudah tersimpan)'
-							: 'Masukkan API Token D1'}
+							: 'Masukkan API Token Database Pusat'}
 						bind:value={apiToken}
 					/>
 					<span class="text-[10px] text-base-content/60">
-						Buat token di Cloudflare Dashboard → My Profile → API Tokens, izin
+						Buat token di dashboard Cloudflare (My Profile → API Tokens) dengan izin
 						<strong>D1 Edit</strong> untuk database sekolah.
 					</span>
 				</fieldset>
