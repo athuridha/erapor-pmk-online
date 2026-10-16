@@ -1,0 +1,61 @@
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+/dist/windows
+
+# OS
+.DS_Store
+Thumbs.db
+NUL
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Our custom
+/src/lib/icons/__icons.d.ts
+/data/*.sqlite3
+/data/*.sqlite3-shm
+/data/*.sqlite3-wal
+# Signature PNG files
+/data/ttd
+# Uploaded photos
+/data/uploads
+# Bell sounds
+/data/sounds
+# Dinas luar attachments (undangan PDF, SPPD bukti PDF & foto)
+/data/dinas-luar
+
+#cert
+/installer/cert
+
+# sync scripts
+/installer/scripts/ensure-columns.mjs
+/installer/scripts/fix-drizzle-indexes.mjs
+/installer/scripts/grant-admin-permissions.mjs
+/installer/scripts/migrate-installed-db.mjs
+/installer/scripts/notify-server-reload.mjs
+/installer/scripts/seed-default-admin.mjs
+/installer/scripts/start-build.mjs
+
+# csrf
+/data/csrf-origins.txt
+
+# ai local config
+opencode.json
+openclaw.json
+
+# Strix pentest output
+/strix_runs

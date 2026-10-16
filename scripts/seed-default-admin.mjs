@@ -1,0 +1,145 @@
+import { createClient } from '@libsql/client';
+import { randomBytes, scryptSync } from 'node:crypto';
+
+const DEFAULT_DB_URL = process.env.DB_URL || 'file:./data/database.sqlite3';
+const client = createClient({ url: DEFAULT_DB_URL });
+
+// Keep this in sync with grant-admin-perms / userPermissions
+const REQUIRED_PERMISSIONS = [
+	'user_list',
+	'user_detail',
+	'user_add',
+	'user_delete',
+	'user_suspend',
+	'user_set_permissions',
+	'dashboard_manage',
+	'app_check_update',
+	'server_stop',
+	'kelas_pindah',
+	'informasi_umum_sekolah',
+	'informasi_umum_akademik',
+	'informasi_umum_kelas',
+	'informasi_umum_murid',
+	'mata_pelajaran_intrakurikuler',
+	'mata_pelajaran_kokurikuler',
+	'mata_pelajaran_ekstrakurikuler',
+	'mata_pelajaran_keasramaan',
+	'input_nilai_asesmen_formatif',
+	'input_nilai_asesmen_sumatif',
+	'input_nilai_asesmen_kokurikuler',
+	'input_nilai_nilai_ekstrakurikuler',
+	'input_nilai_asesmen_keasramaan',
+	'administrasi_absen',
+	'administrasi_jurnal_mengajar',
+	'administrasi_catatan_wali_kelas',
+	'administrasi_rekap_nilai',
+	'administrasi_keputusan',
+	'administrasi_buku_tamu',
+	'cetak_dokumen'
+];
+
+const DEFAULT_ADMIN = {
+	username: 'Admin',
+	password: 'Admin123',
+	permissions: REQUIRED_PERMISSIONS
+};
+
+const PASSWORD_KEY_LENGTH = 64;
+const PASSWORD_SALT_BYTES = 16;
+
+function nowIso() {
+	return new Date().toISOString();
+}
+
+function hashPassword(password) {
+	const salt = randomBytes(PASSWORD_SALT_BYTES).toString('hex');
+	const derived = scryptSync(password, salt, PASSWORD_KEY_LENGTH);
+	return { hash: derived.toString('hex'), salt };
+}
+
+async function hasAuthUserColumn(name) {
+	const res = await client.execute('PRAGMA table_info(auth_user)');
+	const cols = res.rows || [];
+	return cols.some((c) => c.name === name);
+}
+
+async function main() {
+	console.info('[seed-default-admin] Target DB:', DEFAULT_DB_URL);
+
+	// Look for an existing admin (by type or username_normalized)
+	const rows = await client.execute({
+		sql: "SELECT id, username, username_normalized, permissions FROM auth_user WHERE type = 'admin' OR username_normalized = 'admin'"
+	});
+
+	const results = rows.rows || [];
+	if (results.length) {
+		console.info('[seed-default-admin] Admin already present, ensuring permissions...');
+		for (const r of results) {
+			const id = r.id;
+			const existingJson = r.permissions || '[]';
+			let existing = [];
+			try {
+				existing = JSON.parse(existingJson);
+			} catch {
+				// ignore parse errors and treat as empty list
+			}
+			const merged = Array.from(new Set([...(existing || []), ...REQUIRED_PERMISSIONS]));
+			await client.execute({
+				sql: 'UPDATE auth_user SET permissions = ? WHERE id = ?',
+				args: [JSON.stringify(merged), id]
+			});
+			console.info(`[seed-default-admin] Updated admin id=${id} -> ${merged.length} permissions`);
+		}
+		await client.close();
+		console.info('[seed-default-admin] Done.');
+		return;
+	}
+
+	// No admin found -> create a default admin account (idempotent)
+	console.info('[seed-default-admin] No admin account found. Creating default Admin user.');
+	const { hash, salt } = hashPassword(DEFAULT_ADMIN.password);
+	const ts = nowIso();
+	// must_change_password=1 so the very first login forces a password change.
+	// Only set it when the column exists: on an older DB that has not been
+	// migrated yet (no server request has run the ALTER TABLE) the column is
+	// missing and including it would break the INSERT.
+	const canFlagPasswordChange = await hasAuthUserColumn('must_change_password');
+	const columns = [
+		'username',
+		'username_normalized',
+		'password_hash',
+		'password_salt',
+		'password_updated_at',
+		'permissions',
+		'type',
+		'created_at',
+		'updated_at'
+	];
+	const placeholders = columns.map(() => '?');
+	const args = [
+		DEFAULT_ADMIN.username,
+		DEFAULT_ADMIN.username.toLowerCase(),
+		hash,
+		salt,
+		ts,
+		JSON.stringify(DEFAULT_ADMIN.permissions),
+		'admin',
+		ts,
+		ts
+	];
+	if (canFlagPasswordChange) {
+		columns.push('must_change_password');
+		placeholders.push('?');
+		args.push(1);
+	}
+	const insertSql = `INSERT INTO auth_user (${columns.join(', ')}) VALUES (${placeholders.join(', ')})`;
+	await client.execute({ sql: insertSql, args });
+
+	console.info('[seed-default-admin] Created default Admin (username=Admin).');
+	await client.close();
+}
+
+main().catch((err) => {
+	console.error('[seed-default-admin] Failed', err);
+	process.exitCode = 1;
+});

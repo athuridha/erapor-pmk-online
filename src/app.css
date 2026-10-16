@@ -1,0 +1,212 @@
+@import 'tailwindcss';
+@plugin 'daisyui' {
+	exclude: rootscrollgutter;
+	themes:
+		emerald --default,
+		dark;
+}
+@plugin '@tailwindcss/typography';
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+	--breakpoint-ssm: 480px;
+	--color-primary-50: #ecfdf5;
+	--color-primary-100: #d1fae5;
+	--color-primary-200: #a7f3d0;
+	--color-primary-300: #6ee7b7;
+	--color-primary-400: #34d399;
+	--color-primary-500: #10b981;
+	--color-primary-600: #059669;
+	--color-primary-700: #047857;
+	--color-primary-800: #065f46;
+	--color-primary-900: #064e3b;
+	--color-primary-950: #022c22;
+}
+
+:root,
+[data-theme='emerald'] {
+	--color-primary: #059669;
+	--color-primary-content: #ffffff;
+	--color-secondary: #0d9488;
+	--color-secondary-content: #ffffff;
+	--color-accent: #10b981;
+	--color-accent-content: #ffffff;
+	--color-success: #10b981;
+	--color-success-content: #ffffff;
+	--color-base-100: #ffffff;
+	--color-base-200: #f8fafc;
+	--color-base-300: #f1f5f9;
+	--color-base-content: #0f172a;
+}
+
+[data-theme='dark'] {
+	--color-primary: #10b981;
+	--color-primary-content: #000000;
+	--color-secondary: #14b8a6;
+	--color-secondary-content: #ffffff;
+	--color-accent: #34d399;
+	--color-accent-content: #000000;
+	--color-success: #10b981;
+	--color-success-content: #000000;
+	--color-base-100: #141414;
+	--color-base-200: #1f1f1f;
+	--color-base-300: #2b2b2b;
+	--color-base-content: #f5f5f5;
+}
+
+::selection {
+	background-color: #059669;
+	color: #ffffff;
+}
+
+.btn-primary {
+	background-color: #059669 !important;
+	border-color: #047857 !important;
+	color: #ffffff !important;
+}
+
+.btn-primary:hover {
+	background-color: #047857 !important;
+	border-color: #065f46 !important;
+}
+
+.badge-primary {
+	background-color: #ecfdf5 !important;
+	color: #047857 !important;
+	border-color: #a7f3d0 !important;
+}
+
+[data-theme='dark'] .badge-primary {
+	background-color: #065f46 !important;
+	color: #ecfdf5 !important;
+	border-color: #059669 !important;
+}
+
+@utility prose {
+	:root & {
+		:where(code):not(pre > code) {
+			@apply bg-primary text-base-100 border-none;
+		}
+	}
+}
+
+a[data-preloading] {
+	@apply cursor-wait opacity-50;
+}
+
+@layer base {
+	.modal:not([open]) {
+		display: none;
+	}
+}
+
+@layer components {
+	.fab {
+		@apply fixed z-50;
+	}
+
+	.select-ellipsis {
+		max-width: min(100vw, 20rem);
+	}
+
+	.select-ellipsis option {
+		max-width: min(100vw, 20rem);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	table[data-intrak-table='true'] {
+		border-collapse: collapse;
+	}
+
+	table[data-intrak-table='true'] tr[data-tail-row='true'],
+	table[data-intrak-table='true'] tr[data-tail-row='true'] > th,
+	table[data-intrak-table='true'] tr[data-tail-row='true'] > td {
+		border-width: 0 !important;
+		border-color: transparent !important;
+	}
+}
+
+.preview {
+	background-image: repeating-linear-gradient(
+		-45deg,
+		rgba(0, 0, 0, 0.09),
+		rgba(0, 0, 0, 0.09) 1px,
+		transparent 1px,
+		transparent 12px
+	);
+}
+
+[data-theme='dark'] .badge-neutral {
+	color: white;
+}
+
+/* Avoid cursor flicker to the default pointer while a long drag crosses
+   elements that set their own cursor (the DnD helper adds this class). */
+html.erapor-dragging,
+html.erapor-dragging * {
+	cursor: grabbing !important;
+}
+
+/* === Tema Hijau Emerald SMK Pratama Mulya Karawang === */
+aside.drawer-side-pmk,
+.drawer-side aside {
+	background-color: #053d2e;
+	border-color: #065f46;
+}
+
+.drawer-side .menu summary {
+	color: #a7f3d0;
+	border-radius: 0.75rem;
+	padding: 0.5rem 0.75rem;
+	width: 100%;
+	transition: all 150ms ease-in-out;
+}
+
+.drawer-side .menu summary:hover {
+	background-color: rgba(7, 94, 70, 0.7);
+	color: #ffffff;
+}
+
+.drawer-side .menu a {
+	color: #d1fae5;
+	border-radius: 0.75rem;
+	padding: 0.45rem 0.75rem;
+	width: 100%;
+	transition: all 150ms ease-in-out;
+}
+
+.drawer-side .menu a:hover {
+	background-color: rgba(7, 94, 70, 0.7);
+	color: #ffffff;
+}
+
+.drawer-side .menu a.menu-active {
+	background-color: #059669 !important;
+	color: #ffffff !important;
+	font-weight: 700;
+	box-shadow:
+		0 4px 6px -1px rgba(0, 0, 0, 0.1),
+		0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.drawer-side .menu svg {
+	color: #6ee7b7;
+	flex-shrink: 0;
+}
+
+.drawer-side .menu a.menu-active svg {
+	color: #ffffff;
+}
+
+.sidebar-menu-scroll::-webkit-scrollbar {
+	width: 4px;
+}
+.sidebar-menu-scroll::-webkit-scrollbar-thumb {
+	background: #065f46;
+	border-radius: 4px;
+}
+.sidebar-menu-scroll::-webkit-scrollbar-track {
+	background: transparent;
+}

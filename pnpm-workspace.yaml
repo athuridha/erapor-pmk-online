@@ -1,0 +1,7 @@
+allowBuilds:
+  core-js: true
+  es5-ext: true
+  esbuild: true
+  puppeteer: true
+minimumReleaseAgeExclude:
+  - daisyui@5.6.13
