@@ -27,11 +27,18 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import fs from 'node:fs';
 import path from 'node:path';
 
+export type D1TokenSource = 'database' | 'env' | 'wrangler' | 'none';
+
 export interface D1Config {
 	accountId: string;
 	databaseId: string;
 	apiToken: string;
+	tokenSource: D1TokenSource;
+	wranglerTokenExpired: boolean;
 }
+
+export const DEFAULT_CLOUDFLARE_ACCOUNT_ID = 'b456e767d6306149a24d6228c8a65b6d';
+export const DEFAULT_CLOUDFLARE_DATABASE_ID = 'adcb638f-9adb-412b-8e61-cd80f1f1e062';
 
 export function sha256(data: unknown): string {
 	return crypto.createHash('sha256').update(JSON.stringify(data), 'utf8').digest('hex');
@@ -40,8 +47,9 @@ export function sha256(data: unknown): string {
 /**
  * Otomatis mendeteksi token OAuth dari sesi wrangler lokal (C:\Users\...\.wrangler)
  * sehingga pengguna tidak perlu memasukkan token manual jika sudah login wrangler di komputernya.
+ * Token yang sudah lewat `expiration_time` diabaikan supaya tidak berujung 401 "Authentication error".
  */
-function getWranglerOAuthToken(): string {
+function readWranglerToken(): { token: string; expiredAt: string | null; expired: boolean } {
 	try {
 		const appData = process.env.APPDATA || '';
 		const possiblePaths = [
@@ -50,39 +58,51 @@ function getWranglerOAuthToken(): string {
 		];
 
 		for (const p of possiblePaths) {
-			if (fs.existsSync(p)) {
-				const content = fs.readFileSync(p, 'utf8');
-				const tokenMatch = content.match(/oauth_token\s*=\s*"([^"]+)"/);
-				if (tokenMatch && tokenMatch[1]) {
-					return tokenMatch[1].trim();
-				}
-			}
+			if (!fs.existsSync(p)) continue;
+			const content = fs.readFileSync(p, 'utf8');
+			const tokenMatch = content.match(/oauth_token\s*=\s*"([^"]+)"/);
+			if (!tokenMatch?.[1]) continue;
+			const expiryMatch = content.match(/expiration_time\s*=\s*"([^"]+)"/);
+			const expiredAt = expiryMatch?.[1] ?? null;
+			const expired = expiredAt ? Date.parse(expiredAt) <= Date.now() : false;
+			return { token: tokenMatch[1].trim(), expiredAt, expired };
 		}
 	} catch (e) {
 		console.warn('[cloudflare-d1] Gagal membaca token wrangler lokal:', e);
 	}
-	return '';
+	return { token: '', expiredAt: null, expired: false };
 }
 
-export async function getD1Config(sekolahId: number): Promise<D1Config | null> {
+export async function getD1Config(sekolahId: number): Promise<D1Config> {
 	const stored = await db.query.tableCloudSyncSettings.findFirst({
 		where: eq(tableCloudSyncSettings.sekolahId, sekolahId)
 	});
 
-	const wranglerToken = getWranglerOAuthToken();
+	const wrangler = readWranglerToken();
+	const storedToken = (stored?.apiToken || '').trim();
+	const envToken = (process.env.CLOUDFLARE_API_TOKEN || '').trim();
 
-	const accountId =
-		stored?.accountId || process.env.CLOUDFLARE_ACCOUNT_ID || 'b456e767d6306149a24d6228c8a65b6d';
-	const databaseId =
-		stored?.databaseId ||
-		process.env.CLOUDFLARE_DATABASE_ID ||
-		'adcb638f-9adb-412b-8e61-cd80f1f1e062';
-	const apiToken = stored?.apiToken || process.env.CLOUDFLARE_API_TOKEN || wranglerToken || '';
+	let apiToken = '';
+	let tokenSource: D1TokenSource = 'none';
+	if (storedToken) {
+		apiToken = storedToken;
+		tokenSource = 'database';
+	} else if (envToken) {
+		apiToken = envToken;
+		tokenSource = 'env';
+	} else if (wrangler.token && !wrangler.expired) {
+		apiToken = wrangler.token;
+		tokenSource = 'wrangler';
+	}
 
 	return {
-		accountId,
-		databaseId,
-		apiToken
+		accountId:
+			stored?.accountId || process.env.CLOUDFLARE_ACCOUNT_ID || DEFAULT_CLOUDFLARE_ACCOUNT_ID,
+		databaseId:
+			stored?.databaseId || process.env.CLOUDFLARE_DATABASE_ID || DEFAULT_CLOUDFLARE_DATABASE_ID,
+		apiToken,
+		tokenSource,
+		wranglerTokenExpired: Boolean(wrangler.token) && wrangler.expired
 	};
 }
 
@@ -99,8 +119,8 @@ export async function saveD1Config(
 		await db
 			.update(tableCloudSyncSettings)
 			.set({
-				accountId: config.accountId.trim() || 'b456e767d6306149a24d6228c8a65b6d',
-				databaseId: config.databaseId.trim() || 'adcb638f-9adb-412b-8e61-cd80f1f1e062',
+				accountId: config.accountId.trim() || DEFAULT_CLOUDFLARE_ACCOUNT_ID,
+				databaseId: config.databaseId.trim() || DEFAULT_CLOUDFLARE_DATABASE_ID,
 				apiToken: config.apiToken.trim(),
 				updatedAt: nowIso
 			})
@@ -108,8 +128,8 @@ export async function saveD1Config(
 	} else {
 		await db.insert(tableCloudSyncSettings).values({
 			sekolahId,
-			accountId: config.accountId.trim() || 'b456e767d6306149a24d6228c8a65b6d',
-			databaseId: config.databaseId.trim() || 'adcb638f-9adb-412b-8e61-cd80f1f1e062',
+			accountId: config.accountId.trim() || DEFAULT_CLOUDFLARE_ACCOUNT_ID,
+			databaseId: config.databaseId.trim() || DEFAULT_CLOUDFLARE_DATABASE_ID,
 			apiToken: config.apiToken.trim(),
 			createdAt: nowIso
 		});
@@ -143,10 +163,38 @@ export async function executeD1Query(
 			})
 		});
 
-		const data = await res.json();
-		if (!res.ok || !data.success) {
-			const err = data.errors?.[0]?.message || `Gagal menjalankan kueri D1 (status ${res.status})`;
-			return { success: false, error: err };
+		const data = (await res.json().catch(() => null)) as {
+			success?: boolean;
+			result?: unknown;
+			errors?: { code?: number; message?: string }[];
+		} | null;
+
+		if (!res.ok || !data?.success) {
+			const code = data?.errors?.[0]?.code;
+			const message = data?.errors?.[0]?.message;
+			console.warn('[cloudflare-d1] kueri ditolak:', res.status, code, message);
+
+			if (res.status === 401 || code === 10000 || code === 1000) {
+				return {
+					success: false,
+					error: config.wranglerTokenExpired
+						? 'Sesi wrangler di komputer ini sudah kedaluwarsa. Masukkan Cloudflare API Token (izin D1 Edit) di Detail Kredensial Cloud, atau jalankan ulang "wrangler login".'
+						: 'Token Cloudflare ditolak (tidak valid atau sudah kedaluwarsa). Periksa kembali API Token di Detail Kredensial Cloud.'
+				};
+			}
+
+			if (res.status === 403 || code === 7403) {
+				return {
+					success: false,
+					error:
+						'Token Cloudflare tidak punya izin D1 untuk database ini. Buat API Token dengan izin "D1 Edit".'
+				};
+			}
+
+			return {
+				success: false,
+				error: message || `Gagal menjalankan kueri D1 (status ${res.status})`
+			};
 		}
 
 		return { success: true, result: data.result };
@@ -156,6 +204,46 @@ export async function executeD1Query(
 			error: err instanceof Error ? err.message : 'Koneksi ke Cloudflare D1 gagal.'
 		};
 	}
+}
+
+export interface D1ConnectionTest {
+	ok: boolean;
+	message: string;
+	tokenSource: D1TokenSource;
+	wranglerTokenExpired: boolean;
+	accountId: string;
+	databaseId: string;
+}
+
+/**
+ * Uji koneksi ke Cloudflare D1 (SELECT 1) supaya pengguna tahu status kredensial sebenarnya
+ * sebelum menarik/mengirim data.
+ */
+export async function testD1Connection(sekolahId: number): Promise<D1ConnectionTest> {
+	const config = await getD1Config(sekolahId);
+	const base = {
+		tokenSource: config.tokenSource,
+		wranglerTokenExpired: config.wranglerTokenExpired,
+		accountId: config.accountId,
+		databaseId: config.databaseId
+	};
+
+	if (!config.apiToken) {
+		return {
+			...base,
+			ok: false,
+			message: config.wranglerTokenExpired
+				? 'Sesi wrangler di komputer ini sudah kedaluwarsa dan belum ada API Token tersimpan. Masukkan Cloudflare API Token (izin D1 Edit) di Detail Kredensial Cloud.'
+				: 'Belum ada API Token Cloudflare. Isi di Detail Kredensial Cloud untuk mengaktifkan sinkronisasi.'
+		};
+	}
+
+	const res = await executeD1Query(config, 'SELECT 1 AS ok');
+	return {
+		...base,
+		ok: res.success,
+		message: res.success ? 'Koneksi ke Cloudflare D1 berhasil.' : res.error || 'Uji koneksi gagal.'
+	};
 }
 
 /**
@@ -361,6 +449,7 @@ export async function pullDataFromCloud(
 
 	let recordsCount = 0;
 	const details: Record<string, number> = {};
+	let message = 'Master data terbaru berhasil disinkronkan dengan Database Pusat.';
 
 	if (config?.accountId && config.apiToken) {
 		// Tarik data dari D1
@@ -376,7 +465,7 @@ export async function pullDataFromCloud(
 		recordsCount = 1;
 		details.masterVersion = 1;
 	} else {
-		// Mode lokal terverifikasi
+		// Tidak ada kredensial: hanya rekap data lokal, jangan mengaku sudah menarik dari cloud
 		const [kelasCount, muridCount, mapelCount, guruCount] = await Promise.all([
 			db.select({ count: sql<number>`count(*)` }).from(tableKelas),
 			db.select({ count: sql<number>`count(*)` }).from(tableMurid),
@@ -389,6 +478,9 @@ export async function pullDataFromCloud(
 		details.mapel = mapelCount[0]?.count ?? 0;
 		details.guru = guruCount[0]?.count ?? 0;
 		recordsCount = details.kelas + details.murid + details.mapel + details.guru;
+		message = config.wranglerTokenExpired
+			? 'Sesi wrangler sudah kedaluwarsa, jadi tidak ada data yang ditarik dari Database Pusat. Angka di bawah hanya rekap data lokal.'
+			: 'Kredensial Cloudflare belum diisi, jadi tidak ada data yang ditarik dari Database Pusat. Angka di bawah hanya rekap data lokal.';
 	}
 
 	// Catat log

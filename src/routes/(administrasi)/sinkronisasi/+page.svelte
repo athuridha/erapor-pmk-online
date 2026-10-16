@@ -11,6 +11,8 @@
 	let pullStep = $state('');
 	let pushResult = $state<any>(null);
 	let pullResult = $state<any>(null);
+	let pullError = $state('');
+	let pushError = $state('');
 
 	// Modal pengaturan Cloudflare D1
 	let showSettingsModal = $state(false);
@@ -20,6 +22,45 @@
 	let databaseId = $state(data.syncSettings.databaseId);
 	let apiToken = $state('');
 	let isSavingConfig = $state(false);
+
+	// Status koneksi (uji nyata ke Cloudflare D1)
+	let isTestingConnection = $state(false);
+	let connectionResult = $state<{ ok: boolean; message: string } | null>(null);
+
+	const tokenSourceLabel: Record<string, string> = {
+		database: 'API Token yang tersimpan di aplikasi',
+		env: 'variabel lingkungan server',
+		wrangler: 'sesi wrangler lokal',
+		none: 'belum ada token'
+	};
+
+	let cloudState = $derived.by(() => {
+		const { hasToken, tokenSource, wranglerTokenExpired } = data.syncSettings;
+
+		if (!hasToken) {
+			if (wranglerTokenExpired) {
+				return {
+					dot: 'bg-amber-500',
+					text: 'text-amber-600 dark:text-amber-400',
+					label: 'PERLU TOKEN BARU',
+					hint: 'Sesi wrangler di komputer ini sudah kedaluwarsa. Isi API Token D1 di Detail Kredensial Cloud.'
+				};
+			}
+			return {
+				dot: 'bg-slate-400',
+				text: 'text-base-content/70',
+				label: 'BELUM DIKONFIGURASI',
+				hint: 'Belum ada API Token Cloudflare, jadi sinkronisasi cloud belum aktif.'
+			};
+		}
+
+		return {
+			dot: 'bg-emerald-500',
+			text: 'text-emerald-600 dark:text-emerald-400',
+			label: 'KREDENSIAL SIAP',
+			hint: `Token dari ${tokenSourceLabel[tokenSource] ?? 'sumber tidak dikenal'}. Tekan Tes Koneksi untuk memastikan.`
+		};
+	});
 
 	// Modal & status approval paket
 	let isApproving = $state(false);
@@ -82,6 +123,7 @@
 	async function handlePull() {
 		isPulling = true;
 		pullResult = null;
+		pullError = '';
 		pullStep = 'Menghubungi Cloudflare D1 Database...';
 
 		try {
@@ -101,7 +143,8 @@
 			toast(json.message, 'success');
 			await invalidateAll();
 		} catch (err: any) {
-			toast(err.message || 'Gagal sinkronisasi data dari cloud.', 'error');
+			pullError = err.message || 'Gagal sinkronisasi data dari cloud.';
+			toast(pullError, 'error');
 		} finally {
 			isPulling = false;
 			pullStep = '';
@@ -111,6 +154,7 @@
 	async function handlePush() {
 		isPushing = true;
 		pushResult = null;
+		pushError = '';
 		pushStep = 'Memeriksa koneksi Cloudflare D1...';
 
 		try {
@@ -133,7 +177,8 @@
 			toast(json.message, 'success');
 			await invalidateAll();
 		} catch (err: any) {
-			toast(err.message || 'Gagal mengirim nilai ke cloud.', 'error');
+			pushError = err.message || 'Gagal mengirim nilai ke cloud.';
+			toast(pushError, 'error');
 		} finally {
 			isPushing = false;
 			pushStep = '';
@@ -163,6 +208,24 @@
 		}
 	}
 
+	async function handleTestConnection() {
+		if (isTestingConnection) return;
+		isTestingConnection = true;
+		connectionResult = null;
+
+		try {
+			const res = await fetch('/api/cloud/test', { method: 'POST' });
+			const json = await res.json();
+			connectionResult = { ok: Boolean(json.ok), message: json.message || 'Tidak ada respons.' };
+			toast(json.message || 'Uji koneksi selesai.', json.ok ? 'success' : 'error');
+		} catch (err: any) {
+			connectionResult = { ok: false, message: err.message || 'Uji koneksi gagal.' };
+			toast(err.message || 'Uji koneksi gagal.', 'error');
+		} finally {
+			isTestingConnection = false;
+		}
+	}
+
 	function formatDate(val?: string | null) {
 		if (!val) return 'Belum pernah';
 		return new Date(val).toLocaleString('id-ID', {
@@ -189,45 +252,71 @@
 		</div>
 
 		{#if data.user?.type === 'admin'}
-			<button
-				type="button"
-				class="btn btn-sm btn-ghost text-base-content/60 hover:text-emerald-700 rounded-xl shadow-none flex items-center gap-2 border border-slate-200 dark:border-base-300"
-				onclick={() => (showSettingsModal = true)}
-			>
-				<Icon name="gear" class="text-emerald-600" />
-				<span>Detail Kredensial Cloud</span>
-			</button>
+			<div class="flex flex-wrap items-center gap-2 shrink-0">
+				<button
+					type="button"
+					class="btn btn-sm btn-ghost text-base-content/60 hover:text-emerald-700 rounded-xl shadow-none flex items-center gap-2 border border-slate-200 dark:border-base-300"
+					disabled={isTestingConnection}
+					onclick={handleTestConnection}
+				>
+					{#if isTestingConnection}
+						<span class="loading loading-spinner loading-xs"></span>
+					{:else}
+						<Icon name="repeat" class="text-emerald-600" />
+					{/if}
+					<span>Tes Koneksi</span>
+				</button>
+				<button
+					type="button"
+					class="btn btn-sm btn-ghost text-base-content/60 hover:text-emerald-700 rounded-xl shadow-none flex items-center gap-2 border border-slate-200 dark:border-base-300"
+					onclick={() => (showSettingsModal = true)}
+				>
+					<Icon name="gear" class="text-emerald-600" />
+					<span>Detail Kredensial Cloud</span>
+				</button>
+			</div>
 		{/if}
 	</div>
 
 	<!-- Status Card -->
 	<div
-		class="card bg-base-100 rounded-2xl border border-emerald-100 dark:border-base-200 shadow-sm p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4"
+		class="card bg-base-100 rounded-2xl border border-emerald-100 dark:border-base-200 shadow-sm p-4 sm:p-5 space-y-4"
 	>
-		<div class="flex items-center gap-3">
-			<span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-			<div>
-				<div class="text-xs font-bold text-base-content/70">Status Database Cloud:</div>
-				<div class="text-sm font-black text-emerald-600 dark:text-emerald-400">
-					ONLINE &bull; erapor-pmk-db (Cloudflare D1 Aktif)
+		<div class="flex flex-wrap items-center justify-between gap-4">
+			<div class="flex items-center gap-3 min-w-0">
+				<span class="w-3 h-3 rounded-full shrink-0 {cloudState.dot}"></span>
+				<div class="min-w-0">
+					<div class="text-xs font-bold text-base-content/70">Status Database Cloud:</div>
+					<div class="text-sm font-black {cloudState.text}">{cloudState.label}</div>
+					<div class="text-[11px] text-base-content/60 mt-0.5">{cloudState.hint}</div>
+				</div>
+			</div>
+
+			<div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-base-content/70">
+				<div>
+					<span class="font-medium">Total Nilai Lokal:</span>
+					<span class="font-bold text-base-content ml-1">{data.totalGrades} Nilai</span>
+				</div>
+				<div>
+					<span class="font-medium">Rombel:</span>
+					<span class="font-bold text-base-content ml-1">{data.totalClasses} Kelas</span>
+				</div>
+				<div>
+					<span class="font-medium">Mapel:</span>
+					<span class="font-bold text-base-content ml-1">{data.totalSubjects} Mapel</span>
 				</div>
 			</div>
 		</div>
 
-		<div class="flex items-center gap-6 text-xs text-base-content/70">
-			<div>
-				<span class="font-medium">Total Nilai Lokal:</span>
-				<span class="font-bold text-base-content ml-1">{data.totalGrades} Nilai</span>
+		{#if connectionResult}
+			<div
+				class="alert {connectionResult.ok
+					? 'alert-success'
+					: 'alert-error'} alert-soft p-3 rounded-xl text-xs items-start"
+			>
+				<div class="font-bold break-words">{connectionResult.message}</div>
 			</div>
-			<div>
-				<span class="font-medium">Rombel:</span>
-				<span class="font-bold text-base-content ml-1">{data.totalClasses} Kelas</span>
-			</div>
-			<div>
-				<span class="font-medium">Mapel:</span>
-				<span class="font-bold text-base-content ml-1">{data.totalSubjects} Mapel</span>
-			</div>
-		</div>
+		{/if}
 	</div>
 
 	<!-- Action Cards: Pull & Push -->
@@ -277,13 +366,17 @@
 
 				{#if pullResult}
 					<div class="alert alert-success alert-soft p-3 rounded-xl text-xs space-y-0.5">
-						<div class="font-bold">{pullResult.message}</div>
+						<div class="font-bold break-words">{pullResult.message}</div>
 						{#if pullResult.details}
 							<div class="text-[11px] opacity-80">
 								Kelas: {pullResult.details.kelas ?? 0} &bull; Murid: {pullResult.details.murid ?? 0} &bull;
 								Mapel: {pullResult.details.mapel ?? 0}
 							</div>
 						{/if}
+					</div>
+				{:else if pullError}
+					<div class="alert alert-error alert-soft p-3 rounded-xl text-xs items-start">
+						<div class="font-bold break-words">{pullError}</div>
 					</div>
 				{/if}
 			</div>
@@ -333,10 +426,14 @@
 
 				{#if pushResult}
 					<div class="alert alert-success alert-soft p-3 rounded-xl text-xs space-y-0.5">
-						<div class="font-bold">{pushResult.message}</div>
+						<div class="font-bold break-words">{pushResult.message}</div>
 						<div class="font-mono text-[10px] truncate opacity-70">
 							Checksum: {pushResult.checksum}
 						</div>
+					</div>
+				{:else if pushError}
+					<div class="alert alert-error alert-soft p-3 rounded-xl text-xs items-start">
+						<div class="font-bold break-words">{pushError}</div>
 					</div>
 				{/if}
 			</div>
@@ -347,12 +444,12 @@
 	<div
 		class="card bg-base-100 rounded-2xl border border-slate-200 dark:border-base-200 shadow-sm p-6 space-y-4"
 	>
-		<div class="flex items-center justify-between">
-			<div>
+		<div class="flex flex-wrap items-start justify-between gap-3">
+			<div class="min-w-0 flex-1">
 				<h2
-					class="text-base font-bold text-emerald-950 dark:text-emerald-300 flex items-center gap-2"
+					class="text-base font-bold text-emerald-950 dark:text-emerald-300 flex flex-wrap items-center gap-2"
 				>
-					<Icon name="check" class="text-emerald-600" />
+					<Icon name="check" class="text-emerald-600 shrink-0" />
 					<span>Konsolidasi &amp; Persetujuan Nilai Guru</span>
 				</h2>
 				<p class="text-xs text-base-content/70 mt-0.5">
@@ -360,7 +457,7 @@
 					menyetujui data sebelum disahkan ke Database Rapor Utama.
 				</p>
 			</div>
-			<div class="badge badge-sm badge-outline font-semibold">
+			<div class="badge badge-sm badge-outline font-semibold shrink-0 whitespace-nowrap">
 				{data.packages?.length ?? 0} Paket Terdata
 			</div>
 		</div>
@@ -537,20 +634,39 @@
 			</p>
 
 			<form onsubmit={saveSettings} class="space-y-4 mt-4">
-				<div class="alert alert-info alert-soft p-3 rounded-xl text-xs flex items-center gap-2">
-					<Icon name="check" class="w-4 h-4 text-emerald-600 shrink-0" />
-					<span>
-						Akun Cloudflare terdeteksi otomatis (<strong>amarathuridhaa@gmail.com</strong>).
-						Database baru: <strong>erapor-pmk-db</strong> siap digunakan tanpa perlu setup lagi.
-					</span>
-				</div>
+				{#if data.syncSettings.wranglerTokenExpired}
+					<div class="alert alert-warning alert-soft p-3 rounded-xl text-xs items-start gap-2">
+						<Icon name="warning" class="w-4 h-4 text-amber-600 shrink-0" />
+						<span>
+							Sesi <strong>wrangler</strong> di komputer ini sudah kedaluwarsa, jadi tidak dipakai
+							lagi. Masukkan Cloudflare API Token dengan izin <strong>D1 Edit</strong> di bawah.
+						</span>
+					</div>
+				{:else if data.syncSettings.hasToken}
+					<div class="alert alert-info alert-soft p-3 rounded-xl text-xs items-start gap-2">
+						<Icon name="check" class="w-4 h-4 text-emerald-600 shrink-0" />
+						<span>
+							Token aktif berasal dari <strong
+								>{tokenSourceLabel[data.syncSettings.tokenSource] ?? 'sumber tidak dikenal'}</strong
+							>. Biarkan kolom token kosong kalau tidak ingin menggantinya.
+						</span>
+					</div>
+				{:else}
+					<div class="alert alert-info alert-soft p-3 rounded-xl text-xs items-start gap-2">
+						<Icon name="info" class="w-4 h-4 text-emerald-600 shrink-0" />
+						<span>
+							Belum ada API Token tersimpan. Isi token untuk mengaktifkan Tarik/Kirim data ke
+							Database Pusat.
+						</span>
+					</div>
+				{/if}
 
 				<fieldset class="fieldset">
 					<legend class="fieldset-legend text-xs">Cloudflare Account ID</legend>
 					<input
 						type="text"
 						class="input input-sm w-full bg-base-200 rounded-xl"
-						placeholder="b456e767d6306149a24d6228c8a65b6d"
+						placeholder={data.syncSettings.accountId}
 						bind:value={accountId}
 					/>
 				</fieldset>
@@ -560,7 +676,7 @@
 					<input
 						type="text"
 						class="input input-sm w-full bg-base-200 rounded-xl"
-						placeholder="adcb638f-9adb-412b-8e61-cd80f1f1e062"
+						placeholder={data.syncSettings.databaseId}
 						bind:value={databaseId}
 					/>
 				</fieldset>
@@ -571,12 +687,13 @@
 						type="password"
 						class="input input-sm w-full bg-base-200 rounded-xl"
 						placeholder={data.syncSettings.hasToken
-							? '•••••••• (Otomatis dari Akun Wrangler / D1)'
-							: 'Masukkan Token D1'}
+							? '•••••••• (token sudah tersimpan)'
+							: 'Masukkan API Token D1'}
 						bind:value={apiToken}
 					/>
 					<span class="text-[10px] text-base-content/60">
-						Sudah terhubung otomatis via sesi Cloudflare / wrangler Anda.
+						Buat token di Cloudflare Dashboard → My Profile → API Tokens, izin
+						<strong>D1 Edit</strong> untuk database sekolah.
 					</span>
 				</fieldset>
 

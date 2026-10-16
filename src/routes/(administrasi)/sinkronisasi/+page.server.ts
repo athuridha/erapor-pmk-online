@@ -52,11 +52,11 @@ export async function load({ locals }) {
 		totalClasses: kelasCount[0]?.count ?? 0,
 		totalSubjects: mapelCount[0]?.count ?? 0,
 		syncSettings: {
-			databaseId:
-				syncSettings?.databaseId || d1Config?.databaseId || 'adcb638f-9adb-412b-8e61-cd80f1f1e062',
-			accountId:
-				syncSettings?.accountId || d1Config?.accountId || 'b456e767d6306149a24d6228c8a65b6d',
-			hasToken: Boolean(d1Config?.apiToken),
+			databaseId: syncSettings?.databaseId || d1Config.databaseId,
+			accountId: syncSettings?.accountId || d1Config.accountId,
+			hasToken: Boolean(d1Config.apiToken),
+			tokenSource: d1Config.tokenSource,
+			wranglerTokenExpired: d1Config.wranglerTokenExpired,
 			lastPushedAt: syncSettings?.lastPushedAt ?? null,
 			lastPulledAt: syncSettings?.lastPulledAt ?? null,
 			lastChecksum: syncSettings?.lastChecksum ?? null

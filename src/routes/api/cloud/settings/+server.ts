@@ -1,6 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getD1Config, saveD1Config } from '$lib/server/cloudflare-d1';
+import {
+	DEFAULT_CLOUDFLARE_DATABASE_ID,
+	getD1Config,
+	saveD1Config
+} from '$lib/server/cloudflare-d1';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	const user = locals.user;
@@ -12,9 +16,10 @@ export const GET: RequestHandler = async ({ locals }) => {
 	return json({
 		success: true,
 		config: {
-			accountId: config?.accountId || '',
-			databaseId: config?.databaseId || '766ffcd4-c49f-4f29-ab20-dddc0215bb89',
-			hasToken: Boolean(config?.apiToken)
+			accountId: config.accountId,
+			databaseId: config.databaseId || DEFAULT_CLOUDFLARE_DATABASE_ID,
+			hasToken: Boolean(config.apiToken),
+			tokenSource: config.tokenSource
 		}
 	});
 };
@@ -28,7 +33,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const body = await request.json();
 	await saveD1Config(sekolahId, {
 		accountId: body.accountId || '',
-		databaseId: body.databaseId || '766ffcd4-c49f-4f29-ab20-dddc0215bb89',
+		databaseId: body.databaseId || DEFAULT_CLOUDFLARE_DATABASE_ID,
 		apiToken: body.apiToken || ''
 	});
 
