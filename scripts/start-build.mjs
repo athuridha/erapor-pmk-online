@@ -8,6 +8,20 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
  * Installer selalu memperbarui `.env.default` supaya kredensial yang ditanam
  * saat packaging tetap sampai ke mesin yang sudah pernah terinstall.
  */
+
+/**
+ * Installer menulis DB_URL dengan placeholder Windows (`file:%LOCALAPPDATA%/...`)
+ * supaya satu .env berlaku untuk semua pengguna. Saat dijalankan lewat peluncur,
+ * env tersebut sudah diganti peluncur; saat skrip ini dijalankan langsung,
+ * placeholder mentah membuat @libsql/client gagal (URL_INVALID). Jadi perluas
+ * di sini juga.
+ */
+function expandEnvPlaceholders(value) {
+	return value
+		.replace(/%([A-Za-z_][A-Za-z0-9_]*)%/g, (_, name) => process.env[name] ?? '')
+		.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_, name) => process.env[name] ?? '');
+}
+
 function loadDotEnv(fileName = '.env') {
 	try {
 		const envPath = path.resolve(process.cwd(), fileName);
@@ -26,7 +40,7 @@ function loadDotEnv(fileName = '.env') {
 			) {
 				val = val.slice(1, -1);
 			}
-			if (process.env[key] === undefined) process.env[key] = val;
+			if (process.env[key] === undefined) process.env[key] = expandEnvPlaceholders(val);
 		}
 	} catch (e) {
 		console.warn(`[start-build] failed to read ${fileName} file`, e);

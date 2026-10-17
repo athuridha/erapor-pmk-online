@@ -5,11 +5,10 @@ import {
 	tableKelas,
 	tableMataPelajaran,
 	tableAuthUserMataPelajaran,
-	tableAuthUserKelas,
-	tableMurid
+	tableAuthUserKelas
 } from '$lib/server/db/schema';
 import { tableSekolah } from '$lib/server/db/schema';
-import { sql, eq, and, inArray } from 'drizzle-orm';
+import { sql, eq, inArray } from 'drizzle-orm';
 import { authority } from './utils.server';
 import { hashPassword } from '$lib/server/auth';
 import { validatePasswordStrength } from '$lib/server/password-policy';
@@ -62,7 +61,7 @@ export async function load({ url, locals }) {
 	// Derive every role a pegawai holds from relations, so rangkap accounts
 	// (e.g. Kepala Sekolah + Wali Kelas A + Wali Kelas B) display all labels.
 	const sekolahFilter = locals.sekolah?.id ? sql` AND sekolah_id = ${locals.sekolah.id}` : sql``;
-	const [kelasBerwali, sekolahBerkepala, asuhCounts] = await Promise.all([
+	const [kelasBerwali, sekolahBerkepala] = await Promise.all([
 		db.query.tableKelas.findMany({
 			columns: { id: true, nama: true, waliKelasId: true },
 			where: sql`${tableKelas.waliKelasId} IS NOT NULL${sekolahFilter}`
@@ -72,14 +71,7 @@ export async function load({ url, locals }) {
 			.from(tableSekolah)
 			.where(
 				sql`${tableSekolah.kepalaSekolahId} IS NOT NULL${locals.sekolah?.id ? sql` AND ${tableSekolah.id} = ${locals.sekolah.id}` : sql``}`
-			),
-		db
-			.select({ nama: tableMurid.waliAsuhNama, count: sql<number>`count(*)` })
-			.from(tableMurid)
-			.where(
-				sql`${tableMurid.waliAsuhNama} IS NOT NULL AND trim(${tableMurid.waliAsuhNama}) != ''${sekolahFilter}`
 			)
-			.groupBy(tableMurid.waliAsuhNama)
 	]);
 
 	const waliKelasByPegawai = new Map<number, string[]>();
@@ -96,18 +88,11 @@ export async function load({ url, locals }) {
 	const kepalaPegawaiIds = new Set(
 		sekolahBerkepala.map((s) => s.pegawaiId).filter((id): id is number => id != null)
 	);
-	const asuhCountByName = new Map<string, number>();
-	for (const r of asuhCounts) {
-		const key = (r.nama ?? '').trim().toLowerCase();
-		if (!key) continue;
-		asuhCountByName.set(key, (asuhCountByName.get(key) ?? 0) + Number(r.count));
-	}
 
 	const typeLabel: Record<string, string> = {
 		admin: 'Admin',
 		kepala_sekolah: 'Kepala Sekolah',
-		wali_kelas: 'Wali Kelas',
-		wali_asuh: 'Wali Asuh',
+		wali_kelas: 'Guru',
 		user: 'Guru'
 	};
 
@@ -163,25 +148,20 @@ export async function load({ url, locals }) {
 
 	const users = dedupedUsers.map((row) => {
 		const roles: string[] = [];
-		if (row.pegawaiId && kepalaPegawaiIds.has(row.pegawaiId)) roles.push('Kepala Sekolah');
+		if (row.type === 'kepala_sekolah' || (row.pegawaiId && kepalaPegawaiIds.has(row.pegawaiId))) {
+			roles.push('Kepala Sekolah');
+		}
+		if (row.type === 'admin') {
+			roles.push('Admin');
+		}
+		if (row.type === 'user' || row.type === 'wali_kelas') {
+			roles.push('Guru');
+		}
 		if (row.pegawaiId) {
-			for (const nama of waliKelasByPegawai.get(row.pegawaiId) ?? []) roles.push(`Wali ${nama}`);
-		}
-		// Wali kelas sekaligus guru mapel di kelas LAIN dari kelas wallinya.
-		if (row.type === 'wali_kelas' && row.pegawaiId != null) {
-			const ownKelas = new Set(waliKelasIdsByPegawai.get(row.pegawaiId) ?? []);
-			const arr = userMapelMap.get(row.id);
-			if (arr && arr.length > 0) {
-				const teachesOutsideOwn = arr.some((mpId) => {
-					const kId = mapelKelasMap.get(mpId);
-					return kId != null && !ownKelas.has(kId);
-				});
-				if (teachesOutsideOwn) roles.push('Guru');
+			const kelasWali = waliKelasByPegawai.get(row.pegawaiId) ?? [];
+			for (const nama of kelasWali) {
+				roles.push(`Wali ${nama}`);
 			}
-		}
-		const asuhCount = asuhCountByName.get((row.pegawaiName ?? '').trim().toLowerCase()) ?? 0;
-		if (asuhCount > 0 || row.type === 'wali_asuh') {
-			roles.push(asuhCount > 0 ? `Wali Asuh (${asuhCount} murid)` : 'Wali Asuh');
 		}
 		if (!roles.length) roles.push(typeLabel[row.type] ?? row.type);
 		return { ...row, roles };
@@ -301,16 +281,12 @@ export const actions = {
 				.leftJoin(tableKelas, eq(tableAuthUser.kelasId, tableKelas.id))
 				.where(inArray(tableAuthUser.id, ids));
 
-			const blocked = candidates.filter((c) => c.type === 'wali_kelas' || c.type === 'wali_asuh');
+			const blocked = candidates.filter((c) => c.type === 'wali_kelas');
 			if (blocked.length) {
 				const messages = blocked.map((b) => {
 					const name = b.pegawaiName || b.username || 'Pengguna';
 					const kelas = b.kelasName || '';
-					const role = b.type === 'wali_asuh' ? 'Wali Asuh' : 'Wali Kelas';
-					if (b.type === 'wali_asuh') {
-						return `${name} adalah ${role}, tidak dapat dihapus. Ubah wali asuh melalui menu Data Murid`;
-					}
-					return `${name} adalah ${role} ${kelas}, tidak dapat dihapus. Untuk menggantinya buka menu Data Kelas`;
+					return `${name} adalah Wali Kelas ${kelas}, tidak dapat dihapus. Untuk menggantinya buka menu Data Kelas`;
 				});
 				return new Response(JSON.stringify({ type: 'warning', message: messages.join(' | ') }), {
 					status: 400,

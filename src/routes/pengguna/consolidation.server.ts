@@ -3,10 +3,9 @@ import {
 	tableAuthUser,
 	tablePegawai,
 	tableKelas,
-	tableSekolah,
-	tableMurid
+	tableSekolah
 } from '$lib/server/db/schema';
-import { sql, eq, and } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 import { defaultPermissionsByType } from './permissions';
 import { hashPassword } from '$lib/server/auth';
 import { resolveUniqueUsername } from '$lib/server/usernames';
@@ -316,124 +315,6 @@ export async function ensurePegawaiConsolidation() {
 					}
 				}
 			}
-		}
-
-		// ========== WALI ASUH AUTO-DETECTION ==========
-		// Same logic as wali_kelas but for wali_asuh
-		// STEP 1: Consolidate duplicate wali_asuh accounts
-		const allWaliAsuhAccounts = await db.query.tableAuthUser.findMany({
-			where: eq(tableAuthUser.type, 'wali_asuh'),
-			columns: { id: true, pegawaiId: true, createdAt: true, username: true }
-		});
-		console.log('[pengguna:consolidate] Found wali_asuh accounts:', allWaliAsuhAccounts.length);
-
-		// Group by pegawaiId
-		const asuhAccountsByPegawai = new Map<number, AuthUserArray>();
-		for (const acc of allWaliAsuhAccounts) {
-			if (!acc.pegawaiId) continue;
-			const arr = asuhAccountsByPegawai.get(acc.pegawaiId) ?? [];
-			arr.push(acc);
-			asuhAccountsByPegawai.set(acc.pegawaiId, arr);
-		}
-
-		// For each pegawaiId with multiple accounts, keep oldest and delete rest
-		for (const [pegawaiId, accounts] of asuhAccountsByPegawai.entries()) {
-			if (accounts.length > 1) {
-				console.log(
-					`[pengguna:consolidate] Found ${accounts.length} wali_asuh accounts for pegawaiId=${pegawaiId}`
-				);
-				const sorted = accounts.sort((a, b) => {
-					const aTime = new Date(a.createdAt || 0).getTime();
-					const bTime = new Date(b.createdAt || 0).getTime();
-					return aTime - bTime;
-				});
-
-				const toDelete = sorted.slice(1);
-				for (const dup of toDelete) {
-					console.log(
-						`[pengguna:consolidate] Deleting wali_asuh auth_user ID=${dup.id}, username="${dup.username}"`
-					);
-					await db.delete(tableAuthUser).where(eq(tableAuthUser.id, dup.id));
-					console.warn(
-						`[pengguna:consolidate] ✓ Deleted duplicate wali_asuh account: ID=${dup.id}, username="${dup.username}", pegawaiId=${pegawaiId}`
-					);
-				}
-			}
-		}
-
-		// STEP 2: Detect wali_asuh from per-student assignments on tableMurid
-		const muridWaliRows = await db.query.tableMurid.findMany({
-			columns: { waliAsuhNama: true, waliAsuhNip: true },
-			where: sql`${tableMurid.waliAsuhNama} IS NOT NULL AND trim(${tableMurid.waliAsuhNama}) != ''`
-		});
-
-		// Deduplicate by normalized name
-		const waliAsuhByName = new Map<string, { nama: string; nip: string | null }>();
-		for (const row of muridWaliRows) {
-			const nama = (row.waliAsuhNama ?? '').trim();
-			if (!nama) continue;
-			const key = nama.toLowerCase();
-			if (!waliAsuhByName.has(key)) {
-				waliAsuhByName.set(key, { nama, nip: row.waliAsuhNip ?? null });
-			}
-		}
-
-		for (const { nama, nip } of waliAsuhByName.values()) {
-			// Find or create pegawai record by name
-			let pegawaiId: number | null = null;
-			const existingPegawai = await db.query.tablePegawai.findFirst({
-				columns: { id: true },
-				where: sql`LOWER(trim(${tablePegawai.nama})) = ${nama.toLowerCase()}`
-			});
-
-			if (existingPegawai) {
-				pegawaiId = existingPegawai.id;
-			} else {
-				// Auto-create pegawai for this wali_asuh
-				const timestamp = new Date().toISOString();
-				const insertPeg = await db
-					.insert(tablePegawai)
-					.values({ nama, nip: nip ?? '', createdAt: timestamp, updatedAt: timestamp })
-					.returning({ id: tablePegawai.id });
-				pegawaiId = insertPeg?.[0]?.id ?? null;
-				if (pegawaiId) {
-					console.info(`[pengguna] Created pegawai for wali_asuh "${nama}" (ID=${pegawaiId})`);
-				}
-			}
-
-			if (!pegawaiId) continue;
-
-			// Check if auth_user already exists for this pegawai
-			const exists = await db.query.tableAuthUser.findFirst({
-				where: and(eq(tableAuthUser.pegawaiId, pegawaiId), eq(tableAuthUser.type, 'wali_asuh')),
-				columns: { id: true }
-			});
-
-			if (exists) continue;
-
-			// Create auth_user — no kelasId since wali_asuh is per-student, not per-class
-			const username = await resolveUniqueUsername(nama);
-			const usernameNormalized = username.toLowerCase();
-			const password = randomBytes(6).toString('base64url');
-			const { hash, salt } = hashPassword(password);
-			const timestamp = new Date().toISOString();
-
-			await db.insert(tableAuthUser).values({
-				username,
-				usernameNormalized,
-				passwordHash: hash,
-				passwordSalt: salt,
-				passwordUpdatedAt: timestamp,
-				// password generated automatically → require a change at first login
-				mustChangePassword: true,
-				permissions: defaultPermissionsByType['wali_asuh'] ?? [],
-				type: 'wali_asuh',
-				pegawaiId,
-				createdAt: timestamp,
-				updatedAt: timestamp
-			});
-
-			console.info(`[pengguna] Created user for wali_asuh "${nama}" (pegawaiId=${pegawaiId})`);
 		}
 
 		// Cross-type merge: if the same person is both kepala_sekolah and a guru

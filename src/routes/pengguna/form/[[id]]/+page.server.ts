@@ -9,7 +9,7 @@ import {
 	tableSemester,
 	tableSekolah
 } from '$lib/server/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and, notInArray } from 'drizzle-orm';
 import { fail, error } from '@sveltejs/kit';
 import { authority } from '../../utils.server';
 import { defaultPermissionsByType, userPermissions } from '../../permissions';
@@ -19,7 +19,7 @@ import { validatePasswordStrength } from '$lib/server/password-policy';
 
 const u = tableAuthUser;
 
-const ALLOWED_USER_TYPES = ['admin', 'kepala_sekolah', 'wali_kelas', 'wali_asuh', 'user'] as const;
+const ALLOWED_USER_TYPES = ['admin', 'kepala_sekolah', 'wali_kelas', 'user'] as const;
 
 const VALID_PERMISSION_KEYS = new Set<string>(userPermissions);
 
@@ -135,7 +135,9 @@ export async function load({ params }) {
 
 		const kelasSet = new Set(kelasRows.map((r) => r.id));
 		if (user.kelasId != null) kelasSet.add(user.kelasId);
-		for (const wk of waliKelas) kelasSet.add(wk.id);
+		if (user.type === 'wali_kelas') {
+			for (const wk of waliKelas) kelasSet.add(wk.id);
+		}
 
 		userDetail = {
 			...user,
@@ -298,6 +300,13 @@ async function createUser(request: Request) {
 			}
 		}
 
+		if (roleValue === 'kepala_sekolah' && sekolahId && pegawaiId) {
+			await db
+				.update(tableSekolah)
+				.set({ kepalaSekolahId: pegawaiId })
+				.where(eq(tableSekolah.id, sekolahId));
+		}
+
 		console.info(
 			`[pengguna] Created user: ${username} -> id=${created.id}, mapels=${mataPelajaranIds.length}, kelas=${kelasIds.length}`
 		);
@@ -450,6 +459,32 @@ async function updateUser(request: Request, id: number) {
 					});
 				} catch (err) {
 					if (!String(err).includes('UNIQUE')) throw err;
+				}
+			}
+
+			// Jika pegawai sebelumnya adalah wali kelas, namun kelas tersebut tidak dipilih
+			// atau role akun adalah kepala_sekolah/admin tanpa kelas wali, lepas penugasan di tabel kelas
+			const activePegawaiId = existing.pegawaiId;
+			if (activePegawaiId) {
+				const unassignedKelas = await tx
+					.select({ id: tableKelas.id })
+					.from(tableKelas)
+					.where(
+						and(
+							eq(tableKelas.waliKelasId, activePegawaiId),
+							notInArray(tableKelas.id, kelasIds.length > 0 ? kelasIds : [-1])
+						)
+					);
+				for (const uk of unassignedKelas) {
+					await tx.update(tableKelas).set({ waliKelasId: null }).where(eq(tableKelas.id, uk.id));
+				}
+
+				// Jika role pengguna adalah kepala_sekolah dan sekolah dipilih, kaitkan kepala sekolah di tabel sekolah
+				if (roleValue === 'kepala_sekolah' && sekolahId) {
+					await tx
+						.update(tableSekolah)
+						.set({ kepalaSekolahId: activePegawaiId })
+						.where(eq(tableSekolah.id, sekolahId));
 				}
 			}
 

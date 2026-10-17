@@ -9,22 +9,20 @@
 	let isPulling = $state(false);
 	let pushStep = $state('');
 	let pullStep = $state('');
-	let pushResult = $state<any>(null);
-	let pullResult = $state<any>(null);
+	let pushResult = $state<{ message?: string; checksum?: string } | null>(null);
+	let pullResult = $state<{
+		message?: string;
+		count?: number;
+		details?: { kelas?: number; murid?: number; mapel?: number };
+	} | null>(null);
 	let pullError = $state('');
 	let pushError = $state('');
 	let isPushingMaster = $state(false);
-	let pushMasterResult = $state<any>(null);
+	let pushMasterResult = $state<{
+		message?: string;
+		counts?: { murid?: number; kelas?: number; auth_user?: number };
+	} | null>(null);
 	let pushMasterError = $state('');
-
-	// Modal pengaturan kredensial
-	let showSettingsModal = $state(false);
-	// svelte-ignore state_referenced_locally
-	let accountId = $state(data.syncSettings.accountId);
-	// svelte-ignore state_referenced_locally
-	let databaseId = $state(data.syncSettings.databaseId);
-	let apiToken = $state('');
-	let isSavingConfig = $state(false);
 
 	// Status koneksi (uji nyata ke Database Pusat)
 	let isTestingConnection = $state(false);
@@ -46,14 +44,14 @@
 					dot: 'bg-amber-500',
 					text: 'text-amber-600 dark:text-amber-400',
 					label: 'PERLU TOKEN BARU',
-					hint: 'Sesi wrangler di komputer ini sudah kedaluwarsa. Isi API Token Database Pusat di Detail Kredensial.'
+					hint: 'Sesi otentikasi cloud kedaluwarsa. Hubungi administrator/pengembang sistem.'
 				};
 			}
 			return {
 				dot: 'bg-slate-400',
 				text: 'text-base-content/70',
 				label: 'BELUM DIKONFIGURASI',
-				hint: 'Belum ada API Token, jadi sinkronisasi ke Database Pusat belum aktif.'
+				hint: 'Kredensial belum dikonfigurasi. Hubungi administrator/pengembang sistem.'
 			};
 		}
 
@@ -84,8 +82,9 @@
 			if (!res.ok || !json.success) throw new Error(json.error || 'Gagal menyetujui');
 			toast(json.message || 'Paket nilai berhasil disetujui (APPROVED).', 'success');
 			await invalidateAll();
-		} catch (err: any) {
-			toast(err.message || 'Gagal menyetujui paket nilai.', 'error');
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : 'Gagal menyetujui paket nilai.';
+			toast(msg, 'error');
 		} finally {
 			isApproving = false;
 		}
@@ -116,8 +115,9 @@
 			rejectModalOpen = false;
 			rejectingPackageId = null;
 			await invalidateAll();
-		} catch (err: any) {
-			toast(err.message || 'Gagal menolak paket.', 'error');
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : 'Gagal menolak paket.';
+			toast(msg, 'error');
 		} finally {
 			isApproving = false;
 		}
@@ -145,8 +145,9 @@
 			pullResult = json;
 			toast(json.message, 'success');
 			await invalidateAll();
-		} catch (err: any) {
-			pullError = err.message || 'Gagal menyinkronkan data dari Database Pusat.';
+		} catch (err: unknown) {
+			pullError =
+				err instanceof Error ? err.message : 'Gagal menyinkronkan data dari Database Pusat.';
 			toast(pullError, 'error');
 		} finally {
 			isPulling = false;
@@ -179,8 +180,8 @@
 			pushResult = json;
 			toast(json.message, 'success');
 			await invalidateAll();
-		} catch (err: any) {
-			pushError = err.message || 'Gagal mengirim nilai ke Database Pusat.';
+		} catch (err: unknown) {
+			pushError = err instanceof Error ? err.message : 'Gagal mengirim nilai ke Database Pusat.';
 			toast(pushError, 'error');
 		} finally {
 			isPushing = false;
@@ -203,34 +204,12 @@
 			pushMasterResult = json;
 			toast(json.message, 'success');
 			await invalidateAll();
-		} catch (err: any) {
-			pushMasterError = err.message || 'Gagal mengirim master data ke Database Pusat.';
+		} catch (err: unknown) {
+			pushMasterError =
+				err instanceof Error ? err.message : 'Gagal mengirim master data ke Database Pusat.';
 			toast(pushMasterError, 'error');
 		} finally {
 			isPushingMaster = false;
-		}
-	}
-
-	async function saveSettings(e: SubmitEvent) {
-		e.preventDefault();
-		isSavingConfig = true;
-
-		try {
-			const res = await fetch('/api/cloud/settings', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ accountId, databaseId, apiToken })
-			});
-			const json = await res.json();
-			if (!res.ok || !json.success) throw new Error(json.error || 'Gagal menyimpan');
-			toast('Pengaturan kredensial berhasil disimpan.', 'success');
-			showSettingsModal = false;
-			apiToken = '';
-			await invalidateAll();
-		} catch (err: any) {
-			toast(err.message || 'Gagal menyimpan pengaturan.', 'error');
-		} finally {
-			isSavingConfig = false;
 		}
 	}
 
@@ -244,9 +223,10 @@
 			const json = await res.json();
 			connectionResult = { ok: Boolean(json.ok), message: json.message || 'Tidak ada respons.' };
 			toast(json.message || 'Uji koneksi selesai.', json.ok ? 'success' : 'error');
-		} catch (err: any) {
-			connectionResult = { ok: false, message: err.message || 'Uji koneksi gagal.' };
-			toast(err.message || 'Uji koneksi gagal.', 'error');
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : 'Uji koneksi gagal.';
+			connectionResult = { ok: false, message: msg };
+			toast(msg, 'error');
 		} finally {
 			isTestingConnection = false;
 		}
@@ -291,14 +271,6 @@
 						<Icon name="repeat" class="text-emerald-600" />
 					{/if}
 					<span>Tes Koneksi</span>
-				</button>
-				<button
-					type="button"
-					class="btn btn-sm btn-ghost text-base-content/60 hover:text-emerald-700 rounded-xl shadow-none flex items-center gap-2 border border-slate-200 dark:border-base-300"
-					onclick={() => (showSettingsModal = true)}
-				>
-					<Icon name="gear" class="text-emerald-600" />
-					<span>Detail Kredensial</span>
 				</button>
 			</div>
 		{/if}
@@ -694,103 +666,6 @@
 		</div>
 	</div>
 </div>
-
-<!-- Modal pengaturan kredensial -->
-{#if showSettingsModal}
-	<div class="modal modal-open">
-		<div class="modal-box rounded-2xl max-w-md">
-			<h3 class="text-lg font-bold text-emerald-950 dark:text-emerald-300">
-				Pengaturan Kredensial
-			</h3>
-			<p class="text-xs text-base-content/70 mt-1">
-				Konfigurasi kredensial untuk menghubungkan database lokal dengan Database Pusat SMK Pratama
-				Mulya Karawang.
-			</p>
-
-			<form onsubmit={saveSettings} class="space-y-4 mt-4">
-				{#if data.syncSettings.wranglerTokenExpired}
-					<div class="alert alert-warning alert-soft p-3 rounded-xl text-xs items-start gap-2">
-						<Icon name="warning" class="w-4 h-4 text-amber-600 shrink-0" />
-						<span>
-							Sesi <strong>wrangler</strong> di komputer ini sudah kedaluwarsa, jadi tidak dipakai
-							lagi. Masukkan API Token Database Pusat dengan izin <strong>D1 Edit</strong> di bawah.
-						</span>
-					</div>
-				{:else if data.syncSettings.hasToken}
-					<div class="alert alert-info alert-soft p-3 rounded-xl text-xs items-start gap-2">
-						<Icon name="check" class="w-4 h-4 text-emerald-600 shrink-0" />
-						<span>
-							Token aktif berasal dari <strong
-								>{tokenSourceLabel[data.syncSettings.tokenSource] ?? 'sumber tidak dikenal'}</strong
-							>. Biarkan kolom token kosong kalau tidak ingin menggantinya.
-						</span>
-					</div>
-				{:else}
-					<div class="alert alert-info alert-soft p-3 rounded-xl text-xs items-start gap-2">
-						<Icon name="info" class="w-4 h-4 text-emerald-600 shrink-0" />
-						<span>
-							Belum ada API Token tersimpan. Isi token untuk mengaktifkan sinkronisasi data ke
-							Database Pusat.
-						</span>
-					</div>
-				{/if}
-
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend text-xs">Account ID</legend>
-					<input
-						type="text"
-						class="input input-sm w-full bg-base-200 rounded-xl"
-						placeholder={data.syncSettings.accountId}
-						bind:value={accountId}
-					/>
-				</fieldset>
-
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend text-xs">Database ID</legend>
-					<input
-						type="text"
-						class="input input-sm w-full bg-base-200 rounded-xl"
-						placeholder={data.syncSettings.databaseId}
-						bind:value={databaseId}
-					/>
-				</fieldset>
-
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend text-xs">API Token Database Pusat</legend>
-					<input
-						type="password"
-						class="input input-sm w-full bg-base-200 rounded-xl"
-						placeholder={data.syncSettings.hasToken
-							? '•••••••• (token sudah tersimpan)'
-							: 'Masukkan API Token Database Pusat'}
-						bind:value={apiToken}
-					/>
-					<span class="text-[10px] text-base-content/60">
-						Buat token di dashboard Cloudflare (My Profile → API Tokens) dengan izin
-						<strong>D1 Edit</strong> untuk database sekolah.
-					</span>
-				</fieldset>
-
-				<div class="modal-action">
-					<button
-						type="button"
-						class="btn btn-sm btn-ghost rounded-xl shadow-none"
-						onclick={() => (showSettingsModal = false)}
-					>
-						Batal
-					</button>
-					<button
-						type="submit"
-						class="btn btn-sm btn-primary rounded-xl shadow-none"
-						disabled={isSavingConfig}
-					>
-						{isSavingConfig ? 'Menyimpan...' : 'Simpan Pengaturan'}
-					</button>
-				</div>
-			</form>
-		</div>
-	</div>
-{/if}
 
 <!-- Modal Tolak Paket Nilai -->
 {#if rejectModalOpen}

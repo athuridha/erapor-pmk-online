@@ -52,14 +52,14 @@
 		) {
 			return true;
 		}
-		// Wali kelas on non-own class: downgrade to guru-level permissions
-		if (user?.type === 'wali_kelas' && kelasAktif?.id != null) {
+		// Guru on non-own class: sembunyikan menu khusus wali kelas
+		if (user && user.type !== 'admin' && user.type !== 'kepala_sekolah' && kelasAktif?.id != null) {
 			const ownIds = user.ownKelasIds?.length
 				? user.ownKelasIds
 				: user.kelasId != null
 					? [user.kelasId]
 					: [];
-			if (ownIds.length > 0 && !ownIds.includes(kelasAktif.id)) {
+			if (!ownIds.includes(kelasAktif.id)) {
 				const required = resolveRoutePermission(path);
 				if (required && WALI_KELAS_ONLY_PERMISSIONS.has(required)) {
 					return true;

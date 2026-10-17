@@ -15,7 +15,18 @@ import db from '$lib/server/db';
 import { tableKelas, tableMataPelajaran } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { fail, redirect } from '@sveltejs/kit';
+import { isLocalMasterEmpty } from '$lib/server/cloud-master';
 import type { Actions, PageServerLoad } from './$types';
+
+const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost']);
+
+function isLocalRequest(getClientAddress: () => string) {
+	try {
+		return LOOPBACK_ADDRESSES.has(getClientAddress());
+	} catch {
+		return false;
+	}
+}
 
 function resolveRedirectTarget(value: string | null) {
 	if (!value) return null;
@@ -28,6 +39,14 @@ export const load: PageServerLoad = async ({ locals, url, getClientAddress }) =>
 	if (locals.user) {
 		const target = resolveRedirectTarget(url.searchParams.get('redirect')) ?? '/';
 		throw redirect(303, target);
+	}
+
+	if (
+		url.searchParams.get('manual') !== '1' &&
+		isLocalRequest(getClientAddress) &&
+		(await isLocalMasterEmpty())
+	) {
+		throw redirect(303, '/siapkan');
 	}
 
 	// Surface an active per-IP lockout right away (even before the user submits

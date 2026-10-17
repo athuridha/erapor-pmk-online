@@ -197,7 +197,7 @@ export function isAuthorizedUser(
 ) {
 	if (!user) return false;
 	// Admins are authorized for everything by policy
-	// wali_kelas and wali_asuh are NOT admins and must check permissions
+	// wali_kelas and user (guru mapel) are NOT admins and must check permissions
 	if ('type' in user && (user.type === 'admin' || user.type === 'kepala_sekolah')) return true;
 	const userPermissions = user.permissions || [];
 	return allowedPermissions.some((r) => userPermissions.includes(r));

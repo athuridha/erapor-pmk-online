@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve -- setup page uses direct hrefs */
 	let { data, form } = $props();
 
 	const tokenSourceLabel = $derived(
@@ -54,7 +55,7 @@
 					<div class="rounded-lg border border-base-300 p-3 text-sm">
 						<p class="font-medium mb-2">Baris yang dipasang</p>
 						<div class="grid grid-cols-2 gap-x-4 gap-y-1">
-							{#each Object.entries(form.counts ?? {}) as [name, total]}
+							{#each Object.entries(form.counts ?? {}) as [name, total] (name)}
 								<span class="text-base-content/70">{name.replaceAll('_', ' ')}</span>
 								<span class="text-right tabular-nums">{total}</span>
 							{/each}
@@ -65,7 +66,7 @@
 					<div class="rounded-lg border border-base-300 p-3 text-sm">
 						<p class="font-medium mb-2">Data lokal saat ini</p>
 						<div class="grid grid-cols-2 gap-x-4 gap-y-1">
-							{#each Object.entries(counts) as [name, total]}
+							{#each Object.entries(counts) as [name, total] (name)}
 								<span class="text-base-content/70">{name.replaceAll('_', ' ')}</span>
 								<span class="text-right tabular-nums">{total}</span>
 							{/each}
@@ -85,7 +86,7 @@
 								Sinkron dari Database Pusat
 							</button>
 						</form>
-						<a class="btn btn-ghost btn-sm" href="/login">Lewati, masuk manual</a>
+						<a class="btn btn-ghost btn-sm" href="/login?manual=1">Lewati, masuk manual</a>
 					</div>
 				{/if}
 

@@ -2,7 +2,6 @@ import db from '$lib/server/db';
 import { resolveSekolahAcademicContext } from '$lib/server/db/academic';
 import {
 	tableKelas,
-	tableMurid,
 	tablePegawai,
 	tableAuthUserKelas,
 	tableAuthUserMataPelajaran,
@@ -11,8 +10,9 @@ import {
 import { cookieNames, findTitleByPath } from '$lib/utils.js';
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { resolveRoutePermission, WALI_KELAS_ONLY_PERMISSIONS } from './pengguna/permissions';
+import { isLocalMasterEmpty } from '$lib/server/cloud-master';
 
 type WaliKelasUser = {
 	type?: string;
@@ -101,29 +101,32 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	let resolvedWaliOwnKelasIds: number[] = [];
 	if (sekolah?.id) {
 		const userWithType = user as { type?: string; id?: number; pegawaiId?: number } | null;
-		if (userWithType?.type === 'wali_kelas' && userWithType.pegawaiId) {
-			// Wali kelas: kelas sendiri (via waliKelasId) + kelas lain via auth_user_kelas
-			// (kelas_pindah permission) — guru mapel lintas kelas juga masuk sini.
-			const ownKelasRows = await db.query.tableKelas.findMany({
-				columns: { id: true },
-				where: academicContext?.activeSemesterId
-					? and(
-							eq(tableKelas.sekolahId, sekolah.id),
-							eq(tableKelas.waliKelasId, userWithType.pegawaiId),
-							eq(tableKelas.semesterId, academicContext.activeSemesterId)
-						)
-					: and(
-							eq(tableKelas.sekolahId, sekolah.id),
-							eq(tableKelas.waliKelasId, userWithType.pegawaiId)
-						)
-			});
-			const ownKelasIds = new Set(ownKelasRows.map((r) => r.id));
-			resolvedWaliOwnKelasIds = [...ownKelasIds];
-			const additionalKelasRows = await db.query.tableAuthUserKelas.findMany({
+		if ((userWithType?.type === 'wali_kelas' || userWithType?.type === 'user') && userWithType.id) {
+			let ownKelasIds = new Set<number>();
+			if (userWithType.pegawaiId) {
+				const ownKelasRows = await db.query.tableKelas.findMany({
+					columns: { id: true },
+					where: academicContext?.activeSemesterId
+						? and(
+								eq(tableKelas.sekolahId, sekolah.id),
+								eq(tableKelas.waliKelasId, userWithType.pegawaiId),
+								eq(tableKelas.semesterId, academicContext.activeSemesterId)
+							)
+						: and(
+								eq(tableKelas.sekolahId, sekolah.id),
+								eq(tableKelas.waliKelasId, userWithType.pegawaiId)
+							)
+				});
+				ownKelasIds = new Set(ownKelasRows.map((r) => r.id));
+				resolvedWaliOwnKelasIds = [...ownKelasIds];
+			}
+
+			const allowedKelasRecords = await db.query.tableAuthUserKelas.findMany({
 				columns: { kelasId: true },
-				where: eq(tableAuthUserKelas.authUserId, userWithType.id!)
+				where: eq(tableAuthUserKelas.authUserId, userWithType.id)
 			});
-			const allKelasIds = new Set([...ownKelasIds, ...additionalKelasRows.map((r) => r.kelasId)]);
+			const allKelasIds = new Set([...ownKelasIds, ...allowedKelasRecords.map((r) => r.kelasId)]);
+
 			if (allKelasIds.size > 0) {
 				daftarKelas = await db.query.tableKelas.findMany({
 					columns: { id: true, nama: true, fase: true },
@@ -137,85 +140,8 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 						: and(eq(tableKelas.sekolahId, sekolah.id), inArray(tableKelas.id, [...allKelasIds])),
 					orderBy: asc(tableKelas.nama)
 				});
-			}
-		} else if (userWithType?.type === 'wali_asuh' && userWithType.pegawaiId) {
-			// Wali_asuh: only show classes that have their assigned students
-			const peg = await db.query.tablePegawai.findFirst({
-				columns: { nama: true },
-				where: eq(tablePegawai.id, userWithType.pegawaiId)
-			});
-			if (peg?.nama) {
-				const pegNamaLower = peg.nama.trim().toLowerCase();
-				// Find distinct kelasIds from murid where waliAsuhNama matches
-				const rows = await db
-					.selectDistinct({ kelasId: tableMurid.kelasId })
-					.from(tableMurid)
-					.where(
-						sql`LOWER(trim(${tableMurid.waliAsuhNama})) = ${pegNamaLower} AND ${tableMurid.kelasId} IS NOT NULL`
-					);
-
-				const kelasIds = rows.map((r) => r.kelasId).filter((id): id is number => id != null);
-				if (kelasIds.length > 0) {
-					daftarKelas = await db.query.tableKelas.findMany({
-						columns: { id: true, nama: true, fase: true },
-						with: { waliKelas: { columns: { id: true, nama: true } } },
-						where: academicContext?.activeSemesterId
-							? and(
-									inArray(tableKelas.id, kelasIds),
-									eq(tableKelas.semesterId, academicContext.activeSemesterId)
-								)
-							: inArray(tableKelas.id, kelasIds),
-						orderBy: asc(tableKelas.nama)
-					});
-				}
-			}
-		} else if (userWithType?.type === 'user' && userWithType.id) {
-			const allowedKelasRecords = await db.query.tableAuthUserKelas.findMany({
-				columns: { kelasId: true },
-				where: eq(tableAuthUserKelas.authUserId, userWithType.id)
-			});
-
-			if (allowedKelasRecords.length > 0) {
-				const allowedKelasIds = allowedKelasRecords.map((r) => r.kelasId);
-				if (academicContext?.activeSemesterId) {
-					// Prefer explicit assignments in the active semester
-					daftarKelas = await db.query.tableKelas.findMany({
-						columns: { id: true, nama: true, fase: true },
-						with: { waliKelas: { columns: { id: true, nama: true } } },
-						where: and(
-							inArray(tableKelas.id, allowedKelasIds),
-							eq(tableKelas.semesterId, academicContext.activeSemesterId)
-						),
-						orderBy: asc(tableKelas.nama)
-					});
-					// If no explicit matches, resolve assigned kelas names to active semester
-					if (!daftarKelas.length) {
-						const assignedKelas = await db.query.tableKelas.findMany({
-							columns: { nama: true },
-							where: inArray(tableKelas.id, allowedKelasIds)
-						});
-						const namaSet = new Set(assignedKelas.map((k) => k.nama));
-						daftarKelas = await db.query.tableKelas.findMany({
-							columns: { id: true, nama: true, fase: true },
-							with: { waliKelas: { columns: { id: true, nama: true } } },
-							where: and(
-								inArray(tableKelas.nama, Array.from(namaSet)),
-								eq(tableKelas.semesterId, academicContext.activeSemesterId),
-								eq(tableKelas.sekolahId, sekolah.id)
-							),
-							orderBy: asc(tableKelas.nama)
-						});
-					}
-				} else {
-					daftarKelas = await db.query.tableKelas.findMany({
-						columns: { id: true, nama: true, fase: true },
-						with: { waliKelas: { columns: { id: true, nama: true } } },
-						where: inArray(tableKelas.id, allowedKelasIds),
-						orderBy: asc(tableKelas.nama)
-					});
-				}
 			} else {
-				// Fallback bila user (guru) belum memiliki batasan kelas khusus: tampilkan seluruh kelas aktif
+				// Fallback bila guru belum memiliki batasan kelas: tampilkan seluruh kelas aktif
 				daftarKelas = await db.query.tableKelas.findMany({
 					columns: { id: true, nama: true, fase: true },
 					with: { waliKelas: { columns: { id: true, nama: true } } },
@@ -353,12 +279,9 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		kelasAktif = daftarKelas[0];
 	}
 
-	// Server-side guard: wali_kelas on non-own class cannot access wali-kelas-only pages.
-	if (user?.type === 'wali_kelas' && kelasAktif) {
-		const isOwnClass =
-			resolvedWaliOwnKelasIds.length > 0
-				? resolvedWaliOwnKelasIds.includes(kelasAktif.id)
-				: kelasAktif.id === Number(user.kelasId);
+	// Server-side guard: guru on non-own class cannot access wali-kelas-only pages.
+	if (user && user.type !== 'admin' && user.type !== 'kepala_sekolah' && kelasAktif) {
+		const isOwnClass = resolvedWaliOwnKelasIds.includes(kelasAktif.id);
 		if (!isOwnClass) {
 			const required = resolveRoutePermission(url.pathname);
 			if (required && WALI_KELAS_ONLY_PERMISSIONS.has(required)) {
@@ -401,7 +324,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 
 	if (user) {
 		const userType = (user as { type?: string }).type;
-		const canManageMapel = userType !== 'wali_asuh';
+		const canManageMapel = true;
 		const canEditUrutan =
 			userType === 'admin' || userType === 'kepala_sekolah' || userType === 'wali_kelas';
 		const canAddImportMapel = canEditUrutan;
@@ -438,6 +361,15 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure });
 	}
 
+	let setupNeeded = false;
+	if (!user) {
+		try {
+			setupNeeded = await isLocalMasterEmpty();
+		} catch {
+			setupNeeded = false;
+		}
+	}
+
 	return {
 		sekolah,
 		meta,
@@ -448,6 +380,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		hasMataPelajaran,
 		presensiGuruEnabled,
 		activeSemesterTipe: academicContext?.activeSemesterTipe ?? null,
-		academicContext
+		academicContext,
+		setupNeeded
 	};
 };

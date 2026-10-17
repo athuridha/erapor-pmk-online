@@ -1,6 +1,5 @@
 import db from '$lib/server/db';
 import { normMapelName, pilihIndukPembelajaran } from '$lib/server/dapodik';
-import { ensureAgamaMapelForClasses } from '$lib/server/mapel-agama';
 import { getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
 import { isWaliOfKelas } from '$lib/server/kelas-akses';
 import {
@@ -91,9 +90,8 @@ export async function load({ depends, url, parent }) {
 	depends('app:mapel');
 	const { kelasAktif, daftarKelas, user } = await parent();
 	const daftarKelasEntries = daftarKelas as Array<{ id: number }> | undefined;
-	const kelasIdsForEnsure = daftarKelasEntries?.map((kelas) => kelas.id) ?? [];
-	await ensureAgamaMapelForClasses(kelasIdsForEnsure);
-	// PKS tidak lagi otomatis ditambahkan, pengguna harus menambahkannya secara manual via tombol "Tambah PKS"
+	// Mapel Agama & PKS tidak lagi otomatis ditambahkan saat load halaman agar mapel yang dihapus pengguna tidak kembali sendiri
+	// await ensureAgamaMapelForClasses(kelasIdsForEnsure);
 	// await ensurePksMapelForClasses(kelasIdsForEnsure);
 	const fromQuery = url.searchParams.get('kelas_id');
 	const kelasCandidate = fromQuery ? Number(fromQuery) : (kelasAktif?.id ?? null);
@@ -803,5 +801,31 @@ export const actions = {
 		} else {
 			return { success: 'Mapel PKS sudah ada' };
 		}
+	},
+
+	async tambah_agama({ cookies, locals }) {
+		const user = locals.user as { type?: string; pegawaiId?: number | null } | null;
+
+		const kelasIdCookie = cookies.get(cookieNames.ACTIVE_KELAS_ID) || null;
+		const kelasId = kelasIdCookie ? Number(kelasIdCookie) : null;
+		if (!kelasId || !Number.isFinite(kelasId)) {
+			return fail(400, { fail: 'Pilih kelas aktif terlebih dahulu.' });
+		}
+
+		if (!(await canManageImportUrutan(user, kelasId))) {
+			return fail(403, {
+				fail: 'Anda tidak memiliki akses untuk menambahkan mata pelajaran Agama.'
+			});
+		}
+
+		const sekolahId = locals.sekolah?.id;
+		if (!sekolahId) return fail(400, { fail: 'Pilih sekolah aktif terlebih dahulu.' });
+
+		const { ensureAgamaMapelForClasses } = await import('$lib/server/mapel-agama.js');
+		await ensureAgamaMapelForClasses([kelasId]);
+
+		return {
+			success: 'Mata pelajaran Pendidikan Agama dan Budi Pekerti berhasil ditambahkan ke kelas.'
+		};
 	}
 };

@@ -459,6 +459,45 @@
 								</button>
 							</form>
 						</li>
+						<li>
+							<form
+								method="POST"
+								action="?/tambah_agama"
+								class="w-full"
+								use:enhance={() => {
+									toast({ message: 'Menambahkan mata pelajaran Agama...', type: 'info' });
+									return async ({ result }) => {
+										if (result.type === 'success') {
+											await Promise.all([
+												invalidate('app:mapel'),
+												invalidate('app:asesmen-formatif')
+											]);
+											const data = result.data as { success?: string } | undefined;
+											toast({
+												message: data?.success || 'Mata pelajaran Agama berhasil ditambahkan.',
+												type: 'success'
+											});
+										} else if (result.type === 'failure') {
+											const data = result.data as { fail?: string } | undefined;
+											toast({
+												message: data?.fail || 'Gagal menambahkan mata pelajaran Agama.',
+												type: 'error'
+											});
+										}
+									};
+								}}
+							>
+								<button
+									type="submit"
+									class={`flex w-full items-center gap-2 ${!canAddImportMapel || !hasKelasAktif ? 'pointer-events-none opacity-50' : ''}`}
+									disabled={!canAddImportMapel || !hasKelasAktif}
+									aria-disabled={!canAddImportMapel || !hasKelasAktif}
+								>
+									<Icon name="plus" />
+									<span>Tambah Agama</span>
+								</button>
+							</form>
+						</li>
 					</ul>
 				</div>
 			</div>

@@ -234,8 +234,6 @@ const authGuard: Handle = async ({ event, resolve }) => {
 							throw redirect(303, `/forbidden?required=kelas_id`);
 						}
 					}
-				} else if (u.type === 'wali_asuh') {
-					// Wali_asuh is per-student, not per-class — allow access to any class
 				}
 			}
 		}

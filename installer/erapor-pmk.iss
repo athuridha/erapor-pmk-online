@@ -53,14 +53,21 @@ Source:"{#StagePath}\\.env"; DestDir:"{app}"; Flags: ignoreversion restartreplac
 ; start-build.mjs hanya memakai nilainya untuk kunci yang belum ada di .env.
 Source:"{#StagePath}\\.env"; DestDir:"{app}"; DestName:".env.default"; Flags: ignoreversion restartreplace
 Source:"files\\start-erapor-pmk.mjs"; DestDir:"{app}"; Flags: ignoreversion restartreplace
+; Pemilih runtime: pakai {app}\runtime\node\node.exe bila ada, jika tidak node dari PATH.
+Source:"files\\run-node.cmd"; DestDir:"{app}"; Flags: ignoreversion restartreplace
+; Penyedia runtime Node.js (diunduh hanya bila mesin belum punya Node di PATH).
+Source:"scripts\\ensure-node.ps1"; DestDir:"{app}\\scripts"; Flags: ignoreversion restartreplace
+Source:"scripts\\ensure-node.cmd"; DestDir:"{app}\\scripts"; Flags: ignoreversion restartreplace
 Source:"..\dist\windows\vc_redist.x64.exe"; DestDir:"{tmp}"; Flags: ignoreversion deleteafterinstall
 
 [Run]
-Filename:"node"; Parameters:"""{app}\scripts\migrate-installed-db.mjs"""; WorkingDir:"{app}"; StatusMsg:"Menjalankan migrasi database (drizzle-kit) pada mesin ini..."; Flags: runhidden waituntilterminated
+; Dijalankan lebih dulu: menyiapkan runtime Node.js lokal bila mesin belum punya.
+Filename:"{cmd}"; Parameters:"/c ""{app}\scripts\ensure-node.cmd"""; WorkingDir:"{app}"; StatusMsg:"Menyiapkan runtime Node.js..."; Flags: runhidden waituntilterminated
+Filename:"{cmd}"; Parameters:"/c ""{app}\run-node.cmd"" scripts\migrate-installed-db.mjs"; WorkingDir:"{app}"; StatusMsg:"Menjalankan migrasi database (drizzle-kit) pada mesin ini..."; Flags: runhidden waituntilterminated
 
 [Icons]
-Name:"{autoprograms}\erapor-pmk\e-Rapor SMK Pratama Mulya"; Filename:"{sys}\cmd.exe"; Parameters:"/c ""node ""{app}\start-erapor-pmk.mjs"""; WorkingDir:"{app}"; IconFilename:"{app}\erapor-pmk.ico"
-Name:"{autodesktop}\e-Rapor SMK Pratama Mulya"; Filename:"{sys}\cmd.exe"; Parameters:"/c ""node ""{app}\start-erapor-pmk.mjs"""; WorkingDir:"{app}"; IconFilename:"{app}\erapor-pmk.ico"
+Name:"{autoprograms}\erapor-pmk\e-Rapor SMK Pratama Mulya"; Filename:"{app}\\run-node.cmd"; Parameters:"start-erapor-pmk.mjs"; WorkingDir:"{app}"; IconFilename:"{app}\erapor-pmk.ico"
+Name:"{autodesktop}\e-Rapor SMK Pratama Mulya"; Filename:"{app}\\run-node.cmd"; Parameters:"start-erapor-pmk.mjs"; WorkingDir:"{app}"; IconFilename:"{app}\erapor-pmk.ico"
 
 [Code]
 
@@ -112,11 +119,42 @@ begin
 	end;
 end;
 
+procedure StopRunningApp;
+var
+	ResultCode: Integer;
+	AppPath, Script: string;
+begin
+	AppPath := ExpandConstant('{app}');
+	// CloseApplications/RestartManager tidak mengenali node.exe yang memegang
+	// node_modules\@libsql\win32-x64-msvc\index.node, sehingga upgrade saat aplikasi
+	// masih hidup gagal dengan "DeleteFile failed; code 5" dan instalasi campur.
+	// Jadi hentikan sendiri proses node milik aplikasi ini.
+	// Proses server dijalankan oleh peluncur sebagai `node start-build.mjs` (tanpa
+	// path aplikasi di command line), jadi pencocokan lewat path saja tidak cukup.
+	Script :=
+		'Get-CimInstance Win32_Process | Where-Object { $_.Name -eq ''node.exe'' -and (' +
+		'$_.CommandLine -like ''*' + AppPath + '*'' -or ' +
+		'$_.CommandLine -like ''*start-build.mjs*'' -or ' +
+		'$_.CommandLine -like ''*start-erapor-pmk.mjs*'') } | ' +
+		'ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }';
+	if Exec('powershell.exe', '-NoProfile -ExecutionPolicy Bypass -Command "' + Script + '"',
+		'', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+		Log(Format('StopRunningApp selesai (kode %d)', [ResultCode]))
+	else
+		Log('StopRunningApp: gagal menjalankan powershell');
+	// beri waktu handle file dilepas sebelum penyalinan dimulai
+	Sleep(2500);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
 	EnvPath, DbPath, DbDir, S, SrcDb, LogDir, LogFile, SoundDir: string;
 begin
-	if CurStep = ssPostInstall then
+	if CurStep = ssInstall then
+	begin
+		StopRunningApp;
+	end
+	else if CurStep = ssPostInstall then
 	begin
 		InstallVcRedist;
 		DbPath := ExpandConstant('{localappdata}\erapor-pmk-data\database.sqlite3');

@@ -11,7 +11,7 @@ export async function isWaliOfKelas(
 	user: { type?: string; pegawaiId?: number | null } | null | undefined,
 	kelasId: number
 ): Promise<boolean> {
-	if (!user || user.type !== 'wali_kelas' || !user.pegawaiId) return false;
+	if (!user || !user.pegawaiId) return false;
 	const own = await db.query.tableKelas.findFirst({
 		columns: { id: true },
 		where: and(eq(tableKelas.id, kelasId), eq(tableKelas.waliKelasId, user.pegawaiId))

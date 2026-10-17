@@ -19,6 +19,7 @@
 	import ScrollToTop from '$lib/components/scroll-to-top.svelte';
 	import FavoriteMenusFab from '$lib/components/dashboard/favorite-menus-fab.svelte';
 	import PresensiGuruModal from '$lib/components/presensi-guru/presensi-guru-modal.svelte';
+	import OfflineSetupGate from '$lib/components/offline-setup-gate.svelte';
 	import '../app.css';
 
 	let { data, children } = $props();
@@ -26,6 +27,28 @@
 	const appName = 'e-Rapor SMK Pratama Mulya';
 	let stoppingServer = $state(false);
 	let loggingOut = $state(false);
+
+	let isOnline = $state(true);
+
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		isOnline = navigator.onLine;
+
+		const handleOnline = () => {
+			isOnline = true;
+		};
+		const handleOffline = () => {
+			isOnline = false;
+		};
+
+		window.addEventListener('online', handleOnline);
+		window.addEventListener('offline', handleOffline);
+
+		return () => {
+			window.removeEventListener('online', handleOnline);
+			window.removeEventListener('offline', handleOffline);
+		};
+	});
 
 	// Close the mobile drawer when a menu item triggers client-side navigation.
 	// The toggle checkbox lives in the layout (survives soft navigation), so
@@ -39,6 +62,7 @@
 	const isLoginPage = $derived(page.url.pathname === '/login');
 	const isTamuPage = $derived(page.url.pathname === '/tamu');
 	const isJadwalPublikPage = $derived(page.url.pathname === '/jadwal-pelajaran');
+	const isSiapkanPage = $derived(page.url.pathname === '/siapkan');
 	// When not authenticated, never render the drawer/navbar shell — not even for
 	// error pages (e.g. 404 on an unknown URL). This avoids exposing the app menu
 	// structure to anonymous visitors.
@@ -49,6 +73,7 @@
 		isLoginPage ||
 			isTamuPage ||
 			isJadwalPublikPage ||
+			isSiapkanPage ||
 			page.url.pathname.startsWith('/logout') ||
 			data.presensiGuruEnabled === false
 	);
@@ -172,8 +197,17 @@
 		readonlyRoutes.some((r) => page.url.pathname === r || page.url.pathname.startsWith(r + '/'))
 	);
 
-	// User (guru) hanya read-only pada catatan wali kelas dan keputusan kelulusan/kenaikan
-	const disableInteraction = $derived(data.user?.type === 'user' && isReadonlyPage);
+	// Guru hanya read-only pada catatan wali kelas dan keputusan kelulusan/kenaikan jika bukan kelas walinya
+	const isOwnClass = $derived.by(() => {
+		const ownIds = (data.user as { ownKelasIds?: number[] })?.ownKelasIds ?? [];
+		return data.kelasAktif?.id != null && ownIds.includes(data.kelasAktif.id);
+	});
+	const disableInteraction = $derived(
+		data.user?.type !== 'admin' &&
+			data.user?.type !== 'kepala_sekolah' &&
+			!isOwnClass &&
+			isReadonlyPage
+	);
 
 	async function stopServer() {
 		if (stoppingServer) return;
@@ -265,7 +299,9 @@
 	<title>{appName}{page.data.meta.title ? ' - ' + page.data.meta.title : ''}</title>
 </svelte:head>
 
-{#if isLoginPage || isTamuPage || isUnauthenticatedError}
+{#if (data.setupNeeded || isSiapkanPage) && !isOnline}
+	<OfflineSetupGate onOnline={() => (isOnline = true)} />
+{:else if isLoginPage || isTamuPage || isUnauthenticatedError}
 	<div
 		class="bg-gradient-to-br from-slate-100 via-emerald-50/50 to-slate-200 dark:from-slate-950 dark:via-emerald-950/30 dark:to-slate-900 flex min-h-screen flex-col items-center justify-center p-6"
 	>
@@ -277,7 +313,7 @@
 			{@render children()}
 		{/if}
 	</div>
-{:else if isJadwalPublikPage}
+{:else if isJadwalPublikPage || isSiapkanPage}
 	<div class="bg-base-200 flex min-h-screen flex-col p-6">
 		{@render children()}
 	</div>

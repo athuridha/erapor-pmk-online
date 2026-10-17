@@ -122,11 +122,6 @@ export const appMenuItems: MenuItem[] = [
 				title: 'Dinas Luar',
 				path: '/dinas-luar',
 				tags: ['dinas', 'luar', 'perjalanan', 'permohonan', 'undangan']
-			},
-			{
-				title: 'Sinkronisasi Database Pusat',
-				path: '/sinkronisasi',
-				tags: ['sinkron', 'sinkronisasi', 'database pusat', 'kirim nilai', 'ambil master']
 			}
 		]
 	},
@@ -134,5 +129,11 @@ export const appMenuItems: MenuItem[] = [
 		title: 'Cetak Dokumen',
 		icon: 'print',
 		path: '/cetak'
+	},
+	{
+		title: 'Sinkronisasi Database Pusat',
+		icon: 'database',
+		path: '/sinkronisasi',
+		tags: ['sinkron', 'sinkronisasi', 'database pusat', 'kirim nilai', 'ambil master']
 	}
 ];

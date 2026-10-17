@@ -24,7 +24,9 @@
 		pegawaiName?: string;
 		username?: string;
 		permissions?: string[];
-		type?: 'admin' | 'kepala_sekolah' | 'user' | 'wali_asuh';
+		type?: 'admin' | 'kepala_sekolah' | 'user' | 'wali_kelas';
+		kelasId?: number | null;
+		ownKelasIds?: number[] | null;
 	};
 
 	let {
@@ -36,7 +38,6 @@
 
 	let tasksModalRef: { open: () => void } | null = null;
 	let showSwitchModal = $state(false);
-	let isRestoringAdmin = $state(false);
 
 	const daftarKelas = $derived(page.data.daftarKelas ?? []);
 	const kelasAktif = $derived(page.data.kelasAktif ?? null);
@@ -50,23 +51,6 @@
 		return u.type === 'admin' || u.type === 'kepala_sekolah';
 	});
 
-	async function handleRestoreAdmin() {
-		isRestoringAdmin = true;
-		try {
-			const res = await fetch('/api/auth/switch-user/stop', { method: 'POST' });
-			const json = await res.json();
-			if (res.ok && json.success) {
-				toast(json.message || 'Kembali ke akun Admin.', 'success');
-				window.location.href = '/';
-			} else {
-				toast(json.message || 'Gagal kembali ke akun Admin.', 'error');
-			}
-		} catch {
-			toast('Terjadi kesalahan saat memulihkan akun Admin.', 'error');
-		} finally {
-			isRestoringAdmin = false;
-		}
-	}
 	const kelasAktifLabel = $derived.by(() => {
 		if (!kelasAktif) return 'Pilih Kelas';
 		return kelasAktif.fase ? `${kelasAktif.nama} - ${kelasAktif.fase}` : kelasAktif.nama;
@@ -80,8 +64,9 @@
 	});
 
 	const isNonOwnClass = $derived.by(() => {
-		if (!user || user.type !== 'wali_kelas' || !kelasAktif?.id) return false;
-		const u = user as { kelasId?: number | null; ownKelasIds?: number[] | null };
+		if (!user || (user.type !== 'wali_kelas' && user.type !== 'user') || !kelasAktif?.id)
+			return false;
+		const u = user as UserLike;
 		const ownIds = u.ownKelasIds?.length ? u.ownKelasIds : u.kelasId != null ? [u.kelasId] : [];
 		return ownIds.length > 0 && !ownIds.includes(kelasAktif.id);
 	});
@@ -339,25 +324,14 @@
 									<strong>{displayUserName}</strong> - Kepala Sekolah
 								</span>
 							</div>
-						{:else if user?.type === 'user'}
+						{:else if user?.type === 'user' || user?.type === 'wali_kelas'}
 							<div role="alert" class="alert alert-info mb-4">
 								<Icon name="info" />
 								<span>
-									<strong>{displayUserName}</strong> - Guru Mapel
-								</span>
-							</div>
-						{:else if user?.type === 'wali_kelas' && isNonOwnClass}
-							<div role="alert" class="alert alert-info mb-4">
-								<Icon name="info" />
-								<span>
-									<strong>{displayUserName}</strong> - Guru Mapel
-								</span>
-							</div>
-						{:else if user?.type === 'wali_asuh'}
-							<div role="alert" class="alert alert-info mb-4">
-								<Icon name="info" />
-								<span>
-									<strong>{displayUserName}</strong> - Wali Asuh
+									<strong>{displayUserName}</strong> - {!isNonOwnClass &&
+									(user as UserLike)?.ownKelasIds?.length
+										? `Wali Kelas ${kelasAktif?.nama ?? ''}`
+										: 'Guru'}
 								</span>
 							</div>
 						{/if}

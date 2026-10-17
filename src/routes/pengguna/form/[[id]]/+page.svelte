@@ -61,6 +61,18 @@
 
 	function applyRoleTemplate(role: string) {
 		permissions = new Set<string>(defaultPermissionsByType[role as AuthUser['type']] ?? []);
+		if (role === 'kepala_sekolah' || role === 'admin') {
+			mataPelajaranIds = new Set<number>();
+			kelasIds = new Set<number>();
+		}
+	}
+
+	function clearMapel() {
+		mataPelajaranIds = new Set<number>();
+	}
+
+	function clearKelas() {
+		kelasIds = new Set<number>();
 	}
 
 	function togglePermission(key: string) {
@@ -195,16 +207,43 @@
 				<!-- Mata Pelajaran Collapse -->
 				<details class="bg-base-200 border-base-300 collapse-arrow collapse">
 					<summary class="collapse-title font-semibold">
-						Mata Pelajaran {#if mataPelajaranIds.size > 0}
-							<span class="badge badge-sm badge-primary">{mataPelajaranIds.size}</span>
+						Mata Pelajaran
+						{#if isAdminRole}
+							<span class="badge badge-sm badge-ghost text-xs ml-1"
+								>Opsional untuk {type === 'kepala_sekolah' ? 'Kepala Sekolah' : 'Admin'}</span
+							>
+						{/if}
+						{#if mataPelajaranIds.size > 0}
+							<span class="badge badge-sm badge-primary ml-1">{mataPelajaranIds.size}</span>
 						{/if}
 					</summary>
 					<div class="collapse-content text-sm">
 						<div class="space-y-3">
-							<p class="text-xs opacity-75">
-								Pilih satu atau lebih mata pelajaran yang diajari. Khusus role "Wali Kelas" skip
-								langkah ini, karena bawaan Wali Kelas sudah punya akses ke semua mata pelajaran.
-							</p>
+							{#if isAdminRole}
+								<div
+									class="alert alert-info bg-info/10 text-info-content border-info/20 text-xs py-2"
+								>
+									<Icon name="info" class="w-4 h-4 shrink-0 text-info" />
+									<span>
+										Role <strong>{type === 'kepala_sekolah' ? 'Kepala Sekolah' : 'Admin'}</strong> memiliki
+										akses manajerial penuh ke seluruh mata pelajaran. Bagian ini tidak perlu diisi.
+									</span>
+								</div>
+							{:else}
+								<p class="text-xs opacity-75">
+									Pilih satu atau lebih mata pelajaran yang diajari. Khusus role "Wali Kelas" skip
+									langkah ini, karena bawaan Wali Kelas sudah punya akses ke semua mata pelajaran.
+								</p>
+							{/if}
+							{#if mataPelajaranIds.size > 0}
+								<button
+									type="button"
+									class="btn btn-xs btn-outline btn-error shadow-none"
+									onclick={clearMapel}
+								>
+									Kosongkan pilihan mata pelajaran
+								</button>
+							{/if}
 							{#if filteredMataPelajaran.length > 0}
 								<div class="space-y-2">
 									{#each filteredMataPelajaran as m (m.id)}
@@ -229,13 +268,40 @@
 				<!-- Kelas Collapse -->
 				<details class="bg-base-200 border-base-300 collapse-arrow collapse">
 					<summary class="collapse-title font-semibold">
-						Kelas {#if visibleKelasCount > 0}
-							<span class="badge badge-sm badge-secondary">{visibleKelasCount}</span>
+						Kelas
+						{#if isAdminRole}
+							<span class="badge badge-sm badge-ghost text-xs ml-1"
+								>Opsional untuk {type === 'kepala_sekolah' ? 'Kepala Sekolah' : 'Admin'}</span
+							>
+						{/if}
+						{#if visibleKelasCount > 0}
+							<span class="badge badge-sm badge-secondary ml-1">{visibleKelasCount}</span>
 						{/if}
 					</summary>
 					<div class="collapse-content text-sm">
 						<div class="space-y-3">
-							<p class="text-xs opacity-75">Pilih satu atau lebih kelas yang bisa diakses</p>
+							{#if isAdminRole}
+								<div
+									class="alert alert-info bg-info/10 text-info-content border-info/20 text-xs py-2"
+								>
+									<Icon name="info" class="w-4 h-4 shrink-0 text-info" />
+									<span>
+										Role <strong>{type === 'kepala_sekolah' ? 'Kepala Sekolah' : 'Admin'}</strong> memiliki
+										akses ke semua kelas. Bagian ini tidak perlu dipilih jika tidak merangkap wali kelas.
+									</span>
+								</div>
+							{:else}
+								<p class="text-xs opacity-75">Pilih satu atau lebih kelas yang bisa diakses</p>
+							{/if}
+							{#if visibleKelasCount > 0}
+								<button
+									type="button"
+									class="btn btn-xs btn-outline btn-error shadow-none"
+									onclick={clearKelas}
+								>
+									Kosongkan pilihan kelas
+								</button>
+							{/if}
 							{#if filteredKelasList.length > 0}
 								<div class="space-y-2">
 									<label class="bg-base-300 flex cursor-pointer gap-2 rounded p-2 font-semibold">
@@ -299,9 +365,10 @@
 						>
 							<option value="admin">Admin</option>
 							<option value="kepala_sekolah">Kepala Sekolah</option>
-							<option value="wali_kelas">Wali Kelas</option>
-							<option value="wali_asuh">Wali Asuh</option>
 							<option value="user">Guru</option>
+							{#if type === 'wali_kelas'}
+								<option value="wali_kelas">Wali Kelas (Lama)</option>
+							{/if}
 						</select>
 						<p class="label text-wrap">Tentukan peran pengguna</p>
 						{#if roleHint}

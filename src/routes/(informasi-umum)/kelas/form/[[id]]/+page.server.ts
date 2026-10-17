@@ -2,6 +2,7 @@ import db from '$lib/server/db';
 import { resolveSekolahAcademicContext } from '$lib/server/db/academic';
 import type { AcademicContext } from '$lib/server/db/academic';
 import {
+	tableAuthUser,
 	tableKelas,
 	tablePegawai,
 	tableSemester,
@@ -10,7 +11,7 @@ import {
 import { unflattenFormData } from '$lib/utils.js';
 import { deletePegawaiIfOrphaned } from '$lib/server/pengguna-merge.js';
 import { error, fail } from '@sveltejs/kit';
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { authority } from '../../../../pengguna/utils.server';
 
 type TingkatOption = { fase: string; label: string };
@@ -111,53 +112,6 @@ function resolveEffectiveSemesterId(
 	);
 }
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-/**
- * Resolve pegawai untuk field wali (kelas/asrama) dari form.
- * Nama sama dengan pegawai tertaut → orang sama, cukup perbarui NIP.
- * Nama berbeda → ganti orang: find-or-create pegawai by nama lalu tautkan
- * ulang. Baris pegawai tertaut JANGAN ditimpa — bisa jadi orang yang sama
- * dipakai sebagai kepala sekolah / punya akun login (mis. PLT walas).
- */
-async function resolveWaliPegawai(
-	tx: Tx,
-	currentId: number | null,
-	nama: string,
-	nip: string,
-	timestamp: string
-): Promise<{ id: number; replaced: boolean }> {
-	const current = currentId
-		? await tx.query.tablePegawai.findFirst({
-				columns: { id: true, nama: true },
-				where: eq(tablePegawai.id, currentId)
-			})
-		: null;
-	if (current && current.nama.trim().toLowerCase() === nama.trim().toLowerCase()) {
-		await tx
-			.update(tablePegawai)
-			.set({ nip, updatedAt: timestamp })
-			.where(eq(tablePegawai.id, current.id));
-		return { id: current.id, replaced: false };
-	}
-	const existing = await tx.query.tablePegawai.findFirst({
-		columns: { id: true },
-		where: sql`LOWER(trim(${tablePegawai.nama})) = ${nama.trim().toLowerCase()}`
-	});
-	if (existing) {
-		await tx
-			.update(tablePegawai)
-			.set({ nip, updatedAt: timestamp })
-			.where(eq(tablePegawai.id, existing.id));
-		return { id: existing.id, replaced: currentId !== null && currentId !== existing.id };
-	}
-	const [pegawai] = await tx
-		.insert(tablePegawai)
-		.values({ nama, nip, updatedAt: timestamp })
-		.returning({ id: tablePegawai.id });
-	return { id: pegawai?.id ?? 0, replaced: currentId !== null };
-}
-
 export async function load({ params, locals }) {
 	authority('informasi_umum_kelas');
 
@@ -239,20 +193,30 @@ export async function load({ params, locals }) {
 			id: tablePegawai.id,
 			nama: tablePegawai.nama,
 			nip: tablePegawai.nip,
-			dapodikPtkId: tablePegawai.dapodikPtkId
+			userType: tableAuthUser.type
 		})
-		.from(tablePegawai);
-	const seenNama = new Set<string>();
-	const ptkList = pegawaiRows.filter((p) => {
-		const key = (p.nama || '').trim().toLowerCase();
-		if (!key || key === '-' || seenNama.has(key)) return false;
-		seenNama.add(key);
-		return true;
+		.from(tablePegawai)
+		.leftJoin(tableAuthUser, eq(tablePegawai.id, tableAuthUser.pegawaiId));
+
+	const seenId = new Set<number>();
+	const waliKelasOptions = [];
+	for (const p of pegawaiRows) {
+		const nameKey = (p.nama || '').trim();
+		if (!nameKey || nameKey === '-' || seenId.has(p.id)) continue;
+		seenId.add(p.id);
+		waliKelasOptions.push({
+			id: p.id,
+			nama: p.nama,
+			nip: p.nip || null,
+			isWaliKelas: p.userType === 'wali_kelas'
+		});
+	}
+	waliKelasOptions.sort((a, b) => {
+		if (a.isWaliKelas && !b.isWaliKelas) return -1;
+		if (!a.isWaliKelas && b.isWaliKelas) return 1;
+		return a.nama.localeCompare(b.nama);
 	});
 
-	// Data Dapodik tersedia → identitas (nama/NIP) wali terkunci; ganti orang
-	// hanya lewat pilihan daftar, ubah nama/NIP hanya via /pengaturan/profil.
-	const dapodikAktif = pegawaiRows.some((p) => Boolean(p.dapodikPtkId));
 	const userType = (locals.user as { type?: string } | null)?.type;
 	const canResetWalas = userType === 'admin' || userType === 'kepala_sekolah';
 
@@ -262,8 +226,7 @@ export async function load({ params, locals }) {
 		kelas,
 		academicLock,
 		formInit,
-		ptkList,
-		dapodikAktif,
+		waliKelasOptions,
 		canResetWalas
 	};
 }
@@ -277,39 +240,13 @@ export const actions = {
 		const formData = unflattenFormData<KelasFormInput>(await request.formData());
 		const rombel = formData.rombel?.trim();
 		const fase = formData.fase?.trim() || null;
-		const waliNama = formData.waliKelas?.nama?.trim() || '';
-		const waliNipRaw = formData.waliKelas?.nip?.trim() || '';
 		const waliPegawaiIdRaw = Number(formData.waliKelasId ?? 0);
-		const waliPegawaiId =
+		const targetWaliKelasId =
 			Number.isInteger(waliPegawaiIdRaw) && waliPegawaiIdRaw > 0 ? waliPegawaiIdRaw : null;
 
 		if (!rombel) {
 			return fail(400, { fail: `Nama rombel wajib diisi.` });
 		}
-
-		// Data Dapodik aktif → nama & NIP wali kelas mengikuti data pegawai
-		// tersimpan; user hanya memilih orang dari daftar (by ID).
-		let dapodikAktif = false;
-		if (waliNama || waliPegawaiId) {
-			dapodikAktif =
-				(
-					await db
-						.select({ id: tablePegawai.id })
-						.from(tablePegawai)
-						.where(isNotNull(tablePegawai.dapodikPtkId))
-						.limit(1)
-				).length > 0;
-		}
-		const waliNip = dapodikAktif ? '' : waliNipRaw;
-
-		if (!waliNama && waliNip) {
-			return fail(400, {
-				fail: `Jika mengisi NIP, lengkapi juga Nama wali kelas.`
-			});
-		}
-
-		// Consider there is a wali when a name is provided. NIP is optional.
-		const hasWali = Boolean(waliNama);
 
 		const timestamp = new Date().toISOString();
 		const sekolahId = locals.sekolah.id;
@@ -372,30 +309,10 @@ export const actions = {
 			return fail(400, { fail: `Semester tidak valid untuk sekolah aktif.` });
 		}
 
-		// Mode Dapodik: wali kelas harus orang yang sudah ada (by ID / nama
-		// persis). Tidak membuat pegawai baru dan tidak mengubah identitas.
-		let waliTargetId: number | null = null;
-		if (hasWali && dapodikAktif) {
-			const byId = waliPegawaiId
-				? await db.query.tablePegawai.findFirst({
-						columns: { id: true },
-						where: eq(tablePegawai.id, waliPegawaiId)
-					})
-				: null;
-			const byNama =
-				byId ??
-				(await db.query.tablePegawai.findFirst({
-					columns: { id: true },
-					where: sql`LOWER(trim(${tablePegawai.nama})) = ${waliNama.toLowerCase()}`
-				}));
-			waliTargetId = byNama?.id ?? null;
-			if (!waliTargetId) {
-				return fail(400, { fail: `Pilih Wali Kelas dari daftar.` });
-			}
-		}
-
 		const replacedPegawaiIds: number[] = [];
 		await db.transaction(async (tx) => {
+			let savedKelasId: number;
+
 			if (params.id) {
 				const kelas = await tx.query.tableKelas.findFirst({
 					columns: {
@@ -406,20 +323,8 @@ export const actions = {
 				});
 				if (!kelas) error(404, `Data kelas tidak ditemukan`);
 
-				let waliKelasId = kelas.waliKelasId ?? null;
-
-				if (hasWali && dapodikAktif) {
-					if (waliKelasId && waliKelasId !== waliTargetId) {
-						replacedPegawaiIds.push(waliKelasId);
-					}
-					waliKelasId = waliTargetId;
-				} else if (hasWali) {
-					const res = await resolveWaliPegawai(tx, waliKelasId, waliNama, waliNip, timestamp);
-					if (res.replaced && waliKelasId) replacedPegawaiIds.push(waliKelasId);
-					waliKelasId = res.id;
-				} else if (waliKelasId) {
-					replacedPegawaiIds.push(waliKelasId);
-					waliKelasId = null;
+				if (kelas.waliKelasId && kelas.waliKelasId !== targetWaliKelasId) {
+					replacedPegawaiIds.push(kelas.waliKelasId);
 				}
 
 				await tx
@@ -428,33 +333,43 @@ export const actions = {
 						nama: rombel,
 						fase,
 						sekolahId,
-						waliKelasId,
+						waliKelasId: targetWaliKelasId,
 						tahunAjaranId,
 						semesterId,
 						updatedAt: timestamp
 					})
 					.where(eq(tableKelas.id, kelas.id));
+
+				savedKelasId = kelas.id;
 			} else {
-				let waliKelasId: number | null = null;
+				const [inserted] = await tx
+					.insert(tableKelas)
+					.values({
+						nama: rombel,
+						fase,
+						sekolahId,
+						tahunAjaranId,
+						semesterId,
+						waliKelasId: targetWaliKelasId,
+						createdAt: timestamp,
+						updatedAt: timestamp
+					})
+					.returning({ id: tableKelas.id });
 
-				if (hasWali) {
-					if (dapodikAktif) {
-						waliKelasId = waliTargetId;
-					} else {
-						const res = await resolveWaliPegawai(tx, null, waliNama, waliNip, timestamp);
-						waliKelasId = res.id;
-					}
-				}
+				savedKelasId = inserted.id;
+			}
 
-				await tx.insert(tableKelas).values({
-					nama: rombel,
-					fase,
-					sekolahId,
-					tahunAjaranId,
-					semesterId,
-					waliKelasId,
-					updatedAt: timestamp
-				});
+			// Sinkronkan akun wali_kelas jika pegawai terpilih punya akun
+			if (targetWaliKelasId) {
+				await tx
+					.update(tableAuthUser)
+					.set({ kelasId: savedKelasId, updatedAt: timestamp })
+					.where(
+						and(
+							eq(tableAuthUser.pegawaiId, targetWaliKelasId),
+							eq(tableAuthUser.type, 'wali_kelas')
+						)
+					);
 			}
 		});
 

@@ -71,6 +71,7 @@ declare global {
 				| 'sekolahId'
 				| 'mustChangePassword'
 			>;
+			setupNeeded?: boolean;
 		}
 		interface PageState {
 			modal: {

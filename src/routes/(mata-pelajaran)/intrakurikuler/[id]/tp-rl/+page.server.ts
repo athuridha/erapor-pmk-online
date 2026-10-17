@@ -55,10 +55,14 @@ export async function load({ depends, params, parent }) {
 	// pull mapel and user from parent so we can adapt behaviour for assigned agama teachers
 	const { mapel } = await parent();
 
-	await ensureAgamaMapelForClasses([mapel.kelasId]);
-	await ensurePksMapelForClasses([mapel.kelasId]);
+	if (mapel.nama === 'Pendidikan Agama dan Budi Pekerti' || /^pendidikan agama/i.test(mapel.nama)) {
+		await ensureAgamaMapelForClasses([mapel.kelasId]);
+	}
+	if (mapel.nama === 'Pendalaman Kitab Suci' || /^pendalaman kitab suci/i.test(mapel.nama)) {
+		await ensurePksMapelForClasses([mapel.kelasId]);
+	}
 
-	let tujuanPembelajaran = [];
+	let tujuanPembelajaran: (typeof tableTujuanPembelajaran.$inferSelect)[];
 
 	let agamaOptions: Array<{
 		id: number;
