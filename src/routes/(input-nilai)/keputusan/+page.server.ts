@@ -4,6 +4,7 @@ import { resolveSekolahAcademicContext } from '$lib/server/db/academic';
 import { fail, redirect } from '@sveltejs/kit';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { parseTingkat, lastGradeOfFase, isGraduatingFase, isGraduatingGrade } from '$lib/tingkat';
+import { isWaliKelasAccount } from '$lib/server/kelas-akses';
 
 const PER_PAGE = 20;
 const TABLE_MISSING_MESSAGE =
@@ -181,13 +182,11 @@ export const actions = {
 			});
 		}
 
-		// Permission check: only admin and wali_kelas can save keputusan
+		// Permission check: admin/kepala_sekolah, atau wali kelas — termasuk guru
+		// merangkap wali kelas (tipe 'user' dengan relasi waliKelasId).
 		const saveUserType = (locals.user as { type?: string } | null)?.type;
-		if (
-			saveUserType !== 'admin' &&
-			saveUserType !== 'kepala_sekolah' &&
-			saveUserType !== 'wali_kelas'
-		) {
+		const saveIsStaff = saveUserType === 'admin' || saveUserType === 'kepala_sekolah';
+		if (!saveIsStaff && !(await isWaliKelasAccount(locals.user))) {
 			return fail(403, {
 				fail: 'Anda tidak memiliki izin untuk menyimpan keputusan kenaikan kelas.'
 			});
@@ -218,8 +217,8 @@ export const actions = {
 			updates.push({ muridId, naik: naikVal === 'true' });
 		}
 
-		// If wali_kelas, verify they are the wali of all selected students' class
-		if (saveUserType === 'wali_kelas') {
+		// Wali kelas (tipe legacy maupun guru-wali) diverifikasi terhadap kelas semua murid terpilih.
+		if (!saveIsStaff) {
 			const pegawaiId = (locals.user as { pegawaiId?: number | null }).pegawaiId;
 			if (!pegawaiId) {
 				return fail(403, { fail: 'Data wali kelas tidak lengkap.' });

@@ -21,6 +21,7 @@ import {
 	todayDateString,
 	TABLE_MISSING_MESSAGE
 } from './utils';
+import { isWaliKelasAccount, isWaliOfKelas } from '../kelas-akses';
 
 import {
 	simWriteKetidakhadiran,
@@ -876,8 +877,15 @@ export async function handleUpdateRapor({
 		return fail(401, { fail: 'Sekolah tidak ditemukan' });
 	}
 
-	if (locals.user?.type === 'user' || locals.user?.type === 'wali_asuh') {
-		return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah data kehadiran' });
+	const raporUser = locals.user;
+	const raporIsStaff = raporUser?.type === 'admin' || raporUser?.type === 'kepala_sekolah';
+	if (!raporIsStaff) {
+		// Guru merangkap wali kelas (tipe 'user' dengan relasi waliKelasId)
+		// diperlakukan sama seperti wali kelas lama; guru murni dan wali asuh ditolak.
+		const raporIsWali = raporUser?.type !== 'wali_asuh' && (await isWaliKelasAccount(raporUser));
+		if (!raporIsWali) {
+			return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah data kehadiran' });
+		}
 	}
 
 	const activeTa = await db.query.tableTahunAjaran.findFirst({
@@ -921,12 +929,16 @@ export async function handleUpdateRapor({
 	}
 
 	const muridRecord = await db.query.tableMurid.findFirst({
-		columns: { id: true },
+		columns: { id: true, kelasId: true },
 		where: and(eq(tableMurid.id, muridId), eq(tableMurid.sekolahId, sekolahId))
 	});
 
 	if (!muridRecord) {
 		return fail(404, { fail: 'Murid tidak ditemukan atau bukan bagian dari sekolah ini' });
+	}
+
+	if (!raporIsStaff && !(await isWaliOfKelas(raporUser, muridRecord.kelasId))) {
+		return fail(403, { fail: 'Anda bukan wali kelas dari murid ini.' });
 	}
 
 	try {
@@ -959,8 +971,15 @@ export async function handleResetRapor({
 		return fail(401, { fail: 'Sekolah tidak ditemukan' });
 	}
 
-	if (locals.user?.type === 'user' || locals.user?.type === 'wali_asuh') {
-		return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah data kehadiran' });
+	const raporUser = locals.user;
+	const raporIsStaff = raporUser?.type === 'admin' || raporUser?.type === 'kepala_sekolah';
+	if (!raporIsStaff) {
+		// Guru merangkap wali kelas (tipe 'user' dengan relasi waliKelasId)
+		// diperlakukan sama seperti wali kelas lama; guru murni dan wali asuh ditolak.
+		const raporIsWali = raporUser?.type !== 'wali_asuh' && (await isWaliKelasAccount(raporUser));
+		if (!raporIsWali) {
+			return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah data kehadiran' });
+		}
 	}
 
 	const activeTa = await db.query.tableTahunAjaran.findFirst({
@@ -988,12 +1007,16 @@ export async function handleResetRapor({
 	}
 
 	const muridRecord = await db.query.tableMurid.findFirst({
-		columns: { id: true },
+		columns: { id: true, kelasId: true },
 		where: and(eq(tableMurid.id, muridId), eq(tableMurid.sekolahId, sekolahId))
 	});
 
 	if (!muridRecord) {
 		return fail(404, { fail: 'Murid tidak ditemukan atau bukan bagian dari sekolah ini' });
+	}
+
+	if (!raporIsStaff && !(await isWaliOfKelas(raporUser, muridRecord.kelasId))) {
+		return fail(403, { fail: 'Anda bukan wali kelas dari murid ini.' });
 	}
 
 	try {

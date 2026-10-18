@@ -502,6 +502,8 @@ export async function load({ parent, url, depends, locals }) {
 
 		const canAccess = (() => {
 			if (!maybeUser || maybeUser.type !== 'user') return true;
+			// Guru merangkap wali kelas di kelasnya sendiri: paritas wali kelas lama.
+			if (kelasAktif?.id != null && guruOwnKelasIds?.includes(kelasAktif.id)) return true;
 
 			if ((isAgamaSelected || isPksSelected) && allowedAgamaVariants.size > 0) {
 				// Hanya murid dengan agama varian yang diajar guru (termasuk sub-nya).
