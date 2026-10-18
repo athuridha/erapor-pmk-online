@@ -1,4 +1,4 @@
-import db from '$lib/server/db';
+﻿import db from '$lib/server/db';
 import {
 	tableMurid,
 	tableKetidakhadiranHarian,
@@ -50,7 +50,7 @@ export async function loadBulanan(params: {
 		? and(baseFilter, sql`${tableMurid.nama} LIKE ${'%' + search + '%'} COLLATE NOCASE`)
 		: baseFilter;
 
-	const pagination = await computePagination(db, tableMurid, searchFilter, pageNumber, url);
+	const pagination = await computePagination(searchFilter, pageNumber, url);
 
 	const [{ muridCount }] = await db
 		.select({ muridCount: sql<number>`count(*)` })
@@ -143,8 +143,8 @@ export async function loadBulanan(params: {
 		keterangan: string | null;
 		keteranganPulang: string | null;
 		mataPelajaranId: number | null;
-	}> = [];
-	let allAbsensi: Array<{ muridId: number; waktu: string }> = [];
+	}>;
+	let allAbsensi: Array<{ muridId: number; waktu: string }>;
 	let allNullKetidakhadiran: Array<{
 		muridId: number;
 		tanggal: string;

@@ -1,12 +1,13 @@
 <script lang="ts">
 	let {
 		rows,
-		tanggalMulai,
-		tanggalAkhir,
 		totalHariBelajar,
 		jenisPresensi = 'wali_kelas_saja',
 		tipePresensi = '',
-		totalPertemuan = 0
+		totalPertemuan = 0,
+		// kept in the signature for API compatibility; not rendered by this table
+		tanggalMulai: _tanggalMulai = '',
+		tanggalAkhir: _tanggalAkhir = ''
 	}: {
 		rows: Array<{
 			no: number;

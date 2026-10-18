@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- small Map and URLSearchParams usage and navigation helpers */
 	import { invalidate, goto } from '$app/navigation';
 	import MuridPicker from '$lib/components/asesmen-sumatif/murid-picker.svelte';
 	import CheatControls from '$lib/components/asesmen-sumatif/cheat-controls.svelte';
@@ -63,21 +62,21 @@
 
 	// svelte-ignore state_referenced_locally
 	let entries = $state(data.entries.map(toDraft));
+	// svelte-ignore state_referenced_locally
 	let sasTesText = $state(
-		// svelte-ignore state_referenced_locally
 		data.initialScores.sasTes != null ? data.initialScores.sasTes.toFixed(2) : ''
 	);
+	// svelte-ignore state_referenced_locally
 	let sasNonTesText = $state(
-		// svelte-ignore state_referenced_locally
 		data.initialScores.sasNonTes != null ? data.initialScores.sasNonTes.toFixed(2) : ''
 	);
 	// Sumatif Tengah Semester (STS) - new inputs, initially empty (backend doesn't persist yet)
+	// svelte-ignore state_referenced_locally
 	let stsTesText = $state(
-		// svelte-ignore state_referenced_locally
 		data.initialScores.stsTes != null ? data.initialScores.stsTes.toFixed(2) : ''
 	);
+	// svelte-ignore state_referenced_locally
 	let stsNonTesText = $state(
-		// svelte-ignore state_referenced_locally
 		data.initialScores.stsNonTes != null ? data.initialScores.stsNonTes.toFixed(2) : ''
 	);
 	$effect(() => {

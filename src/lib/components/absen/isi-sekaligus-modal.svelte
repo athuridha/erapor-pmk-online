@@ -36,7 +36,6 @@
 	} = $props();
 
 	let step = $state<'pilih-mode' | 'pilih-murid'>('pilih-mode');
-	let pilihanHadirSemua = $state<string>('');
 	let searchTerm = $state('');
 	let selectedIds = $state<number[]>([]);
 	let keteranganMap = $state<Record<number, string>>({});
@@ -116,7 +115,6 @@
 	}
 
 	function pilihTidak() {
-		pilihanHadirSemua = 'tidak';
 		step = 'pilih-murid';
 		updateModal({
 			onPositive: {
@@ -135,7 +133,6 @@
 
 	function goToStep1() {
 		step = 'pilih-mode';
-		pilihanHadirSemua = '';
 		updateModal({
 			onPositive: {
 				label: 'Ya',

@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- page intentionally uses href/goto for navigation */
 	import Icon from '$lib/components/icon.svelte';
 	import SekolahModals from '$lib/components/sekolah/modals.svelte';
 	import type { SekolahCard } from '$lib/components/sekolah/types';

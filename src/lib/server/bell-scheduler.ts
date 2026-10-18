@@ -7,7 +7,6 @@ import {
 	tableBellSettings,
 	tableJadwalPelajaran,
 	tableKegiatanCustom,
-	tableBellSounds,
 	tablePresensiSettings,
 	tableKelas,
 	tableMataPelajaran,
@@ -388,8 +387,7 @@ async function checkSekolah(
 				isSubjectCode,
 				kegiatanCustom,
 				daftarKodeMapel,
-				isAllSame,
-				computeWaktu
+				isAllSame
 			);
 		} else if (currentMinutes >= startMinutes && currentMinutes < endMinutes && !trig.has(key)) {
 			trig.add(key);
@@ -433,8 +431,7 @@ function playSoundForKode(
 	isSubjectCode: (kode: string) => boolean,
 	kegiatanCustom: Array<{ kode: string; soundFileName?: string | null }>,
 	daftarKodeMapel: Set<string>,
-	isAllSame: (jamKe: number) => string | null,
-	computeWaktu: (jamKe: number) => { start: string; end: string }
+	isAllSame: (jamKe: number) => string | null
 ) {
 	if (jamKe > 1) {
 		const prevKode = isAllSame(jamKe - 1);

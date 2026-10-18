@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- setup page uses direct hrefs */
 	let { data, form } = $props();
 
 	const tokenSourceLabel = $derived(

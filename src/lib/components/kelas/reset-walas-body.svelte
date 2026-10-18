@@ -18,7 +18,7 @@
 	action="?/reset-walas"
 	onsuccess={async () => {
 		await invalidate('app:kelas');
-		/* eslint-disable-next-line svelte/no-navigation-without-resolve -- kembali ke daftar kelas setelah reset */
+
 		await goto('/kelas');
 		hideModal();
 	}}

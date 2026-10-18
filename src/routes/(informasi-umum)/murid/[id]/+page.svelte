@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- page uses href/goto intentionally for navigation */
 	import Icon from '$lib/components/icon.svelte';
 	import { jenisKelamin } from '$lib/statics.js';
 	import { modalRoute } from '$lib/utils.js';

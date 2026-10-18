@@ -1,5 +1,5 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any -- file-level: many intentional href/goto usages and loose any/unused vars */
+	/* eslint-disable @typescript-eslint/no-explicit-any -- file-level: many intentional href/goto usages and loose any/unused vars */
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '$lib/components/icon.svelte';

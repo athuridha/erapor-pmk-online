@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- static link(s) to external/about pages */
 	import Icon from '$lib/components/icon.svelte';
 	import type { PageData } from './$types';
 

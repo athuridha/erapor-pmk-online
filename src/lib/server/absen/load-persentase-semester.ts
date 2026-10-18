@@ -1,4 +1,4 @@
-import db from '$lib/server/db';
+﻿import db from '$lib/server/db';
 import {
 	tableMurid,
 	tableKetidakhadiranHarian,
@@ -14,6 +14,7 @@ import { buildRangeLiburDates, buildRangeRedDays } from './libur';
 import { getUniqueSubjectKodes } from './first-mapel';
 import type { PersentaseSemesterRow, AbsenLoadData } from './types';
 import type { PresensiCheckResult } from './presensi';
+import type { AcademicContext } from '$lib/server/db/academic';
 
 export async function loadPersentaseSemester(params: {
 	sekolahId: number;
@@ -24,7 +25,7 @@ export async function loadPersentaseSemester(params: {
 	simHari: string | null;
 	simJam: string | null;
 	url: URL;
-	academicContext: any;
+	academicContext: AcademicContext | null;
 	tahunAjaranId: number;
 	semesterId: number;
 }): Promise<AbsenLoadData> {
@@ -86,8 +87,8 @@ export async function loadPersentaseSemester(params: {
 		isLibur: false
 	};
 
-	const activeTa = academicContext?.tahunAjaranList.find((ta: any) => ta.id === tahunAjaranId);
-	const activeSem = activeTa?.semester.find((s: any) => s.id === semesterId);
+	const activeTa = academicContext?.tahunAjaranList.find((ta) => ta.id === tahunAjaranId);
+	const activeSem = activeTa?.semester.find((s) => s.id === semesterId);
 	let tanggalMulaiRapor = activeSem?.tanggalMasuk ?? activeSem?.tanggalMulai ?? null;
 	let tanggalAkhirRapor = activeSem?.tanggalBagiRaport ?? activeSem?.tanggalSelesai ?? null;
 
@@ -131,7 +132,7 @@ export async function loadPersentaseSemester(params: {
 		? and(baseFilter, sql`${tableMurid.nama} LIKE ${'%' + search + '%'} COLLATE NOCASE`)
 		: baseFilter;
 
-	const pagination = await computePagination(db, tableMurid, searchFilter, pageNumber, url);
+	const pagination = await computePagination(searchFilter, pageNumber, url);
 
 	const [{ muridCount }] = await db
 		.select({ muridCount: sql<number>`count(*)` })

@@ -7,7 +7,16 @@ interface ModalAction {
 	action?: (params: { close: () => void }) => MaybePromise<void>;
 }
 
-type ModalBodyComponent = import('svelte').Component<any, any, string>;
+// Modal bodies may be any Svelte 5 component; prop matching is decoupled via
+// `bodyProps`. The host renders bodies dynamically, so the expected props must
+// be indefinitely wide — strict prop typing here would reject every
+// concrete body component (contravariant required props).
+type ModalBodyComponent = import('svelte').Component<
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	any,
+	Record<string, unknown>,
+	string
+>;
 
 interface ModalProps<BodyProps extends Record<string, unknown> = Record<string, unknown>> {
 	title?: string;

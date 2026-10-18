@@ -105,10 +105,12 @@ export async function readCombinedOriginsFromEnvAndFile(): Promise<Set<string>> 
 	const repoSet = await readRepoDataFileOrigins();
 
 	// Choose the primary source (repo file > persisted data dir > env)
-	let primary = new Set<string>();
-	if (repoSet.size > 0) primary = new Set<string>(repoSet);
-	else if (fileSet.size > 0) primary = new Set<string>(fileSet);
-	else primary = new Set<string>(envEntries);
+	const primary =
+		repoSet.size > 0
+			? new Set<string>(repoSet)
+			: fileSet.size > 0
+				? new Set<string>(fileSet)
+				: new Set<string>(envEntries);
 
 	// Always attempt to detect local IPv4 addresses on the host and add them
 	// to the trusted origins set so LAN access works without manual editing.

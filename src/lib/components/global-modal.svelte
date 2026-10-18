@@ -86,7 +86,6 @@
 </script>
 
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- onExtra is an external link opened in a new tab */
 	import Icon from '$lib/components/icon.svelte';
 </script>
 

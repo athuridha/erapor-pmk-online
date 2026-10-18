@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- per-row links use simple hrefs */
 	import Icon from '$lib/components/icon.svelte';
 	import { page } from '$app/state';
 

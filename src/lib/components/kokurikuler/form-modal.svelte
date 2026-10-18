@@ -71,63 +71,61 @@
 					onsuccess={onSuccess}
 					submitStateChange={(v) => (submitting = v)}
 				>
-					{#snippet children()}
-						<input name="kelasId" value={kelasId ?? ''} hidden />
-						{#if isEditMode && modalItem}
-							<input name="id" value={modalItem.id} hidden />
-						{/if}
+					<input name="kelasId" value={kelasId ?? ''} hidden />
+					{#if isEditMode && modalItem}
+						<input name="id" value={modalItem.id} hidden />
+					{/if}
 
-						<div class="space-y-2">
-							<p class="font-semibold">Pilih Dimensi Profil Lulusan</p>
-							<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-								{#each dimensionOptions as dimensi (dimensi.key)}
-									<label class="flex cursor-pointer flex-row gap-2">
-										<input
-											type="checkbox"
-											class="checkbox"
-											value={dimensi.key}
-											name="dimensi"
-											checked={selectedDimensions.includes(dimensi.key)}
-											onchange={(event) =>
-												onToggleDimension(dimensi.key, event.currentTarget.checked)}
-											aria-label={dimensi.label}
-										/>
-										<div class="flex flex-col">
-											<span>{dimensi.label}</span>
-										</div>
-									</label>
-								{/each}
-							</div>
+					<div class="space-y-2">
+						<p class="font-semibold">Pilih Dimensi Profil Lulusan</p>
+						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+							{#each dimensionOptions as dimensi (dimensi.key)}
+								<label class="flex cursor-pointer flex-row gap-2">
+									<input
+										type="checkbox"
+										class="checkbox"
+										value={dimensi.key}
+										name="dimensi"
+										checked={selectedDimensions.includes(dimensi.key)}
+										onchange={(event) =>
+											onToggleDimension(dimensi.key, event.currentTarget.checked)}
+										aria-label={dimensi.label}
+									/>
+									<div class="flex flex-col">
+										<span>{dimensi.label}</span>
+									</div>
+								</label>
+							{/each}
 						</div>
+					</div>
 
-						<div class="space-y-2">
-							<p class="font-semibold">Kode</p>
-							<input
-								type="text"
-								class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
-								placeholder="Masukkan kode (contoh: KK-BAKU)"
-								name="kode"
-								value={kodeInput}
-								oninput={(event) => onKodeChange((event.currentTarget as HTMLInputElement).value)}
-								required
-								disabled={!canManage}
-								maxlength={20}
-							/>
-						</div>
+					<div class="space-y-2">
+						<p class="font-semibold">Kode</p>
+						<input
+							type="text"
+							class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							placeholder="Masukkan kode (contoh: KK-BAKU)"
+							name="kode"
+							value={kodeInput}
+							oninput={(event) => onKodeChange((event.currentTarget as HTMLInputElement).value)}
+							required
+							disabled={!canManage}
+							maxlength={20}
+						/>
+					</div>
 
-						<div class="space-y-2">
-							<p class="font-semibold">Kegiatan Kokurikuler</p>
-							<textarea
-								class="textarea bg-base-200 dark:bg-base-300 h-28 w-full dark:border-none"
-								placeholder="Ketik kegiatan atau tema kegiatan kokurikuler"
-								name="kokurikuler"
-								value={tujuanInput}
-								oninput={(event) =>
-									onTujuanChange((event.currentTarget as HTMLTextAreaElement).value)}
-								required
-								disabled={!canManage}></textarea>
-						</div>
-					{/snippet}
+					<div class="space-y-2">
+						<p class="font-semibold">Kegiatan Kokurikuler</p>
+						<textarea
+							class="textarea bg-base-200 dark:bg-base-300 h-28 w-full dark:border-none"
+							placeholder="Ketik kegiatan atau tema kegiatan kokurikuler"
+							name="kokurikuler"
+							value={tujuanInput}
+							oninput={(event) =>
+								onTujuanChange((event.currentTarget as HTMLTextAreaElement).value)}
+							required
+							disabled={!canManage}></textarea>
+					</div>
 				</FormEnhance>
 			</div>
 

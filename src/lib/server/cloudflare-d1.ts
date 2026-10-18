@@ -12,17 +12,10 @@ import {
 	tableCloudSyncLogs,
 	tableCloudSyncSettings,
 	tableJurnalMengajar,
-	tableKelas,
 	tableKetidakhadiranHarian,
-	tableKetidakhadiranRapor,
-	tableMataPelajaran,
-	tableMurid,
-	tablePegawai,
-	tableSekolah,
-	tableSemester,
-	tableTahunAjaran
+	tableKetidakhadiranRapor
 } from './db/schema';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -394,7 +387,7 @@ export async function pushDataToCloud(
 	// 2. Kirim ke Cloudflare D1 jika kredensial tersedia
 	const config = await getD1Config(sekolahId);
 	let d1Synced = false;
-	let syncMessage = '';
+	let syncMessage: string;
 
 	if (config?.accountId && config.apiToken) {
 		const d1Res = await executeD1Query(

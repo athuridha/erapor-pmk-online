@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- layout contains many intentional href links for navigation */
 	import { page } from '$app/state';
 	import { dev } from '$app/environment';
 	import { invalidate, onNavigate } from '$app/navigation';

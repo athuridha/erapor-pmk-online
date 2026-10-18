@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- bukti links open in a new tab */
 	import SppdDetailBody from '$lib/components/sppd/sppd-detail-body.svelte';
 	import Icon from '$lib/components/icon.svelte';
 

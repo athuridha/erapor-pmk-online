@@ -22,6 +22,21 @@ export default ts.config(
 		},
 		rules: {
 			'no-undef': 'off',
+			// Kosong-artinya-diam sengaja: catch yang sengaja menelan error adalah
+			// pola aplikasi offline-first ini (best-effort cleanup).
+			'no-empty': ['error', { allowEmptyCatch: true }],
+			// Aplikasi ini sengaja memakai href + goto() ke path statis di banyak file
+			// (layout sudah disable aturan ini karena alasan yang sama), jadi
+			// konsisten satu konvensi saja lewat config, bukan disable per file.
+			'svelte/no-navigation-without-resolve': 'off',
+			'@typescript-eslint/no-unused-vars': [
+				'error',
+				{
+					argsIgnorePattern: '^_',
+					varsIgnorePattern: '^_',
+					caughtErrorsIgnorePattern: '^_'
+				}
+			],
 			'svelte/no-at-html-tags': 'off',
 			'svelte/prefer-svelte-reactivity': 'off'
 		}

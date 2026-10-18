@@ -1,10 +1,5 @@
 import db from '$lib/server/db';
-import {
-	tableAuthUser,
-	tablePegawai,
-	tableKelas,
-	tableSekolah
-} from '$lib/server/db/schema';
+import { tableAuthUser, tablePegawai, tableKelas, tableSekolah } from '$lib/server/db/schema';
 import { sql, eq } from 'drizzle-orm';
 import { defaultPermissionsByType } from './permissions';
 import { hashPassword } from '$lib/server/auth';

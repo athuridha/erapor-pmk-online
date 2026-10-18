@@ -1,4 +1,4 @@
-import { sharedStyles, formatValue, getTutwuriBwDataUri } from './shared';
+import { sharedStyles, formatValue } from './shared';
 
 export interface JurnalMengajarPrintData {
 	sekolah: {

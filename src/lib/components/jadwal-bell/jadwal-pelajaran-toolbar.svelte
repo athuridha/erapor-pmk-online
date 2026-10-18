@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- Kembali link is a plain back nav */
 	import Icon from '$lib/components/icon.svelte';
 
 	let {

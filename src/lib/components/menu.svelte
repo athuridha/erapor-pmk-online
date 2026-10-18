@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve */
 	import { page } from '$app/state';
 	import { StorageState } from '$lib/state.svelte';
 	import { searchQueryMarker } from '$lib/utils';

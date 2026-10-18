@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- URLSearchParams helpers and page navigation */
 	import SvelteURLSearchParams from '$lib/svelte-helpers/url-search-params';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';

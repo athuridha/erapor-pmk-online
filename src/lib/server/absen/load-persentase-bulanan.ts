@@ -1,4 +1,4 @@
-import db from '$lib/server/db';
+﻿import db from '$lib/server/db';
 import {
 	tableMurid,
 	tableKetidakhadiranHarian,
@@ -51,7 +51,7 @@ export async function loadPersentaseBulanan(params: {
 		? and(baseFilter, sql`${tableMurid.nama} LIKE ${'%' + search + '%'} COLLATE NOCASE`)
 		: baseFilter;
 
-	const pagination = await computePagination(db, tableMurid, searchFilter, pageNumber, url);
+	const pagination = await computePagination(searchFilter, pageNumber, url);
 
 	const [{ muridCount }] = await db
 		.select({ muridCount: sql<number>`count(*)` })
@@ -149,8 +149,8 @@ export async function loadPersentaseBulanan(params: {
 		keterangan: string | null;
 		keteranganPulang: string | null;
 		mataPelajaranId: number | null;
-	}> = [];
-	let allAbsensi: Array<{ muridId: number; waktu: string; mataPelajaranId?: number | null }> = [];
+	}>;
+	let allAbsensi: Array<{ muridId: number; waktu: string; mataPelajaranId?: number | null }>;
 	let allNullKetidakhadiran: Array<{
 		muridId: number;
 		tanggal: string;
@@ -329,7 +329,7 @@ export async function loadPersentaseBulanan(params: {
 							keterangan = nullKhMap.get(nullKey);
 						}
 					} else {
-						// kode without MP entry — use null-mpId fallback
+						// kode without MP entry â€” use null-mpId fallback
 						keterangan = nullKhMap.get(nullKey);
 					}
 

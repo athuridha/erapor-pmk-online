@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- search param helpers and goto usage */
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import BulkFillModal from '$lib/components/catatan-wali/bulk-fill-modal.svelte';

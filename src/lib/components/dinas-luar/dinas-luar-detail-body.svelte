@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- undangan link opens in a new tab */
 	import Icon from '$lib/components/icon.svelte';
 
 	interface DinasLuarPermohonanDetail {

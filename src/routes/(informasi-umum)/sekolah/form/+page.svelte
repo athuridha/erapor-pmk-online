@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- small page-level navigation helper calls */
 	import { goto, invalidate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import FormEnhance from '$lib/components/form-enhance.svelte';
@@ -7,7 +6,7 @@
 	import { showModal } from '$lib/components/global-modal.svelte';
 	import ImportDatabaseModal from '$lib/components/modals/import-database-modal.svelte';
 	import SekolahModals from '$lib/components/sekolah/modals.svelte';
-	import { jenjangPendidikanSederajat, nauganOptions } from '$lib/statics';
+	import { nauganOptions } from '$lib/statics';
 	import { modalRoute } from '$lib/utils';
 
 	let { data } = $props();
@@ -74,32 +73,6 @@
 			pilihKepala(kepalaTersaring[Math.min(indeksSorotKepala, kepalaTersaring.length - 1)]);
 		}
 	}
-
-	// typed keys for jenjangPendidikanSederajat to avoid implicit `string` indexing errors
-	const jenjangKeys = Object.keys(jenjangPendidikanSederajat) as Array<
-		keyof typeof jenjangPendidikanSederajat
-	>;
-
-	// Group jenjang for UI (put SLB/PKBM/SRT under 'Sekolah Satu Atap')
-	const groupedJenjang = (() => {
-		const map = new Map<
-			string,
-			Array<{
-				jenjKey: keyof typeof jenjangPendidikanSederajat;
-				variant: { key: string; label: string };
-			}>
-		>();
-		const ssaKeys = new Set(['slb', 'pkbm', 'srt']);
-		for (const k of jenjangKeys) {
-			const label = jenjangPendidikanSederajat[k][0].label;
-			const groupLabel = ssaKeys.has(String(k)) ? 'Sekolah Satu Atap' : label;
-			if (!map.has(groupLabel)) map.set(groupLabel, []);
-			for (const v of jenjangPendidikanSederajat[k]) {
-				map.get(groupLabel)?.push({ jenjKey: k, variant: v });
-			}
-		}
-		return Array.from(map.entries()).map(([label, items]) => ({ label, items }));
-	})();
 
 	// When editing, the form enhancer populates the select by jenjangPendidikan (base key).
 	// Because options reuse the same value for multiple variants, the browser will select

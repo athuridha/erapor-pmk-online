@@ -220,7 +220,7 @@
 	async function applyNavigation(updateParams: (params: SvelteURLSearchParams) => void) {
 		const target = buildUrl(updateParams);
 		if (!target) return;
-		/* eslint-disable-next-line svelte/no-navigation-without-resolve -- intentional URL build + goto */
+
 		await goto(target, { replaceState: true, keepFocus: true });
 	}
 
@@ -326,12 +326,7 @@
 	const hasMurid = $derived.by(() => data.muridCount > 0);
 	const hasFilteredMurid = $derived.by(() => data.totalMurid > 0);
 
-	// svelte-ignore state_referenced_locally
-	let selectedTanggal = $state(data.tanggal);
-
-	$effect(() => {
-		selectedTanggal = data.tanggal;
-	});
+	let selectedTanggal = $derived(data.tanggal);
 
 	const isToday = $derived.by(() => {
 		const y = serverTime.now.getFullYear();
@@ -340,40 +335,17 @@
 		return data.tanggal === `${y}-${m}-${day}`;
 	});
 
-	let selectedMode = $state<
-		| 'harian'
-		| 'bulanan'
-		| 'rapor'
-		| 'persentase_harian'
-		| 'persentase_bulanan'
-		| 'persentase_semester'
-		// svelte-ignore state_referenced_locally
-	>(data.mode);
-	let selectedBulan = $state(
-		// svelte-ignore state_referenced_locally
+	let selectedMode = $derived(data.mode);
+	let selectedBulan = $derived(
 		data.mode === 'bulanan' || data.mode === 'persentase_bulanan'
-			? // svelte-ignore state_referenced_locally
-				data.bulan
+			? data.bulan
 			: serverTime.now.getMonth() + 1
 	);
-	let selectedTahun = $state(
-		// svelte-ignore state_referenced_locally
+	let selectedTahun = $derived(
 		data.mode === 'bulanan' || data.mode === 'persentase_bulanan'
-			? // svelte-ignore state_referenced_locally
-				data.tahun
+			? data.tahun
 			: serverTime.now.getFullYear()
 	);
-
-	$effect(() => {
-		selectedMode = data.mode;
-	});
-
-	$effect(() => {
-		if (data.mode === 'bulanan' || data.mode === 'persentase_bulanan') {
-			selectedBulan = data.bulan;
-			selectedTahun = data.tahun;
-		}
-	});
 
 	let simulasiHari = $state(page.url.searchParams.get('simHari') ?? 'Senin');
 	let simulasiJam = $state(page.url.searchParams.get('simJam') ?? '07:00');

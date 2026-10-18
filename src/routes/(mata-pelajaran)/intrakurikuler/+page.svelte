@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- many navigation links built from data */
 	import { page } from '$app/state';
 	import { invalidate } from '$app/navigation';
 	import { enhance } from '$app/forms';

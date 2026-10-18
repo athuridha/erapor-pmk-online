@@ -1,4 +1,4 @@
-import db from '$lib/server/db';
+﻿import db from '$lib/server/db';
 import {
 	tableMurid,
 	tableKetidakhadiranHarian,
@@ -15,13 +15,14 @@ import { buildRangeLiburDates, buildRangeRedDays } from './libur';
 import { getUniqueSubjectKodes } from './first-mapel';
 import type { RaporRow, AbsenLoadData } from './types';
 import type { PresensiCheckResult } from './presensi';
+import type { AcademicContext } from '$lib/server/db/academic';
 
 export async function loadRapor(params: {
 	sekolahId: number;
 	kelasId: number;
 	search: string | null;
 	pageNumber: number;
-	academicContext: any;
+	academicContext: AcademicContext | null;
 	presensiSettings: NonNullable<PresensiCheckResult['presensiSettings']>;
 	simHari: string | null;
 	simJam: string | null;
@@ -85,8 +86,8 @@ export async function loadRapor(params: {
 		isLibur: false
 	};
 
-	const activeTa = academicContext?.tahunAjaranList.find((ta: any) => ta.id === tahunAjaranId);
-	const activeSem = activeTa?.semester.find((s: any) => s.id === kelasSemesterId);
+	const activeTa = academicContext?.tahunAjaranList.find((ta) => ta.id === tahunAjaranId);
+	const activeSem = activeTa?.semester.find((s) => s.id === kelasSemesterId);
 	let tanggalMulaiRapor = activeSem?.tanggalMasuk ?? activeSem?.tanggalMulai ?? null;
 	let tanggalAkhirRapor = activeSem?.tanggalBagiRaport ?? activeSem?.tanggalSelesai ?? null;
 	const semesterId = kelasSemesterId;
@@ -131,7 +132,7 @@ export async function loadRapor(params: {
 		? and(baseFilter, sql`${tableMurid.nama} LIKE ${'%' + search + '%'} COLLATE NOCASE`)
 		: baseFilter;
 
-	const pagination = await computePagination(db, tableMurid, searchFilter, pageNumber, url);
+	const pagination = await computePagination(searchFilter, pageNumber, url);
 
 	const [{ muridCount }] = await db
 		.select({ muridCount: sql<number>`count(*)` })
@@ -230,7 +231,7 @@ export async function loadRapor(params: {
 			if (mp.kode) kodeToMpMap.set(mp.kode, mp.id);
 		}
 
-		// Keep all kodes — rapor uses only the first valid mapel per day
+		// Keep all kodes â€” rapor uses only the first valid mapel per day
 	}
 
 	const mpIds = [...kodeToMpMap.values()];
@@ -433,7 +434,7 @@ export async function loadRapor(params: {
 						keterangan = nullKhMap.get(nullKey);
 					}
 				} else {
-					// No valid mapel — fall back to null-mpId record
+					// No valid mapel â€” fall back to null-mpId record
 					keterangan = nullKhMap.get(nullKey);
 				}
 

@@ -6,6 +6,7 @@ import {
 } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
 import type { BellSettingsData, CustomKegiatanData } from '$lib/server/absen-utils';
+import type { AcademicContext } from '$lib/server/db/academic';
 
 export type PresensiCheckResult = {
 	presensiReady: boolean;
@@ -19,7 +20,7 @@ export async function checkPresensiReadiness(
 	sekolahId: number | null,
 	kelasId: number | null,
 	tahunAjaranId: number | null,
-	academicContext: any
+	academicContext: AcademicContext | null
 ): Promise<PresensiCheckResult> {
 	const defaults = {
 		presensiReady: false,
@@ -55,11 +56,9 @@ export async function checkPresensiReadiness(
 		});
 
 		const activeTa = academicContext?.tahunAjaranList.find(
-			(ta: any) => ta.id === academicContext?.activeTahunAjaranId
+			(ta) => ta.id === academicContext?.activeTahunAjaranId
 		);
-		const activeSem = activeTa?.semester.find(
-			(s: any) => s.id === academicContext?.activeSemesterId
-		);
+		const activeSem = activeTa?.semester.find((s) => s.id === academicContext?.activeSemesterId);
 		const tanggalMasuk = activeSem?.tanggalMasuk ?? null;
 		const activeSemesterLabel = activeSem && activeTa ? `${activeSem.nama} (${activeTa.nama})` : '';
 

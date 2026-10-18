@@ -36,6 +36,7 @@
 		searchTerm = $bindable(''),
 		daftarMurid = [],
 		piagamRankingOptions = [],
+		muridCount: _muridCount = 0,
 		documentOptions = [
 			{ value: 'cover', label: 'Cover' },
 			{ value: 'biodata', label: 'Biodata' },
@@ -61,7 +62,6 @@
 		jurnalTanggalSelesai = $bindable(''),
 		showTable = true,
 		// preview footer props
-		muridCount = 0,
 		isRaporSelected = false,
 		isBiodataSelected = false,
 		onBgRefresh = () => {},
@@ -120,8 +120,6 @@
 	const isLaporanTpp = $derived(selectedDocument === 'laporan-tpp');
 	const hasMurid = $derived(daftarMurid.length > 0);
 	const hasPiagamRankingOptions = $derived(piagamRankingOptions.length > 0);
-
-	const hasSelectionOptions = $derived(isPiagamSelected ? hasPiagamRankingOptions : hasMurid);
 
 	const bulanList = [
 		'Januari',
@@ -525,7 +523,7 @@
 					</thead>
 					<tbody>
 						{#if isPiagamSelected}
-							{#each paginatedPiagam as item, i}
+							{#each paginatedPiagam as item, i (item.muridId)}
 								<tr>
 									<td>{(currentPage - 1) * PER_PAGE + i + 1}</td>
 									<td>{item.peringkat}</td>

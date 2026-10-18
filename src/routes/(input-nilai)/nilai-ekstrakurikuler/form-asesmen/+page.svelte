@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- form links use static hrefs intentionally */
 	import FormEnhance from '$lib/components/form-enhance.svelte';
 	import Icon from '$lib/components/icon.svelte';
 	import type { EkstrakurikulerNilaiKategori } from '$lib/ekstrakurikuler';

@@ -31,18 +31,16 @@ async function generateUniqueFilename(
 ) {
 	let filename = `${base}${ext}`;
 	let counter = 1;
-	let exists = false;
 
 	do {
 		try {
 			await fs.access(path.join(dir, filename));
-			exists = true;
 			filename = `${base}-${counter}${ext}`;
 			counter++;
 		} catch {
-			exists = false;
+			break;
 		}
-	} while (exists && counter < 1000);
+	} while (counter < 1000);
 
 	return filename;
 }

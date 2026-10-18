@@ -1,4 +1,4 @@
-import db from '$lib/server/db';
+﻿import db from '$lib/server/db';
 import {
 	tableMurid,
 	tableKetidakhadiranHarian,
@@ -514,7 +514,7 @@ export async function loadHarian(params: {
 		.from(tableMurid)
 		.where(baseFilter);
 
-	const pagination = await computePagination(db, tableMurid, searchFilter, pageNumber, url);
+	const pagination = await computePagination(searchFilter, pageNumber, url);
 
 	const todayStart = new Date(tanggal + 'T00:00:00');
 	const todayEnd = new Date(tanggal + 'T23:59:59.999');
@@ -529,7 +529,7 @@ export async function loadHarian(params: {
 			? sql`(${tableAbsensi.mataPelajaranId} = ${firstMapelId} OR ${tableAbsensi.mataPelajaranId} IS NULL)`
 			: sql`${tableAbsensi.mataPelajaranId} IS NULL`;
 
-	let queryRecords: QueryRecord[] = [];
+	let queryRecords: QueryRecord[];
 	let tableReady = true;
 
 	try {

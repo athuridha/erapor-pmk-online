@@ -1,6 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import { sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
+import db from '$lib/server/db';
+import { tableMurid } from '$lib/server/db/schema';
 
 const PER_PAGE = 20;
 
@@ -13,15 +15,13 @@ type PaginationResult = {
 };
 
 export async function computePagination(
-	db: any,
-	table: any,
 	searchFilter: SQL | undefined,
 	pageNumber: number,
 	url: URL
 ): Promise<PaginationResult> {
 	const [{ totalItems }] = await db
 		.select({ totalItems: sql<number>`count(*)` })
-		.from(table)
+		.from(tableMurid)
 		.where(searchFilter);
 
 	const total = totalItems ?? 0;

@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- error page uses simple hrefs for user navigation */
 	import { page } from '$app/state';
 	// `runes` attribute removed to avoid svelte-check warning about
 	// unrecognized script attributes. The component reads the client-side

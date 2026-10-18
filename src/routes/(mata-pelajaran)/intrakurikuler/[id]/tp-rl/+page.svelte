@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- page uses goto/href for TP/RL navigation */
 	import { goto, invalidate } from '$app/navigation';
 	import Icon from '$lib/components/icon.svelte';
 	import BobotInfoAlert from '$lib/components/tp-rl/bobot-info-alert.svelte';
@@ -50,7 +49,7 @@
 	const AGAMA_PARENT_NAME = 'Pendidikan Agama dan Budi Pekerti';
 	const PKS_PARENT_NAME = 'Pendalaman Kitab Suci';
 	const isAgamaParentMapel = $derived(data.mapel.nama === AGAMA_PARENT_NAME);
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 	const _isPksParentMapel = $derived(data.mapel.nama === PKS_PARENT_NAME);
 	// Check if mapel is PAPB-related (parent or any variant)
 	const isAgamaRelated = $derived(

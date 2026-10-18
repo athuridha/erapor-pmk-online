@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- goto with prebuilt query params is intentional here */
 	import { goto } from '$app/navigation';
 	import Icon from '$lib/components/icon.svelte';
 

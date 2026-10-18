@@ -40,20 +40,7 @@
 
 	const canEdit = $derived(userType !== 'wali_asuh');
 
-	// svelte-ignore state_referenced_locally
-	let selectedTanggal = $state(data.tanggal ?? '');
-
-	$effect(() => {
-		selectedTanggal = data.tanggal ?? '';
-	});
-
-	const isToday = $derived.by(() => {
-		const d = new Date();
-		const y = d.getFullYear();
-		const m = String(d.getMonth() + 1).padStart(2, '0');
-		const day = String(d.getDate()).padStart(2, '0');
-		return data.tanggal === `${y}-${m}-${day}`;
-	});
+	let selectedTanggal = $derived(data.tanggal ?? '');
 
 	function applyNavigation(update: (params: SvelteURLSearchParams) => void) {
 		const params = new SvelteURLSearchParams(page.url.search);
@@ -279,9 +266,7 @@
 									action="?/delete"
 									onsuccess={handleDeleteSuccess}
 								>
-									{#snippet children()}
-										<input type="hidden" name="id" value={item.id} />
-									{/snippet}
+									<input type="hidden" name="id" value={item.id} />
 								</FormEnhance>
 								<button
 									type="button"

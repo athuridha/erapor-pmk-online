@@ -78,8 +78,8 @@
 	const totalPages = $derived.by(() => Math.max(1, data.page?.totalPages ?? 1));
 	const pages = $derived.by(() => Array.from({ length: totalPages }, (_, index) => index + 1));
 
+	// svelte-ignore state_referenced_locally
 	let selectedKokurikulerValue = $state(
-		// svelte-ignore state_referenced_locally
 		data.selectedKokurikulerId ? String(data.selectedKokurikulerId) : ''
 	);
 	// svelte-ignore state_referenced_locally
@@ -119,7 +119,7 @@
 	async function applyNavigation(updateParams: (params: SvelteURLSearchParams) => void) {
 		const target = buildUrl(updateParams);
 		if (!target) return;
-		/* eslint-disable-next-line svelte/no-navigation-without-resolve -- intentional, builds URL then navigates */
+
 		await goto(target, { replaceState: true, keepFocus: true });
 	}
 
@@ -242,7 +242,7 @@
 							toast(result.message || 'Nilai berhasil diimport', 'success');
 							close();
 							await invalidate('app:asesmen-kokurikuler');
-							/* eslint-disable-next-line svelte/no-navigation-without-resolve */
+
 							await goto(`?kokurikuler_id=${selectedKokurikulerValue}`);
 						} else {
 							toast(result.message || 'Gagal import nilai', 'error');

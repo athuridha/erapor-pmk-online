@@ -1,5 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- page uses links for per-item navigation */
 	import { invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { tick } from 'svelte';
