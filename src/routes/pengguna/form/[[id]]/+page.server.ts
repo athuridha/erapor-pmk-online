@@ -13,7 +13,6 @@ import { eq, desc, and, notInArray } from 'drizzle-orm';
 import { fail, error } from '@sveltejs/kit';
 import { authority } from '../../utils.server';
 import { defaultPermissionsByType, userPermissions } from '../../permissions';
-import { ensurePegawaiConsolidation } from '../../consolidation.server';
 import { hashPassword } from '$lib/server/auth';
 import { validatePasswordStrength } from '$lib/server/password-policy';
 
@@ -94,10 +93,6 @@ async function fetchSharedLists() {
 
 export async function load({ params }) {
 	authority(params.id ? 'user_set_permissions' : 'user_add');
-
-	// Ensure wali_kelas/wali_asuh accounts + pegawai dedup are applied before
-	// presenting the form (same once-per-process guard as the list page).
-	await ensurePegawaiConsolidation();
 
 	let userDetail = null;
 	if (params.id) {

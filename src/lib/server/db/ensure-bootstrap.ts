@@ -16,6 +16,7 @@ import { ensurePresensiGuruSchema } from './ensure-presensi-guru';
 import { ensureSppdSchema } from './ensure-sppd';
 import { ensureCloudSyncSchema } from './ensure-cloud-sync';
 import { ensureKepalaSekolahAccounts } from '$lib/server/kepala-sekolah';
+import { ensurePegawaiConsolidation } from '$lib/server/pengguna-consolidation';
 import { ensureAiSettingsSchema } from './ensure-ai-settings';
 import { ensureUserAiSettingsSchema } from './ensure-user-ai-settings';
 import { ensureBukuTamuSettingsSchema } from './ensure-buku-tamu-settings';
@@ -65,6 +66,9 @@ export async function runStartupEnsures() {
 	await ensurePermissionMigration();
 	await ensureKepalaSekolahAccounts();
 	await ensureSmkPratamaMulya();
+	// Dedup pegawai + pembuatan/promosi akun wali kelas. Dahulu dipicu dari load
+	// halaman /pengguna (efek samping GET); kini cukup sekali per proses di sini.
+	await ensurePegawaiConsolidation();
 	startupEnsuresDone = true;
 }
 

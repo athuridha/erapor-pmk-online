@@ -12,17 +12,12 @@ import { sql, eq, inArray } from 'drizzle-orm';
 import { authority } from './utils.server';
 import { hashPassword } from '$lib/server/auth';
 import { validatePasswordStrength } from '$lib/server/password-policy';
-import { ensurePegawaiConsolidation } from './consolidation.server';
 import { fail } from '@sveltejs/kit';
 
 const u = tableAuthUser;
 
 export async function load({ url, locals }) {
 	authority('user_list');
-
-	// Ensure wali_kelas/wali_asuh accounts exist and duplicates are consolidated
-	// (runs once per process). See consolidation.server.ts.
-	await ensurePegawaiConsolidation();
 
 	// TODO: implement pagination
 	const q = url.searchParams.get('q');

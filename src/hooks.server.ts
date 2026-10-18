@@ -1,4 +1,5 @@
 import '$lib/server/load-env';
+import { dev } from '$app/environment';
 import { applySessionCookie, resolveSession } from '$lib/server/auth';
 import db from '$lib/server/db';
 import { tableSekolah } from '$lib/server/db/schema';
@@ -148,7 +149,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 	const resolvedProtocol = resolveRequestProtocol(event.request, event.url);
 	const secure = isSecureRequest(event.request, event.url);
 	event.locals.requestIsSecure = secure;
-	if (!sessionToken) {
+	if (!sessionToken && dev) {
 		console.debug('[auth guard] No session cookie on incoming request', {
 			path: event.url.pathname,
 			protocol: event.url.protocol,

@@ -1,24 +1,23 @@
 import db from '$lib/server/db';
 import { tableAuthUser, tablePegawai, tableKelas, tableSekolah } from '$lib/server/db/schema';
 import { sql, eq } from 'drizzle-orm';
-import { defaultPermissionsByType } from './permissions';
+import { defaultPermissionsByType } from '../../routes/pengguna/permissions';
 import { hashPassword } from '$lib/server/auth';
 import { resolveUniqueUsername } from '$lib/server/usernames';
 import { mergeAccountsUnderKepalaSekolah } from '$lib/server/pengguna-merge';
 import { randomBytes } from 'node:crypto';
 
-// Run consolidation once per process, not on every page load.
-// Handles pegawai dedup, wali_kelas/wali_asuh account creation, and cross-type merge.
-let consolidationDone = false;
-
 // Ensure there are auth_user entries for any kelas that has a wali_kelas assigned.
-// This mirrors `scripts/seed-wali-users.mjs` but runs lazily during the users page load
-// so admins don't need to run a separate seed script after importing old DBs.
+// This mirrors `scripts/seed-wali-users.mjs` but runs automatically so admins don't
+// need to run a separate seed script after importing old DBs.
 // Also support multi-kelas wali by auto-assigning 'kelas_pindah' permission.
 // CONSOLIDATION LOGIC: If multiple accounts exist for same pegawaiId, keep oldest and delete others
 // ALSO: Consolidate duplicate pegawai (same nama), keep oldest, merge auth_user references
+//
+// Dipanggil dari runStartupEnsures() (ensure-bootstrap.ts), sekali per proses — bukan
+// dari load halaman GET, agar prefetch/hover tautan tidak memicu mutasi database
+// (buat/hapus/promosikan akun) secara tak sengaja.
 export async function ensurePegawaiConsolidation() {
-	if (consolidationDone) return;
 	try {
 		// STEP 0: Consolidate PEGAWAI duplicates (same nama + same NIP) → keep oldest, merge auth_user
 		const allPegawai = await db.query.tablePegawai.findMany({
@@ -316,7 +315,6 @@ export async function ensurePegawaiConsolidation() {
 		// (wali_kelas / user, e.g. a PLT kepala sekolah who must keep teaching
 		// hours), keep the kepala_sekolah account and merge the rest.
 		await mergeAccountsUnderKepalaSekolah();
-		consolidationDone = true;
 	} catch (err) {
 		console.warn('[pengguna] Failed to ensure wali_kelas/wali_asuh users:', err);
 	}
