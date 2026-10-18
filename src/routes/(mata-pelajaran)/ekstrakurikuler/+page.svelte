@@ -46,18 +46,18 @@
 	const anySelected = $derived.by(() => selectedIds.length > 0);
 	const allSelected = $derived.by(() => totalData > 0 && selectedIds.length === totalData);
 	const canManage = $derived.by(() => data.tableReady && !!data.kelasId);
-	// Restrict editing for wali_asuh and user (guru mapel)
+	// Restrict editing for wali_asuh dan guru mapel murni; guru merangkap wali
+	// kelas boleh mengelola di kelas yang diwalikan.
 	const canEdit = $derived.by(() => {
-		const u = page.data.user as { type?: string } | null | undefined;
-		if (u?.type === 'wali_asuh' || u?.type === 'user') return false;
+		const u = page.data.user as
+			{ type?: string; kelasId?: number | null; ownKelasIds?: number[] | null } | null | undefined;
+		if (u?.type === 'wali_asuh') return false;
+		if (u?.type === 'user') {
+			return data.kelasId != null && (u.ownKelasIds ?? []).includes(data.kelasId);
+		}
 		// Wali kelas di kelas bukan miliknya: turun ke level guru (tidak bisa menambah).
 		if (u?.type === 'wali_kelas' && data.kelasId != null) {
-			const cuid = u as unknown as { kelasId?: number | null; ownKelasIds?: number[] | null };
-			const ownIds = cuid.ownKelasIds?.length
-				? cuid.ownKelasIds
-				: cuid.kelasId != null
-					? [cuid.kelasId]
-					: [];
+			const ownIds = u.ownKelasIds?.length ? u.ownKelasIds : u.kelasId != null ? [u.kelasId] : [];
 			if (ownIds.length > 0 && !ownIds.includes(data.kelasId)) return false;
 		}
 		return true;

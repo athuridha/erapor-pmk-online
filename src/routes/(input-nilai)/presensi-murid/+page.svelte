@@ -157,10 +157,26 @@
 		return `${base} - ${presensiLabel} - ${tipeLabel}`;
 	});
 
-	// Restrict editing: only admin, kepala sekolah, and wali_kelas can edit
+	// Guru merangkap wali kelas (tipe 'user' + relasi waliKelasId): hak wali
+	// berlaku di kelas yang diwalikan — paritas akun wali kelas lama.
+	const isWaliOwnClass = $derived.by(() => {
+		const u = page.data.user as { type?: string; ownKelasIds?: number[] } | null | undefined;
+		return (
+			u?.type === 'user' &&
+			kelasAktif?.id != null &&
+			(u.ownKelasIds?.includes(kelasAktif.id) ?? false)
+		);
+	});
+
+	// Restrict editing: admin, kepala sekolah, wali_kelas, dan guru-wali di kelasnya
 	const canEdit = $derived.by(() => {
 		const u = page.data.user as { type?: string } | null | undefined;
-		return u?.type === 'admin' || u?.type === 'kepala_sekolah' || u?.type === 'wali_kelas';
+		return (
+			u?.type === 'admin' ||
+			u?.type === 'kepala_sekolah' ||
+			u?.type === 'wali_kelas' ||
+			isWaliOwnClass
+		);
 	});
 
 	const currentPage = $derived.by(() => data.page?.currentPage ?? 1);
@@ -514,7 +530,7 @@
 	}
 
 	const isGuruMapelMode = $derived(
-		page.data.user?.type === 'user' && data.jenisPresensi === 'tiap_mapel'
+		page.data.user?.type === 'user' && data.jenisPresensi === 'tiap_mapel' && !isWaliOwnClass
 	);
 
 	const jadwalBelumDimulai = $derived(false);

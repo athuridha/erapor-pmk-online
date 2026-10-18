@@ -88,13 +88,19 @@
 	// Pemilih "agama" saat wali_kelas/admin memilih PABP (Pendidikan Agama dan
 	// Budi Pekerti) — mapel efektif memakai varian agama yang dipilih.
 	let agamaKey = $state('');
-	const showAgamaSelect = $derived(
-		['admin', 'kepala_sekolah', 'wali_kelas'].includes(
-			(data.user as { type?: string } | undefined)?.type ?? ''
-		) &&
+	const showAgamaSelect = $derived.by(() => {
+		const u = data.user as { type?: string; ownKelasIds?: number[] } | undefined;
+		const uType = u?.type ?? '';
+		const isWaliOwnClass =
+			uType === 'user' && kelasAktif?.id != null && (u?.ownKelasIds ?? []).includes(kelasAktif.id);
+		if (!isWaliOwnClass && !['admin', 'kepala_sekolah', 'wali_kelas'].includes(uType)) {
+			return false;
+		}
+		return (
 			!!selectedMapel &&
 			/^(pendidikan (agama|kepercayaan) dan budi pekerti)/i.test(selectedMapel.nama)
-	);
+		);
+	});
 	const agamaOptions = $derived(
 		(data.agamaOptions ?? []) as Array<{
 			key: string;

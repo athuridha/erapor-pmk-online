@@ -38,8 +38,13 @@
 	});
 
 	const canEdit = $derived.by(() => {
-		const u = page.data.user as { type?: string } | null | undefined;
-		return u?.type !== 'wali_asuh' && u?.type !== 'user';
+		const u = page.data.user as { type?: string; ownKelasIds?: number[] } | null | undefined;
+		if (u?.type === 'wali_asuh') return false;
+		// Guru merangkap wali kelas: boleh menyunting di kelas yang diwalikan.
+		if (u?.type === 'user') {
+			return kelasAktif?.id != null && (u.ownKelasIds ?? []).includes(kelasAktif.id);
+		}
+		return true;
 	});
 
 	const currentPage = $derived.by(() => data.page?.currentPage ?? 1);
