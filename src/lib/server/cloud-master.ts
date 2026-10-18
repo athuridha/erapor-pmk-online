@@ -413,6 +413,11 @@ export async function syncMasterFromCloud(
 /**
  * PULL master: baca penunjuk versi terakhir di `publish_versions`, ambil isinya dari
  * `packages`, lalu tulis ke database lokal.
+ *
+ * Penunjuk diseleksi per `school_id` bila identitas sekolahnya sudah diketahui
+ * (`sekolahId > 0`, mis. PULL dari /sinkronisasi setelah login). Pada halaman /siapkan
+ * database lokal masih kosong sehingga belum ada identitas sekolah (`sekolahId = 0`);
+ * penunjuk tanpa filter hanya aman di pengeclosean internal satu sekolah.
  */
 export async function pullMasterDataFromCloud(
 	sekolahId: number,
@@ -431,9 +436,11 @@ export async function pullMasterDataFromCloud(
 		};
 	}
 
+	const schoolFilter = sekolahId > 0 ? `AND school_id = ?` : '';
 	const pointer = await executeD1Query(
 		config,
-		`SELECT metadata_json FROM publish_versions WHERE scope = 'master_data' ORDER BY published_at DESC LIMIT 1`
+		`SELECT metadata_json, checksum FROM publish_versions WHERE scope = 'master_data' ${schoolFilter} ORDER BY published_at DESC LIMIT 1`,
+		sekolahId > 0 ? [String(sekolahId)] : []
 	);
 
 	if (!pointer.success) {
@@ -457,6 +464,7 @@ export async function pullMasterDataFromCloud(
 	}
 
 	const metadata = parseJsonObject(pointerRows[0]?.metadata_json);
+	const pointerChecksum = toNonEmptyString(pointerRows[0]?.checksum);
 	const packageId = typeof metadata?.package_id === 'string' ? metadata.package_id : '';
 	if (!packageId) {
 		return {
@@ -469,7 +477,7 @@ export async function pullMasterDataFromCloud(
 
 	const packageRes = await executeD1Query(
 		config,
-		`SELECT payload_json FROM packages WHERE id = ? LIMIT 1`,
+		`SELECT payload_json, checksum FROM packages WHERE id = ? LIMIT 1`,
 		[packageId]
 	);
 
@@ -493,6 +501,17 @@ export async function pullMasterDataFromCloud(
 		};
 	}
 
+	const packageChecksum = toNonEmptyString(packageRows[0]?.checksum);
+	if (pointerChecksum && packageChecksum && pointerChecksum !== packageChecksum) {
+		return {
+			success: false,
+			message:
+				'Penunjuk versi master tidak cocok dengan paketnya di Database Pusat. Kirim ulang master data dari komputer sekolah.',
+			counts: {},
+			totalRecords: 0
+		};
+	}
+
 	const payload = parseJsonObject(rawPayload) as MasterPayload | null;
 	if (!payload) {
 		return {
@@ -503,10 +522,27 @@ export async function pullMasterDataFromCloud(
 		};
 	}
 
+	// Integritas paket: isi yang turun di Wajib identik dengan checksum saat dikirim,
+	// supaya paket yang rusak / diganti parameternya tidak dipasang ke database lokal.
+	if (packageChecksum && checksumOf(payload) !== packageChecksum) {
+		return {
+			success: false,
+			message:
+				'Checksum paket master tidak cocok. Isi paket di Database Pusat berubah sejak dikirim; kirim ulang master data dari komputer sekolah.',
+			counts: {},
+			totalRecords: 0
+		};
+	}
+
 	const { imported, sekolahId: localSekolahId } = await importMasterData(payload);
 	const totalRecords = Object.values(imported).reduce((sum, value) => sum + value, 0);
 	const nowIso = new Date().toISOString();
 	const targetSekolahId = localSekolahId ?? sekolahId;
+
+	// Identitas sekolah dari paket disebut ke operator supaya salah sasaran terlihat
+	// langsung di layar, terutama pada /siapkan di mana belum ada pemeriksaan school_id.
+	const importedSekolah = (payload.tables?.sekolah?.[0] ?? null) as Record<string, unknown> | null;
+	const namaSekolah = toNonEmptyString(importedSekolah?.nama);
 
 	await db.insert(tableCloudSyncLogs).values({
 		sekolahId: targetSekolahId,
@@ -536,7 +572,7 @@ export async function pullMasterDataFromCloud(
 
 	return {
 		success: true,
-		message: `Master data dari pusat berhasil dipasang (${totalRecords} baris).`,
+		message: `Master data${namaSekolah ? ` sekolah ${namaSekolah}` : ''} dari pusat berhasil dipasang (${totalRecords} baris).`,
 		counts: imported,
 		totalRecords
 	};
@@ -562,4 +598,8 @@ function parseJsonObject(raw: unknown): Record<string, unknown> | null {
 	} catch {
 		return null;
 	}
+}
+
+function toNonEmptyString(value: unknown): string {
+	return typeof value === 'string' && value.length > 0 ? value : '';
 }
