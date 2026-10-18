@@ -1,9 +1,27 @@
+import { ownedKelasIdSet } from '../kelas-akses';
+
+/**
+ * True bila `user` boleh mengedit/menghapus data kehadiran (trigger presensi).
+ * Model baru: guru merangkap wali kelas disimpan sebagai type 'user', jadi
+ * status wali dicek dari relasi waliKelasId — bukan hanya dari tipe akun.
+ * `kelasId` opsional: bila diketahui kelas datanya, cek dilakukan per kelas;
+ * bila tidak, cukup akun itu wali dari minimal satu kelas.
+ */
 export async function canUserEditAbsen(
 	user: NonNullable<App.Locals['user']>,
-	_sekolahId: number
+	_sekolahId: number,
+	kelasId?: number | null
 ): Promise<boolean> {
-	if (user.type === 'admin' || user.type === 'kepala_sekolah' || user.type === 'wali_kelas')
-		return true;
+	if (user.type === 'admin' || user.type === 'kepala_sekolah') return true;
+	// Akun wali kelas lama: akses penuh (perilaku sebelum refactor dipertahankan).
+	if (user.type === 'wali_kelas') return true;
+	if (user.type === 'user') {
+		const owned = user.pegawaiId ? await ownedKelasIdSet(user) : new Set<number>();
+		if (kelasId != null) {
+			return owned.has(kelasId) || user.kelasId === kelasId;
+		}
+		return owned.size > 0;
+	}
 	return false;
 }
 

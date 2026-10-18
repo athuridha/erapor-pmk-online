@@ -325,12 +325,18 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	if (user) {
 		const userType = (user as { type?: string }).type;
 		const canManageMapel = true;
+		const isOwnKelas = kelasAktif != null && resolvedWaliOwnKelasIds.includes(kelasAktif.id);
 		const canEditUrutan =
-			userType === 'admin' || userType === 'kepala_sekolah' || userType === 'wali_kelas';
+			userType === 'admin' ||
+			userType === 'kepala_sekolah' ||
+			userType === 'wali_kelas' ||
+			// Guru merangkap wali kelas (type 'user'): boleh mengatur kelas diwali-nya.
+			(userType === 'user' && isOwnKelas);
 		const canAddImportMapel = canEditUrutan;
 
 		const resolvedKelasId =
-			userType === 'wali_kelas' && resolvedWaliOwnKelasIds.length > 0
+			(userType === 'wali_kelas' || (userType === 'user' && resolvedWaliOwnKelasIds.length > 0)) &&
+			resolvedWaliOwnKelasIds.length > 0
 				? resolvedWaliOwnKelasIds[0]
 				: user.kelasId;
 

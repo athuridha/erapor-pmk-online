@@ -2,6 +2,7 @@ import db from '$lib/server/db';
 import { tableMataPelajaran, tableTujuanPembelajaran } from '$lib/server/db/schema';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
+import { ownedKelasIdSet } from '$lib/server/kelas-akses';
 import { buildGuruMapelPicker, buildMapelPicker } from '$lib/server/mapel-picker';
 import { agamaVariantOptions } from '$lib/statics';
 
@@ -16,6 +17,7 @@ export async function load({ locals, parent }) {
 		id?: number;
 		type?: string;
 		mataPelajaranId?: number | null;
+		pegawaiId?: number | null;
 	} | null;
 	const sekolahId = locals.sekolah?.id;
 
@@ -46,7 +48,10 @@ export async function load({ locals, parent }) {
 		{
 			type: user?.type,
 			id: user?.id,
-			kelasId: kelasAktif.id
+			kelasId: kelasAktif.id,
+			// Guru merangkap wali kelas (type 'user'): kelas diwali-nya bebas filter.
+			ownKelasIds:
+				user?.type === 'user' && user.pegawaiId ? Array.from(await ownedKelasIdSet(user)) : null
 		},
 		kelasAktif.id
 	);

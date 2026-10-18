@@ -1,5 +1,5 @@
 import db from '$lib/server/db';
-import { isWaliOfKelas, ownedKelasIdSet } from '$lib/server/kelas-akses';
+import { isWaliOfKelas, isWaliKelasAccount, ownedKelasIdSet } from '$lib/server/kelas-akses';
 import { tableKelas, tableKokurikuler } from '$lib/server/db/schema';
 import { profilPelajarPancasilaDimensions, type DimensiProfilLulusanKey } from '$lib/statics';
 import { fail } from '@sveltejs/kit';
@@ -99,8 +99,9 @@ export const actions = {
 			return fail(400, { fail: 'Kelas tidak valid' });
 		}
 
-		// Server-side permission: wali_kelas may only add for their own kelas
-		if (locals?.user && (locals.user as unknown as { type?: string }).type === 'wali_kelas') {
+		// Server-side permission: wali kelas (termasuk guru merangkap wali)
+		// may only add for their own kelas
+		if (locals?.user && (await isWaliKelasAccount(locals.user))) {
 			const u = locals.user as { pegawaiId?: number | null };
 
 			const owned = u.pegawaiId
@@ -169,9 +170,10 @@ export const actions = {
 		}
 
 		try {
-			// wali_kelas hanya boleh menghapus data di kelas yang dia wali
+			// wali kelas (termasuk guru merangkap wali) hanya boleh menghapus
+			// data di kelas yang dia wali
 			const deleteUser = locals.user as { type?: string; pegawaiId?: number | null } | null;
-			if (deleteUser?.type === 'wali_kelas') {
+			if (await isWaliKelasAccount(deleteUser)) {
 				const ownedIds = await ownedKelasIdSet(deleteUser);
 				const rows = await db.query.tableKokurikuler.findMany({
 					columns: { id: true, kelasId: true },
@@ -221,9 +223,10 @@ export const actions = {
 			return fail(400, { fail: 'Kelas tidak valid' });
 		}
 
-		// Server-side permission: wali_kelas may only update for their own kelas
+		// Server-side permission: wali_kelas (termasuk guru merangkap wali)
+		// may only update for their own kelas
 		const updateUser = locals.user as { type?: string; pegawaiId?: number | null } | null;
-		if (updateUser?.type === 'wali_kelas' && !(await isWaliOfKelas(updateUser, kelasId))) {
+		if ((await isWaliKelasAccount(updateUser)) && !(await isWaliOfKelas(updateUser, kelasId))) {
 			return fail(403, {
 				fail: 'Anda tidak memiliki izin untuk mengubah di kelas ini.'
 			});
@@ -276,9 +279,10 @@ export const actions = {
 			return fail(400, { fail: 'Pilih kelas aktif terlebih dahulu.' });
 		}
 
-		// Server-side permission: wali_kelas may only import for their own kelas
+		// Server-side permission: wali_kelas (termasuk guru merangkap wali)
+		// may only import for their own kelas
 		const importUser = locals.user as { type?: string; pegawaiId?: number | null } | null;
-		if (importUser?.type === 'wali_kelas' && !(await isWaliOfKelas(importUser, kelasId))) {
+		if ((await isWaliKelasAccount(importUser)) && !(await isWaliOfKelas(importUser, kelasId))) {
 			return fail(403, { fail: 'Anda tidak memiliki izin untuk mengimpor di kelas ini.' });
 		}
 

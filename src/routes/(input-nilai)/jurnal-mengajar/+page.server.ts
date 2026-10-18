@@ -12,6 +12,7 @@ import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { buildKelasContext } from '$lib/server/route-utils';
 import { agamaMapelNames } from '$lib/statics';
 import { getAksesMapelUser } from '$lib/server/mapel-access';
+import { isWaliOfKelas } from '$lib/server/kelas-akses';
 
 const PER_PAGE = 20;
 
@@ -380,7 +381,7 @@ export const actions = {
 			return fail(401, { fail: 'Sekolah tidak ditemukan' });
 		}
 
-		const user = locals.user as { id?: number; type?: string } | null;
+		const user = locals.user as { id?: number; type?: string; pegawaiId?: number | null } | null;
 		if (!user?.id) {
 			return fail(401, { fail: 'Anda harus login terlebih dahulu' });
 		}
@@ -432,15 +433,21 @@ export const actions = {
 		if (id) {
 			// Edit existing — preserve original tanggal & jamPelajaran
 			const existing = await db.query.tableJurnalMengajar.findFirst({
-				columns: { id: true, authUserId: true },
+				columns: { id: true, authUserId: true, kelasId: true },
 				where: eq(tableJurnalMengajar.id, id)
 			});
+			let waliMengampuJurnal = false;
+			if (existing?.kelasId && user.type === 'user' && user.pegawaiId) {
+				// Guru merangkap wali kelas: boleh mengedit jurnal lain di kelas diwali-nya.
+				waliMengampuJurnal = await isWaliOfKelas(user, existing.kelasId);
+			}
 			if (
 				!existing ||
 				(existing.authUserId !== user.id &&
 					user.type !== 'admin' &&
 					user.type !== 'kepala_sekolah' &&
-					user.type !== 'wali_kelas')
+					user.type !== 'wali_kelas' &&
+					!waliMengampuJurnal)
 			) {
 				return fail(404, { fail: 'Jurnal tidak ditemukan' });
 			}
@@ -526,7 +533,7 @@ export const actions = {
 	},
 
 	delete: async ({ request, locals }) => {
-		const user = locals.user as { id?: number; type?: string } | null;
+		const user = locals.user as { id?: number; type?: string; pegawaiId?: number | null } | null;
 		if (!user?.id) {
 			return fail(401, { fail: 'Anda harus login terlebih dahulu' });
 		}
@@ -554,12 +561,18 @@ export const actions = {
 			columns: { id: true, authUserId: true, kelasId: true },
 			where: eq(tableJurnalMengajar.id, id)
 		});
+		let waliMengampuJurnal = false;
+		if (existing?.kelasId && user.type === 'user' && user.pegawaiId) {
+			// Guru merangkap wali kelas: boleh menghapus jurnal lain di kelas diwali-nya.
+			waliMengampuJurnal = await isWaliOfKelas(user, existing.kelasId);
+		}
 		if (
 			!existing ||
 			(existing.authUserId !== user.id &&
 				user.type !== 'admin' &&
 				user.type !== 'kepala_sekolah' &&
-				user.type !== 'wali_kelas')
+				user.type !== 'wali_kelas' &&
+				!waliMengampuJurnal)
 		) {
 			return fail(404, { fail: 'Jurnal tidak ditemukan' });
 		}

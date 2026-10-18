@@ -273,6 +273,7 @@ export const actions = {
 					id: tableAuthUser.id,
 					type: tableAuthUser.type,
 					username: tableAuthUser.username,
+					pegawaiId: tableAuthUser.pegawaiId,
 					pegawaiName: tablePegawai.nama,
 					kelasName: tableKelas.nama
 				})
@@ -281,12 +282,21 @@ export const actions = {
 				.leftJoin(tableKelas, eq(tableAuthUser.kelasId, tableKelas.id))
 				.where(inArray(tableAuthUser.id, ids));
 
-			const blocked = candidates.filter((c) => c.type === 'wali_kelas');
+			// Proteksi hapus: akun wali kelas lama, DAN guru merangkap wali kelas
+			// (type 'user' yang menjadi waliKelasId di tableKelas).
+			const waliPegawaiIds = new Set(
+				(await db.select({ waliKelasId: tableKelas.waliKelasId }).from(tableKelas))
+					.map((r) => r.waliKelasId)
+					.filter((id): id is number => id != null)
+			);
+			const blocked = candidates.filter(
+				(c) => c.type === 'wali_kelas' || (c.pegawaiId != null && waliPegawaiIds.has(c.pegawaiId))
+			);
 			if (blocked.length) {
 				const messages = blocked.map((b) => {
 					const name = b.pegawaiName || b.username || 'Pengguna';
 					const kelas = b.kelasName || '';
-					return `${name} adalah Wali Kelas ${kelas}, tidak dapat dihapus. Untuk menggantinya buka menu Data Kelas`;
+					return `${name} adalah Wali Kelas${kelas ? ` ${kelas}` : ''}, tidak dapat dihapus. Untuk menggantinya buka menu Data Kelas`;
 				});
 				return new Response(JSON.stringify({ type: 'warning', message: messages.join(' | ') }), {
 					status: 400,

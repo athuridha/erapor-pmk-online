@@ -26,15 +26,18 @@ const AGAMA_PARENT_NAME = 'Pendidikan Agama dan Budi Pekerti';
 const PKS_PARENT_NAME = 'Pendalaman Kitab Suci';
 
 async function canManageImportUrutan(
-	user: { type?: string; pegawaiId?: number | null } | null,
+	user: { type?: string; pegawaiId?: number | null; kelasId?: number | null } | null,
 	kelasId: number | null
 ): Promise<boolean> {
 	if (!user) return false;
 	if (user.type === 'admin' || user.type === 'kepala_sekolah') return true;
-	if (user.type !== 'wali_kelas') return false;
-	// Wali kelas hanya boleh menambah/import/urutan mapel di kelas miliknya.
+	// Model baru: guru merangkap wali kelas adalah type 'user', jadi status wali
+	// dicek dari relasi waliKelasId di tableKelas — bukan dari tipe akun. Akun
+	// wali kelas lama tetap lolos lewat fallback auth_user.kelasId.
 	if (kelasId == null) return false;
-	return isWaliOfKelas(user, kelasId);
+	if (await isWaliOfKelas(user, kelasId)) return true;
+	if (user.type === 'wali_kelas' && Number(user.kelasId) === kelasId) return true;
+	return false;
 }
 
 type MapelRow = { id: number; nama: string | null };

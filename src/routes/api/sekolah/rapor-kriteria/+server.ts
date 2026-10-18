@@ -1,6 +1,7 @@
 import db from '$lib/server/db';
 import { tableSekolah, tableKelas } from '$lib/server/db/schema';
 import { isAuthorizedUser } from '../../../pengguna/permissions';
+import { isWaliOfKelas } from '$lib/server/kelas-akses';
 import { json } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 
@@ -26,6 +27,10 @@ async function canManageKelas(user: NonNullable<App.Locals['user']>, kelasId: nu
 			where: eq(tableKelas.id, kelasId)
 		});
 		return kelas?.waliKelasId === user.pegawaiId;
+	}
+	// Guru merangkap wali kelas (type 'user'): cek lewat relasi waliKelasId.
+	if (user.type === 'user' && user.pegawaiId) {
+		return isWaliOfKelas(user, kelasId);
 	}
 	return isAuthorizedUser(['informasi_umum_sekolah'], user);
 }

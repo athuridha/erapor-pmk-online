@@ -11,6 +11,7 @@ import {
 	tableSemester
 } from '$lib/server/db/schema';
 import { and, eq, inArray, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import { agamaMapelNames } from '$lib/statics';
 import {
@@ -43,10 +44,6 @@ export async function handleUpdate({
 		return fail(401, { fail: 'Sekolah tidak ditemukan' });
 	}
 
-	if (!locals.user || !(await canUserEditAbsen(locals.user, sekolahId))) {
-		return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah data kehadiran' });
-	}
-
 	const formData = await request.formData();
 	const tanggalRaw = formData.get('tanggal')?.toString() ?? '';
 	const tanggal = isValidDate(tanggalRaw) ? tanggalRaw : todayDateString();
@@ -75,6 +72,10 @@ export async function handleUpdate({
 
 	const kelasIdRaw = formData.get('kelasId')?.toString();
 	const kelasId = kelasIdRaw ? Number(kelasIdRaw) : null;
+
+	if (!locals.user || !(await canUserEditAbsen(locals.user, sekolahId, kelasId))) {
+		return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah data kehadiran' });
+	}
 
 	const simHari = url.searchParams.get('simHari');
 	const simJam = url.searchParams.get('simJam');
@@ -164,10 +165,6 @@ export async function handleIsiSekaligus({
 	if (!locals.user) {
 		return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah data kehadiran' });
 	}
-	const hasEditPermission = await canUserEditAbsen(locals.user, sekolahId);
-	if (!hasEditPermission && locals.user.type !== 'user') {
-		return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah data kehadiran' });
-	}
 
 	const formData = await request.formData();
 	const tanggalRaw = formData.get('tanggal')?.toString() ?? '';
@@ -180,6 +177,11 @@ export async function handleIsiSekaligus({
 
 	const kelasIdRaw = formData.get('kelasId')?.toString();
 	const kelasId = kelasIdRaw ? Number(kelasIdRaw) : null;
+
+	const hasEditPermission = await canUserEditAbsen(locals.user, sekolahId, kelasId);
+	if (!hasEditPermission && locals.user.type !== 'user') {
+		return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah data kehadiran' });
+	}
 	if (!kelasId || !Number.isInteger(kelasId)) {
 		return fail(400, { fail: 'Kelas tidak ditemukan' });
 	}
@@ -597,7 +599,7 @@ export async function handleIsiSekaligus({
 
 			const selectedIds = Array.from(entryMap.keys());
 			if (selectedIds.length > 0) {
-				const deleteAbsensiConditions: any[] = [
+				const deleteAbsensiConditions: SQL<unknown>[] = [
 					inArray(tableAbsensi.muridId, selectedIds),
 					sql`${tableAbsensi.waktu} >= ${todayStart.toISOString()}`,
 					sql`${tableAbsensi.waktu} <= ${todayEnd.toISOString()}`
@@ -775,7 +777,7 @@ export async function handleDeletePresensi({
 		return fail(401, { fail: 'Sekolah tidak ditemukan' });
 	}
 
-	if (!locals.user || !(await canUserEditAbsen(locals.user, sekolahId))) {
+	if (!locals.user) {
 		return fail(403, { fail: 'Anda tidak memiliki izin untuk menghapus data presensi' });
 	}
 
@@ -786,6 +788,10 @@ export async function handleDeletePresensi({
 	const kelasId = kelasIdRaw ? Number(kelasIdRaw) : null;
 	if (!kelasId || !Number.isInteger(kelasId)) {
 		return fail(400, { fail: 'Kelas tidak ditemukan' });
+	}
+
+	if (!(await canUserEditAbsen(locals.user, sekolahId, kelasId))) {
+		return fail(403, { fail: 'Anda tidak memiliki izin untuk menghapus data presensi' });
 	}
 
 	const simHari = url.searchParams.get('simHari');

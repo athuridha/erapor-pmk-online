@@ -32,6 +32,23 @@ export async function ownedKelasIdSet(
 }
 
 /**
+ * True bila akun berperan sebagai wali kelas: tipe legacy 'wali_kelas', atau
+ * guru (type 'user') yang memang wali dari minimal satu kelas (relasi
+ * waliKelasId). Dipakai untuk memutuskan kapan aturan kepemilikan wali berlaku
+ * — akun guru yang TIDAK merangkap wali tidak menjalankan cek ini.
+ */
+export async function isWaliKelasAccount(
+	user: { type?: string; pegawaiId?: number | null } | null | undefined
+): Promise<boolean> {
+	if (!user) return false;
+	if (user.type === 'wali_kelas') return true;
+	if (user.type === 'user' && user.pegawaiId) {
+		return (await ownedKelasIdSet(user)).size > 0;
+	}
+	return false;
+}
+
+/**
  * Whether `user` may access `kelasId` in the active `sekolahId`. Mirrors the
  * per-role class scoping in src/routes/+layout.server.ts so API handlers that
  * select the class from the client-controlled active-kelas-id cookie cannot
@@ -97,6 +114,14 @@ export async function canAccessKelas(
 	}
 
 	if (user.type === 'user') {
+		// 0. Status wali kelas via relasi waliKelasId (guru merangkap wali kelas).
+		if (user.pegawaiId) {
+			const own = await db.query.tableKelas.findFirst({
+				columns: { id: true },
+				where: and(eq(tableKelas.id, kelasId), eq(tableKelas.waliKelasId, user.pegawaiId))
+			});
+			if (own) return true;
+		}
 		// 1. Cek langsung di auth_user_kelas
 		const hasExplicit = await db.query.tableAuthUserKelas.findFirst({
 			columns: { id: true },

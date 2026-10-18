@@ -13,7 +13,8 @@ import { and, eq, inArray, or, type SQL } from 'drizzle-orm';
 //    ID dan namanya (nama ikut agar pindah kelas tetap jalan).
 
 /** Cek apakah user perlu difilter hanya ke mapel yang di-assign.
- *  - tipe 'user' → selalu filter.
+ *  - tipe 'user' (guru mapel) → selalu filter, KECUALI di kelas yang dia wali
+ *    (guru merangkap wali kelas: bebas di kelasnya sendiri, seperti wali kelas lama).
  *  - tipe 'wali_kelas' → filter di kelas BUKAN miliknya, bebas di kelasnya sendiri. */
 export function needsMapelFilter(
 	user:
@@ -23,7 +24,16 @@ export function needsMapelFilter(
 	selectedKelasId: number | null | undefined
 ): boolean {
 	if (!user?.id) return false;
-	if (user.type === 'user') return true;
+	if (user.type === 'user') {
+		if (
+			selectedKelasId != null &&
+			Array.isArray(user.ownKelasIds) &&
+			user.ownKelasIds.includes(selectedKelasId)
+		) {
+			return false;
+		}
+		return true;
+	}
 	if (user.type === 'wali_kelas' && selectedKelasId != null) {
 		const ownIds = user.ownKelasIds?.length ? user.ownKelasIds : [user.kelasId];
 		if (!ownIds.includes(selectedKelasId)) return true;

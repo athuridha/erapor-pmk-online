@@ -7,6 +7,7 @@ import {
 } from '$lib/server/db/schema';
 import { ensureAsesmenFormatifSchema } from '$lib/server/db/ensure-asesmen-formatif';
 import { getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
+import { ownedKelasIdSet } from '$lib/server/kelas-akses';
 import { labelVarianUntukMurid, muridAgamaKey } from '$lib/server/mapel-picker';
 import { asc, and, eq, inArray } from 'drizzle-orm';
 import { redirect } from '@sveltejs/kit';
@@ -25,9 +26,6 @@ const AGAMA_BASE_SUBJECT = 'Pendidikan Agama dan Budi Pekerti';
 const AGAMA_MAPEL_VALUE = 'agama';
 
 const PKS_BASE_SUBJECT = 'Pendalaman Kitab Suci';
-const AGAMA_VARIANT_NAMES = agamaMapelOptions
-	.filter((option) => option.key !== 'umum')
-	.map((option) => normalizeText(option.name));
 const PKS_VARIANT_NAMES = pksMapelOptions
 	.filter((option) => option.key !== 'umum')
 	.map((option) => normalizeText(option.name));
@@ -84,7 +82,7 @@ function buildSummarySentence(parts: ProgressSummaryPart[]): string | null {
 		const lingkup = part.lingkupMateri.toLowerCase();
 		return `${kategoriLabel} dalam materi ${lingkup} (${part.tuntas}/${part.totalTujuan} TP)`;
 	});
-	let sentence = '';
+	let sentence: string;
 	if (formatted.length === 1) {
 		sentence = formatted[0];
 	} else if (formatted.length === 2) {
@@ -135,7 +133,11 @@ export async function load({ parent, url, depends }) {
 	// prefer the subject with the same name in the active kelas (so subject exists
 	// across multiple kelas rows with same name).
 	const maybeUser = user as unknown as
-		{ id?: number; type?: string; mataPelajaranId?: number } | undefined;
+		{ id?: number; type?: string; mataPelajaranId?: number; pegawaiId?: number | null } | undefined;
+	// Guru merangkap wali kelas (type 'user'): bebas akses seluruh mapel di
+	// kelas yang diwalikan — paritas dengan akun wali kelas lama.
+	const guruOwnKelasIds =
+		maybeUser?.type === 'user' ? Array.from(await ownedKelasIdSet(maybeUser)) : null;
 	// Special rule: if the logged-in user is a 'user' assigned to any agama
 	// variant (Katolik, Islam, Kristen, Hindu, Buddha, Khonghucu, etc.),
 	// treat them like the admin behaviour: show the parent agama subject and
@@ -143,7 +145,10 @@ export async function load({ parent, url, depends }) {
 	// access; that remains restricted to their assigned variant.
 	let treatAssignedAgamaVariantAsBase = false;
 	let userAkses: Awaited<ReturnType<typeof getAksesMapelUser>> | null = null;
-	if (needsMapelFilter(maybeUser, kelasAktif?.id ?? null) && maybeUser?.id) {
+	if (
+		needsMapelFilter({ ...maybeUser, ownKelasIds: guruOwnKelasIds }, kelasAktif?.id ?? null) &&
+		maybeUser?.id
+	) {
 		try {
 			userAkses = await getAksesMapelUser(
 				{
@@ -185,7 +190,10 @@ export async function load({ parent, url, depends }) {
 	let assignedIsAgamaVariant = false;
 	// Cache the user's assigned mapel record to avoid 4 identical DB queries
 	let userAssignedMapelRecord: { id: number; nama: string } | null = null;
-	if (needsMapelFilter(maybeUser, kelasAktif?.id ?? null) && maybeUser?.mataPelajaranId) {
+	if (
+		needsMapelFilter({ ...maybeUser, ownKelasIds: guruOwnKelasIds }, kelasAktif?.id ?? null) &&
+		maybeUser?.mataPelajaranId
+	) {
 		try {
 			userAssignedMapelRecord =
 				(await db.query.tableMataPelajaran.findFirst({

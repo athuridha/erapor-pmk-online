@@ -3,18 +3,13 @@ import { ensureAsesmenSumatifSchema } from '$lib/server/db/ensure-asesmen-sumati
 import { tableAsesmenSumatif, tableMataPelajaran, tableMurid } from '$lib/server/db/schema';
 import { redirect } from '@sveltejs/kit';
 import { getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
+import { ownedKelasIdSet } from '$lib/server/kelas-akses';
 import { labelVarianUntukMurid, muridAgamaKey } from '$lib/server/mapel-picker';
 import { agamaMapelOptions, pksMapelOptions } from '$lib/statics';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 
 const AGAMA_BASE_SUBJECT = 'Pendidikan Agama dan Budi Pekerti';
 const PKS_BASE_SUBJECT = 'Pendalaman Kitab Suci';
-const AGAMA_VARIANT_NAMES = agamaMapelOptions
-	.filter((option) => option.key !== 'umum')
-	.map((option) => normalizeText(option.name));
-const PKS_VARIANT_NAMES = pksMapelOptions
-	.filter((option) => option.key !== 'umum')
-	.map((option) => normalizeText(option.name));
 const AGAMA_MAPEL_VALUE = 'agama';
 const PKS_MAPEL_VALUE = 'pks';
 
@@ -166,11 +161,18 @@ export async function load({ parent, url, depends, locals }) {
 	// then fallback to legacy mataPelajaranId field if join table is empty.
 	// IMPORTANT: Match by mapel name (since same subject can exist in different classes)
 	const maybeUser = user as unknown as
-		{ id?: number; type?: string; mataPelajaranId?: number } | undefined;
+		{ id?: number; type?: string; mataPelajaranId?: number; pegawaiId?: number | null } | undefined;
+	// Guru merangkap wali kelas (type 'user'): bebas akses seluruh mapel di
+	// kelas yang diwalikan — paritas dengan akun wali kelas lama.
+	const guruOwnKelasIds =
+		maybeUser?.type === 'user' ? Array.from(await ownedKelasIdSet(maybeUser)) : null;
 	const assignedMapelIds = new Set<number>();
 	let userAkses: Awaited<ReturnType<typeof getAksesMapelUser>> | null = null;
 
-	if (needsMapelFilter(maybeUser, kelasAktif?.id ?? null) && maybeUser?.id) {
+	if (
+		needsMapelFilter({ ...maybeUser, ownKelasIds: guruOwnKelasIds }, kelasAktif?.id ?? null) &&
+		maybeUser?.id
+	) {
 		try {
 			userAkses = await getAksesMapelUser(
 				{
@@ -198,7 +200,10 @@ export async function load({ parent, url, depends, locals }) {
 	// assignedIsAgamaVariant is set if any of the assigned mapel is agama variant.
 	let assignedLocalMapelId: number | null = null;
 	let assignedIsAgamaVariant = false;
-	if (needsMapelFilter(maybeUser, kelasAktif?.id ?? null) && maybeUser?.id) {
+	if (
+		needsMapelFilter({ ...maybeUser, ownKelasIds: guruOwnKelasIds }, kelasAktif?.id ?? null) &&
+		maybeUser?.id
+	) {
 		// Check multi-mapel first
 		if (assignedMapelIds.size > 0) {
 			// Pick first assigned mapel from the filtered list
