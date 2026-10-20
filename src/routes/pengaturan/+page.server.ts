@@ -38,6 +38,7 @@ import {
 	saveUserAiSettings
 } from '$lib/server/ai';
 import path from 'node:path';
+import { isAdminUser, isAuthorizedUser } from '../pengguna/permissions';
 
 interface AddressEntry {
 	name: string;
@@ -140,6 +141,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		appAddresses: addresses,
 		protocol,
 		appVersion: getAppVersion(),
+		canCheckUpdate: isAuthorizedUser(['app_check_update'], locals.user),
+		canManageUpdate: isAdminUser(locals.user),
 		storage,
 		forcePasswordChange,
 		bukuTamuPasskeySet,

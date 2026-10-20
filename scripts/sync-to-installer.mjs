@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const filesToSync = [
+	'auto-update.mjs',
 	'ensure-columns.mjs',
 	'fix-drizzle-indexes.mjs',
 	'grant-admin-permissions.mjs',

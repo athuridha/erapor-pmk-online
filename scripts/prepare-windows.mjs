@@ -217,6 +217,7 @@ async function main() {
 
 	// Required scripts
 	const requiredScripts = [
+		'auto-update.mjs',
 		'ensure-columns.mjs',
 		'fix-drizzle-indexes.mjs',
 		'seed-default-admin.mjs',

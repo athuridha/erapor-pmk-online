@@ -15,6 +15,8 @@ import {
 import { runStartupEnsures } from '$lib/server/db/ensure-bootstrap';
 import { isAuthorizedUser, resolveRoutePermission } from './routes/pengguna/permissions';
 import { startBellScheduler } from '$lib/server/bell-scheduler';
+import { markActivity } from '$lib/server/activity';
+import { startUpdateScheduler } from '$lib/server/update-auto';
 
 setTimeout(() => {
 	startBellScheduler().catch((e) => {
@@ -22,6 +24,9 @@ setTimeout(() => {
 	});
 	runStartupEnsures().catch((e) => {
 		console.error('[hooks] startup ensures failed:', e);
+	});
+	startUpdateScheduler().catch((e) => {
+		console.error('[hooks] update scheduler failed to start:', e);
 	});
 }, 1000);
 
@@ -394,6 +399,9 @@ function parseAsBytes(value: string | undefined, fallback = '512K') {
 // parsing limits follow the .env configuration in dev and prod.
 const _composed = sequence(csrfGuard, authGuard, cookieParser);
 export const handle: Handle = async ({ event, resolve }) => {
+	// Catat aktivitas setiap request — dipakai deteksi "aplikasi menganggur"
+	// oleh mesin auto update sebelum installer dijalankan otomatis.
+	markActivity();
 	const bodySizeLimit = parseAsBytes(process.env.BODY_SIZE_LIMIT, '512K');
 	// Expose the parsed limit on `locals` so other server-side code can
 	// inspect it if needed. We avoid passing it to `resolve` because

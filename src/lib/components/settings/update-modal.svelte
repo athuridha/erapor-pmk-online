@@ -3,7 +3,11 @@
 	import { toast } from '$lib/components/toast.svelte';
 	import { createEventDispatcher, onDestroy } from 'svelte';
 
-	let { open, currentVersion }: { open: boolean; currentVersion: string } = $props();
+	let {
+		open,
+		currentVersion,
+		canManage = false
+	}: { open: boolean; currentVersion: string; canManage?: boolean } = $props();
 
 	const dispatch = createEventDispatcher<{ close: void }>();
 
@@ -20,6 +24,25 @@
 		installScheduled: boolean;
 	}
 
+	interface AutoSettings {
+		enabled: boolean;
+		autoDownload: boolean;
+		autoInstall: boolean;
+		intervalMinutes: number;
+		idleMinutes: number;
+		windowStartHour: number;
+		windowEndHour: number;
+	}
+
+	interface AutoState {
+		lastCheckAt: string | null;
+		lastError: string | null;
+		latestVersion: string | null;
+		latestPublishedAt: string | null;
+		downloadId: string | null;
+		installStartedAt: string | null;
+	}
+
 	let checkingUpdate = $state(false);
 	let checkError = $state<string | null>(null);
 	let latestRelease = $state<ReleaseSummary | null>(null);
@@ -27,7 +50,38 @@
 	let downloadState = $state<DownloadUiState>(createInitialDownloadState());
 	let installingUpdate = $state(false);
 
+	let autoSettings = $state<AutoSettings>({
+		enabled: false,
+		autoDownload: false,
+		autoInstall: false,
+		intervalMinutes: 360,
+		idleMinutes: 15,
+		windowStartHour: 19,
+		windowEndHour: 5
+	});
+	let autoState = $state<AutoState>({
+		lastCheckAt: null,
+		lastError: null,
+		latestVersion: null,
+		latestPublishedAt: null,
+		downloadId: null,
+		installStartedAt: null
+	});
+	let autoLoaded = $state(false);
+	let autoDownloaded = $state(false);
+	let savingAuto = $state(false);
+
 	let downloadPollHandle: ReturnType<typeof setInterval> | null = null;
+
+	const intervalOptions = [
+		{ minutes: 60, label: 'Setiap 1 jam' },
+		{ minutes: 180, label: 'Setiap 3 jam' },
+		{ minutes: 360, label: 'Setiap 6 jam' },
+		{ minutes: 720, label: 'Setiap 12 jam' },
+		{ minutes: 1440, label: 'Setiap 24 jam' }
+	];
+
+	const hourOptions = Array.from({ length: 24 }, (_, index) => index);
 
 	const selectedAsset = $derived.by(() => pickPreferredAsset(latestRelease));
 	const downloadProgress = $derived.by(() => {
@@ -48,6 +102,7 @@
 			if (!latestRelease && !checkingUpdate) {
 				void checkForUpdate(true);
 			}
+			void loadAutoState();
 			return;
 		}
 
@@ -86,7 +141,7 @@
 		return `${value.toFixed(precision)} ${units[index]}`;
 	}
 
-	function formatDateTime(value: string) {
+	function formatDateTime(value: string | null | undefined) {
 		if (!value) return '-';
 		const date = new Date(value);
 		if (Number.isNaN(date.getTime())) return value;
@@ -95,6 +150,54 @@
 			timeStyle: 'short',
 			hour12: false
 		});
+	}
+
+	function formatHour(hour: number) {
+		return `${String(hour).padStart(2, '0')}:00`;
+	}
+
+	async function loadAutoState() {
+		try {
+			const response = await fetch('/api/updates/state', {
+				cache: 'no-store',
+				credentials: 'same-origin'
+			});
+			if (!response.ok) return;
+			const payload = await response.json();
+			if (payload?.settings) autoSettings = { ...autoSettings, ...payload.settings };
+			if (payload?.state) autoState = { ...autoState, ...payload.state };
+			autoDownloaded = Boolean(payload?.downloaded);
+			autoLoaded = true;
+		} catch (error) {
+			console.error('Gagal memuat status pembaruan otomatis', error);
+		}
+	}
+
+	async function saveAutoSettings() {
+		savingAuto = true;
+		try {
+			const response = await fetch('/api/updates/auto', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(autoSettings),
+				credentials: 'same-origin'
+			});
+			if (!response.ok) {
+				const message = await response.text().catch(() => '');
+				throw new Error(message || 'Gagal menyimpan pengaturan pembaruan.');
+			}
+			const payload = await response.json();
+			if (payload?.settings) autoSettings = { ...autoSettings, ...payload.settings };
+			if (payload?.state) autoState = { ...autoState, ...payload.state };
+			toast({ message: 'Pengaturan pembaruan otomatis disimpan.', type: 'success' });
+		} catch (error) {
+			toast({
+				message: error instanceof Error ? error.message : 'Gagal menyimpan pengaturan pembaruan.',
+				type: 'error'
+			});
+		} finally {
+			savingAuto = false;
+		}
 	}
 
 	function clearDownloadPolling() {
@@ -433,7 +536,7 @@
 				{/if}
 
 				{#if updateAvailable && selectedAsset}
-					<div class="space-y-3">
+					<section class="space-y-3">
 						{#if downloadState.status === 'downloading' || downloadState.status === 'pending'}
 							<div class="rounded-box bg-base-200/50 space-y-2 p-3 text-sm">
 								<p class="font-medium">Mengunduh pembaruan…</p>
@@ -511,7 +614,144 @@
 								</button>
 							{/if}
 						</div>
-					</div>
+					</section>
+				{/if}
+
+				{#if autoLoaded}
+					<section class="space-y-3 border-t border-base-300 pt-4">
+						<div>
+							<h3 class="font-semibold">Pembaruan otomatis</h3>
+							<p class="text-base-content/60 text-xs">
+								Server memeriksa GitHub Releases sendiri, mengunduh installer di latar belakang,
+								lalu memasangnya saat aplikasi menganggur. Data siswa tetap aman karena data berada
+								di folder terpisah.
+							</p>
+						</div>
+
+						<div class="rounded-box bg-base-200/60 space-y-1 p-3 text-xs">
+							<p>Pemeriksaan terakhir: {formatDateTime(autoState.lastCheckAt)}</p>
+							{#if autoState.lastError}
+								<p class="text-error">Gagal memeriksa: {autoState.lastError}</p>
+							{/if}
+							{#if autoState.installStartedAt}
+								<p>
+									Pemasangan otomatis dijalankan {formatDateTime(autoState.installStartedAt)}.
+									Aplikasi dijalankan ulang setelah pemasangan selesai.
+								</p>
+							{:else if autoDownloaded}
+								<p>
+									Installer versi {autoState.latestVersion} sudah terunduh dan menunggu dipasang otomatis.
+								</p>
+							{:else if autoState.latestVersion}
+								<p>Installer versi {autoState.latestVersion} akan diunduh otomatis.</p>
+							{/if}
+						</div>
+
+						{#if canManage}
+							<label class="label cursor-pointer justify-start gap-3">
+								<input
+									type="checkbox"
+									class="toggle toggle-sm toggle-primary"
+									bind:checked={autoSettings.enabled}
+								/>
+								<span class="label-text">Periksa pembaruan otomatis</span>
+							</label>
+							<label class="label cursor-pointer justify-start gap-3">
+								<input
+									type="checkbox"
+									class="toggle toggle-sm toggle-primary"
+									bind:checked={autoSettings.autoDownload}
+									disabled={!autoSettings.enabled}
+								/>
+								<span class="label-text">Unduh installer di latar belakang</span>
+							</label>
+							<label class="label cursor-pointer justify-start gap-3">
+								<input
+									type="checkbox"
+									class="toggle toggle-sm toggle-primary"
+									bind:checked={autoSettings.autoInstall}
+									disabled={!autoSettings.enabled}
+								/>
+								<span class="label-text">Pasang otomatis saat aplikasi menganggur</span>
+							</label>
+
+							<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+								<fieldset class="fieldset">
+									<legend class="fieldset-legend">Interval pemeriksaan</legend>
+									<select
+										class="select select-bordered w-full"
+										bind:value={autoSettings.intervalMinutes}
+										disabled={!autoSettings.enabled}
+									>
+										{#each intervalOptions as option (option.minutes)}
+											<option value={option.minutes}>{option.label}</option>
+										{/each}
+									</select>
+								</fieldset>
+								<fieldset class="fieldset">
+									<legend class="fieldset-legend">Menit menganggur sebelum dipasang</legend>
+									<input
+										type="number"
+										min="1"
+										max="1440"
+										class="input w-full"
+										bind:value={autoSettings.idleMinutes}
+										disabled={!autoSettings.enabled || !autoSettings.autoInstall}
+									/>
+								</fieldset>
+								<fieldset class="fieldset">
+									<legend class="fieldset-legend">Jam mulai pemasangan</legend>
+									<select
+										class="select select-bordered w-full"
+										bind:value={autoSettings.windowStartHour}
+										disabled={!autoSettings.enabled || !autoSettings.autoInstall}
+									>
+										{#each hourOptions as hour (hour)}
+											<option value={hour}>{formatHour(hour)}</option>
+										{/each}
+									</select>
+								</fieldset>
+								<fieldset class="fieldset">
+									<legend class="fieldset-legend">Jam selesai pemasangan</legend>
+									<select
+										class="select select-bordered w-full"
+										bind:value={autoSettings.windowEndHour}
+										disabled={!autoSettings.enabled || !autoSettings.autoInstall}
+									>
+										{#each hourOptions as hour (hour)}
+											<option value={hour}>{formatHour(hour)}</option>
+										{/each}
+									</select>
+								</fieldset>
+							</div>
+
+							<p class="text-base-content/60 text-xs">
+								Jam mulai dan jam selesai yang sama berarti pemasangan boleh berjalan kapan saja.
+								Pemasangan otomatis hanya tersedia di Windows.
+							</p>
+
+							<div class="flex justify-end">
+								<button
+									class="btn btn-primary btn-sm"
+									type="button"
+									onclick={saveAutoSettings}
+									disabled={savingAuto}
+								>
+									{#if savingAuto}
+										<span class="loading loading-spinner loading-sm"></span>
+										Menyimpan…
+									{:else}
+										<Icon name="save" />
+										Simpan Pengaturan
+									{/if}
+								</button>
+							</div>
+						{:else}
+							<p class="text-base-content/60 text-xs">
+								Pengaturan pembaruan otomatis hanya dapat diubah oleh admin atau kepala sekolah.
+							</p>
+						{/if}
+					</section>
 				{/if}
 
 				<div class="flex justify-end">

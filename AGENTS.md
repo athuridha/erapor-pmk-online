@@ -13,6 +13,7 @@ pnpm db:cleanup              # cleanup orphan records
 pnpm db:purge                # delete sqlite db files (main + wal/shm); asks confirmation, -y skips
 pnpm seed:walis              # seed wali asuh users
 pnpm package:win             # stage windows installer artifacts
+pnpm release -- --version 0.1.1   # publish GitHub Release (sumber auto update)
 pnpm prepare                 # svelte-kit sync (auto-runs on install)
 pnpm check                   # svelte-kit sync + svelte-check
 pnpm check:watch             # svelte-kit sync + svelte-check --watch
@@ -79,6 +80,14 @@ strix -n -t ./ --scan-mode quick   # AI pentest (install & usage: docs/SKILLS.md
 - `scripts/prepare-windows.mjs` downloads `vc_redist.x64.exe` to `dist/windows/`.
 - Build on Linux via Wine: install InnoSetup 7+, then `wine ISCC.exe installer/erapor-pmk.iss`. Run `pnpm build` first.
 - **Data root override:** `installer/files/start-erapor-pmk.mjs` resolves the user-data root as `ERAPOR_PMK_DATA_DIR` env → `%LOCALAPPDATA%\erapor-pmk-data\data-root.txt` (written by the "Lokasi Data" page) → default `%LOCALAPPDATA%\erapor-pmk-data`. The **database stays in the fixed launcher home** (`%LOCALAPPDATA%\erapor-pmk-data\database.sqlite3`, set via `DB_URL`) and never follows the movable root — moving an open WAL SQLite file is unsafe. `storage-settings.ts` mirrors this via `launcherHome()`/`launcherDataRootConfigPath()`/`writeLauncherDataRootOverride()`. **Uploads/sounds always follow the root** (default `<root>/uploads|sounds`); the "Lokasi Data" form only edits the root and the handler clears any `photo`/`sounds` pin in `.env` on save (also consolidating legacy custom folders into the new root). The installer's fresh `.env` only contains `DB_URL` + `BODY_SIZE_LIMIT` — no photo/sounds pins.
+
+## Auto update
+
+- Sumber pembaruan = GitHub Releases repo `athuridha/eraport` (`releases/latest`). Rilis diterbitkan lewat `pnpm release -- --version X.Y.Z` (script `scripts/release.mjs`).
+- Mesin: `src/lib/server/update-auto.ts` (scheduler + pengaturan + state di `app_meta` key `update.auto.*`), unduhan tetap lewat `update-manager.ts`.
+- Auto-install hanya di **Windows** dan hanya bila: installer terunduh, aplikasi menganggur (`src/lib/server/activity.ts`, idle ≥ 15 menit), dan sekarang di dalam jam pemasangan (default 19:00–05:00).
+- `scripts/auto-update.mjs` (ikut bundel installer via `prepare-windows.mjs` + `sync-to-installer.mjs`): tunggu port bebas → installer `/VERYSILENT` → jalankan ulang `start-erapor-pmk.mjs`. Log: `%LOCALAPPDATA%\erapor-pmk-data\logs\auto-update.log`.
+- Detail lengkap + troubleshooting: `docs/AUTO_UPDATE.md`.
 
 ## Gotchas
 
