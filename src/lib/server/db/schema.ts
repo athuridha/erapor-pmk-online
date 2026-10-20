@@ -1684,3 +1684,31 @@ export const tablePortalOrangtuaMurid = sqliteTable(
 		index('portal_orangtua_murid_orangtua_idx').on(table.orangtuaId)
 	]
 );
+
+/**
+ * Jejak audit: mencatat siapa mengubah apa dan kapan.
+ * Dipakai untuk perubahan nilai (import massal maupun manual) agar nilai rapor
+ * bisa ditelusuri.
+ */
+export const tableAuditLog = sqliteTable(
+	'audit_log',
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		sekolahId: int()
+			.references(() => tableSekolah.id, { onDelete: 'cascade' })
+			.notNull(),
+		userId: int().references(() => tableAuthUser.id, { onDelete: 'set null' }),
+		aktor: text(),
+		aksi: text().notNull(),
+		entitas: text().notNull(),
+		entitasId: int(),
+		ringkasan: text(),
+		detail: text({ mode: 'json' }).$type<Record<string, unknown> | null>(),
+		...audit
+	},
+	(table) => [
+		index('audit_log_sekolah_idx').on(table.sekolahId),
+		index('audit_log_aksi_idx').on(table.aksi),
+		index('audit_log_created_idx').on(table.createdAt)
+	]
+);

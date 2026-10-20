@@ -159,6 +159,10 @@
 		<div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 			<LegerDownload kelasId={kelasAktif?.id ?? null} />
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+				<a class="btn btn-soft shadow-none max-sm:w-full" href="/nilai-akhir/impor-nilai">
+					<Icon name="import" />
+					Impor Nilai
+				</a>
 				<a class="btn btn-outline shadow-none max-sm:w-full" href="/nilai-akhir/rekap-keseluruhan">
 					<Icon name="chart" />
 					Rekap Keseluruhan

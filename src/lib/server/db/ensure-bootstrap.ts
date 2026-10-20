@@ -19,6 +19,7 @@ import { ensureMuridArsipSchema } from './ensure-murid-arsip';
 import { ensureSppdSchema } from './ensure-sppd';
 import { ensureCloudSyncSchema } from './ensure-cloud-sync';
 import { ensurePortalOrangtuaSchema } from './ensure-portal-orangtua';
+import { ensureAuditLogSchema } from './ensure-audit-log';
 import { ensureKepalaSekolahAccounts } from '$lib/server/kepala-sekolah';
 import { ensurePegawaiConsolidation } from '$lib/server/pengguna-consolidation';
 import { ensureAiSettingsSchema } from './ensure-ai-settings';
@@ -71,6 +72,7 @@ export async function runStartupEnsures() {
 	await ensureSppdSchema();
 	await ensureCloudSyncSchema();
 	await ensurePortalOrangtuaSchema();
+	await ensureAuditLogSchema();
 	await ensureDefaultAdmin();
 	await ensurePermissionMigration();
 	await ensureKepalaSekolahAccounts();

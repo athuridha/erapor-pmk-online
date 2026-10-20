@@ -183,6 +183,7 @@ export const menuRoutePermissions: { path: string; permission: UserPermission }[
 	{ path: '/jurnal-mengajar', permission: 'administrasi_jurnal_mengajar' },
 	{ path: '/catatan-wali-kelas', permission: 'administrasi_catatan_wali_kelas' },
 	{ path: '/nilai-akhir', permission: 'administrasi_rekap_nilai' },
+	{ path: '/audit', permission: 'administrasi_rekap_nilai' },
 	{ path: '/keputusan', permission: 'administrasi_keputusan' },
 	{ path: '/buku-tamu', permission: 'administrasi_buku_tamu' },
 	{ path: '/presensi-guru', permission: 'administrasi_presensi_guru' },

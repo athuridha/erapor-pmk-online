@@ -18,6 +18,7 @@ import {
 	namaVarianUntukMurid
 } from '$lib/server/mapel-picker';
 import { bolehAksesMapel, getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
+import { catatAudit } from '$lib/server/audit';
 import {
 	konfigurasiNilaiDariSekolah,
 	hitungNilaiAkhirRts,
@@ -331,7 +332,7 @@ export const actions = {
 		}
 
 		const murid = await db.query.tableMurid.findFirst({
-			columns: { id: true, kelasId: true },
+			columns: { id: true, kelasId: true, nama: true },
 			where: and(eq(tableMurid.id, muridId), eq(tableMurid.sekolahId, sekolahId))
 		});
 
@@ -379,6 +380,15 @@ export const actions = {
 		}
 
 		await ensureAsesmenSumatifSchema();
+
+		// Nilai akhir lama dicatat untuk jejak audit (siapa mengubah nilai apa).
+		const nilaiSebelum = await db.query.tableAsesmenSumatif.findFirst({
+			columns: { id: true, nilaiAkhir: true },
+			where: and(
+				eq(tableAsesmenSumatif.muridId, murid.id),
+				eq(tableAsesmenSumatif.mataPelajaranId, mapel.id)
+			)
+		});
 
 		const tujuanList = await db.query.tableTujuanPembelajaran.findMany({
 			columns: { id: true, lingkupMateri: true, bobot: true },
@@ -605,6 +615,23 @@ export const actions = {
 					}
 				});
 		});
+
+		if (nilaiSebelum && nilaiSebelum.nilaiAkhir !== nilaiAkhir) {
+			await catatAudit({
+				sekolahId: locals.sekolah?.id ?? 0,
+				userId: locals.user?.id ?? null,
+				aktor: locals.user?.username ?? null,
+				aksi: 'update_nilai',
+				entitas: 'asesmen_sumatif',
+				entitasId: mapel.id,
+				ringkasan: `Nilai akhir ${mapel.nama} - ${murid.nama}`,
+				detail: {
+					muridId: murid.id,
+					nilaiLama: nilaiSebelum.nilaiAkhir,
+					nilaiBaru: nilaiAkhir
+				}
+			});
+		}
 
 		return {
 			message: 'Penilaian sumatif berhasil disimpan.',

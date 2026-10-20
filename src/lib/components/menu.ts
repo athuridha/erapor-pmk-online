@@ -169,6 +169,18 @@
 				tags: ['kirim', 'matev', 'nilai', 'dapodik']
 			},
 			{
+				title: 'Impor Nilai',
+				path: '/nilai-akhir/impor-nilai',
+				icon: 'import',
+				tags: ['impor', 'excel', 'nilai', 'bulk', 'murid']
+			},
+			{
+				title: 'Jejak Audit',
+				path: '/audit',
+				icon: 'info',
+				tags: ['audit', 'jejak', 'riwayat', 'nilai', 'perubahan']
+			},
+			{
 				title: 'Keputusan',
 				path: '/keputusan',
 				tags: ['kenaikan', 'kelas', 'lulus', 'naik'],
