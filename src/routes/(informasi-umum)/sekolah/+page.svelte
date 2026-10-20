@@ -203,7 +203,7 @@
 								</a>
 								<!-- Jalur alternatif tanpa Dapodik: data pokok dari berkas Excel. -->
 								<a
-									href="/sekolah/import-data"
+									href="/sinkronisasi/import-data"
 									class="btn btn-soft shadow-none {!canSekolahManage
 										? 'pointer-events-none opacity-50'
 										: ''}"

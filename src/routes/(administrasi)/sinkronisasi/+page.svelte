@@ -14,6 +14,8 @@
 		message?: string;
 		count?: number;
 		details?: { kelas?: number; murid?: number; mapel?: number };
+		mode?: 'replace' | 'merge';
+		merge?: { inserted?: number; updated?: number; unchanged?: number };
 	} | null>(null);
 	let pullError = $state('');
 	let pushError = $state('');
@@ -335,7 +337,9 @@
 				<p class="text-xs text-base-content/70 leading-relaxed">
 					Sinkronkan data referensi rombel, murid, dan mata pelajaran terbaru dari Database Pusat
 					Sekolah. Jalankan saat awal semester atau bila ada pembaruan siswa dan guru baru dari
-					Operator.
+					Operator. Pada instalasi yang sudah berisi data, data master digabung: baris baru
+					ditambahkan, baris yang berubah diperbarui, dan pekerjaan guru (nilai, absensi, jadwal)
+					tidak ikut tersentuh.
 				</p>
 			</div>
 
@@ -365,7 +369,12 @@
 				{#if pullResult}
 					<div class="alert alert-success alert-soft p-3 rounded-xl text-xs space-y-0.5">
 						<div class="font-bold break-words">{pullResult.message}</div>
-						{#if pullResult.details}
+						{#if pullResult.merge}
+							<div class="text-[11px] opacity-80">
+								Baris baru: {pullResult.merge.inserted} · Diperbarui: {pullResult.merge.updated} · Tetap:
+								{pullResult.merge.unchanged}
+							</div>
+						{:else if pullResult.details}
 							<div class="text-[11px] opacity-80">
 								Kelas: {pullResult.details.kelas ?? 0} &bull; Murid: {pullResult.details.murid ?? 0} &bull;
 								Mapel: {pullResult.details.mapel ?? 0}

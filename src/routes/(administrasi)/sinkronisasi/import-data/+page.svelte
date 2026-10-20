@@ -82,7 +82,7 @@
 						Belum ada semester aktif. Atur dulu di halaman Akademik.
 					{/if}
 				</p>
-				<a class="btn btn-soft btn-sm shadow-none" href="/sekolah/import-data/template">
+				<a class="btn btn-soft btn-sm shadow-none" href="/sinkronisasi/import-data/template">
 					<Icon name="download" />
 					Template Excel
 				</a>

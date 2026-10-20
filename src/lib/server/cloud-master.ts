@@ -26,6 +26,7 @@ import {
 	tableWaliMurid
 } from '$lib/server/db/schema';
 import { executeD1Query, getD1Config } from '$lib/server/cloudflare-d1';
+import { mergeMasterData, type MergeSummary } from '$lib/server/cloud-master-merge';
 import { defaultAdminUsernameNormalized, ensureDefaultAdmin } from '$lib/server/auth';
 
 /**
@@ -138,11 +139,20 @@ export function checksumOf(payload: unknown) {
 export async function exportMasterData(): Promise<MasterPayload> {
 	const tables: Record<string, Record<string, unknown>[]> = {};
 
+	// Tanda tangan pegawai (PNG data URL) bisa ratusan KB per orang dan tidak
+	// dibutuhkan untuk menyiapkan instalasi baru — biarkan ikut lewat backup
+	// database, bukan lewat paket master.
+	const skippedColumns: Record<string, string[]> = { pegawai: ['tandaTangan'] };
+
 	for (const [name, table] of MASTER_TABLES) {
+		const skip = skippedColumns[name] ?? [];
 		const rows = (await db.select().from(table)) as unknown as Record<string, unknown>[];
 		tables[name] = rows.map((row) => {
 			const serialized: Record<string, unknown> = {};
-			for (const [key, value] of Object.entries(row)) serialized[key] = serializeValue(value);
+			for (const [key, value] of Object.entries(row)) {
+				if (skip.includes(key)) continue;
+				serialized[key] = serializeValue(value);
+			}
 			return serialized;
 		});
 	}
@@ -386,28 +396,30 @@ export interface PullMasterResult {
 	message: string;
 	counts: MasterCounts;
 	totalRecords: number;
+	/** Ringkasan perubahan saat data master digabung ke instalasi yang sudah terisi. */
+	merge?: MergeSummary;
+	/** Mode sinkronisasi: ganti total (instalasi baru) atau gabung (data sudah ada). */
+	mode?: 'replace' | 'merge';
 }
 
 /**
- * Sinkronisasi master dari tombol di /sinkronisasi. Hanya dijalankan saat data induk
- * lokal masih kosong: impor menulis baris apa adanya, jadi menjalankannya di database
- * yang sudah terisi akan menabrak batas unik (username, NIS, nama kelas per semester).
+ * Sinkronisasi master dari tombol di /sinkronisasi.
+ *
+ * Dua mode:
+ * - **ganti** (`replace`): instalasi baru — tabel master dikosongkan lalu diisi paket pusat.
+ * - **gabung** (`merge`): instalasi sudah terisi — paket pusat digabung baris per baris
+ *   (baris baru disisipkan, baris yang berubah diperbarui, data lokal tidak dihapus).
+ *
+ * Mode lama selalu berhenti di instalasi yang sudah terisi, padahal operator sering
+ * menambah rombel/siswa baru di komputer pusat. Mode gabung menutup kebutuhan itu
+ * tanpa risiko menimpa pekerjaan guru (nilai, absensi, jadwal tidak ikut tersentuh).
  */
 export async function syncMasterFromCloud(
 	sekolahId: number,
 	userId: number | null
 ): Promise<PullMasterResult> {
-	if (!(await isLocalMasterEmpty())) {
-		return {
-			success: false,
-			message:
-				'Database lokal sudah berisi data induk, jadi sinkronisasi master tidak dijalankan. Sinkronisasi master penuh hanya untuk instalasi baru (lihat halaman penyiapan).',
-			counts: {},
-			totalRecords: 0
-		};
-	}
-
-	return pullMasterDataFromCloud(sekolahId, userId);
+	const mode: 'replace' | 'merge' = (await isLocalMasterEmpty()) ? 'replace' : 'merge';
+	return pullMasterDataFromCloud(sekolahId, userId, mode);
 }
 
 /**
@@ -421,7 +433,8 @@ export async function syncMasterFromCloud(
  */
 export async function pullMasterDataFromCloud(
 	sekolahId: number,
-	userId: number | null
+	userId: number | null,
+	mode: 'replace' | 'merge' = 'replace'
 ): Promise<PullMasterResult> {
 	const config = await getD1Config(sekolahId);
 
@@ -534,7 +547,23 @@ export async function pullMasterDataFromCloud(
 		};
 	}
 
-	const { imported, sekolahId: localSekolahId } = await importMasterData(payload);
+	let imported: MasterCounts;
+	let localSekolahId: number | null;
+	let mergeSummary: MergeSummary | undefined;
+
+	if (mode === 'merge') {
+		const merged = await mergeMasterData(payload);
+		imported = Object.fromEntries(
+			Object.entries(merged.summary.perTable).map(([name, value]) => [name, value.inserted])
+		);
+		mergeSummary = merged.summary;
+		localSekolahId = merged.sekolahId;
+	} else {
+		const replaced = await importMasterData(payload);
+		imported = replaced.imported;
+		localSekolahId = replaced.sekolahId;
+	}
+
 	const totalRecords = Object.values(imported).reduce((sum, value) => sum + value, 0);
 	const nowIso = new Date().toISOString();
 	const targetSekolahId = localSekolahId ?? sekolahId;
@@ -572,9 +601,14 @@ export async function pullMasterDataFromCloud(
 
 	return {
 		success: true,
-		message: `Master data${namaSekolah ? ` sekolah ${namaSekolah}` : ''} dari pusat berhasil dipasang (${totalRecords} baris).`,
+		message:
+			mode === 'merge' && mergeSummary
+				? `Data master dari pusat berhasil digabung: ${mergeSummary.inserted} baris baru, ${mergeSummary.updated} baris diperbarui${namaSekolah ? ` (sekolah ${namaSekolah})` : ''}.`
+				: `Master data${namaSekolah ? ` sekolah ${namaSekolah}` : ''} dari pusat berhasil dipasang (${totalRecords} baris).`,
 		counts: imported,
-		totalRecords
+		totalRecords,
+		merge: mergeSummary,
+		mode
 	};
 }
 

@@ -22,7 +22,9 @@ export const POST: RequestHandler = async ({ locals }) => {
 			success: true,
 			message: res.message,
 			recordsCount: res.totalRecords,
-			details: res.counts
+			details: res.counts,
+			mode: res.mode,
+			merge: res.merge
 		});
 	} catch (err: unknown) {
 		console.error('[cloud pull error]', err);
