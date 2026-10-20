@@ -7,6 +7,7 @@
 	import { modalRoute, searchQueryMarker } from '$lib/utils';
 	import { onDestroy } from 'svelte';
 	import MuridModals from '$lib/components/murid/modals.svelte';
+	import MuridMoveKelasModal from '$lib/components/murid/move-kelas-modal.svelte';
 
 	type BulkModalData = {
 		type: 'bulk';
@@ -52,6 +53,7 @@
 	let selectAllCheckbox: HTMLInputElement | null = null;
 	let formSubmitting = $state(false);
 	let isBulkPhotoUploadOpen = $state(false);
+	let isMoveOpen = $state(false);
 	let dropdownToggle: HTMLButtonElement | null = $state(null);
 
 	function handleSubmittingChange(value: boolean) {
@@ -104,6 +106,15 @@
 				data: modalData
 			}
 		});
+	}
+
+	function openBulkMoveModal() {
+		if (!hasSelection) return;
+		isMoveOpen = true;
+	}
+
+	function handleBulkMoveSuccess() {
+		selectedIds = new Set();
 	}
 
 	import SvelteURLSearchParams from '$lib/svelte-helpers/url-search-params';
@@ -296,20 +307,30 @@
 			</div>
 			<!-- Tombol Tambah Manual (dipindahkan ke kanan judul) -->
 			{#if hasSelection}
-				<button
-					class="btn btn-soft btn-error mt-4 shadow-none sm:mt-0"
-					type="button"
-					disabled={!hasSelection || formSubmitting || !canEdit}
-					onclick={openBulkDeleteModal}
-					title={!canEdit
-						? 'Anda tidak memiliki izin untuk menghapus'
-						: hasSelection
-							? 'Hapus murid terpilih'
-							: 'Pilih murid terlebih dahulu'}
-				>
-					<Icon name="del" />
-					Hapus
-				</button>
+				<div class="mt-4 flex gap-2 sm:mt-0">
+					<button
+						class="btn btn-soft btn-primary shadow-none"
+						type="button"
+						disabled={formSubmitting || !canEdit}
+						onclick={openBulkMoveModal}
+						title={!canEdit
+							? 'Anda tidak memiliki izin untuk memindahkan murid'
+							: 'Pindahkan murid terpilih ke kelas lain'}
+					>
+						<Icon name="move" />
+						Pindahkan
+					</button>
+					<button
+						class="btn btn-soft btn-error shadow-none"
+						type="button"
+						disabled={formSubmitting || !canEdit}
+						onclick={openBulkDeleteModal}
+						title={!canEdit ? 'Anda tidak memiliki izin untuk menghapus' : 'Hapus murid terpilih'}
+					>
+						<Icon name="del" />
+						Hapus
+					</button>
+				</div>
 			{:else}
 				<div class="mt-2 flex max-sm:w-full sm:mt-0">
 					{#if canEdit}
@@ -500,3 +521,11 @@
 </div>
 
 <MuridModals {formSubmitting} {submitBulkDelete} bind:isBulkPhotoUploadOpen />
+
+<MuridMoveKelasModal
+	bind:isOpen={isMoveOpen}
+	murid={selectedMurids.map((murid) => ({ id: murid.id, nama: murid.nama, nis: murid.nis }))}
+	kelasList={data.kelasTujuan ?? []}
+	currentKelasId={data.page.kelasId ? Number(data.page.kelasId) : null}
+	onSuccess={handleBulkMoveSuccess}
+/>

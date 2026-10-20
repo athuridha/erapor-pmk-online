@@ -1,8 +1,9 @@
 import db from '$lib/server/db/index.js';
-import { tableMurid } from '$lib/server/db/schema.js';
+import { tableKelas, tableMurid } from '$lib/server/db/schema.js';
 import { fail, redirect } from '@sveltejs/kit';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { buildKelasContext } from '$lib/server/route-utils';
+import { isAuthorizedUser } from '../../pengguna/permissions';
 
 export async function load({ locals, url, depends, parent }) {
 	depends('app:murid');
@@ -13,6 +14,31 @@ export async function load({ locals, url, depends, parent }) {
 		parentData,
 		url
 	);
+
+	// Target classes for bulk move, grouped by semester in the UI. Only classes
+	// in the same semester as the selected students are accepted by the action.
+	const kelasTujuan = sekolahId
+		? (
+				await db.query.tableKelas.findMany({
+					columns: { id: true, nama: true, fase: true, semesterId: true },
+					with: {
+						semester: {
+							columns: { id: true, nama: true },
+							with: { tahunAjaran: { columns: { nama: true } } }
+						}
+					},
+					where: eq(tableKelas.sekolahId, sekolahId),
+					orderBy: [desc(tableKelas.semesterId), asc(tableKelas.nama)]
+				})
+			).map((kelas) => ({
+				id: kelas.id,
+				nama: kelas.nama,
+				fase: kelas.fase,
+				semesterId: kelas.semesterId,
+				semesterNama: kelas.semester?.nama ?? '',
+				tahunAjaranNama: kelas.semester?.tahunAjaran?.nama ?? ''
+			}))
+		: [];
 	const perPage = 20;
 	const requestedPage = Number(url.searchParams.get('page')) || 1;
 	const pageNumber =
@@ -22,6 +48,7 @@ export async function load({ locals, url, depends, parent }) {
 		return {
 			daftarMurid: [],
 			academicContext,
+			kelasTujuan,
 			page: {
 				kelasId,
 				search,
@@ -69,6 +96,7 @@ export async function load({ locals, url, depends, parent }) {
 	return {
 		daftarMurid,
 		academicContext,
+		kelasTujuan,
 		page: {
 			kelasId,
 			search,
@@ -100,5 +128,83 @@ export const actions = {
 			.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, muridIds)));
 
 		return { message: `${muridIds.length} murid berhasil dihapus` };
+	},
+
+	async moveSelected({ request, locals }) {
+		const sekolahId = locals.sekolah?.id;
+		if (!sekolahId) {
+			return fail(401, { fail: 'Sekolah tidak ditemukan' });
+		}
+		if (!isAuthorizedUser(['informasi_umum_murid'], locals.user ?? undefined)) {
+			return fail(403, { fail: 'Anda tidak memiliki izin memindahkan murid' });
+		}
+
+		const formData = await request.formData();
+		const muridIds = [
+			...new Set(
+				formData
+					.getAll('muridIds')
+					.map((id) => Number(id))
+					.filter((id) => Number.isInteger(id) && id > 0)
+			)
+		];
+		const kelasId = Number(formData.get('kelasId'));
+
+		if (!muridIds.length) {
+			return fail(400, { fail: 'Pilih minimal satu murid untuk dipindahkan' });
+		}
+		if (!Number.isInteger(kelasId) || kelasId <= 0) {
+			return fail(400, { fail: 'Pilih kelas tujuan' });
+		}
+
+		const kelasTujuan = await db.query.tableKelas.findFirst({
+			columns: { id: true, nama: true, semesterId: true },
+			where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
+		});
+		if (!kelasTujuan) {
+			return fail(404, { fail: 'Kelas tujuan tidak ditemukan di sekolah ini' });
+		}
+
+		const muridList = await db.query.tableMurid.findMany({
+			columns: { id: true, nama: true, kelasId: true, semesterId: true },
+			where: and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, muridIds))
+		});
+		if (muridList.length !== muridIds.length) {
+			return fail(400, {
+				fail: 'Sebagian murid tidak ditemukan. Muat ulang halaman lalu coba lagi.'
+			});
+		}
+
+		const bedaSemester = muridList.filter((murid) => murid.semesterId !== kelasTujuan.semesterId);
+		if (bedaSemester.length) {
+			return fail(400, {
+				fail: `Kelas ${kelasTujuan.nama} berada di semester berbeda. Pindah kelas hanya bisa dalam semester yang sama.`
+			});
+		}
+
+		const akanPindah = muridList.filter((murid) => murid.kelasId !== kelasTujuan.id);
+		if (!akanPindah.length) {
+			return { message: `Semua murid sudah berada di kelas ${kelasTujuan.nama}` };
+		}
+
+		await db
+			.update(tableMurid)
+			.set({ kelasId: kelasTujuan.id, updatedAt: new Date().toISOString() })
+			.where(
+				and(
+					eq(tableMurid.sekolahId, sekolahId),
+					inArray(
+						tableMurid.id,
+						akanPindah.map((murid) => murid.id)
+					)
+				)
+			);
+
+		const dilewati = muridList.length - akanPindah.length;
+		return {
+			message: `${akanPindah.length} murid dipindahkan ke kelas ${kelasTujuan.nama}${
+				dilewati ? ` (${dilewati} sudah berada di kelas ini)` : ''
+			}`
+		};
 	}
 };
