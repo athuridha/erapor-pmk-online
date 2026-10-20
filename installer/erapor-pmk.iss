@@ -1,5 +1,5 @@
 #define AppName "e-Rapor SMK Pratama Mulya - Aplikasi administrasi guru terpadu"
-#define AppVersion "0.1.1"
+#define AppVersion "0.1.2"
 #define StagePath "..\\dist\\windows\\stage\\erapor-pmk"
 
 [Setup]
