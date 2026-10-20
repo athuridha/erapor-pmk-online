@@ -201,21 +201,7 @@
 									<Icon name="dapodik" />
 									Sync Dapodik
 								</a>
-								<!-- Jalur alternatif tanpa Dapodik: data pokok dari berkas Excel. -->
-								<a
-									href="/sinkronisasi/import-data"
-									class="btn btn-soft shadow-none {!canSekolahManage
-										? 'pointer-events-none opacity-50'
-										: ''}"
-									aria-label="Impor data pokok"
-									aria-disabled={!canSekolahManage}
-									title={!canSekolahManage
-										? 'Anda tidak memiliki izin untuk mengimpor data pokok'
-										: ''}
-								>
-									<Icon name="import" />
-									Impor Data
-								</a>
+								<!-- Impor data pokok (Excel) & impor database tersedia di Beranda. -->
 								<div class="grid grid-cols-2 gap-2 md:flex md:flex-row">
 									<a
 										href={`/sekolah/tahun-ajaran?sekolahId=${sekolah.id}`}

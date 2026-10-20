@@ -2,10 +2,14 @@ import { MASTER_DATA, cariMasterData } from '$lib/master-data';
 import {
 	hapusMasterData,
 	loadBarisMaster,
+	loadDaftarKelasMurid,
 	loadOpsiRelasi,
-	simpanMasterData
+	simpanMasterData,
+	simpanMasterDataMassal
 } from '$lib/server/master-data';
+import { pindahkanMuridKelas } from '$lib/server/murid-pindah-kelas';
 import { error, fail } from '@sveltejs/kit';
+import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 
 export const load = async ({ params, locals, url, depends }) => {
 	depends('app:master-data');
@@ -26,18 +30,25 @@ export const load = async ({ params, locals, url, depends }) => {
 	}
 
 	const q = url.searchParams.get('q')?.trim() || null;
-	const [baris, relasi] = await Promise.all([
-		loadBarisMaster(sekolahId, entitas.key, { q }),
+	const perHalaman = normalisasiBarisPerHalaman(url.searchParams.get('per_page'), 50);
+	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+	const [daftarBaris, relasi] = await Promise.all([
+		loadBarisMaster(sekolahId, entitas.key, { q, page, perPage: perHalaman }),
 		loadOpsiRelasi(sekolahId)
 	]);
+	const daftarKelasMurid = entitas.key === 'kelas' ? await loadDaftarKelasMurid(sekolahId) : [];
 
 	return {
 		meta: { ...meta, title: `Master Data — ${entitas.judul}` },
 		daftar: MASTER_DATA,
 		entitas,
-		baris,
+		baris: daftarBaris.baris,
+		total: daftarBaris.total,
+		totalHalaman: daftarBaris.totalHalaman,
+		perHalaman: daftarBaris.perHalaman,
 		relasi,
-		filter: { q }
+		daftarKelasMurid,
+		filter: { q, page, perHalaman }
 	};
 };
 
@@ -61,6 +72,106 @@ export const actions = {
 			return fail(400, { fail: hasil.fail });
 		}
 		return { message: hasil.message };
+	},
+
+	async simpanMassal({ request, locals, params }) {
+		const sekolahId = locals.sekolah?.id;
+		if (!sekolahId) {
+			return fail(401, { fail: 'Sekolah tidak ditemukan' });
+		}
+		const user = locals.user;
+		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa mengubah master data.' });
+		}
+
+		const formData = await request.formData();
+		const hasil = await simpanMasterDataMassal(sekolahId, params.entitas ?? '', formData);
+		if (hasil.fail) {
+			return fail(400, { fail: hasil.fail });
+		}
+		return { message: hasil.message };
+	},
+
+	async hapusMassal({ request, locals, params }) {
+		const sekolahId = locals.sekolah?.id;
+		if (!sekolahId) {
+			return fail(401, { fail: 'Sekolah tidak ditemukan' });
+		}
+		const user = locals.user;
+		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa menghapus master data.' });
+		}
+
+		const formData = await request.formData();
+		const mentah = String(formData.get('ids') ?? '[]');
+		let ids: number[] = [];
+		try {
+			const parsed = JSON.parse(mentah);
+			if (Array.isArray(parsed)) {
+				ids = parsed
+					.map((value) => Number(value))
+					.filter((value) => Number.isInteger(value) && value > 0);
+			}
+		} catch {
+			return fail(400, { fail: 'Data pilihan tidak valid.' });
+		}
+		if (!ids.length) {
+			return fail(400, { fail: 'Tidak ada data yang dipilih.' });
+		}
+
+		let terhapus = 0;
+		const gagal: string[] = [];
+		for (const id of ids) {
+			const hasil = await hapusMasterData(sekolahId, params.entitas ?? '', id);
+			if (hasil.fail) gagal.push(hasil.fail);
+			else terhapus += 1;
+		}
+		return {
+			message: `${terhapus} data dihapus${gagal.length ? `, ${gagal.length} gagal: ${gagal[0]}` : ''}.`
+		};
+	},
+
+	async pindahMurid({ request, locals }) {
+		const sekolahId = locals.sekolah?.id;
+		if (!sekolahId) {
+			return fail(401, { fail: 'Sekolah tidak ditemukan' });
+		}
+		const user = locals.user;
+		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa memindahkan murid.' });
+		}
+
+		const formData = await request.formData();
+		const mentah = String(formData.get('pindah') ?? '[]');
+		let daftar: Array<{ muridId: number; kelasId: number }> = [];
+		try {
+			const parsed = JSON.parse(mentah);
+			if (Array.isArray(parsed)) {
+				daftar = parsed
+					.map((item) => ({
+						muridId: Number(item?.muridId),
+						kelasId: Number(item?.kelasId)
+					}))
+					.filter((item) => Number.isInteger(item.muridId) && Number.isInteger(item.kelasId));
+			}
+		} catch {
+			return fail(400, { fail: 'Data perpindahan tidak valid.' });
+		}
+		if (!daftar.length) {
+			return fail(400, { fail: 'Tidak ada murid yang dipindahkan.' });
+		}
+
+		for (const item of daftar) {
+			const hasil = await pindahkanMuridKelas({
+				sekolahId,
+				muridIds: [item.muridId],
+				kelasId: item.kelasId
+			});
+			if (hasil.fail) {
+				return fail(400, { fail: hasil.fail });
+			}
+		}
+		return { message: `${daftar.length} murid dipindahkan.` };
 	},
 
 	async hapus({ request, locals, params }) {

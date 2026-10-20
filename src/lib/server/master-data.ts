@@ -1,5 +1,6 @@
 import db from '$lib/server/db';
 import {
+	tableAlamat,
 	tableAsesmenSumatif,
 	tableAuthUser,
 	tableKelas,
@@ -8,10 +9,12 @@ import {
 	tablePegawai,
 	tableSekolah,
 	tableSemester,
-	tableTahunAjaran
+	tableTahunAjaran,
+	tableWaliMurid
 } from '$lib/server/db/schema';
-import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { MASTER_DATA } from '$lib/master-data';
+import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 
 export interface OpsiRelasi {
 	value: number;
@@ -75,15 +78,42 @@ export interface BarisMaster {
 	[key: string]: string | number | null;
 }
 
-/** Baris tabel master data untuk satu entitas. */
+export interface HasilBarisMaster {
+	baris: BarisMaster[];
+	total: number;
+	totalHalaman: number;
+	perHalaman: number;
+}
+
+/** Baris tabel master data untuk satu entitas (dengan pagination server-side). */
 export async function loadBarisMaster(
 	sekolahId: number,
 	key: string,
-	opsi: { q?: string | null } = {}
-): Promise<BarisMaster[]> {
+	opsi: { q?: string | null; page?: number; perPage?: number } = {}
+): Promise<HasilBarisMaster> {
+	const perHalaman = normalisasiBarisPerHalaman(String(opsi.perPage ?? 50), 50);
+	const page = Math.max(1, opsi.page ?? 1);
 	const q = opsi.q?.trim() ?? '';
 	const like = `%${q}%`;
 
+	const semua = await muatSemuaBaris(sekolahId, key, q, like);
+	const total = semua.length;
+	const totalHalaman = Math.max(1, Math.ceil(total / perHalaman));
+	const mulai = (page - 1) * perHalaman;
+	return {
+		baris: semua.slice(mulai, mulai + perHalaman),
+		total,
+		totalHalaman,
+		perHalaman
+	};
+}
+
+async function muatSemuaBaris(
+	sekolahId: number,
+	key: string,
+	q: string,
+	like: string
+): Promise<BarisMaster[]> {
 	switch (key) {
 		case 'tahun_ajaran': {
 			const rows = await db
@@ -188,6 +218,68 @@ export async function loadBarisMaster(
 						: eq(tablePegawai.sekolahId, sekolahId)
 				)
 				.orderBy(asc(tablePegawai.nama));
+			return rows;
+		}
+		case 'murid': {
+			const rows = await db
+				.select({
+					id: tableMurid.id,
+					nis: tableMurid.nis,
+					nisn: tableMurid.nisn,
+					nama: tableMurid.nama,
+					kelas: sql<string | null>`(select k.nama from kelas k where k.id = murid.kelas_id)`,
+					jk: tableMurid.jenisKelamin,
+					agama: tableMurid.agama,
+					tempat_lahir: tableMurid.tempatLahir,
+					tanggal_lahir: tableMurid.tanggalLahir,
+					tanggal_masuk: tableMurid.tanggalMasuk,
+					pendidikan_sebelumnya: tableMurid.pendidikanSebelumnya,
+					alamat_id: tableMurid.alamatId,
+					alamat: sql<string | null>`(select a.jalan from alamat a where a.id = murid.alamat_id)`,
+					ayah_nama: sql<
+						string | null
+					>`(select w.nama from wali_murid w where w.id = murid.ayah_id)`,
+					ibu_nama: sql<string | null>`(select w.nama from wali_murid w where w.id = murid.ibu_id)`,
+					wali_nama: sql<
+						string | null
+					>`(select w.nama from wali_murid w where w.id = murid.wali_id)`,
+					wali_asuh_nama: tableMurid.waliAsuhNama,
+					nik: tableMurid.nik,
+					anak_ke: tableMurid.anakKe,
+					status: tableMurid.status,
+					tanggal_lulus: tableMurid.tanggalLulus
+				})
+				.from(tableMurid)
+				.where(
+					q
+						? and(
+								eq(tableMurid.sekolahId, sekolahId),
+								sql`(murid.nama like ${like} or murid.nis like ${like} or murid.nisn like ${like})`
+							)
+						: eq(tableMurid.sekolahId, sekolahId)
+				)
+				.orderBy(asc(tableMurid.nama))
+				.limit(2000);
+			return rows.map((row) => ({
+				...row,
+				ayah: row.ayah_nama,
+				ibu: row.ibu_nama,
+				wali: row.wali_nama
+			}));
+		}
+		case 'ortu': {
+			const rows = await db
+				.select({
+					id: tableWaliMurid.id,
+					nama: tableWaliMurid.nama,
+					pekerjaan: tableWaliMurid.pekerjaan,
+					kontak: tableWaliMurid.kontak,
+					alamat: tableWaliMurid.alamat
+				})
+				.from(tableWaliMurid)
+				.where(q ? sql`wali_murid.nama like ${like}` : sql`1 = 1`)
+				.orderBy(asc(tableWaliMurid.nama))
+				.limit(2000);
 			return rows;
 		}
 		case 'sekolah': {
@@ -394,6 +486,109 @@ export async function simpanMasterData(
 			await db.insert(tablePegawai).values({ ...values, sekolahId, createdAt: now });
 			return { message: 'Data pegawai ditambahkan.' };
 		}
+		case 'murid': {
+			const kelasId = Number(teks(formData, 'kelas_id'));
+			if (!kelasId) return { fail: 'Kelas wajib dipilih.' };
+			const kelas = await db.query.tableKelas.findFirst({
+				columns: { id: true, semesterId: true },
+				where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
+			});
+			if (!kelas) return { fail: 'Kelas tidak valid.' };
+
+			// Alamat: pakai baris yang sudah ada, atau buat baru bila diisi.
+			const alamatIdLama = Number(teks(formData, 'alamat_id')) || null;
+			const alamatTeks = teks(formData, 'alamat');
+			let alamatId = alamatIdLama;
+			if (alamatTeks) {
+				if (alamatIdLama) {
+					await db
+						.update(tableAlamat)
+						.set({ jalan: alamatTeks, updatedAt: now })
+						.where(eq(tableAlamat.id, alamatIdLama));
+				} else {
+					const [alamatBaru] = await db
+						.insert(tableAlamat)
+						.values({
+							jalan: alamatTeks,
+							desa: '-',
+							kecamatan: '-',
+							kabupaten: '-',
+							createdAt: now,
+							updatedAt: now
+						})
+						.returning({ id: tableAlamat.id });
+					alamatId = alamatBaru?.id ?? null;
+				}
+			}
+
+			// Ayah/ibu/wali: pakai baris yang ada dengan nama sama, atau buat baru.
+			const resolusiWali = async (nama: string) => {
+				if (!nama) return null;
+				const [ada] = await db
+					.select({ id: tableWaliMurid.id })
+					.from(tableWaliMurid)
+					.where(sql`lower(trim(wali_murid.nama)) = ${nama.toLowerCase()}`)
+					.limit(1);
+				if (ada) return ada.id;
+				const [baru] = await db
+					.insert(tableWaliMurid)
+					.values({ nama, pekerjaan: '-', createdAt: now, updatedAt: now })
+					.returning({ id: tableWaliMurid.id });
+				return baru?.id ?? null;
+			};
+			const ayahId = await resolusiWali(teks(formData, 'ayah_nama'));
+			const ibuId = await resolusiWali(teks(formData, 'ibu_nama'));
+			const waliId = await resolusiWali(teks(formData, 'wali_nama'));
+
+			const values = {
+				nis: teks(formData, 'nis'),
+				nisn: teks(formData, 'nisn'),
+				nama: teks(formData, 'nama'),
+				kelasId,
+				semesterId: kelas.semesterId,
+				jenisKelamin: (teks(formData, 'jenis_kelamin') || 'L') as 'L' | 'P',
+				agama: teks(formData, 'agama') || '-',
+				tempatLahir: teks(formData, 'tempat_lahir') || '-',
+				tanggalLahir: teks(formData, 'tanggal_lahir'),
+				tanggalMasuk: teks(formData, 'tanggal_masuk'),
+				pendidikanSebelumnya: teks(formData, 'pendidikan_sebelumnya') || '-',
+				alamatId: alamatId ?? alamatIdLama ?? 0,
+				ayahId,
+				ibuId,
+				waliId,
+				waliAsuhNama: teks(formData, 'wali_asuh_nama') || null,
+				nik: teks(formData, 'nik') || null,
+				anakKe: angkaAtau(formData, 'anak_ke', null),
+				status: (teks(formData, 'status') || 'aktif') as 'aktif' | 'lulus' | 'pindah' | 'keluar',
+				tanggalLulus: teks(formData, 'tanggal_lulus') || null,
+				updatedAt: now
+			};
+
+			if (id) {
+				await db
+					.update(tableMurid)
+					.set(values)
+					.where(and(eq(tableMurid.id, id), eq(tableMurid.sekolahId, sekolahId)));
+				return { message: 'Data murid diperbarui.' };
+			}
+			await db.insert(tableMurid).values({ ...values, sekolahId, createdAt: now });
+			return { message: 'Data murid ditambahkan.' };
+		}
+		case 'ortu': {
+			const values = {
+				nama: teks(formData, 'nama'),
+				pekerjaan: teks(formData, 'pekerjaan') || '-',
+				kontak: teks(formData, 'kontak') || null,
+				alamat: teks(formData, 'alamat') || null,
+				updatedAt: now
+			};
+			if (id) {
+				await db.update(tableWaliMurid).set(values).where(eq(tableWaliMurid.id, id));
+				return { message: 'Data orang tua/wali diperbarui.' };
+			}
+			await db.insert(tableWaliMurid).values({ ...values, createdAt: now });
+			return { message: 'Data orang tua/wali ditambahkan.' };
+		}
 		case 'sekolah': {
 			const values = {
 				nama: teks(formData, 'nama'),
@@ -420,6 +615,135 @@ export async function simpanMasterData(
 		default:
 			return { fail: 'Jenis master data belum mendukung penyimpanan.' };
 	}
+}
+
+export interface KelasDenganMurid {
+	id: number;
+	nama: string;
+	semesterId: number;
+	semesterNama: string;
+	murid: Array<{ id: number; nama: string; nis: string }>;
+}
+
+/** Daftar kelas beserta muridnya (untuk fitur pindah murid antar kelas). */
+export async function loadDaftarKelasMurid(sekolahId: number): Promise<KelasDenganMurid[]> {
+	const kelas = await db
+		.select({
+			id: tableKelas.id,
+			nama: tableKelas.nama,
+			semesterId: tableKelas.semesterId,
+			semesterNama: tableSemester.nama
+		})
+		.from(tableKelas)
+		.innerJoin(tableSemester, eq(tableKelas.semesterId, tableSemester.id))
+		.where(eq(tableKelas.sekolahId, sekolahId))
+		.orderBy(asc(tableKelas.nama));
+
+	const murid = await db
+		.select({
+			id: tableMurid.id,
+			nama: tableMurid.nama,
+			nis: tableMurid.nis,
+			kelasId: tableMurid.kelasId
+		})
+		.from(tableMurid)
+		.where(eq(tableMurid.sekolahId, sekolahId))
+		.orderBy(asc(tableMurid.nama));
+
+	const perKelas = new Map<number, Array<{ id: number; nama: string; nis: string }>>();
+	for (const row of murid) {
+		const list = perKelas.get(row.kelasId) ?? [];
+		list.push({ id: row.id, nama: row.nama, nis: row.nis });
+		perKelas.set(row.kelasId, list);
+	}
+
+	return kelas.map((row) => ({
+		id: row.id,
+		nama: row.nama,
+		semesterId: row.semesterId,
+		semesterNama: row.semesterNama,
+		murid: perKelas.get(row.id) ?? []
+	}));
+}
+
+/**
+ * Tambah banyak baris sekaligus untuk satu entitas (mis. satu mata pelajaran
+ * untuk beberapa kelas). Baris yang sudah ada dilewati.
+ */
+export async function simpanMasterDataMassal(
+	sekolahId: number,
+	key: string,
+	formData: FormData
+): Promise<HasilSimpan> {
+	if (key !== 'mata_pelajaran') {
+		return { fail: 'Tambah massal baru tersedia untuk mata pelajaran.' };
+	}
+	const nama = teks(formData, 'nama');
+	if (!nama) return { fail: 'Nama mata pelajaran wajib diisi.' };
+	const kelasIds = [
+		...new Set(
+			formData
+				.getAll('kelas_ids')
+				.map((value) => Number(value))
+				.filter((value) => Number.isInteger(value) && value > 0)
+		)
+	];
+	if (!kelasIds.length) return { fail: 'Pilih minimal satu kelas.' };
+
+	const kelasValid = (
+		await db
+			.select({ id: tableKelas.id })
+			.from(tableKelas)
+			.where(and(eq(tableKelas.sekolahId, sekolahId), inArray(tableKelas.id, kelasIds)))
+	).map((row) => row.id);
+	if (!kelasValid.length) return { fail: 'Kelas yang dipilih tidak valid.' };
+
+	const sudahAda = new Set(
+		(
+			await db
+				.select({ kelasId: tableMataPelajaran.kelasId })
+				.from(tableMataPelajaran)
+				.where(
+					and(
+						inArray(tableMataPelajaran.kelasId, kelasValid),
+						sql`lower(mata_pelajaran.nama) = ${nama.toLowerCase()}`
+					)
+				)
+		).map((row) => row.kelasId)
+	);
+
+	const now = new Date().toISOString();
+	const pengampuId = Number(teks(formData, 'pengampu_id')) || null;
+	const jenis = (teks(formData, 'jenis') || 'wajib') as
+		'belum_dipetakan' | 'wajib' | 'pilihan' | 'mulok' | 'kejuruan' | 'pemberdayaan';
+	const kode = teks(formData, 'kode') || null;
+	const kkm = angkaAtau(formData, 'kkm', 0) ?? 0;
+	const urutan = angkaAtau(formData, 'urutan', null);
+
+	let dibuat = 0;
+	let dilewati = 0;
+	for (const kelasId of kelasValid) {
+		if (sudahAda.has(kelasId)) {
+			dilewati += 1;
+			continue;
+		}
+		await db.insert(tableMataPelajaran).values({
+			kelasId,
+			nama,
+			jenis,
+			kode,
+			kkm,
+			urutan,
+			pengampuId,
+			createdAt: now,
+			updatedAt: now
+		});
+		dibuat += 1;
+	}
+
+	return {
+		message: `${dibuat} mata pelajaran ditambahkan${dilewati ? `, ${dilewati} kelas sudah punya mapel ini` : ''}.`
+	};
 }
 
 /** Hapus data master data dengan pengaman terhadap data yang masih dipakai. */
@@ -531,6 +855,24 @@ export async function hapusMasterData(
 				.delete(tablePegawai)
 				.where(and(eq(tablePegawai.id, id), eq(tablePegawai.sekolahId, sekolahId)));
 			return { message: 'Data pegawai dihapus.' };
+		}
+		case 'murid': {
+			await db
+				.delete(tableMurid)
+				.where(and(eq(tableMurid.id, id), eq(tableMurid.sekolahId, sekolahId)));
+			return { message: 'Data murid dihapus (nilai & absensinya ikut terhapus).' };
+		}
+		case 'ortu': {
+			const dipakai = await db
+				.select({ id: tableMurid.id })
+				.from(tableMurid)
+				.where(or(eq(tableMurid.ayahId, id), eq(tableMurid.ibuId, id), eq(tableMurid.waliId, id)))
+				.limit(1);
+			if (dipakai.length) {
+				return { fail: 'Data ini masih dipakai murid. Ganti orang tuanya lebih dulu.' };
+			}
+			await db.delete(tableWaliMurid).where(eq(tableWaliMurid.id, id));
+			return { message: 'Data orang tua/wali dihapus.' };
 		}
 		case 'sekolah':
 			return { fail: 'Data sekolah tidak bisa dihapus dari sini.' };

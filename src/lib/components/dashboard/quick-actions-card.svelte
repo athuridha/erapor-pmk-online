@@ -20,6 +20,13 @@
 		return type === 'admin' || type === 'kepala_sekolah';
 	});
 
+	// Impor data pokok (Excel) memakai izin data sekolah, sama seperti
+	// halamannya di /sinkronisasi/import-data.
+	let canImportPokok = $derived.by(() => {
+		const perms = (page.data.user ?? { permissions: [] }).permissions ?? [];
+		return (perms as string[]).includes('informasi_umum_sekolah');
+	});
+
 	let downloadingBackup = $state(false);
 
 	const handleBackupDownload = async () => {
@@ -132,6 +139,21 @@
 					Import Data
 				</button>
 			</div>
+			<a
+				href={resolve('/sinkronisasi/import-data')}
+				onclick={(e) => {
+					if (!canImportPokok) {
+						e.preventDefault();
+					}
+				}}
+				class="btn btn-outline btn-accent w-full shadow-none"
+				class:btn-disabled={!canImportPokok}
+				aria-disabled={!canImportPokok}
+				title={!canImportPokok ? 'Anda tidak memiliki izin untuk mengimpor data pokok' : ''}
+			>
+				<Icon name="table" />
+				Impor Data Pokok (Excel)
+			</a>
 		</div>
 	</div>
 </div>

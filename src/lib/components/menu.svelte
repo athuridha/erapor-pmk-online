@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { StorageState } from '$lib/state.svelte';
 	import { searchQueryMarker } from '$lib/utils';
 	import Icon from './icon.svelte';
 	import { appMenuItems } from './menu';
@@ -10,7 +9,12 @@
 		WALI_KELAS_ONLY_PERMISSIONS
 	} from '../../routes/pengguna/permissions';
 
-	const expanded = new StorageState<boolean>('menu-expanded');
+	/**
+	 * Status buka tiap kelompok submenu (diisi oleh pengguna, tidak dipaksa
+	 * terbuka). Tanpa ini, setiap render ulang menu membuka semua submenu.
+	 */
+	let terbuka = $state<Record<string, boolean>>({});
+	let bukaSemua = $state(false);
 
 	let search = $state('');
 	const activeSemesterTipe = $derived(
@@ -194,7 +198,20 @@
 	{@const active = isMenuActive(page.url.pathname, item.path, siblingPaths)}
 	<li>
 		{#if item.subMenu}
-			<details open={expanded.value || !!search}>
+			{@const groupKey = item.path ?? item.title}
+			{@const groupPaths = item.subMenu.map((entry) => entry.path ?? '')}
+			{@const groupActive = item.subMenu.some((entry) =>
+				isMenuActive(page.url.pathname, entry.path, groupPaths)
+			)}
+			{@const isOpen = search ? true : bukaSemua ? true : (terbuka[groupKey] ?? groupActive)}
+			<details
+				open={isOpen}
+				ontoggle={(event) => {
+					if (search) return;
+					bukaSemua = false;
+					terbuka[groupKey] = (event.currentTarget as HTMLDetailsElement).open;
+				}}
+			>
 				<summary>
 					{@render menu_item_label(item)}
 				</summary>
@@ -241,9 +258,9 @@
 		</label>
 		<label
 			class="btn swap btn-square rounded-xl bg-[#053d2e] border border-[#065f46] text-emerald-200 hover:text-white hover:bg-[#075e46] shadow-none"
-			title={expanded.value ? 'Sempitkan menu' : 'Luaskan menu'}
+			title={bukaSemua ? 'Tutup semua submenu' : 'Buka semua submenu'}
 		>
-			<input type="checkbox" bind:checked={expanded.value} />
+			<input type="checkbox" bind:checked={bukaSemua} />
 			<span class="swap-on"><Icon name="expand-all" /></span>
 			<span class="swap-off"><Icon name="collapse-all" /></span>
 		</label>

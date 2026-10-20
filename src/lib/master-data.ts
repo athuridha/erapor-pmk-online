@@ -202,6 +202,89 @@ export const MASTER_DATA: MasterData[] = [
 		]
 	},
 	{
+		key: 'murid',
+		judul: 'Murid',
+		deskripsi:
+			'Data induk murid: identitas, kelas, alamat, dan orang tua/wali. Bergabung dengan rapor & portal.',
+		ikon: 'user',
+		tabel: 'murid',
+		fields: [
+			{ key: 'nis', label: 'NIS', tipe: 'teks', wajib: true },
+			{ key: 'nisn', label: 'NISN', tipe: 'teks', wajib: true },
+			{ key: 'nama', label: 'Nama Lengkap', tipe: 'teks', wajib: true },
+			{ key: 'kelas_id', label: 'Kelas', tipe: 'relasi', relasi: 'kelas', wajib: true },
+			{
+				key: 'jenis_kelamin',
+				label: 'Jenis Kelamin',
+				tipe: 'pilihan',
+				wajib: true,
+				opsi: [
+					{ label: 'Laki-laki', value: 'L' },
+					{ label: 'Perempuan', value: 'P' }
+				]
+			},
+			{ key: 'agama', label: 'Agama', tipe: 'teks' },
+			{ key: 'tempat_lahir', label: 'Tempat Lahir', tipe: 'teks' },
+			{ key: 'tanggal_lahir', label: 'Tanggal Lahir', tipe: 'tanggal' },
+			{ key: 'tanggal_masuk', label: 'Tanggal Masuk', tipe: 'tanggal' },
+			{ key: 'pendidikan_sebelumnya', label: 'Pendidikan Sebelumnya', tipe: 'teks' },
+			{
+				key: 'alamat',
+				label: 'Alamat',
+				tipe: 'textarea',
+				placeholder: 'Jalan, desa, kecamatan, kabupaten'
+			},
+			{ key: 'ayah_nama', label: 'Nama Ayah', tipe: 'teks' },
+			{ key: 'ibu_nama', label: 'Nama Ibu', tipe: 'teks' },
+			{ key: 'wali_nama', label: 'Nama Wali', tipe: 'teks' },
+			{ key: 'wali_asuh_nama', label: 'Wali Asuh', tipe: 'teks' },
+			{ key: 'nik', label: 'NIK', tipe: 'teks' },
+			{ key: 'anak_ke', label: 'Anak Ke', tipe: 'angka' },
+			{
+				key: 'status',
+				label: 'Status',
+				tipe: 'pilihan',
+				default: 'aktif',
+				opsi: [
+					{ label: 'Aktif', value: 'aktif' },
+					{ label: 'Lulus', value: 'lulus' },
+					{ label: 'Pindah', value: 'pindah' },
+					{ label: 'Keluar', value: 'keluar' }
+				]
+			},
+			{ key: 'tanggal_lulus', label: 'Tanggal Lulus', tipe: 'tanggal' }
+		],
+		kolom: [
+			{ key: 'nis', label: 'NIS' },
+			{ key: 'nisn', label: 'NISN' },
+			{ key: 'nama', label: 'Nama' },
+			{ key: 'kelas', label: 'Kelas' },
+			{ key: 'jk', label: 'JK' },
+			{ key: 'agama', label: 'Agama' },
+			{ key: 'ayah', label: 'Ayah' },
+			{ key: 'status', label: 'Status' }
+		]
+	},
+	{
+		key: 'ortu',
+		judul: 'Orang Tua & Wali',
+		deskripsi: 'Data orang tua/wali murid (ayah, ibu, wali) beserta pekerjaan dan kontak.',
+		ikon: 'users',
+		tabel: 'wali_murid',
+		fields: [
+			{ key: 'nama', label: 'Nama', tipe: 'teks', wajib: true },
+			{ key: 'pekerjaan', label: 'Pekerjaan', tipe: 'teks', default: '-' },
+			{ key: 'kontak', label: 'Kontak / No. HP', tipe: 'teks' },
+			{ key: 'alamat', label: 'Alamat', tipe: 'textarea' }
+		],
+		kolom: [
+			{ key: 'nama', label: 'Nama' },
+			{ key: 'pekerjaan', label: 'Pekerjaan' },
+			{ key: 'kontak', label: 'Kontak' },
+			{ key: 'alamat', label: 'Alamat' }
+		]
+	},
+	{
 		key: 'sekolah',
 		judul: 'Profil & Konfigurasi Sekolah',
 		deskripsi:

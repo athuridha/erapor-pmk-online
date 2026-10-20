@@ -1,43 +1,78 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
+	import { page } from '$app/state';
 	import Icon from '$lib/components/icon.svelte';
+	import MoveKelasModal from '$lib/components/murid/move-kelas-modal.svelte';
+	import { buildPageNumbers, OPSI_BARIS_PER_HALAMAN } from '$lib/utils/pagination';
+	import { selectAll, semuaTerpilih, toggleId } from '$lib/utils/bulk-select';
 
 	let { data } = $props();
 
-	let searchTerm = $state('');
+	// svelte-ignore state_referenced_locally
+	let searchTerm = $state(data.page.q ?? '');
+	let selectedIds = $state<number[]>([]);
+	let moveModalOpen = $state(false);
 
 	const rekap = $derived(data.rekap);
-	const daftarKelas = $derived(data.daftarKelas ?? []);
+	const statistik = $derived(data.statistik);
 	const semester = $derived(rekap?.semester ?? []);
 	const baris = $derived(rekap?.baris ?? []);
 	const ringkasan = $derived(rekap?.ringkasan ?? []);
-	const konfigurasi = $derived(rekap?.konfigurasi ?? null);
+	const daftarKelas = $derived(data.daftarKelas ?? []);
+	const daftarMapel = $derived(rekap?.daftarMapel ?? []);
+	const daftarGuru = $derived(rekap?.daftarGuru ?? []);
+	const filter = $derived(data.filter ?? { kelasId: null, mapel: null, pengampuId: null });
+	const rekapMapel = $derived(rekap?.rekapMapel ?? []);
+	const rekapGuru = $derived(rekap?.rekapGuru ?? []);
 
-	const barisTampil = $derived.by(() => {
-		const keyword = searchTerm.trim().toLowerCase();
-		if (!keyword) return baris;
-		return baris.filter(
-			(row) =>
-				row.nama.toLowerCase().includes(keyword) ||
-				row.nis.toLowerCase().includes(keyword) ||
-				row.nisn.toLowerCase().includes(keyword)
-		);
-	});
+	const currentPage = $derived(data.page.currentPage ?? 1);
+	const totalPages = $derived(Math.max(1, data.page.totalPages ?? 1));
+	const totalItems = $derived(data.page.totalItems ?? 0);
+	const perPage = $derived(data.page.perPage ?? 50);
+	const nomorHalaman = $derived(buildPageNumbers(currentPage, totalPages));
 
-	const kelasLabel = $derived(
-		rekap?.kelas?.fase ? `${rekap.kelas.nama} - ${rekap.kelas.fase}` : (rekap?.kelas?.nama ?? '-')
+	const muridTerpilih = $derived(
+		baris
+			.filter((row) => selectedIds.includes(row.muridId))
+			.map((row) => ({
+				id: row.muridId,
+				nama: row.nama,
+				nis: row.nis
+			}))
 	);
+	const idsHalaman = $derived(baris.map((row) => row.muridId));
 
-	const semesterAwal = $derived(semester[0]?.label ?? '-');
-	const semesterAkhir = $derived(semester[semester.length - 1]?.label ?? '-');
-	const rataKelasTerakhir = $derived(
-		ringkasan.length ? (ringkasan[ringkasan.length - 1]?.nilai ?? null) : null
-	);
+	async function setFilter(key: string, value: string | null) {
+		const search = new URLSearchParams(page.url.search);
+		if (value) search.set(key, value);
+		else search.delete(key);
+		search.delete('page');
+		const query = search.toString();
+		await goto(`${page.url.pathname}${query ? `?${query}` : ''}`, { keepFocus: true });
+	}
 
-	async function gantiKelas(event: Event) {
-		const value = (event.currentTarget as HTMLSelectElement).value;
-		if (!value) return;
-		await goto(`/nilai-akhir/rekap-keseluruhan?kelas_id=${value}`, { keepFocus: true });
+	async function applySearch(value: string) {
+		const search = new URLSearchParams(page.url.search);
+		if (value.trim()) search.set('q', value.trim());
+		else search.delete('q');
+		search.delete('page');
+		const query = search.toString();
+		const target = `${page.url.pathname}${query ? `?${query}` : ''}`;
+		if (target === `${page.url.pathname}${page.url.search}`) return;
+		await goto(target, { keepFocus: true });
+	}
+
+	async function gotoPage(pageNumber: number) {
+		const search = new URLSearchParams(page.url.search);
+		search.set('page', String(pageNumber));
+		await goto(`${page.url.pathname}?${search.toString()}`, { keepFocus: true });
+	}
+
+	async function gotoPerHalaman(jumlah: number) {
+		const search = new URLSearchParams(page.url.search);
+		search.set('per_page', String(jumlah));
+		search.delete('page');
+		await goto(`${page.url.pathname}?${search.toString()}`, { keepFocus: true });
 	}
 
 	function formatScore(value: number | null | undefined) {
@@ -64,117 +99,166 @@
 	}
 
 	function selKelas(semesterId: number) {
-		const kelas = barisTampil
+		const kelas = baris
 			.map((row) => row.perSemester.find((sel) => sel.semesterId === semesterId)?.kelasNama)
 			.filter((value): value is string => Boolean(value));
 		if (!kelas.length) return '-';
 		const unik = [...new Set(kelas)];
 		return unik.length === 1 ? unik[0] : `${unik.length} kelas`;
 	}
+
+	const exportUrl = $derived(
+		`/api/nilai-akhir/rekap-keseluruhan/export${page.url.search ? page.url.search : ''}`
+	);
 </script>
 
 <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 	<div>
 		<h2 class="text-xl font-bold">Rekap Nilai Keseluruhan</h2>
 		<p class="text-base-content/80 block text-sm">
-			{kelasLabel} · {semesterAwal} sampai {semesterAkhir}
+			Nilai murid dari semester pertama hingga semester terakhir, lengkap dengan filter kelas,
+			mapel, dan guru.
 		</p>
 	</div>
 	<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-		<a
-			class="btn btn-outline shadow-none max-sm:w-full"
-			href="/nilai-akhir/rekap-keseluruhan/export"
-		>
+		{#if selectedIds.length}
+			<button
+				type="button"
+				class="btn btn-soft btn-primary shadow-none"
+				onclick={() => (moveModalOpen = true)}
+			>
+				<Icon name="move" />
+				Pindahkan {selectedIds.length} Murid
+			</button>
+		{/if}
+		<a class="btn btn-outline shadow-none max-sm:w-full" href={exportUrl}>
 			<Icon name="download" />
 			Unduh Excel
 		</a>
-		<a class="btn btn-primary shadow-none max-sm:w-full" href="/nilai-akhir">
-			<Icon name="left" />
-			Rekap Nilai Akhir
-		</a>
 	</div>
 </div>
 
-{#if daftarKelas.length > 1}
-	<label class="form-control w-full max-w-md">
-		<span class="label-text mb-1 text-sm">Kelas yang direkap</span>
+<div class="stats dark:bg-base-200 shadow-md">
+	<div class="stat">
+		<div class="stat-title">Murid</div>
+		<div class="stat-value text-lg">{statistik?.totalMurid ?? 0}</div>
+		<div class="stat-desc">{statistik?.muridSudahNilai ?? 0} punya nilai</div>
+	</div>
+	<div class="stat">
+		<div class="stat-title">Kelas</div>
+		<div class="stat-value text-lg">{statistik?.totalKelas ?? 0}</div>
+		<div class="stat-desc text-wrap">{statistik?.totalSemester ?? 0} semester tercatat</div>
+	</div>
+	<div class="stat">
+		<div class="stat-title">Mata Pelajaran</div>
+		<div class="stat-value text-lg">{statistik?.totalMapel ?? 0}</div>
+		<div class="stat-desc text-wrap">{statistik?.totalGuru ?? 0} guru pengampu</div>
+	</div>
+	<div class="stat">
+		<div class="stat-title">Nilai Terinput</div>
+		<div class="stat-value text-lg">{statistik?.jumlahNilai ?? 0}</div>
+		<div class="stat-desc">{statistik?.muridBelumNilai ?? 0} murid belum ada nilai</div>
+	</div>
+	<div class="stat">
+		<div class="stat-title">Rata-rata Sekolah</div>
+		<div class="stat-value text-lg">{formatScore(statistik?.rataRataKeseluruhan)}</div>
+		<div class="stat-desc text-wrap">Semua mapel & semester</div>
+	</div>
+</div>
+
+<div class="mt-4 grid gap-3 md:grid-cols-4">
+	<label class="form-control">
+		<span class="label-text mb-1 text-sm">Kelas</span>
 		<select
 			class="select select-bordered w-full"
-			value={rekap?.kelas?.id ?? ''}
-			onchange={gantiKelas}
+			value={filter.kelasId ?? ''}
+			onchange={(event) =>
+				setFilter('kelas_id', (event.currentTarget as HTMLSelectElement).value || null)}
 		>
+			<option value="">Semua Kelas</option>
 			{#each daftarKelas as kelas (kelas.id)}
-				<option value={kelas.id}>
-					{kelas.nama} — {kelas.semesterLabel}
-				</option>
+				<option value={kelas.id}>{kelas.nama} — {kelas.semesterLabel}</option>
 			{/each}
 		</select>
 	</label>
-{/if}
 
-<div class="stats dark:bg-base-200 shadow-md mt-4">
-	<div class="stat">
-		<div class="stat-title">Murid Kelas</div>
-		<div class="stat-value text-lg">{rekap?.totalMurid ?? 0}</div>
-		<div class="stat-desc">{rekap?.totalDinilai ?? 0} sudah punya nilai</div>
-	</div>
-	<div class="stat">
-		<div class="stat-title">Semester Dilalui</div>
-		<div class="stat-value text-lg">{semester.length}</div>
-		<div class="stat-desc text-wrap">Dari kelas pertama sampai kelas terakhir</div>
-	</div>
-	<div class="stat">
-		<div class="stat-title">Rata-rata Kelas</div>
-		<div class="stat-value text-lg">{formatScore(rataKelasTerakhir)}</div>
-		<div class="stat-desc text-wrap">Semester terakhir</div>
-	</div>
-	{#if konfigurasi}
-		<div class="stat">
-			<div class="stat-title">Bobot Nilai</div>
-			<div class="stat-value text-lg">
-				{konfigurasi.bobotLingkup}/{konfigurasi.bobotSts}/{konfigurasi.bobotSas}
-			</div>
-			<div class="stat-desc text-wrap">Lingkup/STS/SAS dari pengaturan sekolah</div>
-		</div>
-		<div class="stat">
-			<div class="stat-title">Ambang Kriteria</div>
-			<div class="stat-value text-lg">{konfigurasi.kriteriaCukup} · {konfigurasi.kriteriaBaik}</div>
-			<div class="stat-desc text-wrap">Batas Cukup dan Baik</div>
-		</div>
-	{/if}
+	<label class="form-control">
+		<span class="label-text mb-1 text-sm">Mata Pelajaran</span>
+		<select
+			class="select select-bordered w-full"
+			value={filter.mapel ?? ''}
+			onchange={(event) =>
+				setFilter('mapel', (event.currentTarget as HTMLSelectElement).value || null)}
+		>
+			<option value="">Semua Mata Pelajaran</option>
+			{#each daftarMapel as mapel (mapel.nama)}
+				<option value={mapel.nama}>{mapel.nama}</option>
+			{/each}
+		</select>
+	</label>
+
+	<label class="form-control">
+		<span class="label-text mb-1 text-sm">Guru Pengampu</span>
+		<select
+			class="select select-bordered w-full"
+			value={filter.pengampuId ?? ''}
+			onchange={(event) =>
+				setFilter('pengampu_id', (event.currentTarget as HTMLSelectElement).value || null)}
+		>
+			<option value="">Semua Guru</option>
+			{#each daftarGuru as guru (guru.id)}
+				<option value={guru.id}>{guru.nama}</option>
+			{/each}
+		</select>
+	</label>
+
+	<label class="form-control">
+		<span class="label-text mb-1 text-sm">Cari Murid</span>
+		<label class="input input-bordered flex w-full items-center gap-2">
+			<Icon name="search" />
+			<input
+				type="search"
+				bind:value={searchTerm}
+				spellcheck="false"
+				placeholder="Nama / NIS..."
+				autocomplete="off"
+				onchange={(event) => applySearch((event.currentTarget as HTMLInputElement).value)}
+			/>
+		</label>
+	</label>
 </div>
 
-<form class="mt-4 flex flex-col gap-2 sm:flex-row" onsubmit={(event) => event.preventDefault()}>
-	<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
-		<Icon name="search" />
-		<input
-			type="search"
-			name="q"
-			bind:value={searchTerm}
-			spellcheck="false"
-			placeholder="Cari nama / NIS murid..."
-			autocomplete="off"
-		/>
-	</label>
-</form>
+<div class="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+	<h3 class="text-lg font-bold">Rekap Nilai Murid</h3>
+</div>
 
 {#if !semester.length}
-	<div class="alert alert-warning alert-soft mt-4 flex items-center gap-3">
+	<div class="alert alert-warning alert-soft mt-3 flex items-center gap-3">
 		<Icon name="warning" />
-		<span>
-			Belum ada data nilai untuk kelas ini. Kolom semester terisi otomatis begitu ada murid di kelas
-			tersebut pada semester berjalan dan nilai akhir mapel sudah diinput.
-		</span>
+		<span
+			>Belum ada data nilai. Data muncul setelah semester berjalan dan nilai akhir terinput.</span
+		>
 	</div>
 {:else}
 	<div
-		class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+		class="bg-base-100 dark:bg-base-200 mt-3 overflow-x-auto rounded-md shadow-md dark:shadow-none"
 	>
 		<table class="border-base-200 table border dark:border-none">
 			<thead>
 				<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-					<th class="w-12 text-center" style="min-width: 48px;">No</th>
-					<th style="min-width: 190px;">Nama Murid</th>
+					<th class="w-10 text-center">
+						<input
+							type="checkbox"
+							class="checkbox checkbox-sm"
+							checked={semuaTerpilih(idsHalaman, selectedIds)}
+							onchange={(event) =>
+								(selectedIds = selectAll(
+									idsHalaman,
+									(event.currentTarget as HTMLInputElement).checked
+								))}
+						/>
+					</th>
+					<th style="min-width: 200px;">Nama Murid</th>
 					{#each semester as sem (sem.semesterId)}
 						<th class="text-center" style="min-width: 130px;">
 							{sem.label}
@@ -186,12 +270,26 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each barisTampil as row, index (row.key)}
-					<tr>
-						<td class="text-center">{index + 1}</td>
+				{#each baris as row (row.key)}
+					<tr class={selectedIds.includes(row.muridId) ? 'bg-primary/5' : ''}>
+						<td class="text-center">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								checked={selectedIds.includes(row.muridId)}
+								onchange={(event) =>
+									(selectedIds = toggleId(
+										selectedIds,
+										row.muridId,
+										(event.currentTarget as HTMLInputElement).checked
+									))}
+							/>
+						</td>
 						<td>
 							<div class="font-medium">{row.nama}</div>
-							<div class="text-xs opacity-60">NIS {row.nis || '-'} · NISN {row.nisn || '-'}</div>
+							<div class="text-xs opacity-60">
+								{row.kelasSekarang ?? '-'} · NIS {row.nis || '-'}
+							</div>
 						</td>
 						{#each row.perSemester as sel (sel.semesterId)}
 							<td class="text-center">
@@ -208,16 +306,13 @@
 							<span class={`badge badge-sm ${badgeClass(row.kriteriaKumulatif)}`}>
 								{formatScore(row.rataKumulatif)}
 							</span>
-							{#if row.kriteriaKumulatif}
-								<span class="block text-xs opacity-60">{row.kriteriaKumulatif}</span>
-							{/if}
 						</td>
 						<td class="text-center font-semibold">{row.peringkat}</td>
 					</tr>
 				{:else}
 					<tr>
-						<td colspan={semester.length + 4} class="py-6 text-center opacity-70">
-							Tidak ada murid yang cocok dengan pencarian.
+						<td colspan={semester.length + 5} class="py-6 text-center opacity-70">
+							Tidak ada murid yang cocok.
 						</td>
 					</tr>
 				{/each}
@@ -238,11 +333,132 @@
 		</table>
 	</div>
 
-	<p class="text-base-content/60 mt-2 text-xs">
-		Nilai akhir tiap mapel dihitung dari komponen lingkup, STS, dan SAS memakai bobot dari
-		pengaturan sekolah. Kriteria (Perlu Bimbingan/Cukup/Baik/Sangat Baik) mengikuti ambang di
-		pengaturan rapor. Jumlah mapel memakai katalog mapel jenjang (gabungan mapel semua kelas pada
-		tingkat yang sama), bukan hanya mapel kelas yang dipilih. Kelas yang diikuti murid dapat berbeda
-		antar semester.
-	</p>
+	<div class="mt-3 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+		<p class="text-base-content/60 text-xs">
+			Menampilkan {Math.min(perPage, Math.max(0, totalItems - (currentPage - 1) * perPage))} dari
+			{totalItems} murid
+		</p>
+		<div class="flex flex-col items-center gap-2 sm:flex-row sm:items-center">
+			<label class="flex items-center gap-2 text-xs">
+				Baris per halaman
+				<select
+					class="select select-bordered select-sm"
+					value={perPage}
+					onchange={(event) =>
+						gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
+				>
+					{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
+						<option value={jumlah}>{jumlah}</option>
+					{/each}
+				</select>
+			</label>
+			<div class="join">
+				<button
+					type="button"
+					class="btn btn-sm join-item"
+					disabled={currentPage <= 1}
+					onclick={() => gotoPage(currentPage - 1)}
+				>
+					&laquo;
+				</button>
+				{#each nomorHalaman as nomor, index (index)}
+					{#if nomor === '…'}
+						<button type="button" class="btn btn-sm join-item pointer-events-none">…</button>
+					{:else}
+						<button
+							type="button"
+							class="btn btn-sm join-item"
+							class:btn-active={nomor === currentPage}
+							onclick={() => gotoPage(nomor)}
+						>
+							{nomor}
+						</button>
+					{/if}
+				{/each}
+				<button
+					type="button"
+					class="btn btn-sm join-item"
+					disabled={currentPage >= totalPages}
+					onclick={() => gotoPage(currentPage + 1)}
+				>
+					&raquo;
+				</button>
+			</div>
+		</div>
+	</div>
 {/if}
+
+<div class="mt-8 grid gap-4 lg:grid-cols-2">
+	<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
+		<h3 class="px-4 pt-4 text-lg font-bold">Rekap per Mata Pelajaran</h3>
+		<table class="border-base-200 table-sm table border dark:border-none">
+			<thead>
+				<tr class="bg-base-200 dark:bg-base-300 text-left font-bold">
+					<th>Mata Pelajaran</th>
+					<th>Guru</th>
+					<th class="text-center">Kelas</th>
+					<th class="text-center">Nilai</th>
+					<th class="text-center">Rata-rata</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each rekapMapel as item (item.nama)}
+					<tr>
+						<td>{item.nama}</td>
+						<td class="text-xs opacity-70">{item.guru.join(', ') || '-'}</td>
+						<td class="text-center">{item.kelas}</td>
+						<td class="text-center">{item.jumlahNilai}</td>
+						<td class="text-center font-semibold">{formatScore(item.rataRata)}</td>
+					</tr>
+				{:else}
+					<tr>
+						<td colspan="5" class="py-4 text-center opacity-70">Belum ada nilai.</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+
+	<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
+		<h3 class="px-4 pt-4 text-lg font-bold">Rekap per Guru</h3>
+		<table class="border-base-200 table-sm table border dark:border-none">
+			<thead>
+				<tr class="bg-base-200 dark:bg-base-300 text-left font-bold">
+					<th>Guru Pengampu</th>
+					<th>Mata Pelajaran</th>
+					<th class="text-center">Murid</th>
+					<th class="text-center">Nilai</th>
+					<th class="text-center">Rata-rata</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each rekapGuru as item (item.id)}
+					<tr>
+						<td>{item.nama}</td>
+						<td class="text-xs opacity-70">{item.mapel.join(', ')}</td>
+						<td class="text-center">{item.jumlahMurid}</td>
+						<td class="text-center">{item.jumlahNilai}</td>
+						<td class="text-center font-semibold">{formatScore(item.rataRata)}</td>
+					</tr>
+				{:else}
+					<tr>
+						<td colspan="5" class="py-4 text-center opacity-70">Belum ada nilai.</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+</div>
+
+<MoveKelasModal
+	bind:isOpen={moveModalOpen}
+	murid={muridTerpilih}
+	kelasList={daftarKelas.map((kelas) => ({
+		...kelas,
+		semesterNama: kelas.semesterLabel
+	}))}
+	onSuccess={() => {
+		selectedIds = [];
+		void invalidate('app:rekap-keseluruhan');
+	}}
+/>
