@@ -47,7 +47,6 @@
 			{
 				title: 'Profil & Konfigurasi',
 				path: '/master-data/sekolah',
-				icon: 'school',
 				tags: ['sekolah', 'profil', 'bobot', 'kriteria', 'konfigurasi', 'referensi']
 			}
 		]
@@ -164,13 +163,11 @@
 			{
 				title: 'Impor Nilai',
 				path: '/nilai-akhir/impor-nilai',
-				icon: 'import',
 				tags: ['impor', 'excel', 'nilai', 'bulk', 'murid']
 			},
 			{
 				title: 'Jejak Audit',
 				path: '/audit',
-				icon: 'info',
 				tags: ['audit', 'jejak', 'riwayat', 'nilai', 'perubahan']
 			},
 			{
