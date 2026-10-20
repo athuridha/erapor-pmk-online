@@ -18,6 +18,7 @@ import {
 	tableUserFavorites
 } from '$lib/server/db/schema';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { getRingkasanKelas } from '$lib/server/statistik-kelas';
 
 const AGAMA_BASE_SUBJECT = 'Pendidikan Agama dan Budi Pekerti';
 
@@ -355,10 +356,24 @@ export async function load(event) {
 			})
 		: [];
 
+	// Ringkasan seluruh kelas untuk monitoring admin/kepala sekolah.
+	const userType = event.locals.user?.type;
+	const canSeeRingkasanKelas = userType === 'admin' || userType === 'kepala_sekolah';
+	let ringkasanKelas: {
+		ringkasan: Awaited<ReturnType<typeof getRingkasanKelas>>['ringkasan'];
+		daftarKelas: Awaited<ReturnType<typeof getRingkasanKelas>>['daftarKelas'];
+	} | null = null;
+
+	if (canSeeRingkasanKelas && sekolahId) {
+		const hasil = await getRingkasanKelas(sekolahId, activeSemesterId);
+		ringkasanKelas = { ringkasan: hasil.ringkasan, daftarKelas: hasil.daftarKelas };
+	}
+
 	return {
 		...parentData,
 		favorites,
 		statistikDashboard,
+		ringkasanKelas,
 		bellActive: bellRow?.isActive === 1,
 		hariSekolah,
 		hariSekolahCustom,

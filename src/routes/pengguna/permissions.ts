@@ -15,6 +15,11 @@ export const groupedUserPermissions = {
 		values: [['manage', 'Kelola Tindakan Cepat']],
 		description: 'Dashboard'
 	},
+
+	overview: {
+		values: [['semua_kelas', 'Ringkasan Semua Kelas']],
+		description: 'Ringkasan Sekolah'
+	},
 	app: {
 		values: [['check_update', 'Cek Pembaruan Aplikasi']],
 		description: 'Aplikasi'
@@ -153,6 +158,10 @@ export const removedLegacyPermissionKeys = new Set([
  * halaman (server) dan menyembunyikan item di drawer (client).
  */
 export const menuRoutePermissions: { path: string; permission: UserPermission }[] = [
+	{ path: '/semua-kelas', permission: 'overview_semua_kelas' },
+	// Impor data induk stayed require sekolah-level permission (cuma admin/kepala sekolah),
+	// meski halamannya berada di bawah /sinkronisasi.
+	{ path: '/sinkronisasi/import-data', permission: 'informasi_umum_sekolah' },
 	{ path: '/sekolah', permission: 'informasi_umum_sekolah' },
 	{ path: '/akademik', permission: 'informasi_umum_akademik' },
 	{ path: '/kelas', permission: 'informasi_umum_kelas' },

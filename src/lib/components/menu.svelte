@@ -51,6 +51,12 @@
 		) {
 			return true;
 		}
+		// Tanda tangan: admin/kepala sekolah mengunggah untuk semua orang, wali kelas
+		// hanya untuk tanda tangannya sendiri.
+		if (path === '/tanda-tangan') {
+			const type = user?.type;
+			return type !== 'admin' && type !== 'kepala_sekolah' && type !== 'wali_kelas';
+		}
 		// Guru on non-own class: sembunyikan menu khusus wali kelas
 		if (user && user.type !== 'admin' && user.type !== 'kepala_sekolah' && kelasAktif?.id != null) {
 			const ownIds = user.ownKelasIds?.length
@@ -160,20 +166,29 @@
 		)
 	);
 
-	function isMenuActive(currentPath: string, menuPath?: string) {
+	function isMenuActive(currentPath: string, menuPath?: string, siblingPaths: string[] = []) {
 		if (!menuPath) return false;
 
 		// match to sub paths
 		const normalizedPath = currentPath.replace(/\/+$/, '');
 		const normalizedItemPath = menuPath.replace(/\/+$/, '');
+		// Item yang lebih spesifik menang: di /sinkronisasi/import-data, menu
+		// "Database Pusat" (/sinkronisasi) tidak boleh ikut ditandai aktif.
+		const adaYangLebihSpesifik = siblingPaths.some((path) => {
+			if (!path) return false;
+			const normalizedSibling = path.replace(/\/+$/, '');
+			return normalizedSibling !== normalizedItemPath && normalizedPath === normalizedSibling;
+		});
+		if (adaYangLebihSpesifik) return false;
+
 		const active =
 			normalizedPath === normalizedItemPath || normalizedPath.startsWith(normalizedItemPath + '/');
 		return active;
 	}
 </script>
 
-{#snippet menu_item(item: MenuItem)}
-	{@const active = isMenuActive(page.url.pathname, item.path)}
+{#snippet menu_item(item: MenuItem, siblingPaths: string[] = [])}
+	{@const active = isMenuActive(page.url.pathname, item.path, siblingPaths)}
 	<li>
 		{#if item.subMenu}
 			<details open={expanded.value || !!search}>
@@ -182,7 +197,10 @@
 				</summary>
 				<ul>
 					{#each item.subMenu as menu (menu.path ?? menu.title)}
-						{@render menu_item(menu)}
+						{@render menu_item(
+							menu,
+							item.subMenu.map((entry) => entry.path ?? '')
+						)}
 					{/each}
 				</ul>
 			</details>

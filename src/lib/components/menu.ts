@@ -1,5 +1,11 @@
 export const appMenuItems: MenuItem[] = [
 	{
+		title: 'Beranda',
+		icon: 'grid',
+		path: '/',
+		tags: ['dashboard', 'statistik', 'ringkasan', 'home', 'beranda']
+	},
+	{
 		title: 'Informasi Umum',
 		icon: 'chart',
 		subMenu: [
@@ -15,7 +21,18 @@ export const appMenuItems: MenuItem[] = [
 			},
 			{
 				title: 'Kelas',
-				path: '/kelas'
+				subMenu: [
+					{
+						title: 'Kelas',
+						path: '/kelas',
+						tags: ['rombel', 'kelas', 'kelola', 'tambah', 'hapus']
+					},
+					{
+						title: 'Semua Kelas',
+						path: '/semua-kelas',
+						tags: ['rekap', 'ringkasan', 'overview', 'seluruh kelas', 'guru', 'murid', 'pindah']
+					}
+				]
 			},
 			{
 				title: 'Murid',
@@ -114,6 +131,11 @@ export const appMenuItems: MenuItem[] = [
 				tags: ['presensi', 'guru', 'hadir', 'sakit', 'izin']
 			},
 			{
+				title: 'Tanda Tangan',
+				path: '/tanda-tangan',
+				tags: ['tanda tangan', 'paraf', 'ttd', 'signature', 'kepala sekolah', 'wali kelas']
+			},
+			{
 				title: 'Dinas Luar',
 				path: '/sppd',
 				tags: ['sppd', 'dinas', 'luar', 'perjalanan', 'surat', 'perintah']
@@ -131,9 +153,19 @@ export const appMenuItems: MenuItem[] = [
 		path: '/cetak'
 	},
 	{
-		title: 'Sinkronisasi Database Pusat',
+		title: 'Sinkronisasi',
 		icon: 'database',
-		path: '/sinkronisasi',
-		tags: ['sinkron', 'sinkronisasi', 'database pusat', 'kirim nilai', 'ambil master']
+		subMenu: [
+			{
+				title: 'Database Pusat',
+				path: '/sinkronisasi',
+				tags: ['sinkron', 'sinkronisasi', 'database pusat', 'kirim nilai', 'ambil master']
+			},
+			{
+				title: 'Impor Data',
+				path: '/sinkronisasi/import-data',
+				tags: ['import', 'impor', 'excel', 'data pokok', 'murid', 'kelas', 'pegawai']
+			}
+		]
 	}
 ];

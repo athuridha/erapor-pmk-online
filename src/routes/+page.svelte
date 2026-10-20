@@ -13,6 +13,7 @@
 	import Icon from '$lib/components/icon.svelte';
 	import { showModal } from '$lib/components/global-modal.svelte';
 	import PresensiGuruModal from '$lib/components/presensi-guru/presensi-guru-modal.svelte';
+	import RingkasanKelasCard from '$lib/components/dashboard/ringkasan-kelas-card.svelte';
 	import { getHariSekolahList, isSchoolDay } from '$lib/hari-sekolah';
 
 	let { data } = $props();
@@ -377,6 +378,12 @@
 		<FavoriteMenusCard favorites={data.favorites ?? []} />
 		<RombelMuridStats rombel={statistikDashboard.rombel} murid={statistikDashboard.murid} />
 		<MapelEkstrakurikulerStats mapel={mapelStats} ekstrakurikuler={ekstrakurikulerStats} />
+		{#if data.ringkasanKelas}
+			<RingkasanKelasCard
+				ringkasan={data.ringkasanKelas.ringkasan}
+				daftarKelas={data.ringkasanKelas.daftarKelas}
+			/>
+		{/if}
 	</div>
 
 	<!-- Kolom 2: Progress & Aksi -->
