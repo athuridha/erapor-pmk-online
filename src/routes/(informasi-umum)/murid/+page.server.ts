@@ -3,6 +3,7 @@ import { tableKelas, tableMurid } from '$lib/server/db/schema.js';
 import { fail, redirect } from '@sveltejs/kit';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { buildKelasContext } from '$lib/server/route-utils';
+import { pindahkanMuridKelas } from '$lib/server/murid-pindah-kelas';
 import { isAuthorizedUser } from '../../pengguna/permissions';
 
 export async function load({ locals, url, depends, parent }) {
@@ -150,61 +151,10 @@ export const actions = {
 		];
 		const kelasId = Number(formData.get('kelasId'));
 
-		if (!muridIds.length) {
-			return fail(400, { fail: 'Pilih minimal satu murid untuk dipindahkan' });
+		const hasil = await pindahkanMuridKelas({ sekolahId, muridIds, kelasId });
+		if (hasil.fail) {
+			return fail(400, { fail: hasil.fail });
 		}
-		if (!Number.isInteger(kelasId) || kelasId <= 0) {
-			return fail(400, { fail: 'Pilih kelas tujuan' });
-		}
-
-		const kelasTujuan = await db.query.tableKelas.findFirst({
-			columns: { id: true, nama: true, semesterId: true },
-			where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
-		});
-		if (!kelasTujuan) {
-			return fail(404, { fail: 'Kelas tujuan tidak ditemukan di sekolah ini' });
-		}
-
-		const muridList = await db.query.tableMurid.findMany({
-			columns: { id: true, nama: true, kelasId: true, semesterId: true },
-			where: and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, muridIds))
-		});
-		if (muridList.length !== muridIds.length) {
-			return fail(400, {
-				fail: 'Sebagian murid tidak ditemukan. Muat ulang halaman lalu coba lagi.'
-			});
-		}
-
-		const bedaSemester = muridList.filter((murid) => murid.semesterId !== kelasTujuan.semesterId);
-		if (bedaSemester.length) {
-			return fail(400, {
-				fail: `Kelas ${kelasTujuan.nama} berada di semester berbeda. Pindah kelas hanya bisa dalam semester yang sama.`
-			});
-		}
-
-		const akanPindah = muridList.filter((murid) => murid.kelasId !== kelasTujuan.id);
-		if (!akanPindah.length) {
-			return { message: `Semua murid sudah berada di kelas ${kelasTujuan.nama}` };
-		}
-
-		await db
-			.update(tableMurid)
-			.set({ kelasId: kelasTujuan.id, updatedAt: new Date().toISOString() })
-			.where(
-				and(
-					eq(tableMurid.sekolahId, sekolahId),
-					inArray(
-						tableMurid.id,
-						akanPindah.map((murid) => murid.id)
-					)
-				)
-			);
-
-		const dilewati = muridList.length - akanPindah.length;
-		return {
-			message: `${akanPindah.length} murid dipindahkan ke kelas ${kelasTujuan.nama}${
-				dilewati ? ` (${dilewati} sudah berada di kelas ini)` : ''
-			}`
-		};
+		return { message: hasil.message };
 	}
 };

@@ -4,6 +4,7 @@ import {
 	tableKelas,
 	tableMataPelajaran,
 	tableMurid,
+	tablePegawai,
 	tableSemester,
 	tableTahunAjaran
 } from '$lib/server/db/schema';
@@ -17,8 +18,8 @@ import {
 import { determinePredikat } from '$lib/rapor-modes';
 
 /**
- * Rekap nilai keseluruhan satu kelas: nilai tiap murid dari semester pertama
- * ia masuk sekolah sampai semester terakhir.
+ * Rekap nilai keseluruhan: nilai tiap murid dari semester pertama ia masuk
+ * sekolah sampai semester terakhir, untuk semua murid sekolah.
  *
  * Semuanya berasal dari database:
  * - Semester & kelas dari `tahun_ajaran`, `semester`, `kelas`.
@@ -26,6 +27,8 @@ import { determinePredikat } from '$lib/rapor-modes';
  *   sekolah (bila komponen ada), jika tidak dipakai nilai akhir tersimpan.
  * - Ambang kriteria (Cukup/Baik) mengikuti `sekolah.rapor_kriteria_*` atau
  *   penimpaan per kelas di `kelas.rapor_kriteria_*`.
+ * - Filter mata pelajaran & guru memakai mapel + pengampu yang tercatat di
+ *   database (bukan daftar hard-coded).
  *
  * Catatan data: baris `murid` dibuat per semester (unik pada sekolah +
  * semester + NIS), jadi riwayat seorang murid dicari dengan mencocokkan
@@ -52,9 +55,11 @@ export interface SelRekap {
 
 export interface BarisRekap {
 	key: string;
+	muridId: number;
 	nis: string;
 	nisn: string;
 	nama: string;
+	kelasSekarang: string | null;
 	perSemester: SelRekap[];
 	rataKumulatif: number | null;
 	kriteriaKumulatif: string | null;
@@ -74,6 +79,37 @@ export interface OpsiKelas {
 	nama: string;
 	semesterLabel: string;
 	fase: string | null;
+	semesterId: number;
+	semesterNama: string;
+	tahunAjaranNama: string;
+}
+
+export interface OpsiMapel {
+	nama: string;
+	guru: Array<{ id: number; nama: string }>;
+}
+
+export interface OpsiGuru {
+	id: number;
+	nama: string;
+	mapel: string[];
+}
+
+export interface RekapMapel {
+	nama: string;
+	jumlahNilai: number;
+	rataRata: number | null;
+	kelas: number;
+	guru: string[];
+}
+
+export interface RekapGuru {
+	id: number;
+	nama: string;
+	mapel: string[];
+	jumlahNilai: number;
+	jumlahMurid: number;
+	rataRata: number | null;
 }
 
 export interface RekapKeseluruhan {
@@ -83,6 +119,10 @@ export interface RekapKeseluruhan {
 	ringkasan: RingkasanSemester[];
 	totalMurid: number;
 	totalDinilai: number;
+	daftarMapel: OpsiMapel[];
+	daftarGuru: OpsiGuru[];
+	rekapMapel: RekapMapel[];
+	rekapGuru: RekapGuru[];
 	konfigurasi: {
 		bobotLingkup: number;
 		bobotSts: number;
@@ -90,6 +130,15 @@ export interface RekapKeseluruhan {
 		kriteriaCukup: number;
 		kriteriaBaik: number;
 	};
+}
+
+export interface OpsiRekap {
+	/** Batasi ke satu kelas. Null = semua murid sekolah. */
+	kelasId?: number | null;
+	/** Filter satu mata pelajaran (nama mapel kanonik). */
+	filterMapel?: string | null;
+	/** Filter mata pelajaran yang diampu guru tertentu. */
+	pengampuId?: number | null;
 }
 
 type Akumulator = { sum: number; count: number; sumKkm: number };
@@ -114,18 +163,18 @@ function identityOf(nis: string | null | undefined, nisn: string | null | undefi
 
 const collator = new Intl.Collator('id', { numeric: true, sensitivity: 'base' });
 
-function semesterInfoDari(list: SemesterColumn[]) {
-	return list.map((row) => [row.semesterId, row] as const);
-}
-
 function kosong(konfigurasi?: KonfigurasiNilai): RekapKeseluruhan {
 	return {
-		kelas: { id: 0, nama: '-', fase: null },
+		kelas: { id: 0, nama: 'Semua Kelas', fase: null },
 		semester: [],
 		baris: [],
 		ringkasan: [],
 		totalMurid: 0,
 		totalDinilai: 0,
+		daftarMapel: [],
+		daftarGuru: [],
+		rekapMapel: [],
+		rekapGuru: [],
 		konfigurasi: {
 			bobotLingkup: konfigurasi?.bobotAkhir.lingkup ?? 60,
 			bobotSts: konfigurasi?.bobotAkhir.sts ?? 20,
@@ -184,6 +233,12 @@ export async function daftarKelasSekolah(sekolahId: number): Promise<OpsiKelas[]
 	const labelSemester = new Map(semuaSemester.map((sem) => [sem.semesterId, sem.label]));
 	const kelas = await db.query.tableKelas.findMany({
 		columns: { id: true, nama: true, fase: true, semesterId: true },
+		with: {
+			semester: {
+				columns: { id: true, nama: true },
+				with: { tahunAjaran: { columns: { nama: true } } }
+			}
+		},
 		where: eq(tableKelas.sekolahId, sekolahId)
 	});
 	return kelas
@@ -191,6 +246,9 @@ export async function daftarKelasSekolah(sekolahId: number): Promise<OpsiKelas[]
 			id: row.id,
 			nama: row.nama,
 			fase: row.fase ?? null,
+			semesterId: row.semesterId,
+			semesterNama: row.semester?.nama ?? '',
+			tahunAjaranNama: row.semester?.tahunAjaran?.nama ?? '',
 			semesterLabel: labelSemester.get(row.semesterId) ?? '-'
 		}))
 		.sort(
@@ -201,7 +259,7 @@ export async function daftarKelasSekolah(sekolahId: number): Promise<OpsiKelas[]
 
 export async function buildRekapKeseluruhan(
 	sekolahId: number,
-	kelasId: number
+	opsi: OpsiRekap = {}
 ): Promise<RekapKeseluruhan> {
 	const konfigurasi = await loadKonfigurasiNilai(sekolahId);
 	const konfigurasiDasar = {
@@ -211,12 +269,15 @@ export async function buildRekapKeseluruhan(
 		kriteriaCukup: konfigurasi.kriteriaCukup,
 		kriteriaBaik: konfigurasi.kriteriaBaik
 	};
+	const kelasId = opsi.kelasId ?? null;
 
-	const kelasRow = await db.query.tableKelas.findFirst({
-		columns: { id: true, nama: true, fase: true, semesterId: true },
-		where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
-	});
-	if (!kelasRow) return kosong(konfigurasi);
+	const kelasRow = kelasId
+		? await db.query.tableKelas.findFirst({
+				columns: { id: true, nama: true, fase: true, semesterId: true },
+				where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
+			})
+		: null;
+	if (kelasId && !kelasRow) return kosong(konfigurasi);
 
 	const kelasInfo = await db.query.tableKelas.findMany({
 		columns: {
@@ -230,15 +291,18 @@ export async function buildRekapKeseluruhan(
 	});
 	const kelasMap = new Map(kelasInfo.map((row) => [row.id, row]));
 
-	// 1) Kohort: murid di kelas yang dipilih.
+	// 1) Kohort: murid kelas terpilih, atau semua murid sekolah.
 	const cohort = await db.query.tableMurid.findMany({
 		columns: { id: true, nama: true, nis: true, nisn: true, agama: true, kelasId: true },
-		where: and(eq(tableMurid.sekolahId, sekolahId), eq(tableMurid.kelasId, kelasId))
+		where: and(
+			eq(tableMurid.sekolahId, sekolahId),
+			kelasId ? eq(tableMurid.kelasId, kelasId) : undefined
+		)
 	});
 
 	const identitas = new Map<
 		string,
-		{ nama: string; nis: string; nisn: string; agama: string | null }
+		{ nama: string; nis: string; nisn: string; agama: string | null; muridId: number }
 	>();
 	for (const murid of cohort) {
 		const key = identityOf(murid.nis, murid.nisn);
@@ -247,13 +311,16 @@ export async function buildRekapKeseluruhan(
 			nama: murid.nama,
 			nis: (murid.nis ?? '').trim(),
 			nisn: (murid.nisn ?? '').trim(),
-			agama: murid.agama ?? null
+			agama: murid.agama ?? null,
+			muridId: murid.id
 		});
 	}
 	if (!identitas.size) {
 		return {
 			...kosong(konfigurasi),
-			kelas: { id: kelasRow.id, nama: kelasRow.nama, fase: kelasRow.fase ?? null },
+			kelas: kelasRow
+				? { id: kelasRow.id, nama: kelasRow.nama, fase: kelasRow.fase ?? null }
+				: { id: 0, nama: 'Semua Kelas', fase: null },
 			konfigurasi: konfigurasiDasar
 		};
 	}
@@ -283,16 +350,76 @@ export async function buildRekapKeseluruhan(
 
 	// 3) Semester (urut kronologis) dari database.
 	const semuaSemester = await daftarSemester(sekolahId);
-	const semesterLookup = new Map(semesterInfoDari(semuaSemester));
+	const semesterLookup = new Map(semuaSemester.map((row) => [row.semesterId, row]));
 
-	// 4) Mapel per kelas + semester mapel tersebut.
+	// 4) Mapel per kelas + semester mapel tersebut + daftar mapel & guru.
 	const kelasIds = kelasInfo.map((row) => row.id);
 	const semuaMapel = kelasIds.length
 		? await db.query.tableMataPelajaran.findMany({
-				columns: { id: true, kelasId: true, nama: true, urutan: true, kkm: true },
+				columns: {
+					id: true,
+					kelasId: true,
+					nama: true,
+					urutan: true,
+					kkm: true,
+					pengampuId: true
+				},
 				where: inArray(tableMataPelajaran.kelasId, kelasIds)
 			})
 		: [];
+
+	const pengampuIds = [
+		...new Set(semuaMapel.map((row) => row.pengampuId).filter((v) => v != null))
+	];
+	const pegawai = pengampuIds.length
+		? await db.query.tablePegawai.findMany({
+				columns: { id: true, nama: true },
+				where: inArray(tablePegawai.id, pengampuIds as number[])
+			})
+		: [];
+	const namaGuru = new Map(pegawai.map((row) => [row.id, row.nama]));
+
+	const mapelGuru = new Map<string, Map<number, string>>();
+	const guruMapel = new Map<number, Set<string>>();
+	const semuaNamaMapel = new Set<string>();
+	for (const mapel of semuaMapel) {
+		const nama = mapel.nama ?? '';
+		if (!nama) continue;
+		semuaNamaMapel.add(nama);
+		if (mapel.pengampuId == null) continue;
+		const daftarGuru = mapelGuru.get(nama) ?? new Map<number, string>();
+		daftarGuru.set(mapel.pengampuId, namaGuru.get(mapel.pengampuId) ?? '-');
+		mapelGuru.set(nama, daftarGuru);
+		const mapelGuruList = guruMapel.get(mapel.pengampuId) ?? new Set<string>();
+		mapelGuruList.add(nama);
+		guruMapel.set(mapel.pengampuId, mapelGuruList);
+	}
+
+	const daftarMapel: OpsiMapel[] = [...semuaNamaMapel]
+		.map((nama) => ({
+			nama,
+			guru: [...(mapelGuru.get(nama)?.entries() ?? [])].map(([id, namaGuru]) => ({
+				id,
+				nama: namaGuru
+			}))
+		}))
+		.sort((a, b) => collator.compare(a.nama, b.nama));
+	const daftarGuru: OpsiGuru[] = [...guruMapel.entries()]
+		.map(([id, mapel]) => ({
+			id,
+			nama: namaGuru.get(id) ?? '-',
+			mapel: [...mapel].sort((a, b) => collator.compare(a, b))
+		}))
+		.sort((a, b) => collator.compare(a.nama, b.nama));
+
+	// Filter mata pelajaran: satu mapel, atau seluruh mapel milik seorang guru.
+	const filterNamaMapel = new Set<string>();
+	if (opsi.filterMapel) filterNamaMapel.add(opsi.filterMapel);
+	if (opsi.pengampuId != null) {
+		for (const nama of guruMapel.get(opsi.pengampuId) ?? []) filterNamaMapel.add(nama);
+	}
+	const adaFilter = filterNamaMapel.size > 0;
+
 	const semesterMapel = new Map<number, number>();
 	const kkmMapel = new Map<number, number>();
 	// Katalog mapel per jenjang (tingkat kelas) per semester. Mapel di database
@@ -354,12 +481,20 @@ export async function buildRekapKeseluruhan(
 				})
 			: [];
 
+	const namaMapelId = new Map(semuaMapel.map((row) => [row.id, row.nama ?? '']));
+	const pengampuMapelId = new Map(semuaMapel.map((row) => [row.id, row.pengampuId ?? null]));
+	const kelasMapelId = new Map(semuaMapel.map((row) => [row.id, row.kelasId]));
 	const akumulator = new Map<string, Akumulator>();
+	// Agregat per mata pelajaran dan per guru untuk ringkasan dashboard.
+	const akumulatorMapel = new Map<string, { sum: number; count: number; kelas: Set<number> }>();
+	const akumulatorGuru = new Map<number, { sum: number; count: number; murid: Set<number> }>();
 	for (const row of nilaiRecords) {
 		const key = muridCohort.get(row.muridId);
 		if (!key) continue;
 		const semesterId = semesterMapel.get(row.mataPelajaranId);
 		if (!semesterId) continue;
+		const namaMapel = namaMapelId.get(row.mataPelajaranId) ?? '';
+		if (adaFilter && !filterNamaMapel.has(namaMapel)) continue;
 		const nilai =
 			hitungNilaiAkhirSumatif(
 				{ naLingkup: row.naLingkup, sts: row.sts, sas: row.sas },
@@ -372,16 +507,74 @@ export async function buildRekapKeseluruhan(
 		current.count += 1;
 		current.sumKkm += kkmMapel.get(row.mataPelajaranId) ?? 0;
 		akumulator.set(mapKey, current);
+
+		const perMapel = akumulatorMapel.get(namaMapel) ?? {
+			sum: 0,
+			count: 0,
+			kelas: new Set<number>()
+		};
+		perMapel.sum += nilai;
+		perMapel.count += 1;
+		const kelasDariMapel = kelasMapelId.get(row.mataPelajaranId);
+		if (kelasDariMapel) perMapel.kelas.add(kelasDariMapel);
+		akumulatorMapel.set(namaMapel, perMapel);
+
+		const pengampu = pengampuMapelId.get(row.mataPelajaranId);
+		if (pengampu != null) {
+			const perGuru = akumulatorGuru.get(pengampu) ?? {
+				sum: 0,
+				count: 0,
+				murid: new Set<number>()
+			};
+			perGuru.sum += nilai;
+			perGuru.count += 1;
+			perGuru.murid.add(row.muridId);
+			akumulatorGuru.set(pengampu, perGuru);
+		}
 	}
+
+	const rekapMapel: RekapMapel[] = [...akumulatorMapel.entries()]
+		.map(([nama, data]) => ({
+			nama,
+			jumlahNilai: data.count,
+			rataRata: data.count > 0 ? round2(data.sum / data.count) : null,
+			kelas: data.kelas.size,
+			guru: [...(mapelGuru.get(nama)?.values() ?? [])].sort((a, b) => collator.compare(a, b))
+		}))
+		.sort((a, b) => collator.compare(a.nama, b.nama));
+
+	const rekapGuru: RekapGuru[] = [...akumulatorGuru.entries()]
+		.map(([id, data]) => ({
+			id,
+			nama: namaGuru.get(id) ?? '-',
+			mapel: [...(guruMapel.get(id) ?? [])].sort((a, b) => collator.compare(a, b)),
+			jumlahNilai: data.count,
+			jumlahMurid: data.murid.size,
+			rataRata: data.count > 0 ? round2(data.sum / data.count) : null
+		}))
+		.sort((a, b) => collator.compare(a.nama, b.nama));
 
 	// 6) Kelas yang diikuti murid pada tiap semester.
 	const kelasPerSemesterMurid = new Map<string, number>();
 	for (const [muridId, key] of muridCohort) {
-		const kelasId = kelasMurid.get(muridId);
-		if (!kelasId) continue;
-		const kelas = kelasMap.get(kelasId);
+		const kelasIdMurid = kelasMurid.get(muridId);
+		if (!kelasIdMurid) continue;
+		const kelas = kelasMap.get(kelasIdMurid);
 		if (!kelas) continue;
-		kelasPerSemesterMurid.set(`${key}|${kelas.semesterId}`, kelasId);
+		kelasPerSemesterMurid.set(`${key}|${kelas.semesterId}`, kelasIdMurid);
+	}
+
+	// 6b) Baris murid pada semester terbaru — dipakai saat memindahkan kelas
+	//     (yang harus mengubah baris semester berjalan, bukan baris lama).
+	const muridAktif = new Map<string, { id: number; urut: number }>();
+	for (const [muridId, key] of muridCohort) {
+		const kelasIdMurid = kelasMurid.get(muridId);
+		const semesterId = kelasIdMurid ? kelasMap.get(kelasIdMurid)?.semesterId : undefined;
+		const urut = semesterId ? (semesterLookup.get(semesterId)?.urut ?? 0) : 0;
+		const sekarang = muridAktif.get(key);
+		if (!sekarang || urut > sekarang.urut) {
+			muridAktif.set(key, { id: muridId, urut });
+		}
 	}
 
 	// 7) Semester yang dipakai: dari semester pertama sampai semester terakhir
@@ -400,7 +593,13 @@ export async function buildRekapKeseluruhan(
 	if (!kolomSemester.length) {
 		return {
 			...kosong(konfigurasi),
-			kelas: { id: kelasRow.id, nama: kelasRow.nama, fase: kelasRow.fase ?? null },
+			kelas: kelasRow
+				? { id: kelasRow.id, nama: kelasRow.nama, fase: kelasRow.fase ?? null }
+				: { id: 0, nama: 'Semua Kelas', fase: null },
+			daftarMapel,
+			daftarGuru,
+			rekapMapel,
+			rekapGuru,
 			konfigurasi: konfigurasiDasar
 		};
 	}
@@ -415,14 +614,17 @@ export async function buildRekapKeseluruhan(
 		if (cached !== undefined) return cached;
 		const katalog =
 			katalogPerJenjang.get(`${semesterId}|${jenjang}`) ?? katalogPerSemester.get(semesterId) ?? [];
-		const total = relevanMapelUntukMurid(katalog, agama).length;
+		const katalogTersaring = adaFilter
+			? katalog.filter((row) => filterNamaMapel.has(row.nama))
+			: katalog;
+		const total = relevanMapelUntukMurid(katalogTersaring, agama).length;
 		cacheTotalMapel.set(cacheKey, total);
 		return total;
 	}
 
 	/** Ambang kriteria kelas (penimpaan per kelas) atau bawaan sekolah. */
-	function kriteriaKelas(kelasId: number | null) {
-		const kelas = kelasId ? kelasMap.get(kelasId) : null;
+	function kriteriaKelas(kelasIdKelas: number | null) {
+		const kelas = kelasIdKelas ? kelasMap.get(kelasIdKelas) : null;
 		return {
 			cukup: Number(kelas?.raporKriteriaCukup ?? konfigurasi.kriteriaCukup ?? 85),
 			baik: Number(kelas?.raporKriteriaBaik ?? konfigurasi.kriteriaBaik ?? 95)
@@ -437,19 +639,19 @@ export async function buildRekapKeseluruhan(
 
 	for (const [key, info] of identitas) {
 		const perSemester: SelRekap[] = kolomSemester.map((sem) => {
-			const kelasId = kelasPerSemesterMurid.get(`${key}|${sem.semesterId}`) ?? null;
-			if (kelasId) {
+			const kelasIdMurid = kelasPerSemesterMurid.get(`${key}|${sem.semesterId}`) ?? null;
+			if (kelasIdMurid) {
 				const hitung = kelasPerSemesterHitung.get(sem.semesterId) ?? new Map<number, number>();
-				hitung.set(kelasId, (hitung.get(kelasId) ?? 0) + 1);
+				hitung.set(kelasIdMurid, (hitung.get(kelasIdMurid) ?? 0) + 1);
 				kelasPerSemesterHitung.set(sem.semesterId, hitung);
 			}
-			const kelasNama = kelasId ? (kelasMap.get(kelasId)?.nama ?? null) : null;
+			const kelasNama = kelasIdMurid ? (kelasMap.get(kelasIdMurid)?.nama ?? null) : null;
 			const jenjang = jenjangKelas(kelasNama);
 			const akum = akumulator.get(`${key}|${sem.semesterId}`);
 			const total = jenjang ? totalMapelUntuk(sem.semesterId, jenjang, info.agama) : 0;
 			const nilai = akum && akum.count > 0 ? round2(akum.sum / akum.count) : null;
 			const rataKkm = akum && akum.count > 0 ? round2(akum.sumKkm / akum.count) : null;
-			const ambang = kriteriaKelas(kelasId);
+			const ambang = kriteriaKelas(kelasIdMurid);
 			return {
 				semesterId: sem.semesterId,
 				kelasNama,
@@ -480,16 +682,21 @@ export async function buildRekapKeseluruhan(
 
 		const rataKumulatif = countKumulatif > 0 ? round2(sumKumulatif / countKumulatif) : null;
 		const rataKkmKumulatif = countKumulatif > 0 ? round2(sumKkmKumulatif / countKumulatif) : null;
+		const semesterTerakhirMurid = kolomSemester[kolomSemester.length - 1];
 		const ambangKumulatif = kriteriaKelas(
-			kelasPerSemesterMurid.get(`${key}|${kolomSemester[kolomSemester.length - 1].semesterId}`) ??
-				null
+			semesterTerakhirMurid
+				? (kelasPerSemesterMurid.get(`${key}|${semesterTerakhirMurid.semesterId}`) ?? null)
+				: null
 		);
+		const kelasSekarangId = info.muridId ? kelasMurid.get(info.muridId) : null;
 
 		baris.push({
 			key,
+			muridId: muridAktif.get(key)?.id ?? info.muridId,
 			nis: info.nis,
 			nisn: info.nisn,
 			nama: info.nama,
+			kelasSekarang: kelasSekarangId ? (kelasMap.get(kelasSekarangId)?.nama ?? null) : null,
 			perSemester,
 			rataKumulatif,
 			kriteriaKumulatif:
@@ -537,7 +744,9 @@ export async function buildRekapKeseluruhan(
 	});
 
 	return {
-		kelas: { id: kelasRow.id, nama: kelasRow.nama, fase: kelasRow.fase ?? null },
+		kelas: kelasRow
+			? { id: kelasRow.id, nama: kelasRow.nama, fase: kelasRow.fase ?? null }
+			: { id: 0, nama: 'Semua Kelas', fase: null },
 		semester: kolomSemester,
 		baris,
 		ringkasan: kolomSemester.map((sem) => {
@@ -559,6 +768,10 @@ export async function buildRekapKeseluruhan(
 		}),
 		totalMurid: baris.length,
 		totalDinilai: baris.filter((row) => row.totalDinilai > 0).length,
+		daftarMapel,
+		daftarGuru,
+		rekapMapel,
+		rekapGuru,
 		konfigurasi: konfigurasiDasar
 	};
 }

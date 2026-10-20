@@ -1,6 +1,6 @@
 import { buildRekapKeseluruhan } from '$lib/server/rekap-keseluruhan';
+import { rekapKeExcel } from '$lib/server/rekap-export';
 import { canAccessKelas } from '$lib/server/kelas-akses';
-import { writeAoaToBuffer } from '$lib/utils/excel.js';
 import { cookieNames } from '$lib/utils.js';
 import { isAuthorizedUser } from '../../../../pengguna/permissions';
 import { error } from '@sveltejs/kit';
@@ -28,45 +28,17 @@ export async function GET({ cookies, locals, url }) {
 		throw error(403, 'Anda tidak memiliki akses ke kelas ini.');
 	}
 
-	const rekap = await buildRekapKeseluruhan(sekolahId, kelasAktifId);
+	const filterMapel = url.searchParams.get('mapel')?.trim() || null;
+	const paramPengampu = Number(url.searchParams.get('pengampu_id') ?? '');
+	const pengampuId = Number.isInteger(paramPengampu) && paramPengampu > 0 ? paramPengampu : null;
 
-	const rows: Array<Array<unknown>> = [
-		['Rekap Nilai Keseluruhan', rekap.kelas.nama],
-		[],
-		[
-			'No',
-			'Nama',
-			'NIS',
-			'NISN',
-			...rekap.semester.map((sem) => sem.label),
-			'Rata-rata Kumulatif',
-			'Peringkat'
-		]
-	];
-
-	rekap.baris.forEach((row, index) => {
-		rows.push([
-			index + 1,
-			row.nama,
-			row.nis,
-			row.nisn,
-			...row.perSemester.map((sel) => (sel.nilai == null ? '' : sel.nilai)),
-			row.rataKumulatif ?? '',
-			row.peringkat
-		]);
+	const rekap = await buildRekapKeseluruhan(sekolahId, {
+		kelasId: kelasAktifId,
+		filterMapel,
+		pengampuId
 	});
 
-	rows.push([
-		'',
-		'Rata-rata Kelas',
-		'',
-		'',
-		...rekap.ringkasan.map((item) => (item.nilai == null ? '' : item.nilai)),
-		'',
-		''
-	]);
-
-	const buffer = await writeAoaToBuffer(rows);
+	const buffer = await rekapKeExcel(rekap, 'Rekap Nilai Keseluruhan');
 	const namaFile = `Rekap Nilai Keseluruhan ${rekap.kelas.nama}.xlsx`.replace(/[\\/:*?"<>|]/g, '-');
 
 	return new Response(new Uint8Array(buffer), {

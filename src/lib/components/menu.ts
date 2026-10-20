@@ -6,6 +6,12 @@ export const appMenuItems: MenuItem[] = [
 		tags: ['dashboard', 'statistik', 'ringkasan', 'home', 'beranda']
 	},
 	{
+		title: 'Dashboard Admin',
+		icon: 'activity',
+		path: '/dashboard-admin',
+		tags: ['dashboard', 'admin', 'ringkasan', 'statistik', 'seluruh', 'murid', 'mapel', 'guru']
+	},
+	{
 		title: 'Informasi Umum',
 		icon: 'chart',
 		subMenu: [
