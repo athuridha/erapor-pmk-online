@@ -1,7 +1,9 @@
 ﻿import { MASTER_DATA } from '$lib/admin/master-data';
-import { error, redirect } from '@sveltejs/kit';
+import { loadBarisMaster } from '$lib/admin/master-data.server';
+import { error } from '@sveltejs/kit';
 
 export const load = async ({ locals }) => {
+	const meta: PageMeta = { title: 'Master Data' };
 	const sekolahId = locals.sekolah?.id ?? null;
 	const user = locals.user;
 
@@ -12,7 +14,11 @@ export const load = async ({ locals }) => {
 		throw error(403, 'Master data hanya bisa dikelola admin dan kepala sekolah.');
 	}
 
-	// Navigasi master data memakai sub menu di sidebar; halaman ini hanya
-	// penerusan ke entitas pertama.
-	throw redirect(303, `/master-data/${MASTER_DATA[0].key}`);
+	const daftar = [];
+	for (const entitas of MASTER_DATA) {
+		const hasil = await loadBarisMaster(sekolahId, entitas.key, { perPage: 1 });
+		daftar.push({ ...entitas, jumlah: hasil.total });
+	}
+
+	return { meta, daftar };
 };

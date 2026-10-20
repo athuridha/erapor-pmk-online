@@ -29,6 +29,7 @@
 	const halamanSekarang = $derived(data.filter?.page ?? 1);
 	const nomorHalaman = $derived(buildPageNumbers(halamanSekarang, totalHalaman));
 	const idsHalaman = $derived(baris.map((row) => Number(row.id ?? 0)).filter((id) => id > 0));
+	const barisTampil = $derived(baris.length);
 
 	function nilaiField(key: string): string {
 		const sumber = barisEdit ?? baris[0] ?? {};
@@ -100,9 +101,9 @@
 	}
 </script>
 
-<div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+<div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 	<div>
-		<div class="breadcrumbs mb-1 text-sm">
+		<div class="breadcrumbs mb-0.5 text-xs">
 			<ul>
 				<li><a href="/master-data">Master Data</a></li>
 				{#if entitas}<li>{entitas.judul}</li>{/if}
@@ -113,7 +114,7 @@
 			{entitas?.judul ?? 'Master Data'}
 		</h2>
 		{#if entitas}
-			<p class="text-base-content/80 block text-sm">{entitas.deskripsi}</p>
+			<p class="text-base-content/60 mt-0.5 block text-sm">{entitas.deskripsi}</p>
 		{/if}
 	</div>
 	{#if entitas}
@@ -122,7 +123,11 @@
 				<FormEnhance action="?/hapusMassal" showToast={false} onsuccess={handleHapus}>
 					{#snippet children({ submitting })}
 						<input type="hidden" name="ids" value={JSON.stringify(terpilih)} />
-						<button type="submit" class="btn btn-error shadow-none" disabled={submitting}>
+						<button
+							type="submit"
+							class="btn btn-error btn-soft rounded-xl shadow-none"
+							disabled={submitting}
+						>
 							<Icon name="del" />
 							Hapus {terpilih.length} Terpilih
 						</button>
@@ -131,7 +136,7 @@
 			{/if}
 			{#if entitas.formPengguna}
 				<a
-					class="btn btn-primary shadow-none max-sm:w-full"
+					class="btn btn-primary max-sm:w-full rounded-xl shadow-sm shadow-primary/20"
 					href={entitas.tambahPath ?? '/pengguna/form'}
 				>
 					<Icon name="plus" />
@@ -140,7 +145,7 @@
 			{:else}
 				<button
 					type="button"
-					class="btn btn-primary shadow-none max-sm:w-full"
+					class="btn btn-primary max-sm:w-full rounded-xl shadow-sm shadow-primary/20"
 					onclick={bukaTambah}
 				>
 					<Icon name="plus" />
@@ -150,7 +155,7 @@
 			{#if entitas.key === 'mata_pelajaran'}
 				<button
 					type="button"
-					class="btn btn-soft btn-primary shadow-none max-sm:w-full"
+					class="btn btn-ghost max-sm:w-full rounded-xl"
 					onclick={() => {
 						kelasTerpilihMassal = [];
 						bulkTerbuka = true;
@@ -163,7 +168,7 @@
 			{#if entitas.key === 'kelas'}
 				<button
 					type="button"
-					class="btn btn-soft shadow-none max-sm:w-full"
+					class="btn btn-ghost max-sm:w-full rounded-xl"
 					onclick={() => (pindahMuridTerbuka = true)}
 				>
 					<Icon name="move" />
@@ -174,73 +179,94 @@
 	{/if}
 </div>
 
-<div
-	class="bg-base-100 dark:bg-base-200 mb-4 flex flex-col gap-3 rounded-md p-4 shadow-md sm:flex-row sm:items-end sm:justify-between"
->
-	<div>
-		<h3 class="font-bold">{entitas?.judul}</h3>
-		<p class="text-base-content/70 text-sm">{entitas?.deskripsi}</p>
+<div class="mb-4 grid gap-3 sm:grid-cols-3">
+	<div class="rounded-2xl border border-base-200/60 bg-base-100 p-4">
+		<p class="text-base-content/50 text-xs font-medium tracking-wide uppercase">Total Data</p>
+		<p class="mt-1 text-2xl font-bold tracking-tight">{total}</p>
+		<p class="text-base-content/50 text-xs">
+			baris {entitas?.judul.toLowerCase() ?? 'master data'}
+		</p>
 	</div>
-
-	<label class="form-control w-full max-w-sm">
-		<span class="label-text mb-1 text-sm">Cari data</span>
-		<label class="input input-bordered flex w-full items-center gap-2">
-			<Icon name="search" />
-			<input
-				type="search"
-				bind:value={searchTerm}
-				spellcheck="false"
-				placeholder="Cari data..."
-				autocomplete="off"
-				onchange={(event) => applySearch((event.currentTarget as HTMLInputElement).value)}
-			/>
-		</label>
-	</label>
+	<div class="rounded-2xl border border-base-200/60 bg-base-100 p-4">
+		<p class="text-base-content/50 text-xs font-medium tracking-wide uppercase">Terpilih</p>
+		<p class="mt-1 text-2xl font-bold tracking-tight">{terpilih.length}</p>
+		<p class="text-base-content/50 text-xs">baris ditandai</p>
+	</div>
+	<div class="rounded-2xl border border-base-200/60 bg-base-100 p-4">
+		<p class="text-base-content/50 text-xs font-medium tracking-wide uppercase">Halaman</p>
+		<p class="mt-1 text-2xl font-bold tracking-tight">{halamanSekarang} / {totalHalaman}</p>
+		<p class="text-base-content/50 text-xs">{perHalaman} baris per halaman</p>
+	</div>
 </div>
 
-{#if entitas}
-	<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
-		<table class="border-base-200 table border dark:border-none">
-			<thead>
-				<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-					<th class="w-10 text-center">
+<form
+	class="mt-4 flex flex-col gap-2 sm:flex-row"
+	data-sveltekit-keepfocus
+	data-sveltekit-replacestate
+	onsubmit={(event) => event.preventDefault()}
+>
+	<label
+		class="input bg-base-200/60 w-full max-w-sm rounded-xl border border-transparent transition focus:border-primary/40 focus:bg-base-100"
+	>
+		<Icon name="search" />
+		<input
+			type="search"
+			name="q"
+			bind:value={searchTerm}
+			spellcheck="false"
+			placeholder={`Cari ${entitas?.judul.toLowerCase() ?? 'data'}...`}
+			autocomplete="off"
+			onchange={(event) => applySearch((event.currentTarget as HTMLInputElement).value)}
+		/>
+	</label>
+</form>
+
+<div class="mt-4 overflow-x-auto rounded-2xl border border-base-200/60 bg-base-100 shadow-sm">
+	<table class="border-base-200 table border dark:border-none">
+		<thead>
+			<tr
+				class="bg-base-200/40 text-base-content/50 border-b border-base-200/60 text-left text-[11px] font-semibold tracking-wider uppercase"
+			>
+				<th style="width: 50px; min-width: 40px;" class="text-center">
+					<input
+						type="checkbox"
+						class="checkbox checkbox-primary checkbox-sm rounded-md"
+						checked={semuaTerpilih(idsHalaman, terpilih)}
+						onchange={(event) =>
+							(terpilih = selectAll(idsHalaman, (event.currentTarget as HTMLInputElement).checked))}
+					/>
+				</th>
+				{#each entitas?.kolom ?? [] as kolom (kolom.key)}
+					<th style="min-width: 140px;">{kolom.label}</th>
+				{/each}
+				<th class="text-center" style="width: 150px;">Aksi</th>
+			</tr>
+		</thead>
+		<tbody class="divide-y divide-base-200/60">
+			{#each baris as row (row.id)}
+				<tr
+					class="hover:bg-base-200/30 transition-colors {terpilih.includes(Number(row.id))
+						? 'bg-primary/5'
+						: ''}"
+				>
+					<td class="text-center">
 						<input
 							type="checkbox"
-							class="checkbox checkbox-sm"
-							checked={semuaTerpilih(idsHalaman, terpilih)}
+							class="checkbox checkbox-primary checkbox-sm rounded-md"
+							checked={terpilih.includes(Number(row.id))}
 							onchange={(event) =>
-								(terpilih = selectAll(
-									idsHalaman,
+								(terpilih = toggleId(
+									terpilih,
+									Number(row.id),
 									(event.currentTarget as HTMLInputElement).checked
 								))}
 						/>
-					</th>
-					{#each entitas.kolom as kolom (kolom.key)}
-						<th style="min-width: 130px;">{kolom.label}</th>
+					</td>
+					{#each entitas?.kolom ?? [] as kolom (kolom.key)}
+						<td>{row[kolom.key] ?? '—'}</td>
 					{/each}
-					<th class="text-center" style="min-width: 130px;">Aksi</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each baris as row (row.id)}
-					<tr class={terpilih.includes(Number(row.id)) ? 'bg-primary/5' : ''}>
-						<td class="text-center">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-sm"
-								checked={terpilih.includes(Number(row.id))}
-								onchange={(event) =>
-									(terpilih = toggleId(
-										terpilih,
-										Number(row.id),
-										(event.currentTarget as HTMLInputElement).checked
-									))}
-							/>
-						</td>
-						{#each entitas.kolom as kolom (kolom.key)}
-							<td>{row[kolom.key] ?? '—'}</td>
-						{/each}
-						<td class="text-center">
+					<td>
+						<div class="flex items-center justify-center gap-1">
 							{#if hapusId === row.id}
 								<FormEnhance action="?/hapus" showToast={false} onsuccess={handleHapus}>
 									{#snippet children({ submitting })}
@@ -248,14 +274,14 @@
 										<div class="flex items-center justify-center gap-1">
 											<button
 												type="submit"
-												class="btn btn-error btn-xs shadow-none"
+												class="btn btn-ghost btn-sm rounded-lg text-error"
 												disabled={submitting}
 											>
 												Ya
 											</button>
 											<button
 												type="button"
-												class="btn btn-ghost btn-xs shadow-none"
+												class="btn btn-ghost btn-sm rounded-lg"
 												onclick={() => (hapusId = null)}
 											>
 												Batal
@@ -264,108 +290,222 @@
 									{/snippet}
 								</FormEnhance>
 							{:else}
-								<div class="flex items-center justify-center gap-1">
-									{#if entitas.formPengguna}
-										<a class="btn btn-ghost btn-xs shadow-none" href={`/pengguna/form/${row.id}`}>
-											<Icon name="edit" />
-											Ubah
-										</a>
-									{:else}
-										<button
-											type="button"
-											class="btn btn-ghost btn-xs shadow-none"
-											onclick={() => bukaUbah(row)}
-										>
-											<Icon name="edit" />
-											Ubah
-										</button>
-									{/if}
+								{#if entitas?.formPengguna}
+									<a class="btn btn-ghost btn-sm rounded-lg" href={`/pengguna/form/${row.id}`}>
+										<Icon name="edit" />
+										Ubah
+									</a>
+								{:else}
 									<button
 										type="button"
-										class="btn btn-ghost btn-xs text-error shadow-none"
-										onclick={() => (hapusId = row.id)}
+										class="btn btn-ghost btn-sm rounded-lg"
+										onclick={() => bukaUbah(row)}
 									>
-										<Icon name="del" />
+										<Icon name="edit" />
+										Ubah
 									</button>
-								</div>
+								{/if}
+								<button
+									type="button"
+									class="btn btn-ghost btn-sm rounded-lg text-error"
+									onclick={() => (hapusId = row.id)}
+								>
+									<Icon name="del" />
+								</button>
 							{/if}
-						</td>
-					</tr>
+						</div>
+					</td>
+				</tr>
+			{:else}
+				<tr>
+					<td class="p-10 text-center" colspan={(entitas?.kolom.length ?? 0) + 2}>
+						<em class="opacity-60">Belum ada data untuk ditampilkan.</em>
+					</td>
+				</tr>
+			{/each}
+		</tbody>
+	</table>
+</div>
+
+<div class="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+	<label class="flex items-center gap-2 text-sm">
+		Baris per halaman
+		<select
+			class="select select-bordered select-sm rounded-lg"
+			value={perHalaman}
+			onchange={(event) => gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
+		>
+			{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
+				<option value={jumlah}>{jumlah}</option>
+			{/each}
+		</select>
+	</label>
+
+	{#if totalHalaman > 1}
+		<div class="join mx-auto">
+			<button
+				type="button"
+				class="join-item btn btn-sm"
+				disabled={halamanSekarang <= 1}
+				onclick={() => gotoPage(halamanSekarang - 1)}
+			>
+				«
+			</button>
+			{#each nomorHalaman as nomor, index (index)}
+				{#if nomor === '…'}
+					<button type="button" class="join-item btn btn-sm" disabled>…</button>
 				{:else}
-					<tr>
-						<td colspan={entitas.kolom.length + 1} class="py-6 text-center opacity-70">
-							Belum ada data {entitas.judul.toLowerCase()}.
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+					<button
+						type="button"
+						class="join-item btn btn-sm"
+						class:btn-active={nomor === halamanSekarang}
+						onclick={() => gotoPage(nomor)}
+					>
+						{nomor}
+					</button>
+				{/if}
+			{/each}
+			<button
+				type="button"
+				class="join-item btn btn-sm"
+				disabled={halamanSekarang >= totalHalaman}
+				onclick={() => gotoPage(halamanSekarang + 1)}
+			>
+				»
+			</button>
+		</div>
+	{/if}
 
-	<div class="mt-3 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-		<p class="text-base-content/60 text-xs">
-			Menampilkan {baris.length} dari {total} data
-		</p>
+	<p class="text-sm opacity-70">Menampilkan {barisTampil} dari {total} data</p>
+</div>
 
-		<div class="flex flex-col items-center gap-2 sm:flex-row sm:items-center">
-			<label class="flex items-center gap-2 text-xs">
-				Baris per halaman
-				<select
-					class="select select-bordered select-sm"
-					value={perHalaman}
-					onchange={(event) =>
-						gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
-				>
-					{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
-						<option value={jumlah}>{jumlah}</option>
-					{/each}
-				</select>
-			</label>
+{#if entitas && formTerbuka}
+	<dialog class="modal" open>
+		<div class="modal-box max-w-2xl">
+			<h3 class="mb-4 text-lg font-bold">
+				{barisEdit ? 'Ubah' : 'Tambah'}
+				{entitas.judul}
+			</h3>
 
-			<div class="join">
-				<button
-					type="button"
-					class="btn btn-sm join-item"
-					disabled={halamanSekarang <= 1}
-					onclick={() => gotoPage(halamanSekarang - 1)}
-				>
-					«
-				</button>
-				{#each nomorHalaman as nomor, index (index)}
-					{#if nomor === '…'}
-						<button type="button" class="btn btn-sm join-item pointer-events-none">…</button>
-					{:else}
+			<FormEnhance action="?/simpan" showToast={false} onsuccess={handleSimpan}>
+				{#snippet children({ submitting, invalid })}
+					{#if barisEdit}
+						<input type="hidden" name="id" value={barisEdit.id} />
+					{/if}
+
+					<div class="grid gap-3 sm:grid-cols-2">
+						{#each entitas.fields as field (field.key)}
+							<label class="form-control">
+								<span class="label-text mb-1 text-sm">
+									{field.label}
+									{#if field.wajib}<span class="text-error">*</span>{/if}
+								</span>
+								{#if field.tipe === 'toggle'}
+									<input
+										type="checkbox"
+										name={field.key}
+										class="toggle toggle-primary rounded-full"
+										checked={nilaiField(field.key) === 'Ya' || nilaiField(field.key) === 'true'}
+										disabled={submitting}
+									/>
+								{:else if field.tipe === 'pilihan'}
+									<select
+										name={field.key}
+										class="select select-bordered w-full rounded-xl"
+										required={field.wajib}
+										disabled={submitting}
+									>
+										{#if !field.wajib}<option value="">—</option>{/if}
+										{#each field.opsi ?? [] as opsi (opsi.value)}
+											<option value={opsi.value} selected={nilaiField(field.key) === opsi.value}>
+												{opsi.label}
+											</option>
+										{/each}
+									</select>
+								{:else if field.tipe === 'relasi'}
+									<select
+										name={field.key}
+										class="select select-bordered w-full rounded-xl"
+										required={field.wajib}
+										disabled={submitting}
+									>
+										{#if !field.wajib}<option value="">—</option>{/if}
+										{#each relasi[field.relasi ?? 'kelas'] ?? [] as opsi (opsi.value)}
+											<option
+												value={opsi.value}
+												selected={nilaiField(field.key) === String(opsi.value)}
+											>
+												{opsi.label}
+											</option>
+										{/each}
+									</select>
+								{:else if field.tipe === 'textarea'}
+									<textarea
+										name={field.key}
+										class="textarea textarea-bordered w-full rounded-xl"
+										rows="3"
+										required={field.wajib}
+										placeholder={field.placeholder ?? ''}
+										disabled={submitting}>{nilaiField(field.key)}</textarea
+									>
+								{:else}
+									<input
+										name={field.key}
+										type={field.tipe === 'tanggal'
+											? 'date'
+											: field.tipe === 'angka' || field.tipe === 'desimal'
+												? 'number'
+												: 'text'}
+										class="input input-bordered w-full rounded-xl"
+										value={nilaiField(field.key)}
+										required={field.wajib}
+										placeholder={field.placeholder ?? ''}
+										disabled={submitting}
+									/>
+								{/if}
+								{#if field.bantu}
+									<span class="label-text-alt mt-1 text-xs opacity-70">{field.bantu}</span>
+								{/if}
+							</label>
+						{/each}
+					</div>
+
+					<div class="modal-action">
 						<button
 							type="button"
-							class="btn btn-sm join-item"
-							class:btn-active={nomor === halamanSekarang}
-							onclick={() => gotoPage(nomor)}
+							class="btn btn-ghost rounded-xl"
+							onclick={tutupForm}
+							disabled={submitting}
 						>
-							{nomor}
+							<Icon name="close" />
+							Batal
 						</button>
-					{/if}
-				{/each}
-				<button
-					type="button"
-					class="btn btn-sm join-item"
-					disabled={halamanSekarang >= totalHalaman}
-					onclick={() => gotoPage(halamanSekarang + 1)}
-				>
-					»
-				</button>
-			</div>
+						<button
+							type="submit"
+							class="btn btn-primary btn-soft rounded-xl shadow-none"
+							disabled={submitting || invalid}
+						>
+							{#if submitting}
+								<span class="loading loading-spinner loading-sm"></span>
+							{:else}
+								<Icon name="save" />
+							{/if}
+							Simpan
+						</button>
+					</div>
+				{/snippet}
+			</FormEnhance>
 		</div>
-	</div>
-{/if}
-
-{#if entitas.key === 'kelas'}
-	<PindahMuridModal bind:isOpen={pindahMuridTerbuka} daftarKelas={data.daftarKelasMurid ?? []} />
+		<form method="dialog" class="modal-backdrop">
+			<button>close</button>
+		</form>
+	</dialog>
 {/if}
 
 {#if entitas && bulkTerbuka}
 	<dialog class="modal" open>
 		<div class="modal-box max-w-3xl">
-			<h3 class="mb-1 text-lg font-bold">Tambah Mata Pelajaran Massal</h3>
+			<h3 class="mb-1 text-lg font-bold">Tambah {entitas.judul} Massal</h3>
 			<p class="mb-4 text-sm opacity-70">
 				Satu mata pelajaran ditambahkan ke beberapa kelas sekaligus. Kelas yang sudah punya mapel
 				dengan nama sama otomatis dilewati.
@@ -381,7 +521,7 @@
 							<input
 								name="nama"
 								type="text"
-								class="input input-bordered w-full"
+								class="input input-bordered w-full rounded-xl"
 								required
 								placeholder="Matematika"
 								disabled={submitting}
@@ -389,7 +529,11 @@
 						</label>
 						<label class="form-control">
 							<span class="label-text mb-1 text-sm">Jenis</span>
-							<select name="jenis" class="select select-bordered w-full" disabled={submitting}>
+							<select
+								name="jenis"
+								class="select select-bordered w-full rounded-xl"
+								disabled={submitting}
+							>
 								<option value="wajib">Wajib</option>
 								<option value="pilihan">Pilihan</option>
 								<option value="mulok">Mulok</option>
@@ -402,7 +546,7 @@
 							<input
 								name="kode"
 								type="text"
-								class="input input-bordered w-full"
+								class="input input-bordered w-full rounded-xl"
 								disabled={submitting}
 							/>
 						</label>
@@ -411,7 +555,7 @@
 							<input
 								name="kkm"
 								type="number"
-								class="input input-bordered w-full"
+								class="input input-bordered w-full rounded-xl"
 								value="0"
 								disabled={submitting}
 							/>
@@ -420,7 +564,7 @@
 							<span class="label-text mb-1 text-sm">Guru Pengampu</span>
 							<select
 								name="pengampu_id"
-								class="select select-bordered w-full"
+								class="select select-bordered w-full rounded-xl"
 								disabled={submitting}
 							>
 								<option value="">—</option>
@@ -438,7 +582,7 @@
 							</span>
 							<button
 								type="button"
-								class="btn btn-ghost btn-xs shadow-none"
+								class="btn btn-ghost btn-xs rounded-lg"
 								onclick={() =>
 									(kelasTerpilihMassal = (relasi.kelas ?? []).map((opsi) => opsi.value))}
 							>
@@ -448,11 +592,11 @@
 						<div class="bg-base-200 max-h-56 overflow-y-auto rounded-box p-2">
 							{#each relasi.kelas ?? [] as opsi (opsi.value)}
 								<label
-									class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-base-300"
+									class="hover:bg-base-300 flex cursor-pointer items-center gap-2 rounded px-2 py-1"
 								>
 									<input
 										type="checkbox"
-										class="checkbox checkbox-sm"
+										class="checkbox checkbox-primary checkbox-sm rounded-md"
 										checked={kelasTerpilihMassal.includes(opsi.value)}
 										onchange={(event) =>
 											toggleKelasMassal(
@@ -469,7 +613,7 @@
 					<div class="modal-action">
 						<button
 							type="button"
-							class="btn btn-soft shadow-none"
+							class="btn btn-ghost rounded-xl"
 							onclick={() => (bulkTerbuka = false)}
 							disabled={submitting}
 						>
@@ -478,7 +622,7 @@
 						</button>
 						<button
 							type="submit"
-							class="btn btn-primary btn-soft shadow-none"
+							class="btn btn-primary btn-soft rounded-xl shadow-none"
 							disabled={submitting || invalid || kelasTerpilihMassal.length === 0}
 						>
 							{#if submitting}
@@ -498,128 +642,6 @@
 	</dialog>
 {/if}
 
-{#if entitas && formTerbuka}
-	<dialog class="modal" open>
-		<div class="modal-box max-w-2xl">
-			<h3 class="mb-4 text-lg font-bold">
-				{barisEdit ? 'Ubah' : 'Tambah'}
-				{entitas.judul}
-			</h3>
-
-			<FormEnhance action="?/simpan" showToast={false} onsuccess={handleSimpan}>
-				{#snippet children({ submitting, invalid })}
-					{#if barisEdit}
-						<input type="hidden" name="id" value={barisEdit.id} />
-						{#if barisEdit.alamat_id}
-							<input type="hidden" name="alamat_id" value={barisEdit.alamat_id} />
-						{/if}
-					{/if}
-
-					<div class="grid gap-3 sm:grid-cols-2">
-						{#each entitas.fields as field (field.key)}
-							<label class="form-control">
-								<span class="label-text mb-1 text-sm">
-									{field.label}
-									{#if field.wajib}<span class="text-error">*</span>{/if}
-								</span>
-								{#if field.tipe === 'toggle'}
-									<input
-										type="checkbox"
-										name={field.key}
-										class="toggle toggle-primary"
-										checked={nilaiField(field.key) === 'Ya' || nilaiField(field.key) === 'true'}
-										disabled={submitting}
-									/>
-								{:else if field.tipe === 'pilihan'}
-									<select
-										name={field.key}
-										class="select select-bordered w-full"
-										required={field.wajib}
-										disabled={submitting}
-									>
-										{#if !field.wajib}<option value="">—</option>{/if}
-										{#each field.opsi ?? [] as opsi (opsi.value)}
-											<option value={opsi.value} selected={nilaiField(field.key) === opsi.value}>
-												{opsi.label}
-											</option>
-										{/each}
-									</select>
-								{:else if field.tipe === 'relasi'}
-									<select
-										name={field.key}
-										class="select select-bordered w-full"
-										required={field.wajib}
-										disabled={submitting}
-									>
-										{#if !field.wajib}<option value="">—</option>{/if}
-										{#each relasi[field.relasi ?? 'kelas'] ?? [] as opsi (opsi.value)}
-											<option
-												value={opsi.value}
-												selected={nilaiField(field.key) === String(opsi.value)}
-											>
-												{opsi.label}
-											</option>
-										{/each}
-									</select>
-								{:else if field.tipe === 'textarea'}
-									<textarea
-										name={field.key}
-										class="textarea textarea-bordered w-full"
-										rows="3"
-										required={field.wajib}
-										placeholder={field.placeholder ?? ''}
-										disabled={submitting}>{nilaiField(field.key)}</textarea
-									>
-								{:else}
-									<input
-										name={field.key}
-										type={field.tipe === 'tanggal'
-											? 'date'
-											: field.tipe === 'angka' || field.tipe === 'desimal'
-												? 'number'
-												: 'text'}
-										class="input input-bordered w-full"
-										value={nilaiField(field.key)}
-										required={field.wajib}
-										placeholder={field.placeholder ?? ''}
-										disabled={submitting}
-									/>
-								{/if}
-								{#if field.bantu}
-									<span class="label-text-alt mt-1 text-xs opacity-70">{field.bantu}</span>
-								{/if}
-							</label>
-						{/each}
-					</div>
-
-					<div class="modal-action">
-						<button
-							type="button"
-							class="btn btn-soft shadow-none"
-							onclick={tutupForm}
-							disabled={submitting}
-						>
-							<Icon name="close" />
-							Batal
-						</button>
-						<button
-							type="submit"
-							class="btn btn-primary btn-soft shadow-none"
-							disabled={submitting || invalid}
-						>
-							{#if submitting}
-								<span class="loading loading-spinner loading-sm"></span>
-							{:else}
-								<Icon name="save" />
-							{/if}
-							Simpan
-						</button>
-					</div>
-				{/snippet}
-			</FormEnhance>
-		</div>
-		<form method="dialog" class="modal-backdrop">
-			<button>close</button>
-		</form>
-	</dialog>
+{#if entitas?.key === 'kelas'}
+	<PindahMuridModal bind:isOpen={pindahMuridTerbuka} daftarKelas={data.daftarKelasMurid ?? []} />
 {/if}
