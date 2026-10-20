@@ -163,6 +163,7 @@ export const removedLegacyPermissionKeys = new Set([
  */
 export const menuRoutePermissions: { path: string; permission: UserPermission }[] = [
 	{ path: '/dashboard-admin', permission: 'overview_semua_kelas' },
+	{ path: '/master-data', permission: 'overview_semua_kelas' },
 	{ path: '/semua-kelas', permission: 'overview_semua_kelas' },
 	// Impor data induk stayed require sekolah-level permission (cuma admin/kepala sekolah),
 	// meski halamannya berada di bawah /sinkronisasi.

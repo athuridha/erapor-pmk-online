@@ -12,6 +12,21 @@ export const appMenuItems: MenuItem[] = [
 		tags: ['dashboard', 'admin', 'ringkasan', 'statistik', 'seluruh', 'murid', 'mapel', 'guru']
 	},
 	{
+		title: 'Master Data',
+		icon: 'database',
+		path: '/master-data',
+		tags: [
+			'master data',
+			'referensi',
+			'tahun ajaran',
+			'semester',
+			'kelas',
+			'mapel',
+			'guru',
+			'konfigurasi'
+		]
+	},
+	{
 		title: 'Informasi Umum',
 		icon: 'chart',
 		subMenu: [
