@@ -18,6 +18,11 @@ import {
 	namaVarianUntukMurid
 } from '$lib/server/mapel-picker';
 import { bolehAksesMapel, getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
+import {
+	konfigurasiNilaiDariSekolah,
+	hitungNilaiAkhirRts,
+	hitungNilaiAkhirSumatif
+} from '$lib/server/nilai-sumatif';
 
 const DEFAULT_LINGKUP = 'Tanpa lingkup materi';
 
@@ -498,56 +503,15 @@ export const actions = {
 			sas = Math.round((sum / sasValues.length) * 100) / 100;
 		}
 
-		// Compute nilaiAkhirRTS using RTS bobot (lingkup + STS only, no SAS)
-		const rtsBobotLingkup = Number(locals.sekolah?.sumatifBobotRtsLingkup ?? 70);
-		const rtsBobotSts = Number(locals.sekolah?.sumatifBobotRtsSts ?? 30);
+		// Bobot & kriteria diambil dari pengaturan sekolah (database) lewat helper
+		// bersama, supaya rapor dan rekap memakai perhitungan yang sama.
+		const konfigurasi = konfigurasiNilaiDariSekolah(locals.sekolah ?? null);
 
-		let nilaiAkhirRts: number | null = null;
-		let weightedRts = 0;
-		let totalWeightRts = 0;
-		if (naLingkup != null) {
-			weightedRts += naLingkup * rtsBobotLingkup;
-			totalWeightRts += rtsBobotLingkup;
-		}
-		if (sts != null) {
-			weightedRts += sts * rtsBobotSts;
-			totalWeightRts += rtsBobotSts;
-		}
-		if (totalWeightRts > 0) {
-			nilaiAkhirRts = Math.round((weightedRts / totalWeightRts) * 100) / 100;
-		}
+		// Compute nilaiAkhirRTS using RTS bobot (lingkup + STS only, no SAS)
+		const nilaiAkhirRts = hitungNilaiAkhirRts({ naLingkup, sts }, konfigurasi.bobotRts);
 
 		// Compute final nilaiAkhir using sekolah-level weights (fallback to 60/20/20)
-		// Base sekolah weights
-		const baseWeights = {
-			lingkup: Number(locals.sekolah?.sumatifBobotLingkup ?? 60),
-			sts: Number(locals.sekolah?.sumatifBobotSts ?? 20),
-			sas: Number(locals.sekolah?.sumatifBobotSas ?? 20)
-		};
-
-		// If STS is not provided, use fallback distribution: Lingkup 70%, SAS 30%.
-		const effectiveWeights = sts == null ? { lingkup: 70, sts: 0, sas: 30 } : baseWeights;
-
-		let nilaiAkhir: number | null = null;
-		let weightedSumFinal = 0;
-		let usedWeightFinal = 0;
-
-		if (naLingkup != null) {
-			weightedSumFinal += naLingkup * effectiveWeights.lingkup;
-			usedWeightFinal += effectiveWeights.lingkup;
-		}
-		if (sts != null) {
-			weightedSumFinal += sts * effectiveWeights.sts;
-			usedWeightFinal += effectiveWeights.sts;
-		}
-		if (sas != null) {
-			weightedSumFinal += sas * effectiveWeights.sas;
-			usedWeightFinal += effectiveWeights.sas;
-		}
-
-		if (usedWeightFinal > 0) {
-			nilaiAkhir = Math.round((weightedSumFinal / usedWeightFinal) * 100) / 100;
-		}
+		const nilaiAkhir = hitungNilaiAkhirSumatif({ naLingkup, sts, sas }, konfigurasi.bobotAkhir);
 
 		const hasTujuanScores = Array.from(nilaiByTujuan.values()).some((value) => value != null);
 		const shouldPersistAggregate =

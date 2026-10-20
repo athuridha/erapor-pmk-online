@@ -158,16 +158,22 @@
 		</div>
 		<div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 			<LegerDownload kelasId={kelasAktif?.id ?? null} />
-			{#if kelasAktif && isAdmin}
-				<a
-					class="btn btn-primary shadow-none max-sm:w-full"
-					href="/nilai-akhir/kirim-dapodik"
-					use:modalRoute={'kirim-dapodik'}
-				>
-					<Icon name="dapodik" />
-					Kirim ke Dapodik
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+				<a class="btn btn-outline shadow-none max-sm:w-full" href="/nilai-akhir/rekap-keseluruhan">
+					<Icon name="chart" />
+					Rekap Keseluruhan
 				</a>
-			{/if}
+				{#if kelasAktif && isAdmin}
+					<a
+						class="btn btn-primary shadow-none max-sm:w-full"
+						href="/nilai-akhir/kirim-dapodik"
+						use:modalRoute={'kirim-dapodik'}
+					>
+						<Icon name="dapodik" />
+						Kirim ke Dapodik
+					</a>
+				{/if}
+			</div>
 		</div>
 	</div>
 
