@@ -33,7 +33,14 @@ interface BiodataPrintData {
 		};
 	};
 	wali: { nama: string; pekerjaan: string; alamat: string };
-	ttd: { tempat: string; tanggal: string; kepalaSekolah: string; nip: string };
+	ttd: {
+		tempat: string;
+		tanggal: string;
+		kepalaSekolah: string;
+		nip: string;
+		/** Tanda tangan kepala sekolah (diunggah di /tanda-tangan). */
+		tandaTangan?: string | null;
+	};
 	showBgLogo?: boolean;
 }
 
@@ -149,6 +156,20 @@ body {
 	font-size: 10pt;
 }
 
+/* Gambar tanda tangan kepala sekolah (diunggah di /tanda-tangan). */
+.ttd-sign {
+	height: 55pt;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.ttd-img {
+	height: 55pt;
+	max-width: 150pt;
+	object-fit: contain;
+}
+
 .photo-box {
 	width: 30mm;
 	height: 40mm;
@@ -218,6 +239,9 @@ ${bgLogoSrc ? `<img class="watermark" src="${bgLogoSrc}" alt="logo" />` : ''}
 		<div class="ttd-top">
 			<p>${formatValue(ttd.tempat)}, ${formatValue(ttd.tanggal)}</p>
 			<p>${kepalaTitle}</p>
+		</div>
+		<div class="ttd-sign">
+			${ttd.tandaTangan ? `<img class="ttd-img" src="${ttd.tandaTangan}" alt="" />` : ''}
 		</div>
 		<div class="ttd-bottom">
 			<p class="font-bold">${formatValue(ttd.kepalaSekolah)}</p>

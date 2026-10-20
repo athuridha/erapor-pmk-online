@@ -16,7 +16,7 @@ import {
 	singkatJabatan,
 	type PresensiGuruPrintRow
 } from '$lib/server/pdf/templates/presensi-guru';
-import { signatureToDataUrl } from '$lib/server/ttd';
+import { personSignatureDataUrl, signatureToDataUrl } from '$lib/server/ttd';
 import type { RequestHandler } from './$types';
 
 const BULAN_NAMES = [
@@ -205,7 +205,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		kepalaSekolah: {
 			nama: kepalaSekolahNama,
 			nip: kepalaSekolahNip,
-			statusKepalaSekolah: sekolah?.statusKepalaSekolah ?? null
+			statusKepalaSekolah: sekolah?.statusKepalaSekolah ?? null,
+			tandaTangan: await personSignatureDataUrl(sekolah?.kepalaSekolahId)
 		},
 		tanggalTtd
 	};

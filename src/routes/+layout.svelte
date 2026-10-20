@@ -62,6 +62,7 @@
 	const isLoginPage = $derived(page.url.pathname === '/login');
 	const isTamuPage = $derived(page.url.pathname === '/tamu');
 	const isJadwalPublikPage = $derived(page.url.pathname === '/jadwal-pelajaran');
+	const isVerifikasiRapor = $derived(page.url.pathname === '/rapor/verifikasi');
 	const isSiapkanPage = $derived(page.url.pathname === '/siapkan');
 	// When not authenticated, never render the drawer/navbar shell — not even for
 	// error pages (e.g. 404 on an unknown URL). This avoids exposing the app menu
@@ -317,6 +318,8 @@
 	<div class="bg-base-200 flex min-h-screen flex-col p-6">
 		{@render children()}
 	</div>
+{:else if isVerifikasiRapor}
+	{@render children()}
 {:else}
 	<main class="drawer lg:drawer-open">
 		<input id="my-drawer-2" type="checkbox" class="drawer-toggle" />

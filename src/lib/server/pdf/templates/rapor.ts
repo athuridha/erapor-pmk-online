@@ -25,11 +25,15 @@ export interface RaporPrintData {
 	waliKelas: {
 		nama: string;
 		nip?: string | null;
+		/** Tanda tangan wali kelas sebagai data URL (hasil unggah di /tanda-tangan). */
+		tandaTangan?: string | null;
 	};
 	kepalaSekolah: {
 		nama: string;
 		nip?: string | null;
 		statusKepalaSekolah?: string | null;
+		/** Tanda tangan kepala sekolah sebagai data URL. */
+		tandaTangan?: string | null;
 	};
 	nilaiIntrakurikuler: Array<{
 		kelompok?: string | null;
@@ -55,6 +59,11 @@ export interface RaporPrintData {
 	ttd: {
 		tempat: string;
 		tanggal: string;
+	};
+	/** QR verifikasi rapor (gambar data URI + tautan verifikasi). */
+	qrCode?: {
+		image: string;
+		url: string;
 	};
 
 	tpMode?: 'compact' | 'full-desc';
@@ -234,6 +243,14 @@ body {
 	border-collapse: collapse;
 }
 
+/* ── Gambar tanda tangan (diunggah di /tanda-tangan) ── */
+.ttd-img {
+	height: 55pt;
+	max-width: 150pt;
+	object-fit: contain;
+	vertical-align: middle;
+}
+
 /* ── Spacer heights — mirrors DaisyUI h-24, h-25, h-10 ── */
 .spacer-4 { height: 4rem; }
 .spacer-5 { height: 5rem; }
@@ -271,6 +288,22 @@ body {
 }
 @media print {
 	.watermark { position: fixed; }
+}
+
+/* ── QR verifikasi rapor ── */
+.qr-verifikasi {
+	text-align: right;
+	margin-top: 6pt;
+}
+
+.qr-verifikasi img {
+	width: 58pt;
+	height: 58pt;
+}
+
+.qr-verifikasi div {
+	font-size: 6.5pt;
+	color: #555;
 }
 
 /* ── Text utilities — mirrors DaisyUI text-center, text-justify, etc. ── */
@@ -320,6 +353,17 @@ ${bgLogoSrc ? `<img src="${bgLogoSrc}" alt="" class="watermark">` : ''}
 	<div>:</div>
 	<div>${formatValue(data.periode.tahunPelajaran)}</div>
 </div>
+
+${
+	data.qrCode?.image
+		? `
+<!-- QR verifikasi -->
+<div class="qr-verifikasi">
+	<img src="${data.qrCode.image}" alt="" />
+	<div>Scan untuk verifikasi rapor</div>
+</div>`
+		: ''
+}
 
 <!-- Intrakurikuler -->
 <table class="pdf-table breakable" data-ref="intrakurikuler" style="margin-top:12pt;">
@@ -520,7 +564,13 @@ ${
 			</tr>
 			<tr>
 				<td class="spacer-5"></td>
-				<td class="spacer-5"></td>
+				<td class="text-center">
+					${
+						data.waliKelas.tandaTangan
+							? `<img class="ttd-img" src="${data.waliKelas.tandaTangan}" alt="" />`
+							: ''
+					}
+				</td>
 			</tr>
 			<tr>
 				<td class="text-center">____________________</td>
@@ -541,7 +591,13 @@ ${
 				<td colspan="2" class="text-center font-bold" style="padding-top:8pt;">${kepalaStatus}</td>
 			</tr>
 			<tr>
-				<td colspan="2" class="spacer-5"></td>
+				<td colspan="2" class="text-center">
+					${
+						data.kepalaSekolah.tandaTangan
+							? `<img class="ttd-img" src="${data.kepalaSekolah.tandaTangan}" alt="" />`
+							: ''
+					}
+				</td>
 			</tr>
 			<tr>
 				<td colspan="2" class="text-center font-bold underline">${formatValue(data.kepalaSekolah.nama)}</td>

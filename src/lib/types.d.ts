@@ -93,6 +93,8 @@ interface BiodataPrintData {
 		tanggal: string;
 		kepalaSekolah: string;
 		nip: string;
+		/** Tanda tangan kepala sekolah (diunggah di /tanda-tangan). */
+		tandaTangan?: string | null;
 	};
 }
 
@@ -120,11 +122,15 @@ interface RaporPrintData {
 	waliKelas: {
 		nama: string;
 		nip?: string | null;
+		/** Tanda tangan wali kelas (diunggah di /tanda-tangan). */
+		tandaTangan?: string | null;
 	};
 	kepalaSekolah: {
 		nama: string;
 		nip?: string | null;
 		statusKepalaSekolah?: string | null;
+		/** Tanda tangan kepala sekolah (diunggah di /tanda-tangan). */
+		tandaTangan?: string | null;
 	};
 	nilaiIntrakurikuler: Array<{
 		kelompok?: string | null;
@@ -150,6 +156,11 @@ interface RaporPrintData {
 	ttd: {
 		tempat: string;
 		tanggal: string;
+	};
+	/** QR verifikasi rapor (ditandatangani HMAC, Contains ke halaman /rapor/verifikasi). */
+	qrCode?: {
+		image: string;
+		url: string;
 	};
 
 	// Mode for tujuan pembelajaran display: compact | full-desc
@@ -201,10 +212,14 @@ interface PiagamPrintData {
 			nama: string;
 			nip?: string | null;
 			statusKepalaSekolah?: string | null;
+			/** Tanda tangan kepala sekolah (diunggah di /tanda-tangan). */
+			tandaTangan?: string | null;
 		};
 		waliKelas: {
 			nama: string;
 			nip?: string | null;
+			/** Tanda tangan wali kelas. */
+			tandaTangan?: string | null;
 		};
 	};
 }

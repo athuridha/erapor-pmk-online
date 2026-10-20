@@ -39,8 +39,19 @@ export interface PiagamPrintData {
 	ttd: {
 		tempat: string;
 		tanggal: string;
-		kepalaSekolah: { nama: string; nip?: string | null; statusKepalaSekolah?: string | null };
-		waliKelas: { nama: string; nip?: string | null };
+		kepalaSekolah: {
+			nama: string;
+			nip?: string | null;
+			statusKepalaSekolah?: string | null;
+			/** Tanda tangan kepala sekolah (diunggah di /tanda-tangan). */
+			tandaTangan?: string | null;
+		};
+		waliKelas: {
+			nama: string;
+			nip?: string | null;
+			/** Tanda tangan wali kelas. */
+			tandaTangan?: string | null;
+		};
 	};
 }
 
@@ -311,6 +322,15 @@ function piagamStyles(margin16mm = true): string {
 	font-size: 12pt;
 }
 
+/* Gambar tanda tangan (diunggah di /tanda-tangan) */
+.ttd-img {
+	height: 18mm;
+	max-width: 45mm;
+	object-fit: contain;
+	vertical-align: middle;
+	margin-bottom: 2mm;
+}
+
 .t2-header-row {
 	display: flex;
 	align-items: center;
@@ -398,16 +418,24 @@ export function renderPiagamHTML(data: PiagamPrintData, template: '1' | '2'): st
 	);
 
 	function footerHTML(): string {
+		const kepalaImg = ttd.kepalaSekolah.tandaTangan
+			? `<img class="ttd-img" src="${ttd.kepalaSekolah.tandaTangan}" alt="" />`
+			: '';
+		const waliImg = ttd.waliKelas.tandaTangan
+			? `<img class="ttd-img" src="${ttd.waliKelas.tandaTangan}" alt="" />`
+			: '';
 		return `
 	<div class="footer">
 		<div class="footer-left">
 			<div class="kepala-status">${ttd.kepalaSekolah.statusKepalaSekolah === 'plt' ? 'Plt. Kepala Sekolah' : 'Kepala Sekolah'}</div>
+			${kepalaImg}
 			<div class="ttd-name">${formatValue(ttd.kepalaSekolah.nama)}</div>
 			<div class="ttd-nip">${escHtml(ttd.kepalaSekolah.nip ?? '')}</div>
 		</div>
 		<div class="footer-right">
 			<div class="footer-label">${escHtml(ttd.tempat)}, ${escHtml(ttd.tanggal)}</div>
 			<div class="footer-label">Wali Kelas</div>
+			${waliImg}
 			<div class="ttd-name">${formatValue(ttd.waliKelas.nama)}</div>
 			<div class="ttd-nip">${escHtml(ttd.waliKelas.nip ?? '')}</div>
 		</div>

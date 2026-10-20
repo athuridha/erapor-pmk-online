@@ -13,6 +13,7 @@ import {
 	fallbackTempat,
 	getLogoSrc
 } from '$lib/server/pdf/preview-utils';
+import { personSignatureDataUrl } from '$lib/server/ttd';
 
 type BiodataContext = {
 	locals: App.Locals;
@@ -138,6 +139,9 @@ export async function getBiodataPreviewPayload({ locals, url }: BiodataContext) 
 	const showBgLogo = url.searchParams.get('bg_logo') === '1';
 	const bgLogoSrc = showBgLogo ? await getLogoSrc(sekolah.id) : null;
 
+	// Tanda tangan kepala sekolah yang diunggah di /tanda-tangan.
+	const tandaTanganKepalaSekolah = await personSignatureDataUrl(sekolah.kepalaSekolah?.id ?? null);
+
 	const biodataData: BiodataPrintData = {
 		sekolah: {
 			nama: sekolah.nama,
@@ -178,7 +182,8 @@ export async function getBiodataPreviewPayload({ locals, url }: BiodataContext) 
 			tempat: fallbackTempat(sekolah),
 			tanggal: tanggalTtd,
 			kepalaSekolah: sekolah.kepalaSekolah?.nama ?? '',
-			nip: sekolah.kepalaSekolah?.nip ?? ''
+			nip: sekolah.kepalaSekolah?.nip ?? '',
+			tandaTangan: tandaTanganKepalaSekolah
 		}
 	};
 

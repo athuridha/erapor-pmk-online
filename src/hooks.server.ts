@@ -130,6 +130,8 @@ const PUBLIC_ROUTE_IDS = new Set([
 	'/tamu',
 	'/jadwal-pelajaran',
 	'/api/buku-tamu',
+	// Verifikasi rapor (publik) — orang tua memindai QR code pada rapor.
+	'/rapor/verifikasi',
 	// Penyiapan sebelum login (instalasi baru): menarik master data dari pusat.
 	// Penjaganya ada di route itu sendiri — hanya dari loopback dan hanya saat
 	// database lokal masih kosong.

@@ -43,6 +43,8 @@ import {
 	getLogoSrc as getBgLogoSrc
 } from '$lib/server/pdf/preview-utils';
 import { computeRaporAttendance } from '$lib/server/pdf/attendance-utils';
+import { personSignatureDataUrl } from '$lib/server/ttd';
+import { buatQrDataUri, buatTokenRapor, type RaporQrPayload } from '$lib/server/rapor-qr';
 
 const LOCALE_ID = 'id-ID';
 
@@ -115,6 +117,7 @@ export async function getRaporPreviewPayload({ locals, url }: RaporContext) {
 				with: {
 					waliKelas: {
 						columns: {
+							id: true,
 							nama: true,
 							nip: true
 						}
@@ -527,6 +530,27 @@ export async function getRaporPreviewPayload({ locals, url }: RaporContext) {
 				})
 			: null);
 
+	// Tanda tangan yang diunggah di /tanda-tangan (kepala sekolah & wali kelas).
+	const tandaTanganWaliKelas = await personSignatureDataUrl(waliKelasPegawai?.id ?? null);
+	const tandaTanganKepalaSekolah = await personSignatureDataUrl(sekolah.kepalaSekolah?.id ?? null);
+
+	// QR verifikasi rapor: payload ditandatangani HMAC, lalu di-QR menjadi tautan.
+	const qrPayload: RaporQrPayload = {
+		nama: murid.nama,
+		kelas: murid.kelas?.nama ?? '',
+		fase: murid.kelas?.fase ?? null,
+		semester: murid.semester?.tipe
+			? murid.semester.tipe.charAt(0).toUpperCase() + murid.semester.tipe.slice(1)
+			: (murid.semester?.nama ?? ''),
+		tahunAjaran: murid.kelas?.tahunAjaran?.nama ?? '',
+		periode: raporPeriode,
+		sekolah: sekolah.nama,
+		tanggal: ttdTanggal
+	};
+	const qrToken = buatTokenRapor(qrPayload);
+	const qrUrl = `${url.origin}/rapor/verifikasi?token=${encodeURIComponent(qrToken)}`;
+	const qrImage = await buatQrDataUri(qrUrl);
+
 	const semesterData = murid.kelas?.semester ?? murid.semester;
 	const tahunAjaranData = murid.kelas?.tahunAjaran;
 	const computedKehadiran =
@@ -560,12 +584,14 @@ export async function getRaporPreviewPayload({ locals, url }: RaporContext) {
 		},
 		waliKelas: {
 			nama: waliKelasPegawai?.nama ?? '',
-			nip: waliKelasPegawai?.nip ?? null
+			nip: waliKelasPegawai?.nip ?? null,
+			tandaTangan: tandaTanganWaliKelas
 		},
 		kepalaSekolah: {
 			nama: sekolah.kepalaSekolah?.nama ?? '',
 			nip: sekolah.kepalaSekolah?.nip ?? null,
-			statusKepalaSekolah: sekolah.statusKepalaSekolah ?? 'definitif'
+			statusKepalaSekolah: sekolah.statusKepalaSekolah ?? 'definitif',
+			tandaTangan: tandaTanganKepalaSekolah
 		},
 		nilaiIntrakurikuler,
 		kokurikuler,
@@ -579,6 +605,10 @@ export async function getRaporPreviewPayload({ locals, url }: RaporContext) {
 		catatanWali: murid.catatanWali?.catatan?.trim() ?? '',
 		tanggapanOrangTua: '',
 		naik: murid.keputusan?.naik ?? true,
+		qrCode: {
+			image: qrImage,
+			url: qrUrl
+		},
 		ttd: {
 			tempat: fallbackTempat(sekolah),
 			tanggal: ttdTanggal

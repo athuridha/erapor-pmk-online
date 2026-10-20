@@ -76,6 +76,8 @@ export interface PresensiGuruPrintData {
 		nama: string;
 		nip?: string | null;
 		statusKepalaSekolah?: string | null;
+		/** Tanda tangan kepala sekolah (diunggah di /tanda-tangan). */
+		tandaTangan?: string | null;
 	} | null;
 	tanggalTtd?: string;
 }
@@ -374,6 +376,13 @@ td {
 	height: 55px;
 }
 
+.ttd-img {
+	height: 55px;
+	max-width: 180px;
+	object-fit: contain;
+	display: block;
+}
+
 .legend-item {
 	margin-left: 10px;
 	white-space: nowrap;
@@ -506,7 +515,7 @@ td {
 			<p>${formatValue(data.tanggalTtd)}</p>
 			<p>${kepalaTitle}</p>
 			<p>${formatValue(data.sekolah.nama)}</p>
-			<div class="ttd-space"></div>
+			${kepalaSekolah?.tandaTangan ? `<img class="ttd-img" src="${kepalaSekolah.tandaTangan}" alt="" />` : '<div class="ttd-space"></div>'}
 			<p class="bold">${kepalaNama}</p>
 			<p>${kepalaNipLabel}</p>
 		</div>

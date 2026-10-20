@@ -18,6 +18,7 @@ import {
 import { renderPDF } from '$lib/server/pdf/pagedpdf';
 import { renderJurnalMengajarHTML } from '$lib/server/pdf/templates/jurnal-mengajar';
 import { formatTanggal } from '$lib/server/pdf/preview-utils';
+import { personSignatureDataUrl } from '$lib/server/ttd';
 import type { RequestHandler } from './$types';
 
 export const GET = (async ({ locals, url }) => {
@@ -238,6 +239,10 @@ export const GET = (async ({ locals, url }) => {
 		year: 'numeric'
 	});
 
+	// Tanda tangan yang diunggah di /tanda-tangan (kepala sekolah & guru).
+	const tandaTanganKepala = await personSignatureDataUrl(sekolah?.kepalaSekolahId ?? null);
+	const tandaTanganGuru = await personSignatureDataUrl(user.pegawaiId ?? null);
+
 	const printData = {
 		sekolah: {
 			nama: sekolah?.nama ?? ''
@@ -256,11 +261,13 @@ export const GET = (async ({ locals, url }) => {
 		kepalaSekolah: {
 			nama: kepalaSekolahNama,
 			nip: kepalaSekolahNip,
-			statusKepalaSekolah: kepalaSekolahStatus
+			statusKepalaSekolah: kepalaSekolahStatus,
+			tandaTangan: tandaTanganKepala
 		},
 		guru: {
 			nama: userName,
-			nip: guruNip
+			nip: guruNip,
+			tandaTangan: tandaTanganGuru
 		},
 		isWaliKelas,
 		guruLabel,

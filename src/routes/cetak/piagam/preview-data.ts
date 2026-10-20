@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import db from '$lib/server/db';
 import { tableMurid } from '$lib/server/db/schema';
 import { computeNilaiAkhirRekap } from '$lib/server/nilai-akhir';
+import { personSignatureDataUrl } from '$lib/server/ttd';
 import type { PiagamPrintData } from '$lib/server/pdf/templates/piagam';
 import {
 	requireInteger,
@@ -81,6 +82,7 @@ export async function getPiagamPreviewPayload({ locals, url }: { locals: App.Loc
 				with: {
 					waliKelas: {
 						columns: {
+							id: true,
 							nama: true,
 							nip: true
 						}
@@ -175,11 +177,13 @@ export async function getPiagamPreviewPayload({ locals, url }: { locals: App.Loc
 			kepalaSekolah: {
 				nama: sekolah.kepalaSekolah?.nama ?? '',
 				nip: sekolah.kepalaSekolah?.nip ?? '',
-				statusKepalaSekolah: sekolah.statusKepalaSekolah ?? 'definitif'
+				statusKepalaSekolah: sekolah.statusKepalaSekolah ?? 'definitif',
+				tandaTangan: await personSignatureDataUrl(sekolah.kepalaSekolah?.id ?? null)
 			},
 			waliKelas: {
 				nama: murid.kelas?.waliKelas?.nama ?? '',
-				nip: murid.kelas?.waliKelas?.nip ?? ''
+				nip: murid.kelas?.waliKelas?.nip ?? '',
+				tandaTangan: await personSignatureDataUrl(murid.kelas?.waliKelas?.id ?? null)
 			}
 		}
 	};

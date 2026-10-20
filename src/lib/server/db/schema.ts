@@ -109,6 +109,9 @@ export const tablePegawai = sqliteTable('pegawai', {
 	// Referensi Dapodik
 	dapodikPtkId: text(),
 	nuptk: text(),
+	// Tanda tangan (PNG data URL) yang diunggah di /tanda-tangan. Disimpan di
+	// database supaya ikut terbawa saat backup/restore .sqlite3.
+	tandaTangan: text(),
 	...audit
 });
 

@@ -13,6 +13,7 @@ import { ensureJurnalMengajarSchema } from './ensure-jurnal-mengajar';
 import { ensureKetidakhadiranHarianSchema } from './ensure-ketidakhadiran-harian';
 import { ensureKetidakhadiranRaporSchema } from './ensure-ketidakhadiran-rapor';
 import { ensurePresensiGuruSchema } from './ensure-presensi-guru';
+import { ensurePegawaiTtdSchema } from './ensure-pegawai-ttd';
 import { ensureSppdSchema } from './ensure-sppd';
 import { ensureCloudSyncSchema } from './ensure-cloud-sync';
 import { ensureKepalaSekolahAccounts } from '$lib/server/kepala-sekolah';
@@ -38,6 +39,8 @@ let startupEnsuresDone = false;
 export async function runStartupEnsures() {
 	if (startupEnsuresDone) return;
 	await ensureCoreSchema();
+	// Kolom tanda tangan pegawai (database lama) + pindahkan berkas lama ke DB.
+	await ensurePegawaiTtdSchema();
 	await ensureAcademicModulesSchema();
 	await ensureJadwalBellSchema();
 	await ensurePresensiSettingsSchema();

@@ -21,14 +21,20 @@ export async function ensurePegawaiConsolidation() {
 	try {
 		// STEP 0: Consolidate PEGAWAI duplicates (same nama + same NIP) → keep oldest, merge auth_user
 		const allPegawai = await db.query.tablePegawai.findMany({
-			columns: { id: true, nama: true, nip: true, createdAt: true }
+			columns: { id: true, nama: true, nip: true, createdAt: true, tandaTangan: true }
 		});
 
 		// Group pegawai by (nama normalized + nip normalized) to find duplicates
 		// Only merge when both name AND NIP match to avoid collapsing distinct people
 		// who happen to share a name. Empty NIPs are grouped separately (two empty-NIP
 		// same-name records are treated as potentially different people and skipped).
-		type PegawaiArray = { id: number; nama: string; nip: string | null; createdAt: string }[];
+		type PegawaiArray = {
+			id: number;
+			nama: string;
+			nip: string | null;
+			createdAt: string;
+			tandaTangan: string | null;
+		}[];
 		const pegawaiByNameNip = new Map<string, PegawaiArray>();
 		for (const peg of allPegawai) {
 			const nameKey = (peg.nama || '').trim().toLowerCase();
@@ -113,6 +119,15 @@ export async function ensurePegawaiConsolidation() {
 						console.log(
 							`[pengguna:consolidate] Updated sekolah ID=${s.id}: kepalaSekolahId ${dup.id} → ${keepPegawai.id}`
 						);
+					}
+
+					// Tanda tangan yang sudah diunggah jangan hilang saat duplikat dihapus.
+					if (!keepPegawai.tandaTangan && dup.tandaTangan) {
+						await db
+							.update(tablePegawai)
+							.set({ tandaTangan: dup.tandaTangan })
+							.where(eq(tablePegawai.id, keepPegawai.id));
+						keepPegawai.tandaTangan = dup.tandaTangan;
 					}
 
 					// Now safe to delete duplicate pegawai

@@ -31,10 +31,14 @@ export interface JurnalMengajarPrintData {
 		nama: string;
 		nip?: string | null;
 		statusKepalaSekolah?: string | null;
+		/** Tanda tangan kepala sekolah (diunggah di /tanda-tangan). */
+		tandaTangan?: string | null;
 	};
 	guru: {
 		nama: string;
 		nip?: string | null;
+		/** Tanda tangan guru/wali kelas yang mencetak jurnal. */
+		tandaTangan?: string | null;
 	};
 	isWaliKelas: boolean;
 	guruLabel: string;
@@ -166,6 +170,13 @@ tr.striped td {
 	height: 4rem;
 }
 
+/* Gambar tanda tangan (diunggah di /tanda-tangan). */
+.signature-table .ttd-img {
+	height: 52pt;
+	max-width: 140pt;
+	object-fit: contain;
+}
+
 .signature-table .h-4 {
 	height: 1rem;
 }
@@ -217,8 +228,16 @@ tr.striped td {
 					<td>${formatValue(data.guruLabel)}</td>
 				</tr>
 				<tr>
-					<td class="h-24"></td>
-					<td class="h-24"></td>
+					<td class="h-24">${
+						data.kepalaSekolah.tandaTangan
+							? `<img class="ttd-img" src="${data.kepalaSekolah.tandaTangan}" alt="" />`
+							: ''
+					}</td>
+					<td class="h-24">${
+						data.guru.tandaTangan
+							? `<img class="ttd-img" src="${data.guru.tandaTangan}" alt="" />`
+							: ''
+					}</td>
 				</tr>
 				<tr>
 					<td class="font-bold underline">${formatValue(data.kepalaSekolah.nama)}</td>
