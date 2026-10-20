@@ -32,6 +32,7 @@ export async function load({ url, locals }) {
 			type: u.type,
 			pegawaiId: u.pegawaiId,
 			pegawaiName: tablePegawai.nama,
+			pegawaiNik: tablePegawai.nik,
 			kelasId: u.kelasId,
 			kelasName: tableKelas.nama,
 			passwordUpdatedAt: u.passwordUpdatedAt,

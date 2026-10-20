@@ -45,3 +45,8 @@ export function uploadsDir(): string {
 export function soundsDir(): string {
 	return dirFromEnv(process.env.sounds, path.join(dataRoot(), 'sounds'));
 }
+
+/** Directory for student archive documents (KK, akta, ijazah). */
+export function arsipDir(): string {
+	return path.join(dataRoot(), 'arsip');
+}

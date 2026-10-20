@@ -148,6 +148,12 @@ export const appMenuItems: MenuItem[] = [
 		]
 	},
 	{
+		title: 'Portal Orang Tua',
+		icon: 'users',
+		path: '/portal-orang-tua',
+		tags: ['portal', 'orang tua', 'wali', 'akun', 'password', 'publikasi']
+	},
+	{
 		title: 'Cetak Dokumen',
 		icon: 'print',
 		path: '/cetak'

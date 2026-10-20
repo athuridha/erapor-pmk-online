@@ -176,6 +176,33 @@
 							/>
 						</fieldset>
 					</div>
+					<div class="flex flex-col gap-2 sm:flex-row">
+						<!-- Status Murid -->
+						<fieldset class="fieldset flex-1">
+							<legend class="fieldset-legend">Status Murid</legend>
+							<select
+								class="select bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								name="status"
+							>
+								<option value="aktif">Aktif</option>
+								<option value="lulus">Lulus</option>
+								<option value="pindah">Pindah</option>
+								<option value="keluar">Keluar</option>
+							</select>
+							<p class="label text-wrap">
+								Status Lulus membuka unggahan Ijazah Sekolah di tab Arsip.
+							</p>
+						</fieldset>
+						<!-- Tanggal Lulus -->
+						<fieldset class="fieldset flex-1">
+							<legend class="fieldset-legend">Tanggal Lulus</legend>
+							<input
+								type="date"
+								class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								name="tanggalLulus"
+							/>
+						</fieldset>
+					</div>
 				</div>
 
 				<!-- data Orang Tua -->

@@ -219,7 +219,7 @@
 						</th>
 						<th>Nama</th>
 						<th>Role</th>
-						<th>Nama Pengguna</th>
+						<th>NIK / Username</th>
 						<th>Aksi</th>
 						<th>Hak Akses</th>
 					</tr>

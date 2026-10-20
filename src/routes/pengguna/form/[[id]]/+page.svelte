@@ -24,6 +24,8 @@
 	// svelte-ignore state_referenced_locally
 	let nama = $state(data.userDetail?.pegawaiName ?? '');
 	// svelte-ignore state_referenced_locally
+	let nik = $state(data.userDetail?.pegawaiNik ?? '');
+	// svelte-ignore state_referenced_locally
 	let username = $state(data.userDetail?.username ?? '');
 	let password = $state('');
 	// svelte-ignore state_referenced_locally
@@ -375,6 +377,25 @@
 						{/if}
 					</fieldset>
 				</div>
+
+				<!-- NIK -->
+				<fieldset class="fieldset">
+					<legend class="fieldset-legend">NIK Guru</legend>
+					<input
+						id="form-nik"
+						type="text"
+						inputmode="numeric"
+						maxlength="16"
+						class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						name="nik"
+						bind:value={nik}
+						placeholder="16 digit NIK"
+					/>
+					<p class="label text-wrap">
+						Dipakai guru untuk masuk ke e-Rapor. Kosongkan jika akun ini hanya memakai nama pengguna
+						(mis. admin).
+					</p>
+				</fieldset>
 
 				<!-- Akun -->
 				<fieldset class="fieldset">

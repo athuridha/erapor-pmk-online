@@ -77,6 +77,10 @@ export const groupedUserPermissions = {
 	cetak: {
 		values: [['dokumen', 'Cetak Dokumen']],
 		description: 'Cetak Dokumen'
+	},
+	portal: {
+		values: [['orang_tua', 'Kelola Akun Portal Orang Tua']],
+		description: 'Portal Orang Tua'
 	}
 } as const;
 
@@ -184,6 +188,7 @@ export const menuRoutePermissions: { path: string; permission: UserPermission }[
 	{ path: '/sppd', permission: 'administrasi_sppd' },
 	{ path: '/dinas-luar', permission: 'administrasi_dinas_luar' },
 	{ path: '/sinkronisasi', permission: 'administrasi_sinkronisasi' },
+	{ path: '/portal-orang-tua', permission: 'portal_orang_tua' },
 	{ path: '/cetak', permission: 'cetak_dokumen' }
 ];
 

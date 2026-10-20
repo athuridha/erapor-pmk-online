@@ -14,8 +14,11 @@ import { ensureKetidakhadiranHarianSchema } from './ensure-ketidakhadiran-harian
 import { ensureKetidakhadiranRaporSchema } from './ensure-ketidakhadiran-rapor';
 import { ensurePresensiGuruSchema } from './ensure-presensi-guru';
 import { ensurePegawaiTtdSchema } from './ensure-pegawai-ttd';
+import { ensurePegawaiNikSchema } from './ensure-pegawai-nik';
+import { ensureMuridArsipSchema } from './ensure-murid-arsip';
 import { ensureSppdSchema } from './ensure-sppd';
 import { ensureCloudSyncSchema } from './ensure-cloud-sync';
+import { ensurePortalOrangtuaSchema } from './ensure-portal-orangtua';
 import { ensureKepalaSekolahAccounts } from '$lib/server/kepala-sekolah';
 import { ensurePegawaiConsolidation } from '$lib/server/pengguna-consolidation';
 import { ensureAiSettingsSchema } from './ensure-ai-settings';
@@ -41,6 +44,8 @@ export async function runStartupEnsures() {
 	await ensureCoreSchema();
 	// Kolom tanda tangan pegawai (database lama) + pindahkan berkas lama ke DB.
 	await ensurePegawaiTtdSchema();
+	await ensurePegawaiNikSchema();
+	await ensureMuridArsipSchema();
 	await ensureAcademicModulesSchema();
 	await ensureJadwalBellSchema();
 	await ensurePresensiSettingsSchema();
@@ -65,6 +70,7 @@ export async function runStartupEnsures() {
 	await ensurePresensiGuruSchema();
 	await ensureSppdSchema();
 	await ensureCloudSyncSchema();
+	await ensurePortalOrangtuaSchema();
 	await ensureDefaultAdmin();
 	await ensurePermissionMigration();
 	await ensureKepalaSekolahAccounts();

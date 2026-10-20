@@ -6,7 +6,7 @@
 
 <td>{u.pegawaiName ?? u.username}</td>
 <td>{(u.roles ?? []).join(', ')}</td>
-<td>{u.username ? u.username : '-'}</td>
+<td>{u.pegawaiNik || u.username || '-'}</td>
 <td>
 	<div class="flex flex-row items-center gap-1">
 		{#if onSwitch && !isMasterAdmin}

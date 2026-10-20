@@ -7,9 +7,20 @@
 	import { showModal } from '$lib/components/global-modal.svelte';
 	import { toast } from '$lib/components/toast.svelte';
 	import MuridPhotoUploadModal from '$lib/components/murid-photo-upload-modal.svelte';
+	import MuridArsipTab from '$lib/components/murid/murid-arsip-tab.svelte';
 	import { page } from '$app/state';
 
 	let { data } = $props();
+
+	function statusLabel(value?: string | null) {
+		const labels: Record<string, string> = {
+			aktif: 'Aktif',
+			lulus: 'Lulus',
+			pindah: 'Pindah',
+			keluar: 'Keluar'
+		};
+		return labels[value ?? 'aktif'] ?? value;
+	}
 
 	// Restrict editing for wali_asuh and user (guru mapel)
 	const canEdit = $derived.by(() => {
@@ -204,6 +215,8 @@
 						{@render field('Agama', data.murid.agama)}
 						{@render field('Pendidikan Sebelumnya', data.murid.pendidikanSebelumnya)}
 						{@render field('Tanggal Masuk Sekolah Ini', data.murid.tanggalMasuk)}
+						{@render field('Status', statusLabel(data.murid.status))}
+						{@render field('Tanggal Lulus', data.murid.tanggalLulus)}
 					</div>
 				</div>
 			</div>
@@ -269,6 +282,21 @@
 					{@render field('Nama Wali Asuh', data.murid.waliAsuhNama)}
 					{@render field('NIP Wali Asuh', data.murid.waliAsuhNip)}
 				</div>
+			</div>
+			<!-- Arsip dokumen -->
+			<input
+				type="radio"
+				name="tab-detil-murid"
+				class="tab pointer-events-auto"
+				aria-label="Arsip"
+			/>
+			<div class="tab-content bg-base-100 p-4">
+				<MuridArsipTab
+					muridId={data.murid.id}
+					lampiran={data.murid.lampiran ?? []}
+					status={data.murid.status}
+					{canEdit}
+				/>
 			</div>
 		</div>
 	</div>

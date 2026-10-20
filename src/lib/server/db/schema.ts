@@ -103,6 +103,8 @@ export const tablePegawai = sqliteTable('pegawai', {
 	id: int().primaryKey({ autoIncrement: true }),
 	nama: text().notNull(),
 	nip: text().notNull(),
+	// NIK dipakai sebagai identitas login guru (selain username admin).
+	nik: text(),
 	// Sekolah pemilik pegawai (null utk placeholder/belum ditetapkan). Dipakai
 	// dapodik sync utk memisahkan data GTK antar sekolah.
 	sekolahId: int().references(() => tableSekolah.id),
@@ -371,6 +373,11 @@ export const tableMurid = sqliteTable(
 		agama: text().notNull(),
 		pendidikanSebelumnya: text().notNull(),
 		tanggalMasuk: text().notNull(),
+		// Status kelulusan dipakai untuk membuka arsip ijazah sekolah.
+		status: text({ enum: ['aktif', 'lulus', 'pindah', 'keluar'] })
+			.default('aktif')
+			.notNull(),
+		tanggalLulus: text(),
 		alamatId: int()
 			.references(() => tableAlamat.id)
 			.notNull(),
@@ -420,6 +427,30 @@ export const tableKehadiranMurid = sqliteTable(
 	(table) => [unique().on(table.muridId), index('kehadiran_murid_murid_idx').on(table.muridId)]
 );
 
+// Satu berkas per jenis arsip per murid. Berkas fisik disimpan di data root,
+// bukan blob database, agar backup .sqlite3 tetap ringan.
+export const tableMuridLampiran = sqliteTable(
+	'murid_lampiran',
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		muridId: int()
+			.references(() => tableMurid.id, { onDelete: 'cascade' })
+			.notNull(),
+		jenis: text({
+			enum: ['kk', 'akta', 'ijazah_terakhir', 'ijazah_sekolah']
+		}).notNull(),
+		namaFile: text().notNull(),
+		filePath: text().notNull(),
+		mimeType: text().notNull(),
+		ukuran: int().default(0).notNull(),
+		...audit
+	},
+	(table) => [
+		unique().on(table.muridId, table.jenis),
+		index('murid_lampiran_murid_idx').on(table.muridId)
+	]
+);
+
 export const tableMuridRelations = relations(tableMurid, ({ one, many }) => ({
 	kelas: one(tableKelas, { fields: [tableMurid.kelasId], references: [tableKelas.id] }),
 	semester: one(tableSemester, { fields: [tableMurid.semesterId], references: [tableSemester.id] }),
@@ -439,6 +470,7 @@ export const tableMuridRelations = relations(tableMurid, ({ one, many }) => ({
 		fields: [tableMurid.id],
 		references: [tableKeputusanMurid.muridId]
 	}),
+	lampiran: many(tableMuridLampiran),
 	muridMataPelajaran: many(tableMuridMataPelajaran),
 	absensi: many(tableAbsensi),
 	ketidakhadiranHarian: many(tableKetidakhadiranHarian)
@@ -454,6 +486,13 @@ export const tableCatatanWaliKelasRelations = relations(tableCatatanWaliKelas, (
 export const tableKehadiranMuridRelations = relations(tableKehadiranMurid, ({ one }) => ({
 	murid: one(tableMurid, {
 		fields: [tableKehadiranMurid.muridId],
+		references: [tableMurid.id]
+	})
+}));
+
+export const tableMuridLampiranRelations = relations(tableMuridLampiran, ({ one }) => ({
+	murid: one(tableMurid, {
+		fields: [tableMuridLampiran.muridId],
 		references: [tableMurid.id]
 	})
 }));
@@ -1600,4 +1639,48 @@ export const tableCloudSyncLogs = sqliteTable(
 		...audit
 	},
 	(table) => [index('cloud_sync_logs_sekolah_idx').on(table.sekolahId)]
+);
+
+// Akun portal orang tua. Sumber kebenaran akun ada di e-Rapor; portal hanya
+// menerima salinan hash password lewat publikasi. `forcePasswordSync` dipakai
+// agar reset password dari e-Rapor menimpa password portal, sementara password
+// yang sudah diganti orang tua di portal tidak ikut tertimpa saat publikasi
+// berikutnya.
+export const tablePortalOrangtua = sqliteTable(
+	'portal_orangtua',
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		sekolahId: int()
+			.references(() => tableSekolah.id, { onDelete: 'cascade' })
+			.notNull(),
+		telepon: text().notNull(),
+		nama: text().notNull(),
+		passwordHash: text().notNull(),
+		passwordSalt: text().notNull(),
+		mustChangePassword: int({ mode: 'boolean' }).default(true).notNull(),
+		isActive: int({ mode: 'boolean' }).default(true).notNull(),
+		forcePasswordSync: int({ mode: 'boolean' }).default(true).notNull(),
+		lastPublishedAt: text(),
+		...audit
+	},
+	(table) => [uniqueIndex('portal_orangtua_sekolah_telepon_idx').on(table.sekolahId, table.telepon)]
+);
+
+export const tablePortalOrangtuaMurid = sqliteTable(
+	'portal_orangtua_murid',
+	{
+		orangtuaId: int()
+			.references(() => tablePortalOrangtua.id, { onDelete: 'cascade' })
+			.notNull(),
+		muridId: int()
+			.references(() => tableMurid.id, { onDelete: 'cascade' })
+			.notNull(),
+		hubungan: text({ enum: ['ayah', 'ibu', 'wali'] })
+			.default('wali')
+			.notNull()
+	},
+	(table) => [
+		index('portal_orangtua_murid_murid_idx').on(table.muridId),
+		index('portal_orangtua_murid_orangtua_idx').on(table.orangtuaId)
+	]
 );

@@ -99,7 +99,7 @@ export const actions: Actions = {
 			logLoginEvent('Missing credentials', { username, client });
 			const remaining = remainingAttempts(await recentFailureCount(username || null, client));
 			const suffix = remaining > 0 ? ` Sisa ${remaining}x percobaan sebelum akun terkunci.` : '';
-			return fail(400, { message: `Nama pengguna dan kata sandi wajib diisi.${suffix}` });
+			return fail(400, { message: `NIK dan kata sandi wajib diisi.${suffix}` });
 		}
 
 		// Rate limiting / lockout (brute-force protection). A blocked attempt is
@@ -131,7 +131,7 @@ export const actions: Actions = {
 			const remaining = remainingAttempts(failures + 1);
 			const suffix = remaining > 0 ? ` Sisa ${remaining}x percobaan sebelum akun terkunci.` : '';
 			return fail(401, {
-				message: `Nama pengguna atau kata sandi tidak valid.${suffix}`
+				message: `NIK atau kata sandi tidak valid.${suffix}`
 			});
 		}
 

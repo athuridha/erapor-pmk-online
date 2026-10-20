@@ -203,7 +203,11 @@ export async function executeD1Query(
 
 			// Cloudflare membalas 7500 "You do not have permission to perform this operation."
 			// ketika token hanya berizin baca (D1 Read) lalu diminta menulis.
-			if (code === 7500 || /permission to perform/i.test(message ?? '')) {
+			if (
+				res.status === 403 ||
+				/permission to perform/i.test(message ?? '') ||
+				/D1 Read/i.test(message ?? '')
+			) {
 				return {
 					success: false,
 					error:

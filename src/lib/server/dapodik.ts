@@ -891,6 +891,7 @@ async function syncPtk(
 			const nama = str(row, 'nama');
 			if (!ptkId || !nama) continue;
 			const nip = str(row, 'nip') ?? '';
+			const nik = str(row, 'nik') ?? null;
 
 			let pegawaiId = index.resolve(ptkId, nip || null, nama);
 			if (pegawaiId) {
@@ -903,6 +904,7 @@ async function syncPtk(
 					.set({
 						dapodikPtkId: ptkId,
 						...(nip ? { nip } : {}),
+						...(nik ? { nik } : {}),
 						// Placeholder kepsek ('-') bisa dibuat createSekolahFromDapodik
 						// sebelum sekolah punya id — scope ke sekolah ini sekarang.
 						...(existing && !existing.dapodikPtkId && !existing.sekolahId ? { sekolahId } : {}),
@@ -916,6 +918,7 @@ async function syncPtk(
 					.values({
 						nama,
 						nip: nip || '',
+						nik,
 						sekolahId,
 						dapodikPtkId: ptkId,
 						nuptk: str(row, 'nuptk') ?? null

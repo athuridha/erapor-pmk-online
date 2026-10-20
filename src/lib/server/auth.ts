@@ -1,9 +1,9 @@
 import db from '$lib/server/db';
-import { tableAuthSession, tableAuthUser } from '$lib/server/db/schema';
+import { tableAuthSession, tableAuthUser, tablePegawai } from '$lib/server/db/schema';
 import { userPermissions } from '../../routes/pengguna/permissions';
 import { cookieNames } from '$lib/utils';
 import type { Cookies } from '@sveltejs/kit';
-import { eq, sql } from 'drizzle-orm';
+import { eq, or, sql } from 'drizzle-orm';
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
 const SESSION_TTL_SECONDS = 60 * 60 * 12; // 12 hours
@@ -125,14 +125,41 @@ export async function ensureDefaultAdmin() {
 }
 
 export async function authenticateUser(username: string, password: string) {
-	const normalized = normalizeUsername(username);
+	const identifier = username.trim();
+	const normalized = normalizeUsername(identifier);
 	if (!normalized) return null;
+
+	// Admin tetap memakai username. Akun guru juga bisa memakai username lama,
+	// lalu dicocokkan ke NIK/NIP pegawai supaya login guru tidak terputus saat
+	// migrasi data.
 	const user = await db.query.tableAuthUser.findFirst({
 		where: eq(tableAuthUser.usernameNormalized, normalized)
 	});
-	if (!user) return null;
-	const valid = verifyPassword(password, user.passwordHash, user.passwordSalt);
-	return valid ? user : null;
+	if (user) {
+		const valid = verifyPassword(password, user.passwordHash, user.passwordSalt);
+		return valid ? user : null;
+	}
+
+	if (!identifier) return null;
+	try {
+		const [byPegawai] = await db
+			.select({ user: tableAuthUser })
+			.from(tableAuthUser)
+			.innerJoin(tablePegawai, eq(tableAuthUser.pegawaiId, tablePegawai.id))
+			.where(or(eq(tablePegawai.nik, identifier), eq(tablePegawai.nip, identifier)))
+			.limit(1);
+		if (!byPegawai?.user) return null;
+		const valid = verifyPassword(
+			password,
+			byPegawai.user.passwordHash,
+			byPegawai.user.passwordSalt
+		);
+		return valid ? byPegawai.user : null;
+	} catch (error) {
+		// Kolom pegawai.nik mungkin belum ada pada proses startup yang sangat awal.
+		console.warn('[auth] NIK login lookup failed', error);
+		return null;
+	}
 }
 
 function calculateExpiry(secondsFromNow: number) {

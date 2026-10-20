@@ -284,8 +284,8 @@ export async function mergeMasterData(payload: MasterPayloadLike): Promise<{
 				return nip ? `nip:${nip}` : `nama:${toText(row.nama)}`;
 			},
 			mapRow: (row, idMaps) => ({ ...row, sekolahId: mapId(idMaps, 'sekolah', row.sekolahId) }),
-			insertColumns: ['nama', 'nip', 'sekolahId', 'dapodikPtkId', 'nuptk'],
-			updateColumns: ['nama', 'sekolahId', 'dapodikPtkId', 'nuptk']
+			insertColumns: ['nama', 'nip', 'nik', 'sekolahId', 'dapodikPtkId', 'nuptk'],
+			updateColumns: ['nama', 'nik', 'sekolahId', 'dapodikPtkId', 'nuptk']
 		});
 
 		// Kepala sekolah sekolah sekarang bisa dipetakan ke pegawai lokal.

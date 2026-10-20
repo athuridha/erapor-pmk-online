@@ -43,6 +43,12 @@ function parsePermissions(
 	}
 }
 
+function validateNik(value: string) {
+	if (!value) return null;
+	if (!/^\d{16}$/.test(value)) return 'NIK harus 16 digit angka.';
+	return null;
+}
+
 async function fetchSharedLists() {
 	const [mataPelajaran, sekolahList, kelasListRaw] = await Promise.all([
 		db
@@ -106,6 +112,7 @@ export async function load({ params }) {
 				type: u.type,
 				pegawaiId: u.pegawaiId,
 				pegawaiName: tablePegawai.nama,
+				pegawaiNik: tablePegawai.nik,
 				sekolahId: u.sekolahId,
 				kelasId: u.kelasId,
 				permissions: u.permissions
@@ -163,10 +170,13 @@ async function createUser(request: Request) {
 	const username = String(form.get('username') ?? '').trim();
 	const password = String(form.get('password') ?? '').trim();
 	const nama = String(form.get('nama') ?? '').trim();
+	const nik = String(form.get('nik') ?? '').trim();
 	const roleValue = String(form.get('type') ?? 'user');
 	if (!(ALLOWED_USER_TYPES as readonly string[]).includes(roleValue)) {
 		return fail(400, { message: 'Tipe pengguna tidak valid.' });
 	}
+	const nikError = validateNik(nik);
+	if (nikError) return fail(400, { message: nikError });
 
 	let mataPelajaranIds: number[] = [];
 	const mpRaw = form.get('mataPelajaranIds');
@@ -207,7 +217,7 @@ async function createUser(request: Request) {
 		if (nama) {
 			const [p] = await db
 				.insert(tablePegawai)
-				.values({ nama, nip: '' })
+				.values({ nama, nip: '', nik: nik || null })
 				.returning({ id: tablePegawai.id });
 			if (p && typeof p.id === 'number') pegawaiId = p.id;
 		}
@@ -340,10 +350,13 @@ async function updateUser(request: Request, id: number) {
 	const username = String(form.get('username') ?? '').trim();
 	const password = String(form.get('password') ?? '').trim();
 	const nama = String(form.get('nama') ?? '').trim();
+	const nik = String(form.get('nik') ?? '').trim();
 	const roleValue = String(form.get('type') ?? 'user');
 	if (!(ALLOWED_USER_TYPES as readonly string[]).includes(roleValue)) {
 		return fail(400, { message: 'Tipe pengguna tidak valid.' });
 	}
+	const nikError = validateNik(nik);
+	if (nikError) return fail(400, { message: nikError });
 
 	if (!username) return fail(400, { message: 'Username wajib diisi.' });
 
@@ -417,11 +430,14 @@ async function updateUser(request: Request, id: number) {
 			}
 
 			if (nama && existing.pegawaiId) {
-				await tx.update(tablePegawai).set({ nama }).where(eq(tablePegawai.id, existing.pegawaiId));
+				await tx
+					.update(tablePegawai)
+					.set({ nama, nik: nik || null })
+					.where(eq(tablePegawai.id, existing.pegawaiId));
 			} else if (nama && !existing.pegawaiId) {
 				const [p] = await tx
 					.insert(tablePegawai)
-					.values({ nama, nip: '' })
+					.values({ nama, nip: '', nik: nik || null })
 					.returning({ id: tablePegawai.id });
 				if (p) await tx.update(u).set({ pegawaiId: p.id }).where(eq(u.id, id));
 			}

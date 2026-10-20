@@ -122,16 +122,19 @@
 		<FormEnhance action="?/login" onfailure={handleLoginFailure}>
 			{#snippet children({ submitting, invalid })}
 				<div class="fieldset">
-					<label class="fieldset-legend" for="username"> Nama Pengguna </label>
+					<label class="fieldset-legend" for="username"> NIK Guru </label>
 					<input
 						type="text"
 						id="username"
 						name="username"
 						required
 						autocomplete="username"
-						placeholder="Contoh: Admin"
+						placeholder="Contoh: 3216012345670001"
 						class="input input-bordered dark:bg-base-200 w-full dark:border-none"
 					/>
+					<p class="label text-wrap">
+						Guru masuk memakai NIK. Akun admin tetap memakai nama pengguna.
+					</p>
 				</div>
 
 				<div class="fieldset">
