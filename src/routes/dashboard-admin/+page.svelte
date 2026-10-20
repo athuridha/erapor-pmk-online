@@ -216,7 +216,9 @@
 									>
 										<Icon name={item.ikon} />
 									</span>
-									<h5 class="card-title text-base">{item.judul}</h5>
+									<a class="card-title text-base link-hover" href={`/dashboard-admin/${item.key}`}>
+										{item.judul}
+									</a>
 								</div>
 								{#if item.jumlah != null}
 									<span class="badge badge-soft badge-primary">{item.jumlah}</span>
