@@ -2,7 +2,8 @@ import db from '$lib/server/db';
 import {
 	tablePresensiSettings,
 	tableBellSettings,
-	tableKegiatanCustom
+	tableKegiatanCustom,
+	tableSemester
 } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
 import type { BellSettingsData, CustomKegiatanData } from '$lib/server/absen-utils';
@@ -31,13 +32,41 @@ export async function checkPresensiReadiness(
 	};
 
 	if (sekolahId && kelasId && tahunAjaranId) {
-		const presensiSettings =
+		let presensiSettings =
 			(await db.query.tablePresensiSettings.findFirst({
 				where: and(
 					eq(tablePresensiSettings.sekolahId, sekolahId),
 					eq(tablePresensiSettings.tahunAjaranId, tahunAjaranId)
 				)
 			})) ?? null;
+
+		// Instalasi baru — atau instalasi yang datanya baru ditarik dari Database
+		// Pusat — belum punya baris pengaturan presensi. Tanpa baris ini halaman
+		// presensi menampilkan daftar kosong padahal muridnya ada. Buat default
+		// supaya daftar siswa langsung tampil dan bisa diatur dari halaman /
+		// pengaturan.
+		if (!presensiSettings) {
+			try {
+				const [created] = await db
+					.insert(tablePresensiSettings)
+					.values({ sekolahId, tahunAjaranId })
+					.onConflictDoNothing({
+						target: [tablePresensiSettings.sekolahId, tablePresensiSettings.tahunAjaranId]
+					})
+					.returning();
+				presensiSettings =
+					created ??
+					(await db.query.tablePresensiSettings.findFirst({
+						where: and(
+							eq(tablePresensiSettings.sekolahId, sekolahId),
+							eq(tablePresensiSettings.tahunAjaranId, tahunAjaranId)
+						)
+					})) ??
+					null;
+			} catch (error) {
+				console.warn('[presensi] gagal membuat pengaturan presensi default:', error);
+			}
+		}
 
 		const bellSettings =
 			(await db.query.tableBellSettings.findFirst({
@@ -59,7 +88,22 @@ export async function checkPresensiReadiness(
 			(ta) => ta.id === academicContext?.activeTahunAjaranId
 		);
 		const activeSem = activeTa?.semester.find((s) => s.id === academicContext?.activeSemesterId);
-		const tanggalMasuk = activeSem?.tanggalMasuk ?? null;
+
+		// Tanggal masuk semester menentukan mulai hitung presensi. Data master dari
+		// Database Pusat belum tentu menyertakannya, jadi lengkapi dengan tanggal
+		// mulai semester bila kosong.
+		let tanggalMasuk = activeSem?.tanggalMasuk ?? null;
+		if (!tanggalMasuk && activeSem?.tanggalMulai) {
+			tanggalMasuk = activeSem.tanggalMulai;
+			try {
+				await db
+					.update(tableSemester)
+					.set({ tanggalMasuk, updatedAt: new Date().toISOString() })
+					.where(eq(tableSemester.id, activeSem.id));
+			} catch (error) {
+				console.warn('[presensi] gagal melengkapi tanggal masuk semester:', error);
+			}
+		}
 		const activeSemesterLabel = activeSem && activeTa ? `${activeSem.nama} (${activeTa.nama})` : '';
 
 		const hasPresensiSettings = !!presensiSettings;
