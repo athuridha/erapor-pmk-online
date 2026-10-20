@@ -37,6 +37,10 @@ export interface MasterData {
 	fields: FieldMaster[];
 	/** Kolom yang ditampilkan di tabel. */
 	kolom: Array<{ key: string; label: string }>;
+	/** Tambah/ubah memakai form khusus (mis. form pengguna), bukan form generik. */
+	formPengguna?: boolean;
+	/** Halaman form tambah/ubah khusus. */
+	tambahPath?: string;
 }
 
 export const MASTER_DATA: MasterData[] = [
@@ -176,29 +180,24 @@ export const MASTER_DATA: MasterData[] = [
 		]
 	},
 	{
-		key: 'pegawai',
+		key: 'pengguna',
 		judul: 'Guru & Pegawai',
 		deskripsi:
-			'Data guru/pegawai dan NIP/NIK untuk login. Jabatan & golongan diatur di profil akun pengguna.',
-		ikon: 'user',
-		tabel: 'pegawai',
-		fields: [
-			{ key: 'nama', label: 'Nama', tipe: 'teks', wajib: true },
-			{ key: 'nip', label: 'NIP', tipe: 'teks', wajib: true },
-			{
-				key: 'nik',
-				label: 'NIK (untuk login guru)',
-				tipe: 'teks',
-				bantu: '16 digit, dipakai guru untuk login.'
-			},
-			{ key: 'nuptk', label: 'NUPTK', tipe: 'teks' },
-			{ key: 'dapodik_ptk_id', label: 'ID PTK Dapodik', tipe: 'teks' }
-		],
+			'Akun guru, kepala sekolah, dan wali kelas. CRUD memakai form yang sama dengan Manajemen Pengguna.',
+		ikon: 'users',
+		tabel: 'auth_user',
+		/** Tambah/ubah memakai form pengguna (bukan form master data generik). */
+		formPengguna: true,
+		tambahPath: '/pengguna/form',
+		fields: [],
 		kolom: [
 			{ key: 'nama', label: 'Nama' },
-			{ key: 'nip', label: 'NIP' },
-			{ key: 'nik', label: 'NIK' },
-			{ key: 'nuptk', label: 'NUPTK' }
+			{ key: 'role', label: 'Role' },
+			{ key: 'nik_username', label: 'NIK / Username' },
+			{ key: 'kelas', label: 'Kelas' },
+			{ key: 'mapel', label: 'Mata Pelajaran' },
+			{ key: 'izin', label: 'Hak Akses' },
+			{ key: 'dibuat', label: 'Dibuat' }
 		]
 	},
 	{

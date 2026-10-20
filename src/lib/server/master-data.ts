@@ -220,6 +220,38 @@ async function muatSemuaBaris(
 				.orderBy(asc(tablePegawai.nama));
 			return rows;
 		}
+		case 'pengguna': {
+			const rows = await db
+				.select({
+					id: tableAuthUser.id,
+					username: tableAuthUser.username,
+					namaLengkap: tableAuthUser.namaLengkap,
+					role: tableAuthUser.type,
+					pegawaiNama: tablePegawai.nama,
+					nik: tablePegawai.nik,
+					kelas: sql<string | null>`(select k.nama from kelas k where k.id = auth_user.kelas_id)`,
+					mapel: sql<
+						string | null
+					>`(select mp.nama from mata_pelajaran mp where mp.id = auth_user.mata_pelajaran_id)`,
+					izin: sql<number>`(select count(*) from json_each(auth_user.permissions))`,
+					dibuat: tableAuthUser.createdAt
+				})
+				.from(tableAuthUser)
+				.leftJoin(tablePegawai, eq(tableAuthUser.pegawaiId, tablePegawai.id))
+				.where(
+					q
+						? sql`(lower(auth_user.username) like ${like} or lower(coalesce(auth_user.nama_lengkap, '')) like ${like})`
+						: undefined
+				)
+				.orderBy(asc(tableAuthUser.username))
+				.limit(2000);
+			return rows.map((row) => ({
+				...row,
+				nama: row.namaLengkap ?? row.pegawaiNama ?? row.username,
+				role: labelRole(row.role),
+				nik_username: row.nik || row.username
+			}));
+		}
 		case 'murid': {
 			const rows = await db
 				.select({
@@ -315,6 +347,21 @@ export interface HasilSimpan {
 	fail?: string;
 }
 
+function labelRole(role: string): string {
+	switch (role) {
+		case 'admin':
+			return 'Admin';
+		case 'kepala_sekolah':
+			return 'Kepala Sekolah';
+		case 'wali_kelas':
+			return 'Wali Kelas';
+		case 'wali_asuh':
+			return 'Wali Asuh';
+		default:
+			return 'Guru';
+	}
+}
+
 function teks(formData: FormData, key: string) {
 	const nilai = formData.get(key);
 	return typeof nilai === 'string' ? nilai.trim() : '';
@@ -348,6 +395,12 @@ export async function simpanMasterData(
 	}
 
 	const now = new Date().toISOString();
+
+	if (definisi.formPengguna) {
+		return {
+			fail: 'Tambah/ubah akun pengguna dilakukan lewat form (/pengguna/form), bukan form master data.'
+		};
+	}
 
 	switch (key) {
 		case 'tahun_ajaran': {
@@ -809,6 +862,40 @@ export async function hapusMasterData(
 			}
 			await db.delete(tableMataPelajaran).where(eq(tableMataPelajaran.id, id));
 			return { message: 'Mata pelajaran dihapus.' };
+		}
+		case 'pengguna': {
+			const akun = await db.query.tableAuthUser.findFirst({
+				columns: { id: true, username: true, type: true, pegawaiId: true },
+				where: eq(tableAuthUser.id, id)
+			});
+			if (!akun) return { fail: 'Akun pengguna tidak ditemukan.' };
+			if (akun.id === 1 || akun.username.trim().toLowerCase() === 'admin') {
+				return { fail: 'Akun Admin utama tidak dapat dihapus.' };
+			}
+			if (akun.pegawaiId) {
+				const kepalaSekolah = await db
+					.select({ id: tableSekolah.id })
+					.from(tableSekolah)
+					.where(eq(tableSekolah.kepalaSekolahId, akun.pegawaiId))
+					.limit(1);
+				if (kepalaSekolah.length) {
+					return {
+						fail: 'Akun ini adalah kepala sekolah. Ganti kepala sekolahnya lebih dulu.'
+					};
+				}
+				const waliKelas = await db
+					.select({ id: tableKelas.id })
+					.from(tableKelas)
+					.where(eq(tableKelas.waliKelasId, akun.pegawaiId))
+					.limit(1);
+				if (waliKelas.length) {
+					return {
+						fail: 'Akun masih menjadi wali kelas. Ganti wali kelasnya lebih dulu.'
+					};
+				}
+			}
+			await db.delete(tableAuthUser).where(eq(tableAuthUser.id, id));
+			return { message: `Akun ${akun.username} dihapus.` };
 		}
 		case 'pegawai': {
 			const dipakaiKepala = await db

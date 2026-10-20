@@ -1,4 +1,4 @@
-export const appMenuItems: MenuItem[] = [
+﻿export const appMenuItems: MenuItem[] = [
 	{
 		title: 'Beranda',
 		icon: 'grid',
@@ -41,7 +41,7 @@ export const appMenuItems: MenuItem[] = [
 			},
 			{
 				title: 'Guru & Pegawai',
-				path: '/master-data/pegawai',
+				path: '/master-data/pengguna',
 				icon: 'users',
 				tags: ['guru', 'pegawai', 'nip', 'nik', 'referensi']
 			},

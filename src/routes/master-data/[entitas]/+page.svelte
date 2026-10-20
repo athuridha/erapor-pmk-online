@@ -129,10 +129,24 @@
 					{/snippet}
 				</FormEnhance>
 			{/if}
-			<button type="button" class="btn btn-primary shadow-none max-sm:w-full" onclick={bukaTambah}>
-				<Icon name="plus" />
-				Tambah
-			</button>
+			{#if entitas.formPengguna}
+				<a
+					class="btn btn-primary shadow-none max-sm:w-full"
+					href={entitas.tambahPath ?? '/pengguna/form'}
+				>
+					<Icon name="plus" />
+					Tambah Akun
+				</a>
+			{:else}
+				<button
+					type="button"
+					class="btn btn-primary shadow-none max-sm:w-full"
+					onclick={bukaTambah}
+				>
+					<Icon name="plus" />
+					Tambah
+				</button>
+			{/if}
 			{#if entitas.key === 'mata_pelajaran'}
 				<button
 					type="button"
@@ -251,14 +265,21 @@
 								</FormEnhance>
 							{:else}
 								<div class="flex items-center justify-center gap-1">
-									<button
-										type="button"
-										class="btn btn-ghost btn-xs shadow-none"
-										onclick={() => bukaUbah(row)}
-									>
-										<Icon name="edit" />
-										Ubah
-									</button>
+									{#if entitas.formPengguna}
+										<a class="btn btn-ghost btn-xs shadow-none" href={`/pengguna/form/${row.id}`}>
+											<Icon name="edit" />
+											Ubah
+										</a>
+									{:else}
+										<button
+											type="button"
+											class="btn btn-ghost btn-xs shadow-none"
+											onclick={() => bukaUbah(row)}
+										>
+											<Icon name="edit" />
+											Ubah
+										</button>
+									{/if}
 									<button
 										type="button"
 										class="btn btn-ghost btn-xs text-error shadow-none"
