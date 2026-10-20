@@ -12,43 +12,36 @@
 			{
 				title: 'Tahun Ajaran',
 				path: '/master-data/tahun_ajaran',
-				icon: 'calendar',
 				tags: ['tahun ajaran', 'kalender', 'referensi']
 			},
 			{
 				title: 'Semester',
 				path: '/master-data/semester',
-				icon: 'layers',
 				tags: ['semester', 'ganjil', 'genap', 'referensi']
 			},
 			{
 				title: 'Kelas',
 				path: '/master-data/kelas',
-				icon: 'users',
 				tags: ['kelas', 'rombel', 'wali kelas', 'referensi']
 			},
 			{
 				title: 'Murid',
 				path: '/master-data/murid',
-				icon: 'user',
 				tags: ['murid', 'siswa', 'data induk', 'referensi']
 			},
 			{
 				title: 'Mata Pelajaran',
 				path: '/master-data/mata_pelajaran',
-				icon: 'book',
 				tags: ['mapel', 'mata pelajaran', 'kkm', 'pengampu', 'referensi']
 			},
 			{
 				title: 'Guru & Pegawai',
 				path: '/master-data/pengguna',
-				icon: 'users',
 				tags: ['guru', 'pegawai', 'nip', 'nik', 'referensi']
 			},
 			{
 				title: 'Orang Tua & Wali',
 				path: '/master-data/ortu',
-				icon: 'users',
 				tags: ['orang tua', 'wali', 'ayah', 'ibu', 'referensi']
 			},
 			{

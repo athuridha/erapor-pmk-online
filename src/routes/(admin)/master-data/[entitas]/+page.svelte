@@ -101,282 +101,252 @@
 	}
 </script>
 
-<div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-	<div>
-		<div class="breadcrumbs mb-0.5 text-xs">
-			<ul>
-				<li><a href="/master-data">Master Data</a></li>
-				{#if entitas}<li>{entitas.judul}</li>{/if}
-			</ul>
+<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
+	<div class="mb-4 flex items-start justify-between gap-2 max-sm:flex-col sm:flex-row">
+		<div>
+			<h2 class="text-xl font-bold">{entitas?.judul ?? 'Master Data'}</h2>
+			{#if entitas}
+				<p class="text-base-content/80 block text-sm">{entitas.deskripsi}</p>
+			{/if}
 		</div>
-		<h2 class="flex items-center gap-2 text-xl font-bold">
-			<Icon name={entitas?.ikon ?? 'database'} />
-			{entitas?.judul ?? 'Master Data'}
-		</h2>
 		{#if entitas}
-			<p class="text-base-content/60 mt-0.5 block text-sm">{entitas.deskripsi}</p>
-		{/if}
-	</div>
-	{#if entitas}
-		<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-			{#if terpilih.length}
-				<FormEnhance action="?/hapusMassal" showToast={false} onsuccess={handleHapus}>
-					{#snippet children({ submitting })}
-						<input type="hidden" name="ids" value={JSON.stringify(terpilih)} />
-						<button
-							type="submit"
-							class="btn btn-error btn-soft rounded-xl shadow-none"
-							disabled={submitting}
-						>
-							<Icon name="del" />
-							Hapus {terpilih.length} Terpilih
-						</button>
-					{/snippet}
-				</FormEnhance>
-			{/if}
-			{#if entitas.formPengguna}
-				<a
-					class="btn btn-primary max-sm:w-full rounded-xl shadow-sm shadow-primary/20"
-					href={entitas.tambahPath ?? '/pengguna/form'}
-				>
-					<Icon name="plus" />
-					Tambah Akun
-				</a>
-			{:else}
-				<button
-					type="button"
-					class="btn btn-primary max-sm:w-full rounded-xl shadow-sm shadow-primary/20"
-					onclick={bukaTambah}
-				>
-					<Icon name="plus" />
-					Tambah
-				</button>
-			{/if}
-			{#if entitas.key === 'mata_pelajaran'}
-				<button
-					type="button"
-					class="btn btn-ghost max-sm:w-full rounded-xl"
-					onclick={() => {
-						kelasTerpilihMassal = [];
-						bulkTerbuka = true;
-					}}
-				>
-					<Icon name="layers" />
-					Tambah Massal
-				</button>
-			{/if}
-			{#if entitas.key === 'kelas'}
-				<button
-					type="button"
-					class="btn btn-ghost max-sm:w-full rounded-xl"
-					onclick={() => (pindahMuridTerbuka = true)}
-				>
-					<Icon name="move" />
-					Pindah Murid
-				</button>
-			{/if}
-		</div>
-	{/if}
-</div>
-
-<div class="mb-4 grid gap-3 sm:grid-cols-3">
-	<div class="rounded-2xl border border-base-200/60 bg-base-100 p-4">
-		<p class="text-base-content/50 text-xs font-medium tracking-wide uppercase">Total Data</p>
-		<p class="mt-1 text-2xl font-bold tracking-tight">{total}</p>
-		<p class="text-base-content/50 text-xs">
-			baris {entitas?.judul.toLowerCase() ?? 'master data'}
-		</p>
-	</div>
-	<div class="rounded-2xl border border-base-200/60 bg-base-100 p-4">
-		<p class="text-base-content/50 text-xs font-medium tracking-wide uppercase">Terpilih</p>
-		<p class="mt-1 text-2xl font-bold tracking-tight">{terpilih.length}</p>
-		<p class="text-base-content/50 text-xs">baris ditandai</p>
-	</div>
-	<div class="rounded-2xl border border-base-200/60 bg-base-100 p-4">
-		<p class="text-base-content/50 text-xs font-medium tracking-wide uppercase">Halaman</p>
-		<p class="mt-1 text-2xl font-bold tracking-tight">{halamanSekarang} / {totalHalaman}</p>
-		<p class="text-base-content/50 text-xs">{perHalaman} baris per halaman</p>
-	</div>
-</div>
-
-<form
-	class="mt-4 flex flex-col gap-2 sm:flex-row"
-	data-sveltekit-keepfocus
-	data-sveltekit-replacestate
-	onsubmit={(event) => event.preventDefault()}
->
-	<label
-		class="input bg-base-200/60 w-full max-w-sm rounded-xl border border-transparent transition focus:border-primary/40 focus:bg-base-100"
-	>
-		<Icon name="search" />
-		<input
-			type="search"
-			name="q"
-			bind:value={searchTerm}
-			spellcheck="false"
-			placeholder={`Cari ${entitas?.judul.toLowerCase() ?? 'data'}...`}
-			autocomplete="off"
-			onchange={(event) => applySearch((event.currentTarget as HTMLInputElement).value)}
-		/>
-	</label>
-</form>
-
-<div class="mt-4 overflow-x-auto rounded-2xl border border-base-200/60 bg-base-100 shadow-sm">
-	<table class="border-base-200 table border dark:border-none">
-		<thead>
-			<tr
-				class="bg-base-200/40 text-base-content/50 border-b border-base-200/60 text-left text-[11px] font-semibold tracking-wider uppercase"
-			>
-				<th style="width: 50px; min-width: 40px;" class="text-center">
-					<input
-						type="checkbox"
-						class="checkbox checkbox-primary checkbox-sm rounded-md"
-						checked={semuaTerpilih(idsHalaman, terpilih)}
-						onchange={(event) =>
-							(terpilih = selectAll(idsHalaman, (event.currentTarget as HTMLInputElement).checked))}
-					/>
-				</th>
-				{#each entitas?.kolom ?? [] as kolom (kolom.key)}
-					<th style="min-width: 140px;">{kolom.label}</th>
-				{/each}
-				<th class="text-center" style="width: 150px;">Aksi</th>
-			</tr>
-		</thead>
-		<tbody class="divide-y divide-base-200/60">
-			{#each baris as row (row.id)}
-				<tr
-					class="hover:bg-base-200/30 transition-colors {terpilih.includes(Number(row.id))
-						? 'bg-primary/5'
-						: ''}"
-				>
-					<td class="text-center">
-						<input
-							type="checkbox"
-							class="checkbox checkbox-primary checkbox-sm rounded-md"
-							checked={terpilih.includes(Number(row.id))}
-							onchange={(event) =>
-								(terpilih = toggleId(
-									terpilih,
-									Number(row.id),
-									(event.currentTarget as HTMLInputElement).checked
-								))}
-						/>
-					</td>
-					{#each entitas?.kolom ?? [] as kolom (kolom.key)}
-						<td>{row[kolom.key] ?? '—'}</td>
-					{/each}
-					<td>
-						<div class="flex items-center justify-center gap-1">
-							{#if hapusId === row.id}
-								<FormEnhance action="?/hapus" showToast={false} onsuccess={handleHapus}>
-									{#snippet children({ submitting })}
-										<input type="hidden" name="id" value={row.id} />
-										<div class="flex items-center justify-center gap-1">
-											<button
-												type="submit"
-												class="btn btn-ghost btn-sm rounded-lg text-error"
-												disabled={submitting}
-											>
-												Ya
-											</button>
-											<button
-												type="button"
-												class="btn btn-ghost btn-sm rounded-lg"
-												onclick={() => (hapusId = null)}
-											>
-												Batal
-											</button>
-										</div>
-									{/snippet}
-								</FormEnhance>
-							{:else}
-								{#if entitas?.formPengguna}
-									<a class="btn btn-ghost btn-sm rounded-lg" href={`/pengguna/form/${row.id}`}>
-										<Icon name="edit" />
-										Ubah
-									</a>
-								{:else}
-									<button
-										type="button"
-										class="btn btn-ghost btn-sm rounded-lg"
-										onclick={() => bukaUbah(row)}
-									>
-										<Icon name="edit" />
-										Ubah
-									</button>
-								{/if}
-								<button
-									type="button"
-									class="btn btn-ghost btn-sm rounded-lg text-error"
-									onclick={() => (hapusId = row.id)}
-								>
-									<Icon name="del" />
-								</button>
-							{/if}
-						</div>
-					</td>
-				</tr>
-			{:else}
-				<tr>
-					<td class="p-10 text-center" colspan={(entitas?.kolom.length ?? 0) + 2}>
-						<em class="opacity-60">Belum ada data untuk ditampilkan.</em>
-					</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-</div>
-
-<div class="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
-	<label class="flex items-center gap-2 text-sm">
-		Baris per halaman
-		<select
-			class="select select-bordered select-sm rounded-lg"
-			value={perHalaman}
-			onchange={(event) => gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
-		>
-			{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
-				<option value={jumlah}>{jumlah}</option>
-			{/each}
-		</select>
-	</label>
-
-	{#if totalHalaman > 1}
-		<div class="join mx-auto">
-			<button
-				type="button"
-				class="join-item btn btn-sm"
-				disabled={halamanSekarang <= 1}
-				onclick={() => gotoPage(halamanSekarang - 1)}
-			>
-				«
-			</button>
-			{#each nomorHalaman as nomor, index (index)}
-				{#if nomor === '…'}
-					<button type="button" class="join-item btn btn-sm" disabled>…</button>
+			<div class="flex flex-wrap items-center gap-2 max-sm:w-full">
+				{#if terpilih.length}
+					<FormEnhance action="?/hapusMassal" showToast={false} onsuccess={handleHapus}>
+						{#snippet children({ submitting })}
+							<input type="hidden" name="ids" value={JSON.stringify(terpilih)} />
+							<button
+								type="submit"
+								class="btn btn-error btn-soft shadow-none"
+								disabled={submitting}
+							>
+								<Icon name="del" />
+								Hapus {terpilih.length} Terpilih
+							</button>
+						{/snippet}
+					</FormEnhance>
+				{/if}
+				{#if entitas.formPengguna}
+					<a
+						class="btn btn-primary btn-soft shadow-none max-sm:w-full"
+						href={entitas.tambahPath ?? '/pengguna/form'}
+					>
+						<Icon name="plus" />
+						Tambah Akun
+					</a>
 				{:else}
 					<button
 						type="button"
-						class="join-item btn btn-sm"
-						class:btn-active={nomor === halamanSekarang}
-						onclick={() => gotoPage(nomor)}
+						class="btn btn-primary btn-soft shadow-none max-sm:w-full"
+						onclick={bukaTambah}
 					>
-						{nomor}
+						<Icon name="plus" />
+						Tambah
 					</button>
 				{/if}
-			{/each}
-			<button
-				type="button"
-				class="join-item btn btn-sm"
-				disabled={halamanSekarang >= totalHalaman}
-				onclick={() => gotoPage(halamanSekarang + 1)}
+				{#if entitas.key === 'mata_pelajaran'}
+					<button
+						type="button"
+						class="btn btn-soft shadow-none max-sm:w-full"
+						onclick={() => {
+							kelasTerpilihMassal = [];
+							bulkTerbuka = true;
+						}}
+					>
+						<Icon name="layers" />
+						Tambah Massal
+					</button>
+				{/if}
+				{#if entitas.key === 'kelas'}
+					<button
+						type="button"
+						class="btn btn-soft shadow-none max-sm:w-full"
+						onclick={() => (pindahMuridTerbuka = true)}
+					>
+						<Icon name="move" />
+						Pindah Murid
+					</button>
+				{/if}
+			</div>
+		{/if}
+	</div>
+
+	<form
+		class="mb-4 flex flex-col gap-2 sm:flex-row"
+		data-sveltekit-keepfocus
+		data-sveltekit-replacestate
+		onsubmit={(event) => event.preventDefault()}
+	>
+		<div class="join w-full">
+			<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
+				<Icon name="search" />
+				<input
+					type="search"
+					name="q"
+					bind:value={searchTerm}
+					spellcheck="false"
+					placeholder={`Cari ${entitas?.judul.toLowerCase() ?? 'data'}...`}
+					autocomplete="off"
+					onchange={(event) => applySearch((event.currentTarget as HTMLInputElement).value)}
+				/>
+			</label>
+			<select
+				class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink dark:border-none"
+				value={perHalaman}
+				title="Baris per halaman"
+				onchange={(event) =>
+					gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
 			>
-				»
-			</button>
+				{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
+					<option value={jumlah}>{jumlah} / hal</option>
+				{/each}
+			</select>
+		</div>
+	</form>
+
+	<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
+		<table class="border-base-200 table border dark:border-none">
+			<thead>
+				<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
+					<th style="width: 50px; min-width: 40px;" class="text-center">
+						<input
+							type="checkbox"
+							class="checkbox checkbox-sm"
+							checked={semuaTerpilih(idsHalaman, terpilih)}
+							onchange={(event) =>
+								(terpilih = selectAll(
+									idsHalaman,
+									(event.currentTarget as HTMLInputElement).checked
+								))}
+						/>
+					</th>
+					{#each entitas?.kolom ?? [] as kolom (kolom.key)}
+						<th style="min-width: 140px;">{kolom.label}</th>
+					{/each}
+					<th class="text-center" style="width: 150px;">Aksi</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each baris as row (row.id)}
+					<tr class={terpilih.includes(Number(row.id)) ? 'bg-base-200/40' : undefined}>
+						<td class="text-center">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								checked={terpilih.includes(Number(row.id))}
+								onchange={(event) =>
+									(terpilih = toggleId(
+										terpilih,
+										Number(row.id),
+										(event.currentTarget as HTMLInputElement).checked
+									))}
+							/>
+						</td>
+						{#each entitas?.kolom ?? [] as kolom (kolom.key)}
+							<td>{row[kolom.key] ?? '—'}</td>
+						{/each}
+						<td>
+							<div class="flex items-center justify-center gap-1">
+								{#if hapusId === row.id}
+									<FormEnhance action="?/hapus" showToast={false} onsuccess={handleHapus}>
+										{#snippet children({ submitting })}
+											<input type="hidden" name="id" value={row.id} />
+											<div class="flex items-center justify-center gap-1">
+												<button
+													type="submit"
+													class="btn btn-error btn-soft btn-sm shadow-none"
+													disabled={submitting}
+												>
+													Ya
+												</button>
+												<button
+													type="button"
+													class="btn btn-soft btn-sm shadow-none"
+													onclick={() => (hapusId = null)}
+												>
+													Batal
+												</button>
+											</div>
+										{/snippet}
+									</FormEnhance>
+								{:else}
+									{#if entitas?.formPengguna}
+										<a class="btn btn-soft btn-sm shadow-none" href={`/pengguna/form/${row.id}`}>
+											<Icon name="edit" />
+											Ubah
+										</a>
+									{:else}
+										<button
+											type="button"
+											class="btn btn-soft btn-sm shadow-none"
+											onclick={() => bukaUbah(row)}
+										>
+											<Icon name="edit" />
+											Ubah
+										</button>
+									{/if}
+									<button
+										type="button"
+										class="btn btn-soft btn-error btn-sm shadow-none"
+										onclick={() => (hapusId = row.id)}
+									>
+										<Icon name="del" />
+									</button>
+								{/if}
+							</div>
+						</td>
+					</tr>
+				{:else}
+					<tr>
+						<td class="p-6 text-center" colspan={(entitas?.kolom.length ?? 0) + 2}>
+							<em class="opacity-60">Belum ada data untuk ditampilkan.</em>
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+
+	{#if totalHalaman > 1}
+		<div class="mt-4 flex justify-center">
+			<div class="join">
+				<button
+					type="button"
+					class="join-item btn"
+					disabled={halamanSekarang <= 1}
+					onclick={() => gotoPage(halamanSekarang - 1)}
+				>
+					«
+				</button>
+				{#each nomorHalaman as nomor, index (index)}
+					{#if nomor === '…'}
+						<button type="button" class="join-item btn" disabled>…</button>
+					{:else}
+						<button
+							type="button"
+							class="join-item btn"
+							class:btn-active={nomor === halamanSekarang}
+							onclick={() => gotoPage(nomor)}
+						>
+							{nomor}
+						</button>
+					{/if}
+				{/each}
+				<button
+					type="button"
+					class="join-item btn"
+					disabled={halamanSekarang >= totalHalaman}
+					onclick={() => gotoPage(halamanSekarang + 1)}
+				>
+					»
+				</button>
+			</div>
 		</div>
 	{/if}
 
-	<p class="text-sm opacity-70">Menampilkan {barisTampil} dari {total} data</p>
+	<p class="mt-3 text-center text-sm opacity-70">
+		Menampilkan {barisTampil} dari {total} data
+	</p>
 </div>
 
 {#if entitas && formTerbuka}
