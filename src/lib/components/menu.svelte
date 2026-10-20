@@ -172,6 +172,9 @@
 		// match to sub paths
 		const normalizedPath = currentPath.replace(/\/+$/, '');
 		const normalizedItemPath = menuPath.replace(/\/+$/, '');
+		// Beranda ("/") hanya aktif di halaman beranda. Tanpa ini, path kosong
+		// membuat semua halaman dianggap turunan "/" sehingga Beranda selalu aktif.
+		if (normalizedItemPath === '') return normalizedPath === '';
 		// Item yang lebih spesifik menang: di /sinkronisasi/import-data, menu
 		// "Database Pusat" (/sinkronisasi) tidak boleh ikut ditandai aktif.
 		const adaYangLebihSpesifik = siblingPaths.some((path) => {
