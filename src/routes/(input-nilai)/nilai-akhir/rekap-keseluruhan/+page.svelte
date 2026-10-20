@@ -1,8 +1,8 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '$lib/components/icon.svelte';
-	import MoveKelasModal from '$lib/components/murid/move-kelas-modal.svelte';
+	import PindahMuridModal from '$lib/components/murid/pindah-murid-modal.svelte';
 	import { buildPageNumbers, OPSI_BARIS_PER_HALAMAN } from '$lib/utils/pagination';
 	import { selectAll, semuaTerpilih, toggleId } from '$lib/utils/bulk-select';
 
@@ -450,13 +450,16 @@
 	</div>
 </div>
 
-<MoveKelasModal
+<PindahMuridModal
 	bind:isOpen={moveModalOpen}
-	murid={muridTerpilih}
-	kelasList={daftarKelas.map((kelas) => ({
-		...kelas,
+	{muridTerpilih}
+	kelasTujuan={daftarKelas.map((kelas) => ({
+		id: kelas.id,
+		nama: kelas.nama,
+		fase: kelas.fase,
 		semesterNama: kelas.semesterLabel
 	}))}
+	action="?/pindahMurid"
 	onSuccess={() => {
 		selectedIds = [];
 		void invalidate('app:rekap-keseluruhan');

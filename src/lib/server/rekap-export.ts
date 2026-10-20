@@ -1,5 +1,5 @@
-import { writeAoaToBuffer } from '$lib/utils/excel.js';
-import type { RekapKeseluruhan } from '$lib/server/rekap-keseluruhan';
+﻿import { writeAoaToBuffer } from '$lib/utils/excel.js';
+import type { RekapKeseluruhan } from '$lib/admin/rekap.server';
 
 /**
  * Susun berkas Excel rekap nilai: judul, matriks murid per semester, rata-rata

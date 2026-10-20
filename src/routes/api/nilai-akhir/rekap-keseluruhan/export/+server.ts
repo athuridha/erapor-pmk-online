@@ -1,4 +1,4 @@
-import { buildRekapKeseluruhan } from '$lib/server/rekap-keseluruhan';
+﻿import { buildRekapKeseluruhan } from '$lib/admin/rekap.server';
 import { rekapKeExcel } from '$lib/server/rekap-export';
 import { canAccessKelas } from '$lib/server/kelas-akses';
 import { cookieNames } from '$lib/utils.js';

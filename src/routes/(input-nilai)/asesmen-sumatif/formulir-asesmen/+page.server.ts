@@ -1,4 +1,4 @@
-import db from '$lib/server/db';
+﻿import db from '$lib/server/db';
 import { ensureAsesmenSumatifSchema } from '$lib/server/db/ensure-asesmen-sumatif';
 import {
 	tableAsesmenSumatif,
@@ -18,7 +18,7 @@ import {
 	namaVarianUntukMurid
 } from '$lib/server/mapel-picker';
 import { bolehAksesMapel, getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
-import { catatAudit } from '$lib/server/audit';
+import { catatAudit } from '$lib/admin/audit.server';
 import {
 	konfigurasiNilaiDariSekolah,
 	hitungNilaiAkhirRts,

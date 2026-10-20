@@ -1,4 +1,4 @@
-import { loadAuditLog } from '$lib/server/audit';
+﻿import { loadAuditLog } from '$lib/admin/audit.server';
 import { error } from '@sveltejs/kit';
 
 export const load = async ({ locals, url, depends }) => {

@@ -1,9 +1,9 @@
-import {
+﻿import {
 	daftarKelasImpor,
 	parseBerkasNilai,
 	simpanImporNilai,
 	type JenisImpor
-} from '$lib/server/impor-nilai';
+} from '$lib/admin/impor-nilai.server';
 import { fail } from '@sveltejs/kit';
 
 export const load = async ({ locals, url }) => {

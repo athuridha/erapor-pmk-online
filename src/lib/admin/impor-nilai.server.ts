@@ -9,7 +9,7 @@ import {
 } from '$lib/server/db/schema';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { readBufferToAoA, writeAoaToBuffer } from '$lib/utils/excel.js';
-import { catatAudit } from '$lib/server/audit';
+import { catatAudit } from '$lib/admin/audit.server';
 
 export type JenisImpor = 'sumatif' | 'formatif';
 

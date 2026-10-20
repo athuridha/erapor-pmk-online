@@ -1,4 +1,4 @@
-export const groupedUserPermissions = {
+﻿export const groupedUserPermissions = {
 	user: {
 		values: [
 			['list', 'Lihat daftar pengguna'],

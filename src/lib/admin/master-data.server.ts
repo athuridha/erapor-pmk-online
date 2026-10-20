@@ -1,4 +1,4 @@
-import db from '$lib/server/db';
+﻿import db from '$lib/server/db';
 import {
 	tableAlamat,
 	tableAsesmenSumatif,
@@ -13,7 +13,7 @@ import {
 	tableWaliMurid
 } from '$lib/server/db/schema';
 import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
-import { MASTER_DATA } from '$lib/master-data';
+import { MASTER_DATA } from '$lib/admin/master-data';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 
 export interface OpsiRelasi {

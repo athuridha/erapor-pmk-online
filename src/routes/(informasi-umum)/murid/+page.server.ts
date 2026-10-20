@@ -131,7 +131,7 @@ export const actions = {
 		return { message: `${muridIds.length} murid berhasil dihapus` };
 	},
 
-	async moveSelected({ request, locals }) {
+	async pindahMurid({ request, locals }) {
 		const sekolahId = locals.sekolah?.id;
 		if (!sekolahId) {
 			return fail(401, { fail: 'Sekolah tidak ditemukan' });

@@ -1,4 +1,4 @@
-import { MASTER_DATA, cariMasterData } from '$lib/master-data';
+﻿import { MASTER_DATA, cariMasterData } from '$lib/admin/master-data';
 import {
 	hapusMasterData,
 	loadBarisMaster,
@@ -6,7 +6,7 @@ import {
 	loadOpsiRelasi,
 	simpanMasterData,
 	simpanMasterDataMassal
-} from '$lib/server/master-data';
+} from '$lib/admin/master-data.server';
 import { pindahkanMuridKelas } from '$lib/server/murid-pindah-kelas';
 import { error, fail } from '@sveltejs/kit';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';

@@ -7,7 +7,7 @@
 	import { modalRoute, searchQueryMarker } from '$lib/utils';
 	import { onDestroy } from 'svelte';
 	import MuridModals from '$lib/components/murid/modals.svelte';
-	import MuridMoveKelasModal from '$lib/components/murid/move-kelas-modal.svelte';
+	import PindahMuridModal from '$lib/components/murid/pindah-murid-modal.svelte';
 
 	type BulkModalData = {
 		type: 'bulk';
@@ -522,10 +522,14 @@
 
 <MuridModals {formSubmitting} {submitBulkDelete} bind:isBulkPhotoUploadOpen />
 
-<MuridMoveKelasModal
+<PindahMuridModal
 	bind:isOpen={isMoveOpen}
-	murid={selectedMurids.map((murid) => ({ id: murid.id, nama: murid.nama, nis: murid.nis }))}
-	kelasList={data.kelasTujuan ?? []}
-	currentKelasId={data.page.kelasId ? Number(data.page.kelasId) : null}
+	muridTerpilih={selectedMurids.map((murid) => ({
+		id: murid.id,
+		nama: murid.nama,
+		nis: murid.nis
+	}))}
+	kelasTujuan={data.kelasTujuan ?? []}
+	action="?/pindahMurid"
 	onSuccess={handleBulkMoveSuccess}
 />

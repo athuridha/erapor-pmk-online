@@ -1,4 +1,4 @@
-import { buatTemplateNilai, type JenisImpor } from '$lib/server/impor-nilai';
+﻿import { buatTemplateNilai, type JenisImpor } from '$lib/admin/impor-nilai.server';
 import { error } from '@sveltejs/kit';
 
 export async function GET({ locals, url }) {

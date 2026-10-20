@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import SvelteURLSearchParams from '$lib/svelte-helpers/url-search-params';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';

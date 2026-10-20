@@ -1,4 +1,4 @@
-﻿import { buildRekapKeseluruhan, daftarKelasSekolah } from '$lib/server/rekap-keseluruhan';
+﻿import { buildRekapKeseluruhan, daftarKelasSekolah } from '$lib/admin/rekap.server';
 import { pindahkanMuridKelas } from '$lib/server/murid-pindah-kelas';
 import { canAccessKelas } from '$lib/server/kelas-akses';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
@@ -101,7 +101,7 @@ export const load = async ({ parent, locals, url, depends }) => {
 };
 
 export const actions = {
-	async moveSelected({ request, locals }) {
+	async pindahMurid({ request, locals }) {
 		const sekolahId = locals.sekolah?.id;
 		if (!sekolahId) {
 			return fail(401, { fail: 'Sekolah tidak ditemukan' });

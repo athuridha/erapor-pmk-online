@@ -1,4 +1,4 @@
-import { MASTER_DATA } from '$lib/master-data';
+﻿import { MASTER_DATA } from '$lib/admin/master-data';
 import { error, redirect } from '@sveltejs/kit';
 
 export const load = async ({ locals }) => {
