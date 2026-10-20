@@ -7,7 +7,7 @@ import {
 	tableMurid,
 	tableTahunAjaran
 } from '$lib/server/db/schema';
-import { and, count, eq, sql } from 'drizzle-orm';
+import { and, count, eq, inArray } from 'drizzle-orm';
 
 export interface HasilHapus {
 	message?: string;
@@ -68,17 +68,19 @@ export async function hapusDataModul(
 			if (n > 0) {
 				return { fail: `Mata pelajaran sudah memiliki ${n} nilai. Hapus nilainya lebih dulu.` };
 			}
-			await db
-				.delete(tableMataPelajaran)
-				.where(
-					and(
-						eq(tableMataPelajaran.id, id),
-						eq(
-							tableMataPelajaran.kelasId,
-							sql`(select id from kelas where sekolah_id = ${sekolahId})`
-						)
-					)
-				);
+			const kelasIds = (
+				await db
+					.select({ id: tableKelas.id })
+					.from(tableKelas)
+					.where(eq(tableKelas.sekolahId, sekolahId))
+			).map((row) => row.id);
+			if (!kelasIds.length) return { fail: 'Data tidak ditemukan di sekolah ini.' };
+			const mapel = await db.query.tableMataPelajaran.findFirst({
+				columns: { id: true },
+				where: and(eq(tableMataPelajaran.id, id), inArray(tableMataPelajaran.kelasId, kelasIds))
+			});
+			if (!mapel) return { fail: 'Mata pelajaran tidak ditemukan di sekolah ini.' };
+			await db.delete(tableMataPelajaran).where(eq(tableMataPelajaran.id, id));
 			return { message: 'Mata pelajaran dihapus.' };
 		}
 		case 'pengguna': {
