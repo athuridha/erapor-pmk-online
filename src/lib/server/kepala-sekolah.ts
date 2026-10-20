@@ -1,6 +1,6 @@
 import db from '$lib/server/db';
 import { tableAuthUser, tablePegawai, tableSekolah } from '$lib/server/db/schema';
-import { and, eq, inArray, ne, or } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import { hashPassword } from '$lib/server/auth';
 import { randomBytes } from 'node:crypto';
 import { resolveUniqueUsername } from '$lib/server/usernames';
@@ -8,8 +8,73 @@ import { userPermissions } from '../../routes/pengguna/permissions';
 import {
 	deletePegawaiIfOrphaned,
 	findGuruPegawaiForKepalaSekolah,
-	mergeAccountInto
+	mergeAccountInto,
+	repointPegawaiReferences
 } from '$lib/server/pengguna-merge';
+
+type KepalaSekolahAccount = {
+	id: number;
+	createdAt: string | null;
+	sekolahId: number | null;
+	pegawaiId: number | null;
+	username: string;
+};
+
+/**
+ * Kumpulkan akun `kepala_sekolah` yang dipastikan milik orang yang sama.
+ *
+ * Selain akun yang sudah terikat ke sekolah atau pegawai target, ikut
+ * dicakup akun "yatim": `sekolahId` null tetapi nama/NIP pegawainya sama.
+ * Akun yatim muncul ketika kepala sekolah diganti (mis. sinkron Dapodik)
+ * sehingga record pegawai lama tertinggal. Tanpa ini akun lama tidak pernah
+ * digabung dan `/pengguna` menampilkan dua akun untuk satu kepala sekolah.
+ *
+ * Akun milik sekolah lain tidak pernah ikut supaya multi-sekolah tetap aman.
+ */
+async function findKepalaSekolahAccounts(
+	sekolahId: number,
+	targetPegawaiId: number,
+	nama: string,
+	nip: string | null
+): Promise<KepalaSekolahAccount[]> {
+	const all = await db.query.tableAuthUser.findMany({
+		columns: {
+			id: true,
+			createdAt: true,
+			sekolahId: true,
+			pegawaiId: true,
+			username: true
+		},
+		where: eq(tableAuthUser.type, 'kepala_sekolah')
+	});
+
+	const nameKey = (nama ?? '').trim().toLowerCase();
+	const nipKey = (nip ?? '').trim().toLowerCase();
+	const pegawaiIds = Array.from(
+		new Set(all.map((a) => a.pegawaiId).filter((value): value is number => value != null))
+	);
+	const pegawaiMap = new Map<number, { nama: string; nip: string | null }>();
+	if (pegawaiIds.length) {
+		const rows = await db.query.tablePegawai.findMany({
+			columns: { id: true, nama: true, nip: true },
+			where: inArray(tablePegawai.id, pegawaiIds)
+		});
+		for (const row of rows) {
+			pegawaiMap.set(row.id, { nama: row.nama, nip: row.nip });
+		}
+	}
+
+	return all.filter((account) => {
+		if (account.sekolahId === sekolahId) return true;
+		if (account.pegawaiId === targetPegawaiId) return true;
+		if (account.sekolahId != null) return false;
+		const pegawai = account.pegawaiId ? pegawaiMap.get(account.pegawaiId) : null;
+		if (!pegawai) return false;
+		if (nameKey && pegawai.nama.trim().toLowerCase() === nameKey) return true;
+		if (nipKey && (pegawai.nip ?? '').trim().toLowerCase() === nipKey) return true;
+		return false;
+	});
+}
 
 /**
  * Ensure a `kepala_sekolah` auth account exists for a sekolah, derived from the
@@ -61,20 +126,24 @@ export async function ensureKepalaSekolahUser(sekolahId: number, kepalaSekolahId
 
 		// Existing kepala_sekolah account(s) for this sekolah/person: keep the
 		// oldest, sync it, and merge the rest.
-		const existingKepala = await db.query.tableAuthUser.findMany({
-			columns: { id: true, createdAt: true },
-			where: and(
-				eq(tableAuthUser.type, 'kepala_sekolah'),
-				or(eq(tableAuthUser.sekolahId, sekolahId), eq(tableAuthUser.pegawaiId, targetPegawaiId))
-			)
-		});
+		const existingKepala = await findKepalaSekolahAccounts(
+			sekolahId,
+			targetPegawaiId,
+			nama,
+			pegawai?.nip ?? null
+		);
 
 		let keptUserId: number;
 		if (existingKepala.length) {
 			const sorted = [...existingKepala].sort(
 				(a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime()
 			);
-			keptUserId = sorted[0].id;
+			const kept = sorted[0];
+			keptUserId = kept.id;
+			// Pegawai lama yang dipakai akun yang dipertahankan bisa jadi record
+			// ganda (mis. data Dapodik membuat pegawai baru dengan nama sama).
+			// Simpan dulu supaya bisa dibersihkan setelah akun dipindah.
+			const keptPreviousPegawaiId = kept.pegawaiId;
 			await db
 				.update(tableAuthUser)
 				.set({
@@ -84,8 +153,17 @@ export async function ensureKepalaSekolahUser(sekolahId: number, kepalaSekolahId
 					updatedAt: timestamp
 				})
 				.where(eq(tableAuthUser.id, keptUserId));
+			if (keptPreviousPegawaiId && keptPreviousPegawaiId !== targetPegawaiId) {
+				await repointPegawaiReferences(keptPreviousPegawaiId, targetPegawaiId, sekolahId);
+				await deletePegawaiIfOrphaned(keptPreviousPegawaiId);
+			}
 			for (const dup of sorted.slice(1)) {
+				const dupPegawaiId = dup.pegawaiId;
 				await mergeAccountInto(keptUserId, dup.id);
+				if (dupPegawaiId && dupPegawaiId !== targetPegawaiId) {
+					await repointPegawaiReferences(dupPegawaiId, targetPegawaiId, sekolahId);
+					await deletePegawaiIfOrphaned(dupPegawaiId);
+				}
 			}
 		} else {
 			// No kepala_sekolah account yet. If the person already has a guru

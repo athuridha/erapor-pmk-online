@@ -222,6 +222,35 @@ export async function deletePegawaiIfOrphaned(pegawaiId: number): Promise<boolea
 const GURU_TYPES_TO_MERGE: Array<AuthUser['type']> = ['wali_kelas', 'user'];
 
 /**
+ * Arahkan referensi pegawai (wali kelas, wali asuh, kepala sekolah) dari satu
+ * record ke record lain supaya record lama bisa dihapus.
+ *
+ * Hanya baris milik `sekolahId` yang dipindah supaya deployment multi-sekolah
+ * tidak ikut berubah.
+ */
+export async function repointPegawaiReferences(
+	fromPegawaiId: number,
+	toPegawaiId: number,
+	sekolahId: number
+): Promise<void> {
+	if (fromPegawaiId === toPegawaiId) return;
+	await db
+		.update(tableKelas)
+		.set({ waliKelasId: toPegawaiId })
+		.where(and(eq(tableKelas.waliKelasId, fromPegawaiId), eq(tableKelas.sekolahId, sekolahId)));
+	await db
+		.update(tableKelas)
+		.set({ waliAsuhId: toPegawaiId })
+		.where(and(eq(tableKelas.waliAsuhId, fromPegawaiId), eq(tableKelas.sekolahId, sekolahId)));
+	await db
+		.update(tableSekolah)
+		.set({ kepalaSekolahId: toPegawaiId })
+		.where(
+			and(eq(tableSekolah.kepalaSekolahId, fromPegawaiId), eq(tableSekolah.id, sekolahId))
+		);
+}
+
+/**
  * Global sweep: for every pegawai that owns a `kepala_sekolah` account plus
  * other guru accounts (`wali_kelas` / `user`), keep the kepala_sekolah account
  * and merge the rest. The merge target prefers a kepala_sekolah account scoped
