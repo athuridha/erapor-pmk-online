@@ -76,7 +76,7 @@ export async function load({ parent, url, depends, locals }) {
 	}
 
 	const ekstrak = await db.query.tableEkstrakurikuler.findFirst({
-		columns: { id: true, nama: true, kelasId: true },
+		columns: { id: true, nama: true, kelasId: true, semuaKelas: true },
 		where: eq(tableEkstrakurikuler.id, ekstrakurikulerId)
 	});
 	if (!ekstrak) {
@@ -92,7 +92,7 @@ export async function load({ parent, url, depends, locals }) {
 		)
 	});
 
-	if (murid.kelasId !== ekstrak.kelasId) {
+	if (murid.kelasId !== ekstrak.kelasId && !ekstrak.semuaKelas) {
 		throw error(403, 'Murid dan ekstrakurikuler tidak berada pada kelas yang sama');
 	}
 
@@ -180,14 +180,14 @@ export const actions = {
 		}
 
 		const ekstrakRecord = await db.query.tableEkstrakurikuler.findFirst({
-			columns: { id: true, kelasId: true },
+			columns: { id: true, kelasId: true, semuaKelas: true },
 			where: eq(tableEkstrakurikuler.id, ekstrakurikulerId)
 		});
 		if (!ekstrakRecord) {
 			return fail(404, { fail: 'Data ekstrakurikuler tidak ditemukan' });
 		}
 
-		if (muridRecord.kelasId !== ekstrakRecord.kelasId) {
+		if (muridRecord.kelasId !== ekstrakRecord.kelasId && !ekstrakRecord.semuaKelas) {
 			return fail(400, { fail: 'Murid dan ekstrakurikuler tidak berada pada kelas yang sama' });
 		}
 

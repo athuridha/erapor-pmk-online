@@ -6,6 +6,7 @@
 	import { toast } from '$lib/components/toast.svelte';
 	import { buildPageNumbers, OPSI_BARIS_PER_HALAMAN } from '$lib/utils/pagination';
 	import PindahMuridModal from '$lib/components/murid/pindah-murid-modal.svelte';
+	import AnggotaEkstrakurikulerModal from '$lib/components/ekstrakurikuler/anggota-modal.svelte';
 	import { selectAll, semuaTerpilih, toggleId } from '$lib/utils/bulk-select';
 
 	let { data } = $props();
@@ -15,6 +16,7 @@
 	let formTerbuka = $state(false);
 	let bulkTerbuka = $state(false);
 	let pindahMuridTerbuka = $state(false);
+	let anggotaEkstra = $state<{ id: number; nama: string } | null>(null);
 	let kelasTerpilihMassal = $state<number[]>([]);
 	let barisEdit = $state<Record<string, string | number | null> | null>(null);
 	let hapusId = $state<number | null>(null);
@@ -32,8 +34,9 @@
 	const barisTampil = $derived(baris.length);
 
 	function nilaiField(key: string): string {
-		const sumber = barisEdit ?? baris[0] ?? {};
-		const nilai = sumber[key];
+		// Mode tambah: form kosong. Isi field dari baris yang sedang diubah.
+		if (!barisEdit) return '';
+		const nilai = barisEdit[key];
 		return nilai == null ? '' : String(nilai);
 	}
 
@@ -270,6 +273,18 @@
 										{/snippet}
 									</FormEnhance>
 								{:else}
+									{#if entitas?.key === 'ekstrakurikuler'}
+										<button
+											type="button"
+											class="btn btn-soft btn-sm shadow-none"
+											title="Kelola anggota ekstrakurikuler"
+											onclick={() =>
+												(anggotaEkstra = { id: Number(row.id), nama: String(row.nama ?? '') })}
+										>
+											<Icon name="users" />
+											Anggota
+										</button>
+									{/if}
 									{#if entitas?.formPengguna}
 										<a class="btn btn-soft btn-sm shadow-none" href={`/pengguna/form/${row.id}`}>
 											<Icon name="edit" />
@@ -399,7 +414,13 @@
 										required={field.wajib}
 										disabled={submitting}
 									>
-										{#if !field.wajib}<option value="">—</option>{/if}
+										{#if field.opsiTambahan}
+											{#each field.opsiTambahan as opsi (opsi.value)}
+												<option value={opsi.value} selected={nilaiField(field.key) === opsi.value}>
+													{opsi.label}
+												</option>
+											{/each}
+										{:else if !field.wajib}<option value="">—</option>{/if}
 										{#each relasi[field.relasi ?? 'kelas'] ?? [] as opsi (opsi.value)}
 											<option
 												value={opsi.value}
@@ -614,4 +635,14 @@
 
 {#if entitas?.key === 'kelas'}
 	<PindahMuridModal bind:isOpen={pindahMuridTerbuka} daftarKelas={data.daftarKelasMurid ?? []} />
+{/if}
+
+{#if anggotaEkstra && data.anggotaEkstrakurikuler}
+	<AnggotaEkstrakurikulerModal
+		ekstra={anggotaEkstra}
+		murid={data.anggotaEkstrakurikuler.murid}
+		kelas={data.anggotaEkstrakurikuler.kelas}
+		anggotaAwal={data.anggotaEkstrakurikuler.anggota?.[anggotaEkstra.id] ?? []}
+		onClose={() => (anggotaEkstra = null)}
+	/>
 {/if}

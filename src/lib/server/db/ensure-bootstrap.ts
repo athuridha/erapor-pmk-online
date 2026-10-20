@@ -3,6 +3,7 @@ import { ensureSmkPratamaMulya } from './ensure-smk-pratama-mulya';
 import { ensureAcademicModulesSchema } from './ensure-academic-modules';
 import { ensureAbsensiSchema } from './ensure-absensi';
 import { ensureAsesmenEkstrakurikulerSchema } from './ensure-asesmen-ekstrakurikuler';
+import { ensureEkstrakurikulerSchema } from './ensure-ekstrakurikuler';
 import { ensureAsesmenFormatifSchema } from './ensure-asesmen-formatif';
 import { ensureAsesmenKokurikulerSchema } from './ensure-asesmen-kokurikuler';
 import { ensureAsesmenSumatifSchema } from './ensure-asesmen-sumatif';
@@ -62,6 +63,7 @@ export async function runStartupEnsures() {
 	await ensureAsesmenKokurikulerSchema();
 	await ensureAsesmenSumatifSchema();
 	await ensureAsesmenEkstrakurikulerSchema();
+	await ensureEkstrakurikulerSchema();
 	await ensureBukuTamuSchema();
 	await ensureCatatanWaliSchema();
 	await ensureDinasLuarSchema();

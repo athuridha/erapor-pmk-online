@@ -29,7 +29,10 @@ export async function POST({ request, locals }) {
 			where: eq(tableEkstrakurikuler.id, ekstrakurikulerId)
 		});
 
-		if (!ekstrakurikuler || ekstrakurikuler.kelasId !== kelasId) {
+		if (
+			!ekstrakurikuler ||
+			(ekstrakurikuler.kelasId !== kelasId && ekstrakurikuler.semuaKelas !== 1)
+		) {
 			throw error(404, 'Ekstrakurikuler tidak ditemukan');
 		}
 

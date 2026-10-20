@@ -12,7 +12,7 @@ import {
 import { sanitizeDimensionList } from '$lib/kokurikuler';
 import { relevanMapelUntukMurid } from '$lib/server/mapel-picker';
 import { redirect } from '@sveltejs/kit';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, or } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
 const PER_PAGE = 20;
@@ -248,7 +248,10 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 	try {
 		const ekstrakRows = await db.query.tableEkstrakurikuler.findMany({
 			columns: { id: true },
-			where: eq(tableEkstrakurikuler.kelasId, kelasAktif.id)
+			where: or(
+				eq(tableEkstrakurikuler.kelasId, kelasAktif.id),
+				eq(tableEkstrakurikuler.semuaKelas, 1)
+			)
 		});
 		ekstrakCount = ekstrakRows.length;
 	} catch {
@@ -387,7 +390,10 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 	if (ekstrakCount > 0) {
 		try {
 			const ekstrakRows = await db.query.tableEkstrakurikuler.findMany({
-				where: eq(tableEkstrakurikuler.kelasId, kelasAktif.id),
+				where: or(
+					eq(tableEkstrakurikuler.kelasId, kelasAktif.id),
+					eq(tableEkstrakurikuler.semuaKelas, 1)
+				),
 				orderBy: asc(tableEkstrakurikuler.createdAt),
 				with: { tujuan: { columns: { id: true } } }
 			});

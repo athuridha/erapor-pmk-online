@@ -17,7 +17,7 @@ import {
 } from '$lib/server/db/schema.js';
 import { tableAuthUser } from '$lib/server/db/schema.js';
 import { fail } from '@sveltejs/kit';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 
 export async function load({ depends, locals }) {
 	depends('app:kelas');
@@ -148,7 +148,12 @@ export const actions = {
 			db
 				.select({ total: sql<number>`count(*)` })
 				.from(tableEkstrakurikuler)
-				.where(eq(tableEkstrakurikuler.kelasId, kelasIdNumber)),
+				.where(
+					and(
+						eq(tableEkstrakurikuler.kelasId, kelasIdNumber),
+						eq(tableEkstrakurikuler.semuaKelas, 0)
+					)
+				),
 			db
 				.select({ total: sql<number>`count(*)` })
 				.from(tableKokurikuler)
@@ -226,7 +231,12 @@ export const actions = {
 				const ekstrakIdsRows = await tx
 					.select({ id: tableEkstrakurikuler.id })
 					.from(tableEkstrakurikuler)
-					.where(eq(tableEkstrakurikuler.kelasId, kelasIdNumber));
+					.where(
+						and(
+							eq(tableEkstrakurikuler.kelasId, kelasIdNumber),
+							eq(tableEkstrakurikuler.semuaKelas, 0)
+						)
+					);
 				const ekstrakIds = ekstrakIdsRows.map((row) => row.id);
 
 				if (ekstrakIds.length) {
@@ -234,6 +244,25 @@ export const actions = {
 						.delete(tableEkstrakurikulerTujuan)
 						.where(inArray(tableEkstrakurikulerTujuan.ekstrakurikulerId, ekstrakIds));
 					await tx.delete(tableEkstrakurikuler).where(inArray(tableEkstrakurikuler.id, ekstrakIds));
+				}
+
+				// Ekstrakurikuler umum (semua kelas) tidak dihapus; kelas acuannya dipindah.
+				const [penggantiKelas] = await tx
+					.select({ id: tableKelas.id })
+					.from(tableKelas)
+					.where(and(eq(tableKelas.sekolahId, sekolahId), ne(tableKelas.id, kelasIdNumber)))
+					.orderBy(asc(tableKelas.nama))
+					.limit(1);
+				if (penggantiKelas) {
+					await tx
+						.update(tableEkstrakurikuler)
+						.set({ kelasId: penggantiKelas.id })
+						.where(
+							and(
+								eq(tableEkstrakurikuler.kelasId, kelasIdNumber),
+								eq(tableEkstrakurikuler.semuaKelas, 1)
+							)
+						);
 				}
 
 				await tx.delete(tableKokurikuler).where(eq(tableKokurikuler.kelasId, kelasIdNumber));

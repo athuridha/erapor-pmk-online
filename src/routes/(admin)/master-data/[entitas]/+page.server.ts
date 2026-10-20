@@ -1,9 +1,11 @@
 ﻿import { MASTER_DATA, cariMasterData } from '$lib/admin/master-data';
 import {
 	hapusMasterData,
+	loadAnggotaEkstrakurikuler,
 	loadBarisMaster,
 	loadDaftarKelasMurid,
 	loadOpsiRelasi,
+	simpanAnggotaEkstrakurikuler,
 	simpanMasterData,
 	simpanMasterDataMassal
 } from '$lib/admin/master-data.server';
@@ -37,6 +39,8 @@ export const load = async ({ params, locals, url, depends }) => {
 		loadOpsiRelasi(sekolahId)
 	]);
 	const daftarKelasMurid = entitas.key === 'kelas' ? await loadDaftarKelasMurid(sekolahId) : [];
+	const anggotaEkstrakurikuler =
+		entitas.key === 'ekstrakurikuler' ? await loadAnggotaEkstrakurikuler(sekolahId) : null;
 
 	return {
 		meta: { ...meta, title: `Master Data — ${entitas.judul}` },
@@ -48,6 +52,7 @@ export const load = async ({ params, locals, url, depends }) => {
 		perHalaman: daftarBaris.perHalaman,
 		relasi,
 		daftarKelasMurid,
+		anggotaEkstrakurikuler,
 		filter: { q, page, perHalaman }
 	};
 };
@@ -187,6 +192,41 @@ export const actions = {
 		const formData = await request.formData();
 		const id = Number(formData.get('id') ?? 0);
 		const hasil = await hapusMasterData(sekolahId, params.entitas ?? '', id);
+		if (hasil.fail) {
+			return fail(400, { fail: hasil.fail });
+		}
+		return { message: hasil.message };
+	},
+
+	async simpanAnggota({ request, locals }) {
+		const sekolahId = locals.sekolah?.id;
+		if (!sekolahId) {
+			return fail(401, { fail: 'Sekolah tidak ditemukan' });
+		}
+		const user = locals.user;
+		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa mengubah anggota.' });
+		}
+
+		const formData = await request.formData();
+		const ekstrakurikulerId = Number(formData.get('ekstrakurikulerId') ?? 0);
+		if (!Number.isInteger(ekstrakurikulerId) || ekstrakurikulerId <= 0) {
+			return fail(400, { fail: 'Ekstrakurikuler tidak valid.' });
+		}
+
+		let ids: number[] = [];
+		try {
+			const parsed = JSON.parse(String(formData.get('anggota') ?? '[]'));
+			if (Array.isArray(parsed)) {
+				ids = [
+					...new Set(parsed.map(Number).filter((value) => Number.isInteger(value) && value > 0))
+				];
+			}
+		} catch {
+			return fail(400, { fail: 'Data anggota tidak valid.' });
+		}
+
+		const hasil = await simpanAnggotaEkstrakurikuler(sekolahId, ekstrakurikulerId, ids);
 		if (hasil.fail) {
 			return fail(400, { fail: hasil.fail });
 		}

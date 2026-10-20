@@ -24,6 +24,8 @@ export interface FieldMaster {
 	relasi?: SumberRelasi;
 	/** Pilihan tetap (untuk tipe 'pilihan'). */
 	opsi?: Array<{ label: string; value: string }>;
+	/** Opsi tambahan untuk field relasi (mis. "Semua Kelas" untuk ekstrakurikuler). */
+	opsiTambahan?: Array<{ label: string; value: string }>;
 	default?: string | number | boolean;
 }
 
@@ -177,6 +179,36 @@ export const MASTER_DATA: MasterData[] = [
 			{ key: 'jenis', label: 'Jenis' },
 			{ key: 'kkm', label: 'KKM' },
 			{ key: 'pengampu', label: 'Guru Pengampu' }
+		]
+	},
+	{
+		key: 'ekstrakurikuler',
+		judul: 'Ekstrakurikuler',
+		deskripsi: 'Kegiatan ekstrakurikuler per kelas beserta daftar anggotanya.',
+		ikon: 'layers',
+		tabel: 'ekstrakurikuler',
+		fields: [
+			{
+				key: 'nama',
+				label: 'Nama Ekstrakurikuler',
+				tipe: 'teks',
+				wajib: true,
+				placeholder: 'Pramuka'
+			},
+			{
+				key: 'kelas_id',
+				label: 'Kelas',
+				tipe: 'relasi',
+				relasi: 'kelas',
+				wajib: false,
+				opsiTambahan: [{ label: 'Semua Kelas', value: '' }],
+				bantu: 'Pilih "Semua Kelas" bila ekstrakurikuler berlaku untuk seluruh sekolah.'
+			}
+		],
+		kolom: [
+			{ key: 'nama', label: 'Ekstrakurikuler' },
+			{ key: 'kelas', label: 'Kelas' },
+			{ key: 'jumlah_anggota', label: 'Anggota' }
 		]
 	},
 	{

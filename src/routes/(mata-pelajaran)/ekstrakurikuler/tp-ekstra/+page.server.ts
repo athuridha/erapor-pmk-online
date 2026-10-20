@@ -63,7 +63,7 @@ export async function load({ depends, url, parent }) {
 		throw error(404, 'Ekstrakurikuler tidak ditemukan');
 	}
 
-	if (kelasAktif?.id && ekstrakurikuler.kelasId !== kelasAktif.id) {
+	if (kelasAktif?.id && ekstrakurikuler.kelasId !== kelasAktif.id && !ekstrakurikuler.semuaKelas) {
 		throw error(403, 'Ekstrakurikuler tidak termasuk dalam kelas aktif');
 	}
 

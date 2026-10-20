@@ -772,6 +772,8 @@ export const tableEkstrakurikuler = sqliteTable(
 		kelasId: int()
 			.references(() => tableKelas.id)
 			.notNull(),
+		// 1 = ekstrakurikuler berlaku untuk semua kelas (kelasId hanya menjadi acuan).
+		semuaKelas: int().notNull().default(0),
 		...audit
 	},
 	(table) => [unique().on(table.kelasId, table.nama)]

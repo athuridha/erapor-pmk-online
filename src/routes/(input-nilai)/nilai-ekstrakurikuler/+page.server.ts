@@ -13,7 +13,7 @@ import {
 	isEkstrakurikulerNilaiKategori
 } from '$lib/ekstrakurikuler';
 import { redirect, error } from '@sveltejs/kit';
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, or } from 'drizzle-orm';
 
 const PER_PAGE = 20;
 
@@ -63,7 +63,10 @@ export async function load({ parent, url, depends }) {
 	const ekstrakRecords = await db.query.tableEkstrakurikuler.findMany({
 		columns: { id: true, nama: true },
 		with: { tujuan: { columns: { id: true } } },
-		where: eq(tableEkstrakurikuler.kelasId, kelasAktif.id),
+		where: or(
+			eq(tableEkstrakurikuler.kelasId, kelasAktif.id),
+			eq(tableEkstrakurikuler.semuaKelas, 1)
+		),
 		orderBy: asc(tableEkstrakurikuler.createdAt)
 	});
 

@@ -5,7 +5,7 @@ import {
 	tableKelas
 } from '$lib/server/db/schema';
 import { writeAoaToBuffer } from '$lib/utils/excel.js';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { asc, eq, inArray, or } from 'drizzle-orm';
 import { cookieNames } from '$lib/utils';
 
 export async function GET({ cookies }) {
@@ -18,7 +18,7 @@ export async function GET({ cookies }) {
 	}
 
 	const ekstraRows = await db.query.tableEkstrakurikuler.findMany({
-		where: eq(tableEkstrakurikuler.kelasId, kelasId),
+		where: or(eq(tableEkstrakurikuler.kelasId, kelasId), eq(tableEkstrakurikuler.semuaKelas, 1)),
 		orderBy: [asc(tableEkstrakurikuler.nama)]
 	});
 

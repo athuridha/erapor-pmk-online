@@ -6,7 +6,7 @@ import {
 	tableKelas
 } from '$lib/server/db/schema';
 import { fail } from '@sveltejs/kit';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, or } from 'drizzle-orm';
 import { readBufferToAoA } from '$lib/utils/excel.js';
 import { cookieNames } from '$lib/utils';
 
@@ -41,7 +41,10 @@ export async function load({ depends, parent }) {
 	if (kelasId) {
 		try {
 			ekstrakurikulerRaw = await db.query.tableEkstrakurikuler.findMany({
-				where: eq(tableEkstrakurikuler.kelasId, kelasId),
+				where: or(
+					eq(tableEkstrakurikuler.kelasId, kelasId),
+					eq(tableEkstrakurikuler.semuaKelas, 1)
+				),
 				orderBy: asc(tableEkstrakurikuler.createdAt)
 			});
 		} catch (error) {
@@ -151,7 +154,12 @@ export const actions = {
 			const updated = await db
 				.update(tableEkstrakurikuler)
 				.set({ nama, updatedAt: new Date().toISOString() })
-				.where(and(eq(tableEkstrakurikuler.id, id), eq(tableEkstrakurikuler.kelasId, kelasId)))
+				.where(
+					or(
+						and(eq(tableEkstrakurikuler.id, id), eq(tableEkstrakurikuler.kelasId, kelasId)),
+						and(eq(tableEkstrakurikuler.id, id), eq(tableEkstrakurikuler.semuaKelas, 1))
+					)
+				)
 				.returning({ id: tableEkstrakurikuler.id });
 
 			if (!updated.length) {
@@ -191,23 +199,35 @@ export const actions = {
 		}
 
 		try {
+			const rows = await db.query.tableEkstrakurikuler.findMany({
+				columns: { id: true, kelasId: true, semuaKelas: true },
+				where: inArray(tableEkstrakurikuler.id, ids)
+			});
+			// Ekstrakurikuler umum berlaku untuk semua kelas, jadi dihapus lewat Master Data.
+			const bolehHapus = rows.filter((row) => !row.semuaKelas).map((row) => row.id);
+			const dilewati = rows.length - bolehHapus.length;
+			if (!bolehHapus.length) {
+				return fail(400, {
+					fail: 'Ekstrakurikuler umum tidak bisa dihapus dari sini. Hapus lewat Master Data.'
+				});
+			}
+
 			// wali kelas (termasuk guru merangkap wali) hanya boleh menghapus
 			// data di kelas yang dia wali
 			const deleteUser = locals.user as { type?: string; pegawaiId?: number | null } | null;
 			if (await isWaliKelasAccount(deleteUser)) {
 				const ownedIds = await ownedKelasIdSet(deleteUser);
-				const rows = await db.query.tableEkstrakurikuler.findMany({
-					columns: { id: true, kelasId: true },
-					where: inArray(tableEkstrakurikuler.id, ids)
-				});
-				if (rows.some((r) => !ownedIds.has(r.kelasId))) {
+				const rowsOwned = rows.filter((row) => bolehHapus.includes(row.id));
+				if (rowsOwned.some((r) => !ownedIds.has(r.kelasId))) {
 					return fail(403, {
 						fail: 'Anda tidak memiliki izin untuk menghapus di kelas ini.'
 					});
 				}
 			}
-			await db.delete(tableEkstrakurikuler).where(inArray(tableEkstrakurikuler.id, ids));
-			return { message: `${ids.length} ekstrakurikuler berhasil dihapus` };
+			await db.delete(tableEkstrakurikuler).where(inArray(tableEkstrakurikuler.id, bolehHapus));
+			return {
+				message: `${bolehHapus.length} ekstrakurikuler berhasil dihapus${dilewati ? `, ${dilewati} ekstrakurikuler umum dilewati` : ''}`
+			};
 		} catch (error) {
 			if (isTableMissingError(error)) {
 				return fail(500, { fail: TABLE_MISSING_MESSAGE });

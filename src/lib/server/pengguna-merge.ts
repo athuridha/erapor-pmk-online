@@ -245,9 +245,7 @@ export async function repointPegawaiReferences(
 	await db
 		.update(tableSekolah)
 		.set({ kepalaSekolahId: toPegawaiId })
-		.where(
-			and(eq(tableSekolah.kepalaSekolahId, fromPegawaiId), eq(tableSekolah.id, sekolahId))
-		);
+		.where(and(eq(tableSekolah.kepalaSekolahId, fromPegawaiId), eq(tableSekolah.id, sekolahId)));
 }
 
 /**

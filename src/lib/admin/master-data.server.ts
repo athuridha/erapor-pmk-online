@@ -3,16 +3,18 @@ import {
 	tableAlamat,
 	tableAsesmenSumatif,
 	tableAuthUser,
+	tableEkstrakurikuler,
 	tableKelas,
 	tableMataPelajaran,
 	tableMurid,
+	tableMuridEkstrakurikuler,
 	tablePegawai,
 	tableSekolah,
 	tableSemester,
 	tableTahunAjaran,
 	tableWaliMurid
 } from '$lib/server/db/schema';
-import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import { MASTER_DATA } from '$lib/admin/master-data';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 
@@ -199,6 +201,30 @@ async function muatSemuaBaris(
 						: eq(tableKelas.sekolahId, sekolahId)
 				)
 				.orderBy(asc(tableMataPelajaran.nama));
+			return rows;
+		}
+		case 'ekstrakurikuler': {
+			const rows = await db
+				.select({
+					id: tableEkstrakurikuler.id,
+					nama: tableEkstrakurikuler.nama,
+					kelas_id: sql<
+						string | number
+					>`case when ekstrakurikuler.semua_kelas = 1 then '' else ekstrakurikuler.kelas_id end`,
+					semua_kelas: tableEkstrakurikuler.semuaKelas,
+					kelas: sql<
+						string | null
+					>`case when ekstrakurikuler.semua_kelas = 1 then 'Semua kelas' else (select k.nama from kelas k where k.id = ekstrakurikuler.kelas_id) end`,
+					jumlah_anggota: sql<number>`(select count(*) from murid_ekstrakurikuler me where me.ekstrakurikuler_id = ekstrakurikuler.id)`
+				})
+				.from(tableEkstrakurikuler)
+				.innerJoin(tableKelas, eq(tableEkstrakurikuler.kelasId, tableKelas.id))
+				.where(
+					q
+						? and(eq(tableKelas.sekolahId, sekolahId), sql`ekstrakurikuler.nama like ${like}`)
+						: eq(tableKelas.sekolahId, sekolahId)
+				)
+				.orderBy(asc(tableEkstrakurikuler.nama));
 			return rows;
 		}
 		case 'pegawai': {
@@ -519,6 +545,77 @@ export async function simpanMasterData(
 			}
 			await db.insert(tableMataPelajaran).values({ ...values, createdAt: now });
 			return { message: 'Mata pelajaran ditambahkan.' };
+		}
+		case 'ekstrakurikuler': {
+			const kelasRaw = teks(formData, 'kelas_id');
+			const semuaKelas = kelasRaw === '' ? 1 : 0;
+			const nama = teks(formData, 'nama');
+			if (!nama) return { fail: 'Nama ekstrakurikuler wajib diisi.' };
+
+			// Kelas acuan: kelas yang dipilih, atau kelas pertama sekolah untuk ekstra umum.
+			let kelasId = Number(kelasRaw) || null;
+			if (kelasId) {
+				const kelas = await db.query.tableKelas.findFirst({
+					columns: { id: true },
+					where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
+				});
+				if (!kelas) return { fail: 'Kelas tidak valid.' };
+			} else {
+				const [pertama] = await db
+					.select({ id: tableKelas.id })
+					.from(tableKelas)
+					.where(eq(tableKelas.sekolahId, sekolahId))
+					.orderBy(asc(tableKelas.nama))
+					.limit(1);
+				if (!pertama) return { fail: 'Belum ada kelas di sekolah ini.' };
+				kelasId = pertama.id;
+			}
+
+			const bentrok = await db
+				.select({ id: tableEkstrakurikuler.id })
+				.from(tableEkstrakurikuler)
+				.innerJoin(tableKelas, eq(tableEkstrakurikuler.kelasId, tableKelas.id))
+				.where(
+					and(
+						eq(tableKelas.sekolahId, sekolahId),
+						semuaKelas
+							? eq(tableEkstrakurikuler.semuaKelas, 1)
+							: and(
+									eq(tableEkstrakurikuler.semuaKelas, 0),
+									eq(tableEkstrakurikuler.kelasId, kelasId)
+								),
+						sql`lower(trim(ekstrakurikuler.nama)) = ${nama.toLowerCase()}`,
+						id ? sql`ekstrakurikuler.id <> ${id}` : undefined
+					)
+				)
+				.limit(1);
+			if (bentrok.length) {
+				return {
+					fail: semuaKelas
+						? 'Nama ekstrakurikuler sudah dipakai ekstrakurikuler umum lain.'
+						: 'Nama ekstrakurikuler sudah ada di kelas ini.'
+				};
+			}
+
+			const values = { nama, kelasId, semuaKelas, updatedAt: now };
+			if (id) {
+				const kelasIds = (
+					await db
+						.select({ id: tableKelas.id })
+						.from(tableKelas)
+						.where(eq(tableKelas.sekolahId, sekolahId))
+				).map((row) => row.id);
+				if (!kelasIds.length) return { fail: 'Data tidak ditemukan di sekolah ini.' };
+				await db
+					.update(tableEkstrakurikuler)
+					.set(values)
+					.where(
+						and(eq(tableEkstrakurikuler.id, id), inArray(tableEkstrakurikuler.kelasId, kelasIds))
+					);
+				return { message: 'Ekstrakurikuler diperbarui.' };
+			}
+			await db.insert(tableEkstrakurikuler).values({ ...values, createdAt: now });
+			return { message: 'Ekstrakurikuler ditambahkan.' };
 		}
 		case 'pegawai': {
 			const values = {
@@ -847,6 +944,35 @@ export async function hapusMasterData(
 					fail: `Kelas masih memiliki ${nMapel} mata pelajaran. Hapus mapelnya lebih dulu.`
 				};
 			}
+			// Ekstrakurikuler khusus kelas diblokir; ekstrakurikuler umum dipindah ke kelas lain.
+			const [{ n: nEkstraKhusus } = { n: 0 }] = await db
+				.select({ n: count() })
+				.from(tableEkstrakurikuler)
+				.where(and(eq(tableEkstrakurikuler.kelasId, id), eq(tableEkstrakurikuler.semuaKelas, 0)));
+			if (nEkstraKhusus > 0) {
+				return {
+					fail: `Kelas masih memiliki ${nEkstraKhusus} ekstrakurikuler. Hapus ekstrakurikulernya lebih dulu.`
+				};
+			}
+			const [{ n: nEkstraUmum } = { n: 0 }] = await db
+				.select({ n: count() })
+				.from(tableEkstrakurikuler)
+				.where(and(eq(tableEkstrakurikuler.kelasId, id), eq(tableEkstrakurikuler.semuaKelas, 1)));
+			if (nEkstraUmum > 0) {
+				const [pengganti] = await db
+					.select({ id: tableKelas.id })
+					.from(tableKelas)
+					.where(and(eq(tableKelas.sekolahId, sekolahId), ne(tableKelas.id, id)))
+					.orderBy(asc(tableKelas.nama))
+					.limit(1);
+				if (!pengganti) {
+					return { fail: 'Kelas tidak bisa dihapus karena dipakai ekstrakurikuler umum.' };
+				}
+				await db
+					.update(tableEkstrakurikuler)
+					.set({ kelasId: pengganti.id })
+					.where(and(eq(tableEkstrakurikuler.kelasId, id), eq(tableEkstrakurikuler.semuaKelas, 1)));
+			}
 			await db
 				.delete(tableKelas)
 				.where(and(eq(tableKelas.id, id), eq(tableKelas.sekolahId, sekolahId)));
@@ -862,6 +988,17 @@ export async function hapusMasterData(
 			}
 			await db.delete(tableMataPelajaran).where(eq(tableMataPelajaran.id, id));
 			return { message: 'Mata pelajaran dihapus.' };
+		}
+		case 'ekstrakurikuler': {
+			const ekstra = await db
+				.select({ id: tableEkstrakurikuler.id })
+				.from(tableEkstrakurikuler)
+				.innerJoin(tableKelas, eq(tableEkstrakurikuler.kelasId, tableKelas.id))
+				.where(and(eq(tableEkstrakurikuler.id, id), eq(tableKelas.sekolahId, sekolahId)))
+				.limit(1);
+			if (!ekstra.length) return { fail: 'Ekstrakurikuler tidak ditemukan.' };
+			await db.delete(tableEkstrakurikuler).where(eq(tableEkstrakurikuler.id, id));
+			return { message: 'Ekstrakurikuler dihapus.' };
 		}
 		case 'pengguna': {
 			const akun = await db.query.tableAuthUser.findFirst({
@@ -966,4 +1103,114 @@ export async function hapusMasterData(
 		default:
 			return { fail: 'Jenis master data ini belum mendukung penghapusan.' };
 	}
+}
+
+export interface DataAnggotaEkstrakurikuler {
+	murid: Array<{ id: number; nama: string; nis: string; kelasId: number; kelasNama: string }>;
+	kelas: Array<{ id: number; nama: string }>;
+	anggota: Record<number, number[]>;
+}
+
+/** Data pendukung modal anggota ekstrakurikuler: murid, kelas, dan peta anggota. */
+export async function loadAnggotaEkstrakurikuler(
+	sekolahId: number
+): Promise<DataAnggotaEkstrakurikuler> {
+	const [muridRows, kelasRows, ekstraRows] = await Promise.all([
+		db
+			.select({
+				id: tableMurid.id,
+				nama: tableMurid.nama,
+				nis: tableMurid.nis,
+				kelasId: tableMurid.kelasId,
+				kelasNama: tableKelas.nama
+			})
+			.from(tableMurid)
+			.innerJoin(tableKelas, eq(tableMurid.kelasId, tableKelas.id))
+			.where(eq(tableMurid.sekolahId, sekolahId))
+			.orderBy(asc(tableMurid.nama)),
+		db
+			.select({ id: tableKelas.id, nama: tableKelas.nama })
+			.from(tableKelas)
+			.where(eq(tableKelas.sekolahId, sekolahId))
+			.orderBy(asc(tableKelas.nama)),
+		db
+			.select({ id: tableEkstrakurikuler.id })
+			.from(tableEkstrakurikuler)
+			.innerJoin(tableKelas, eq(tableEkstrakurikuler.kelasId, tableKelas.id))
+			.where(eq(tableKelas.sekolahId, sekolahId))
+	]);
+
+	const ekstraIds = ekstraRows.map((row) => row.id);
+	const anggotaRows = ekstraIds.length
+		? await db
+				.select({
+					muridId: tableMuridEkstrakurikuler.muridId,
+					ekstrakurikulerId: tableMuridEkstrakurikuler.ekstrakurikulerId
+				})
+				.from(tableMuridEkstrakurikuler)
+				.where(inArray(tableMuridEkstrakurikuler.ekstrakurikulerId, ekstraIds))
+		: [];
+
+	const anggota: Record<number, number[]> = {};
+	for (const ekstraId of ekstraIds) anggota[ekstraId] = [];
+	for (const row of anggotaRows) anggota[row.ekstrakurikulerId]?.push(row.muridId);
+
+	return { murid: muridRows, kelas: kelasRows, anggota };
+}
+
+/** Ganti daftar anggota satu ekstrakurikuler. Murid harus dari sekolah yang sama. */
+export async function simpanAnggotaEkstrakurikuler(
+	sekolahId: number,
+	ekstrakurikulerId: number,
+	muridIds: number[]
+): Promise<HasilSimpan> {
+	const ekstra = await db
+		.select({ id: tableEkstrakurikuler.id, nama: tableEkstrakurikuler.nama })
+		.from(tableEkstrakurikuler)
+		.innerJoin(tableKelas, eq(tableEkstrakurikuler.kelasId, tableKelas.id))
+		.where(and(eq(tableEkstrakurikuler.id, ekstrakurikulerId), eq(tableKelas.sekolahId, sekolahId)))
+		.limit(1);
+	if (!ekstra.length) return { fail: 'Ekstrakurikuler tidak ditemukan.' };
+
+	const validIds = muridIds.length
+		? (
+				await db
+					.select({ id: tableMurid.id })
+					.from(tableMurid)
+					.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, muridIds)))
+			).map((row) => row.id)
+		: [];
+
+	try {
+		await db.transaction(async (tx) => {
+			const lama = await tx
+				.select({ muridId: tableMuridEkstrakurikuler.muridId })
+				.from(tableMuridEkstrakurikuler)
+				.where(eq(tableMuridEkstrakurikuler.ekstrakurikulerId, ekstrakurikulerId));
+			const lamaSet = new Set(lama.map((row) => row.muridId));
+			const baruSet = new Set(validIds);
+			const hapus = [...lamaSet].filter((muridId) => !baruSet.has(muridId));
+			const tambah = validIds.filter((muridId) => !lamaSet.has(muridId));
+
+			if (hapus.length) {
+				await tx
+					.delete(tableMuridEkstrakurikuler)
+					.where(
+						and(
+							eq(tableMuridEkstrakurikuler.ekstrakurikulerId, ekstrakurikulerId),
+							inArray(tableMuridEkstrakurikuler.muridId, hapus)
+						)
+					);
+			}
+			if (tambah.length) {
+				await tx
+					.insert(tableMuridEkstrakurikuler)
+					.values(tambah.map((muridId) => ({ muridId, ekstrakurikulerId })));
+			}
+		});
+	} catch (error) {
+		return { fail: error instanceof Error ? error.message : 'Gagal menyimpan anggota.' };
+	}
+
+	return { message: `Anggota ${ekstra[0].nama} disimpan (${validIds.length} murid).` };
 }

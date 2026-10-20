@@ -484,7 +484,7 @@
 								type="checkbox"
 								class="checkbox"
 								checked={selectedIds.includes(item.id)}
-								disabled={!data.tableReady || editingRowId === item.id}
+								disabled={!data.tableReady || editingRowId === item.id || item.semuaKelas === 1}
 								onchange={(event) => toggleRowSelection(item.id, event.currentTarget.checked)}
 							/>
 						</td>
@@ -529,6 +529,9 @@
 								</FormEnhance>
 							{:else}
 								{item.nama}
+								{#if item.semuaKelas}
+									<span class="badge badge-info badge-soft badge-sm ml-1">Umum</span>
+								{/if}
 							{/if}
 						</td>
 						<td>
@@ -586,9 +589,11 @@
 									type="button"
 									title={!canEdit
 										? 'Anda tidak memiliki izin untuk menghapus'
-										: 'Hapus ekstrakurikuler'}
+										: item.semuaKelas
+											? 'Ekstrakurikuler umum dihapus lewat Master Data'
+											: 'Hapus ekstrakurikuler'}
 									aria-label="Hapus ekstrakurikuler"
-									disabled={!canManage || !canEdit}
+									disabled={!canManage || !canEdit || item.semuaKelas === 1}
 									onclick={() => openSingleDeleteModal(item)}
 								>
 									<Icon name="del" />

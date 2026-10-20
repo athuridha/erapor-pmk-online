@@ -31,7 +31,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			where: eq(tableEkstrakurikuler.id, ekstrakurikulerId)
 		});
 
-		if (!ekstrakurikuler || ekstrakurikuler.kelasId !== kelasId) {
+		if (
+			!ekstrakurikuler ||
+			(ekstrakurikuler.kelasId !== kelasId && ekstrakurikuler.semuaKelas !== 1)
+		) {
 			return json({ success: false, message: 'Ekstrakurikuler tidak ditemukan' }, { status: 404 });
 		}
 

@@ -6,7 +6,7 @@ import {
 	tableMurid
 } from '$lib/server/db/schema';
 import { error } from '@sveltejs/kit';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, or } from 'drizzle-orm';
 
 function formatScore(value: number | null | undefined) {
 	if (value == null || Number.isNaN(value)) return null;
@@ -44,7 +44,10 @@ export async function load({ parent, url, locals, depends }) {
 	if (!murid) return { meta, status: 'not-found', murid: null, daftarEkstrakurikuler: [] };
 
 	const ekstrakRows = await db.query.tableEkstrakurikuler.findMany({
-		where: eq(tableEkstrakurikuler.kelasId, kelasAktif.id),
+		where: or(
+			eq(tableEkstrakurikuler.kelasId, kelasAktif.id),
+			eq(tableEkstrakurikuler.semuaKelas, 1)
+		),
 		orderBy: asc(tableEkstrakurikuler.createdAt),
 		with: { tujuan: { columns: { id: true } } }
 	});
