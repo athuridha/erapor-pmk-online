@@ -141,7 +141,19 @@
 			return;
 		}
 		if (!data.hasAnyMapel) {
-			toast('Tidak ada mata pelajaran yang tersedia', 'warning');
+			showModal({
+				title: 'Belum Ada Mata Pelajaran',
+				body: `<p class="text-base-content/70">Kelas ini belum punya mata pelajaran, jadi jurnal mengajar belum bisa diisi. Tambahkan mata pelajaran untuk kelas aktif dulu, lalu kembali ke halaman ini.</p>`,
+				onPositive: {
+					label: 'Tambah Mata Pelajaran',
+					action: () => {
+						hideModal();
+						void goto('/intrakurikuler/form');
+					}
+				},
+				onNegative: { label: 'Nanti' },
+				dismissible: true
+			});
 			return;
 		}
 		openTambahModal();
@@ -183,8 +195,14 @@
 			type="button"
 			class="btn btn-primary btn-soft gap-2 self-start shadow-none max-sm:w-full sm:self-center"
 			onclick={handleTambahClick}
-			disabled={!canEdit || !data.page.kelasId || !data.hasAnyMapel}
-			title={!canEdit ? 'Anda tidak memiliki izin' : 'Tambah jurnal baru'}
+			disabled={!canEdit}
+			title={!canEdit
+				? 'Anda tidak memiliki izin'
+				: !data.page.kelasId
+					? 'Pilih kelas terlebih dahulu'
+					: !data.hasAnyMapel
+						? 'Kelas ini belum punya mata pelajaran'
+						: 'Tambah jurnal baru'}
 		>
 			<Icon name="plus" />
 			<span>Tambah Jurnal</span>
