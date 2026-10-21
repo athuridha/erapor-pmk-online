@@ -7,6 +7,100 @@ import { hapusMasterData } from '$lib/admin/master-data.server';
 import { hashPassword } from '$lib/server/auth';
 import { validatePasswordStrength } from '$lib/server/password-policy';
 import { defaultPermissionsByType } from '../../../../pengguna/permissions';
+import { readBufferToAoA } from '$lib/utils/excel.js';
+
+const MAKS_UPLOAD_DAFTAR = 2_000_000; // 2 MB
+
+/** Header kolom yang dikenali untuk import daftar guru. */
+const HEADER_USERNAME = [
+	'pengguna/password',
+	'pengguna / password',
+	'pengguna',
+	'username',
+	'user',
+	'login',
+	'akun',
+	'nip',
+	'nis'
+];
+const HEADER_NAMA = ['nama', 'nama lengkap', 'nama guru', 'nama pengguna', 'name'];
+
+function parseCsv(teks: string): string[][] {
+	const barisPertama = teks.split(/\r?\n/).find((baris) => baris.trim().length > 0) ?? '';
+	const pemisah = barisPertama.includes(';') && !barisPertama.includes(',') ? ';' : ',';
+
+	const rows: string[][] = [];
+	let row: string[] = [];
+	let sel = '';
+	let dalamKutip = false;
+
+	for (let i = 0; i < teks.length; i += 1) {
+		const ch = teks[i];
+		if (dalamKutip) {
+			if (ch === '"') {
+				if (teks[i + 1] === '"') {
+					sel += '"';
+					i += 1;
+				} else {
+					dalamKutip = false;
+				}
+			} else {
+				sel += ch;
+			}
+			continue;
+		}
+		if (ch === '"') {
+			dalamKutip = true;
+			continue;
+		}
+		if (ch === pemisah) {
+			row.push(sel.trim());
+			sel = '';
+			continue;
+		}
+		if (ch === '\n') {
+			row.push(sel.trim());
+			rows.push(row);
+			row = [];
+			sel = '';
+			continue;
+		}
+		if (ch === '\r') continue;
+		sel += ch;
+	}
+	if (sel.length || row.length) {
+		row.push(sel.trim());
+		rows.push(row);
+	}
+	return rows.filter((item) => item.some((value) => value !== ''));
+}
+
+/** Baca baris tabel dari file .xlsx atau .csv. */
+async function bacaBarisFile(file: File): Promise<string[][]> {
+	const nama = file.name.toLowerCase();
+	if (nama.endsWith('.csv') || file.type === 'text/csv') {
+		return parseCsv(await file.text());
+	}
+	return (await readBufferToAoA(await file.arrayBuffer())) as string[][];
+}
+
+/** Cari indeks kolom username & nama dari baris header. */
+function cariKolom(header: string[]): { kolomUsername: number; kolomNama: number } {
+	const normal = (value: string) =>
+		(value ?? '').toString().toLowerCase().replace(/[_.]+/g, ' ').trim();
+	let kolomUsername = -1;
+	let kolomNama = -1;
+	header.forEach((value, index) => {
+		const v = normal(value);
+		if (kolomUsername === -1 && HEADER_USERNAME.some((h) => v === h || v.startsWith(h))) {
+			kolomUsername = index;
+		}
+		if (kolomNama === -1 && HEADER_NAMA.some((h) => v === h || v.startsWith(h))) {
+			kolomNama = index;
+		}
+	});
+	return { kolomUsername, kolomNama };
+}
 
 const KELOMPOK = {
 	guru: {
@@ -154,6 +248,149 @@ function pastikanBolehKelola(locals: App.Locals): number {
 }
 
 export const actions = {
+	async imporGuru({ request, locals, params }) {
+		const sekolahId = pastikanBolehKelola(locals);
+
+		if ((params.kelompok ?? '') !== 'guru') {
+			return fail(400, { fail: 'Impor daftar hanya tersedia untuk akun guru.' });
+		}
+
+		const formData = await request.formData();
+		const file = formData.get('file');
+		if (!(file instanceof File) || file.size === 0) {
+			return fail(400, { fail: 'Pilih file daftar guru (.xlsx atau .csv).' });
+		}
+		if (file.size > MAKS_UPLOAD_DAFTAR) {
+			return fail(400, { fail: 'Ukuran file maksimal 2 MB.' });
+		}
+
+		const pakaiSandiUsername = formData.get('sandi') !== 'tetap';
+		const sandiTetap = String(formData.get('sandi_tetap') ?? '').trim();
+		const wajibGantiSandi = formData.get('wajib_ganti') !== 'tidak';
+		const perbaruiNama = formData.get('perbarui_nama') === 'ya';
+
+		if (!pakaiSandiUsername) {
+			if (!sandiTetap) return fail(400, { fail: 'Kata sandi tetap wajib diisi.' });
+			const passwordError = validatePasswordStrength(sandiTetap);
+			if (passwordError) return fail(400, { fail: passwordError });
+		}
+
+		let baris: string[][];
+		try {
+			baris = await bacaBarisFile(file);
+		} catch (error) {
+			console.error('[master-data-pengguna] gagal membaca file daftar guru:', error);
+			return fail(400, { fail: 'File tidak bisa dibaca. Pastikan format .xlsx atau .csv.' });
+		}
+		if (baris.length < 2) {
+			return fail(400, { fail: 'File kosong atau tidak punya baris data.' });
+		}
+
+		const { kolomUsername, kolomNama } = cariKolom(baris[0]);
+		if (kolomUsername === -1 || kolomNama === -1) {
+			return fail(400, {
+				fail: 'Header kolom tidak dikenali. Kolom pertama harus "Pengguna/Password" dan kolom kedua "Nama".'
+			});
+		}
+
+		let dibuat = 0;
+		let diperbarui = 0;
+		const dilewati: string[] = [];
+
+		for (const row of baris.slice(1)) {
+			const username = String(row[kolomUsername] ?? '').trim();
+			const nama = String(row[kolomNama] ?? '').trim();
+			if (!username && !nama) continue;
+			if (!username) {
+				dilewati.push(`${nama || '(tanpa nama)'}: username kosong`);
+				continue;
+			}
+			if (!nama) {
+				dilewati.push(`${username}: nama kosong`);
+				continue;
+			}
+
+			const normalized = username.toLowerCase();
+			const [ada] = await db
+				.select({ id: tableAuthUser.id, pegawaiId: tableAuthUser.pegawaiId })
+				.from(tableAuthUser)
+				.where(eq(tableAuthUser.usernameNormalized, normalized))
+				.limit(1);
+
+			if (ada) {
+				// Akun sudah ada: perbarui nama bila diminta, selain itu lewati.
+				const [pegawai] = ada.pegawaiId
+					? await db
+							.select({ id: tablePegawai.id })
+							.from(tablePegawai)
+							.where(eq(tablePegawai.id, ada.pegawaiId))
+							.limit(1)
+					: [];
+				if (perbaruiNama && pegawai) {
+					await db.update(tablePegawai).set({ nama }).where(eq(tablePegawai.id, pegawai.id));
+					diperbarui += 1;
+				} else {
+					dilewati.push(`${username}: akun sudah ada`);
+				}
+				continue;
+			}
+
+			// Orang yang sama sudah punya akun (mis. kepala sekolah) dilewati.
+			const [orang] = await db
+				.select({ id: tablePegawai.id })
+				.from(tablePegawai)
+				.where(eq(tablePegawai.nama, nama))
+				.limit(1);
+			if (orang) {
+				const [terpakai] = await db
+					.select({ id: tableAuthUser.id })
+					.from(tableAuthUser)
+					.where(eq(tableAuthUser.pegawaiId, orang.id))
+					.limit(1);
+				if (terpakai) {
+					dilewati.push(`${username}: ${nama} sudah punya akun`);
+					continue;
+				}
+			}
+
+			const sandi = pakaiSandiUsername ? username : sandiTetap;
+			const { hash, salt } = hashPassword(sandi);
+			const timestamp = new Date().toISOString();
+
+			let pegawaiId = orang?.id ?? null;
+			if (!pegawaiId) {
+				const [pegawai] = await db
+					.insert(tablePegawai)
+					.values({ nama, nip: username })
+					.returning({ id: tablePegawai.id });
+				pegawaiId = pegawai?.id ?? null;
+			}
+
+			await db.insert(tableAuthUser).values({
+				username,
+				usernameNormalized: normalized,
+				passwordHash: hash,
+				passwordSalt: salt,
+				mustChangePassword: wajibGantiSandi,
+				permissions: defaultPermissionsByType.user,
+				type: 'user',
+				sekolahId,
+				pegawaiId: pegawaiId ?? undefined,
+				createdAt: timestamp,
+				updatedAt: timestamp
+			});
+			dibuat += 1;
+		}
+
+		const bagian = [`${dibuat} akun guru dibuat`];
+		if (diperbarui) bagian.push(`${diperbarui} nama diperbarui`);
+		if (dilewati.length) bagian.push(`${dilewati.length} dilewati`);
+		const pesan =
+			bagian.join(', ') + (dilewati.length ? ` — contoh: ${dilewati.slice(0, 3).join('; ')}` : '');
+
+		return { message: pesan, dibuat, diperbarui, dilewati: dilewati.length };
+	},
+
 	async tambah({ request, locals, params }) {
 		const sekolahId = pastikanBolehKelola(locals);
 
