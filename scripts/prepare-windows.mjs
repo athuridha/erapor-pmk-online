@@ -258,12 +258,16 @@ async function main() {
 	const envExample = path.join(projectRoot, '.env.example');
 	if (fs.existsSync(envExample)) fs.copyFileSync(envExample, path.join(appStage, '.env.example'));
 
-	// Token permanen ditanam saat packaging supaya sekolah tidak perlu mengisi
-	// kredensial cloud sendiri. Rotasi tetap bisa lewat halaman /sinkronisasi
-	// karena nilai yang tersimpan di database menang atas nilai .env.
+	// Token Cloudflare hanya ditanam bila diminta eksplisit lewat
+	// ERAPOR_PACKAGE_CLOUD_TOKEN=1. Repo rilis bersifat publik, jadi menyertakan
+	// token di dalam installer akan membocorkannya ke siapa pun yang mengunduh.
+	// Sekolah tetap bisa mengisi token lewat halaman /sinkronisasi.
 	const projectEnv = readProjectEnv();
 	const envValue = (key) => (process.env[key] ?? projectEnv[key] ?? '').trim();
-	const cloudToken = envValue('CLOUDFLARE_API_TOKEN');
+	const bolehTanamToken = ['1', 'true', 'ya', 'yes'].includes(
+		(process.env.ERAPOR_PACKAGE_CLOUD_TOKEN ?? '').trim().toLowerCase()
+	);
+	const cloudToken = bolehTanamToken ? envValue('CLOUDFLARE_API_TOKEN') : '';
 	const cloudAccountId = envValue('CLOUDFLARE_ACCOUNT_ID');
 	const cloudDatabaseId = envValue('CLOUDFLARE_DATABASE_ID');
 
@@ -289,7 +293,7 @@ async function main() {
 		await verifyCloudToken(cloudToken);
 	} else {
 		console.warn(
-			'CLOUDFLARE_API_TOKEN tidak ditemukan di .env; instalasi hasil build ini hanya bisa sinkronisasi setelah token diisi di halaman /sinkronisasi.'
+			'CLOUDFLARE_API_TOKEN tidak ditanam di installer. Isi token lewat halaman /sinkronisasi, atau build dengan ERAPOR_PACKAGE_CLOUD_TOKEN=1 bilaINSTALLER memang untuk dipakai sendiri.'
 		);
 	}
 
