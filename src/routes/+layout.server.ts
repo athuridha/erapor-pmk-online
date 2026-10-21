@@ -178,11 +178,15 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 
 	// Admin & kepala sekolah boleh berada "di luar kelas": data diambil dari
 	// semua kelas (tanpa filter kelas), dan bisa masuk ke kelas mana saja.
+	// Tanpa pilihan kelas eksplisit, keduanya default ke mode "Semua Kelas".
 	const bolehSemuaKelas = user?.type === 'admin' || user?.type === 'kepala_sekolah';
 	let pilihSemuaKelas = false;
 	if (bolehSemuaKelas) {
 		if (kelasIdParam === SEMUA_KELAS) pilihSemuaKelas = true;
-		else if (kelasIdParam == null && kelasCookie === SEMUA_KELAS) pilihSemuaKelas = true;
+		else if (kelasIdParam == null) {
+			// Tanpa param: pakai cookie kalau ada, selain itu default semua kelas.
+			pilihSemuaKelas = kelasCookie == null || kelasCookie === SEMUA_KELAS;
+		}
 	}
 
 	let kelasAktif: (typeof daftarKelas)[number] | null = null;

@@ -378,6 +378,43 @@ async function main() {
 		console.info('Downloaded VC++ redistributable:', (stat.size / 1024 / 1024).toFixed(1), 'MB');
 	}
 
+	// 16) Bundle standalone Node.js runtime so target machines never need Node installed
+	console.info('Bundling Node.js runtime for full-offline installer...');
+	const runtimeNodeDir = path.join(appStage, 'runtime', 'node');
+	fs.mkdirSync(runtimeNodeDir, { recursive: true });
+	const targetNodeExe = path.join(runtimeNodeDir, 'node.exe');
+
+	const cachedNodeExe = path.resolve(projectRoot, 'dist', 'windows', 'node.exe');
+	if (fs.existsSync(cachedNodeExe)) {
+		console.info('Using cached Node.js binary from', cachedNodeExe);
+		fs.copyFileSync(cachedNodeExe, targetNodeExe);
+	} else if (process.platform === 'win32' && fs.existsSync(process.execPath)) {
+		console.info('Copying host Node.js binary from', process.execPath);
+		fs.copyFileSync(process.execPath, targetNodeExe);
+		try {
+			fs.copyFileSync(process.execPath, cachedNodeExe);
+		} catch {
+			/* ignore cache write error */
+		}
+	} else {
+		console.info('Downloading official Node.js win-x64 binary...');
+		const nodeUrl = 'https://nodejs.org/dist/v22.14.0/win-x64/node.exe';
+		if (hasCommand('curl')) {
+			run('curl', ['-#Lo', targetNodeExe, nodeUrl]);
+		} else if (hasCommand('wget')) {
+			run('wget', ['-O', targetNodeExe, nodeUrl]);
+		} else {
+			throw new Error('Neither curl nor wget available to download Node.js runtime.');
+		}
+		try {
+			fs.copyFileSync(targetNodeExe, cachedNodeExe);
+		} catch {
+			/* ignore cache write error */
+		}
+	}
+	const nodeStat = fs.statSync(targetNodeExe);
+	console.info('Bundled Node.js binary size:', (nodeStat.size / 1024 / 1024).toFixed(1), 'MB');
+
 	console.info('\nStaging complete. Contents available at', appStage);
 }
 
