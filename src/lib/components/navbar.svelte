@@ -50,8 +50,10 @@
 		return u.type === 'admin' || u.type === 'kepala_sekolah';
 	});
 
+	const bolehSemuaKelas = $derived(user?.type === 'admin' || user?.type === 'kepala_sekolah');
+
 	const kelasAktifLabel = $derived.by(() => {
-		if (!kelasAktif) return 'Pilih Kelas';
+		if (!kelasAktif) return bolehSemuaKelas ? 'Semua Kelas' : 'Pilih Kelas';
 		return kelasAktif.fase ? `${kelasAktif.nama} - ${kelasAktif.fase}` : kelasAktif.nama;
 	});
 
@@ -87,6 +89,14 @@
 	function buildKelasHref(kelasId: number) {
 		const params = new SvelteURLSearchParams(page.url.search);
 		params.set('kelas_id', String(kelasId));
+		const query = params.toString();
+		return query ? `${page.url.pathname}?${query}` : page.url.pathname;
+	}
+
+	/** Link "keluar kelas": admin/kepala sekolah kembali ke mode semua kelas. */
+	function buildSemuaKelasHref() {
+		const params = new SvelteURLSearchParams(page.url.search);
+		params.set('kelas_id', 'semua');
 		const query = params.toString();
 		return query ? `${page.url.pathname}?${query}` : page.url.pathname;
 	}
@@ -360,6 +370,16 @@
 								<div
 									class="border-base-100 flex max-h-[30vh] flex-col overflow-y-auto border-t-3 p-1"
 								>
+									{#if bolehSemuaKelas}
+										<a
+											class="btn btn-ghost btn-sm justify-start text-left shadow-none"
+											href={buildSemuaKelasHref()}
+											class:active={!kelasAktif}
+										>
+											<Icon name="layers" />
+											Semua Kelas (keluar kelas)
+										</a>
+									{/if}
 									{#each daftarKelas as kelas (kelas.id)}
 										{@const label = kelas.fase ? `${kelas.nama} - ${kelas.fase}` : kelas.nama}
 										<a

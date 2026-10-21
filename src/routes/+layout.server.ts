@@ -14,6 +14,9 @@ import { and, asc, eq, inArray } from 'drizzle-orm';
 import { resolveRoutePermission, WALI_KELAS_ONLY_PERMISSIONS } from './pengguna/permissions';
 import { isLocalMasterEmpty } from '$lib/server/cloud-master';
 
+/** Nilai penanda "di luar kelas" (data diambil dari semua kelas). */
+const SEMUA_KELAS = 'semua';
+
 type WaliKelasUser = {
 	type?: string;
 	id?: number;
@@ -173,10 +176,19 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	const kelasIdParam = url.searchParams.get('kelas_id');
 	const kelasCookie = cookies.get(cookieNames.ACTIVE_KELAS_ID);
 
+	// Admin & kepala sekolah boleh berada "di luar kelas": data diambil dari
+	// semua kelas (tanpa filter kelas), dan bisa masuk ke kelas mana saja.
+	const bolehSemuaKelas = user?.type === 'admin' || user?.type === 'kepala_sekolah';
+	let pilihSemuaKelas = false;
+	if (bolehSemuaKelas) {
+		if (kelasIdParam === SEMUA_KELAS) pilihSemuaKelas = true;
+		else if (kelasIdParam == null && kelasCookie === SEMUA_KELAS) pilihSemuaKelas = true;
+	}
+
 	let kelasAktif: (typeof daftarKelas)[number] | null = null;
 
 	// 1) If explicit param provided, prefer it
-	if (kelasIdParam != null) {
+	if (kelasIdParam != null && !pilihSemuaKelas) {
 		const kelasIdNumber = Number(kelasIdParam);
 		if (Number.isInteger(kelasIdNumber)) {
 			if (user) {
@@ -198,7 +210,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	}
 
 	// 2) Fall back to cookie candidate
-	if (!kelasAktif && kelasCookie) {
+	if (!kelasAktif && kelasCookie && !pilihSemuaKelas) {
 		const kelasCookieNumber = Number(kelasCookie);
 		if (Number.isInteger(kelasCookieNumber)) {
 			kelasAktif = daftarKelas.find((kelas) => kelas.id === kelasCookieNumber) ?? null;
@@ -225,7 +237,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	}
 
 	// 3) If no cookie match, and the user is a wali_kelas/kepala_sekolah, prefer their assigned kelas
-	if (!kelasAktif && user) {
+	if (!kelasAktif && user && !pilihSemuaKelas) {
 		const userWithType = user as { type?: string; kelasId?: number };
 		if (userWithType.type === 'wali_kelas' && userWithType.kelasId) {
 			const resolvedId =
@@ -250,7 +262,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	// 3.5) A kepala_sekolah who also serves as wali kelas (PLT keeping teaching
 	// hours) defaults to their assigned class on first login (no cookie yet).
 	// Runs after the cookie step so a manually chosen kelas is always respected.
-	if (!kelasAktif && user && sekolah?.id) {
+	if (!kelasAktif && user && sekolah?.id && !pilihSemuaKelas) {
 		const userWithType = user as { type?: string; pegawaiId?: number };
 		if (userWithType.type === 'kepala_sekolah' && userWithType.pegawaiId) {
 			const waliKelasRecord = await db.query.tableKelas.findFirst({
@@ -275,7 +287,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		}
 	}
 
-	if (!kelasAktif && daftarKelas.length) {
+	if (!kelasAktif && daftarKelas.length && !pilihSemuaKelas) {
 		kelasAktif = daftarKelas[0];
 	}
 
@@ -358,7 +370,13 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 
 	// Set cookies AFTER all async operations are complete
 	const secure = locals.requestIsSecure ?? false;
-	if (kelasAktif) {
+	if (pilihSemuaKelas) {
+		// Mode "di luar kelas": simpan penanda agar tetap aktif di halaman lain.
+		cookies.set(cookieNames.ACTIVE_KELAS_ID, SEMUA_KELAS, {
+			path: '/',
+			secure
+		});
+	} else if (kelasAktif) {
 		cookies.set(cookieNames.ACTIVE_KELAS_ID, String(kelasAktif.id), {
 			path: '/',
 			secure
