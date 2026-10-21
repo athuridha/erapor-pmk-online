@@ -27,6 +27,22 @@ const pkgPath = path.join(projectRoot, 'package.json');
 const installerPath = path.join(projectRoot, 'dist', 'windows', 'ERaporPMKSetup.exe');
 const defaultRepo = 'athuridha/eraport';
 
+/**
+ * Di Windows `pnpm` hanya tersedia sebagai shim .cmd, sedangkan spawn tanpa
+ * shell tidak bisa menjalankannya. Cari path absolutnya lalu jalankan lewat
+ * shell.
+ */
+function resolvePnpm() {
+	if (process.platform !== 'win32') return { cmd: 'pnpm', shell: false };
+	const dirs = (process.env.PATH || '').split(path.delimiter);
+	for (const dir of dirs) {
+		if (!dir) continue;
+		const candidate = path.join(dir, 'pnpm.cmd');
+		if (existsSync(candidate)) return { cmd: candidate, shell: true };
+	}
+	return { cmd: 'pnpm', shell: true };
+}
+
 function parseArgs(argv) {
 	const args = {
 		version: null,
@@ -242,7 +258,8 @@ async function main() {
 
 	if (!args.skipBuild) {
 		console.info('\nMembangun installer (pnpm prod)…');
-		run('pnpm', ['prod']);
+		const pnpm = resolvePnpm();
+		run(pnpm.cmd, ['prod'], { shell: pnpm.shell });
 	} else {
 		console.info('\nMelewati build installer (--skip-build).');
 	}
