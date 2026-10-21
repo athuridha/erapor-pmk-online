@@ -217,7 +217,18 @@
 	{
 		title: 'Cetak Dokumen',
 		icon: 'print',
-		path: '/cetak'
+		subMenu: [
+			{
+				title: 'Cetak Dokumen',
+				path: '/cetak',
+				tags: ['cetak', 'pdf', 'rapor', 'piagam', 'biodata', 'cover', 'jurnal']
+			},
+			{
+				title: 'Kustomisasi',
+				path: '/cetak/kustomisasi',
+				tags: ['kustomisasi', 'cetak', 'template', 'logo', 'kop', 'watermark', 'layout', 'jarak']
+			}
+		]
 	},
 	{
 		title: 'Sinkronisasi',

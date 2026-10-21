@@ -76,6 +76,34 @@ table {
 
 export const FALLBACK = '\u2014';
 
+export interface CustomCetakDoc {
+	judul: string;
+	subjudul: string;
+	catatan: string;
+	tampilkanFoto: boolean;
+	tampilkanLogo: boolean;
+	tampilkanWatermark: boolean;
+	labelMengetahui: string;
+}
+
+/**
+ * Ambil pengaturan kustomisasi cetak yang menempel di data cetak.
+ * Semua field opsional: template lama tetap aman kalau data tidak memuatnya.
+ */
+export function customDoc(data: unknown): CustomCetakDoc {
+	const raw = (data as { custom?: Record<string, unknown> } | null)?.custom ?? {};
+	const teks = (raw.teks ?? {}) as { labelMengetahui?: string };
+	return {
+		judul: typeof raw.judul === 'string' ? raw.judul : '',
+		subjudul: typeof raw.subjudul === 'string' ? raw.subjudul : '',
+		catatan: typeof raw.catatan === 'string' ? raw.catatan : '',
+		tampilkanFoto: raw.tampilkanFoto !== false,
+		tampilkanLogo: raw.tampilkanLogo !== false,
+		tampilkanWatermark: raw.tampilkanWatermark !== false,
+		labelMengetahui: teks.labelMengetahui || 'Mengetahui'
+	};
+}
+
 // Escape a string for safe interpolation into an HTML template. Used before any
 // user-supplied text is placed into a template's text node or a double-quoted
 // attribute, preventing stored-HTML injection.

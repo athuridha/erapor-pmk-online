@@ -1,4 +1,4 @@
-import { sharedStyles, formatValue, formatUpper, getTutwuriBwDataUri } from './shared';
+import { sharedStyles, formatValue, formatUpper, getTutwuriBwDataUri, customDoc } from './shared';
 
 interface BiodataPrintData {
 	sekolah: { nama: string; bgLogoSrc?: string | null; statusKepalaSekolah?: string | null };
@@ -75,6 +75,8 @@ function colEmpty(no: string, label: string): string {
 
 export function renderBiodataHTML(data: BiodataPrintData): string {
 	const { sekolah, murid, orangTua, wali, ttd, showBgLogo } = data;
+
+	const custom = customDoc(data);
 
 	const bgLogoSrc = showBgLogo ? sekolah.bgLogoSrc || getTutwuriBwDataUri() : null;
 
@@ -194,7 +196,7 @@ body {
 
 ${bgLogoSrc ? `<img class="watermark" src="${bgLogoSrc}" alt="logo" />` : ''}
 
-<div class="header-title">IDENTITAS MURID</div>
+<div class="header-title">${formatValue(custom.judul || 'IDENTITAS MURID')}</div>
 <div class="header-school">${formatValue(sekolah.nama)}</div>
 
 <table class="identity-table">
@@ -232,9 +234,7 @@ ${bgLogoSrc ? `<img class="watermark" src="${bgLogoSrc}" alt="logo" />` : ''}
 </table>
 
 <div class="footer">
-	<div class="photo-box">
-		${foto ? `<img src="${foto}" alt="foto" />` : 'PAS FOTO 3x4'}
-	</div>
+	${custom.tampilkanFoto ? `<div class="photo-box">${foto ? `<img src="${foto}" alt="foto" />` : 'PAS FOTO 3x4'}</div>` : ''}
 	<div class="ttd-section">
 		<div class="ttd-top">
 			<p>${formatValue(ttd.tempat)}, ${formatValue(ttd.tanggal)}</p>

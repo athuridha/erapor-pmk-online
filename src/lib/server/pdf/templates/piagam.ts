@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { uploadsDir } from '$lib/server/data-dirs';
 import { getKopSuratLines } from '$lib/statics';
-import { sharedStyles, formatUpper, formatValue, escHtml } from './shared';
+import { sharedStyles, formatUpper, formatValue, escHtml, customDoc } from './shared';
 
 export interface PiagamPrintData {
 	sekolah: {
@@ -381,6 +381,7 @@ function piagamStyles(margin16mm = true): string {
 }
 
 export function renderPiagamHTML(data: PiagamPrintData, template: '1' | '2'): string {
+	const custom = customDoc(data);
 	const logoUrl = data.sekolah.logoUrl || null;
 	const logoDinasUrl = data.sekolah.logoDinasUrl || null;
 	const kumerLogo = getKumerLogoDataUri();
@@ -465,14 +466,14 @@ ${bgCert ? `<div class="piagam-bg" style="background-image: url('${bgCert}')"></
 			${alamatLine ? `<div class="header-info">${alamatLine}</div>` : ''}
 			${contactLine ? `<div class="header-contact">${contactLine}</div>` : ''}
 		</div>
-		${logoUrl ? `<img src="${logoUrl}" alt="" class="header-logo">` : '<div class="header-logo"></div>'}
+		${custom.tampilkanLogo && logoUrl ? `<img src="${logoUrl}" alt="" class="header-logo">` : '<div class="header-logo"></div>'}
 	</div>
 
 	<div class="double-line"></div>
 
 	<div class="main-content">
-		<div class="title-main">${formatUpper(penghargaan.judul)}</div>
-		<div class="title-sub">${formatUpper(penghargaan.subjudul)}</div>
+		<div class="title-main">${formatUpper(custom.judul || penghargaan.judul)}</div>
+		<div class="title-sub">${formatUpper(custom.subjudul || penghargaan.subjudul)}</div>
 		<div class="murid-name">${formatUpper(data.murid.nama)}</div>
 		<div class="sebagai-text">SEBAGAI</div>
 		<div class="ranking-label">${formatUpper(penghargaan.rankingLabel)}</div>
@@ -482,6 +483,8 @@ ${bgCert ? `<div class="piagam-bg" style="background-image: url('${bgCert}')"></
 
 	${footerHTML()}
 </div>
+
+${custom.catatan ? `<div class="custom-note">${escHtml(custom.catatan)}</div>` : ''}
 </body>
 </html>`;
 	}
@@ -509,8 +512,8 @@ ${bgCert2 ? `<div class="piagam-bg" style="background-image: url('${bgCert2}')">
 	<div class="t2-school-name">${formatUpper(data.sekolah.nama)}</div>
 
 	<div class="main-content">
-		<div class="t2-title">${escHtml(penghargaan.judul)}</div>
-		<div class="t2-subtitle">${escHtml(penghargaan.subjudul)}</div>
+		<div class="t2-title">${escHtml(custom.judul || penghargaan.judul)}</div>
+		<div class="t2-subtitle">${escHtml(custom.subjudul || penghargaan.subjudul)}</div>
 		<div class="t2-murid-name">${escHtml(data.murid.nama)}</div>
 		<div class="sebagai-text">SEBAGAI</div>
 		<div class="ranking-label">${formatUpper(penghargaan.rankingLabel)}</div>
@@ -520,6 +523,8 @@ ${bgCert2 ? `<div class="piagam-bg" style="background-image: url('${bgCert2}')">
 
 	${footerHTML()}
 </div>
+
+${custom.catatan ? `<div class="custom-note">${escHtml(custom.catatan)}</div>` : ''}
 </body>
 </html>`;
 }

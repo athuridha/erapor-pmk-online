@@ -9,6 +9,14 @@ import { renderBiodataHTML } from './templates/biodata';
 import { renderPiagamHTML } from './templates/piagam';
 import { renderJurnalMengajarHTML } from './templates/jurnal-mengajar';
 import { renderBukuTamuHTML } from './templates/buku-tamu';
+import {
+	customCss,
+	DOKUMEN_CETAK,
+	loadCustomCetak,
+	terapkanCustom,
+	type CustomCetak,
+	type DokumenCetak
+} from '$lib/server/cetak/customization';
 
 export type DocumentType =
 	'cover' | 'rapor' | 'biodata' | 'piagam' | 'jurnal-mengajar' | 'buku-tamu';
@@ -36,12 +44,39 @@ export function renderHTML(
 	}
 }
 
+/** Sisipkan CSS kustomisasi (jarak/layout) ke dalam HTML dokumen. */
+export function suntikCustomCss(html: string, custom: CustomCetak): string {
+	const style = `<style id="cetak-custom">${customCss(custom)}</style>`;
+	if (html.includes('</head>')) return html.replace('</head>', `${style}</head>`);
+	return `${style}${html}`;
+}
+
+/**
+ * Render HTML dokumen sambil menerapkan kustomisasi cetak (teks, gambar,
+ * dan jarak/layout).
+ */
+export function renderHTMLWithCustom(
+	docType: DocumentType,
+	data: Record<string, unknown>,
+	template: '1' | '2' | undefined,
+	custom: CustomCetak
+): string {
+	const dokumen = (DOKUMEN_CETAK as readonly string[]).includes(docType)
+		? (docType as DokumenCetak)
+		: null;
+	const merged = dokumen
+		? terapkanCustom(data, custom, dokumen)
+		: { ...data, custom: { ...custom, docType, judul: '', subjudul: '', catatan: '' } };
+	return suntikCustomCss(renderHTML(docType, merged, template), custom);
+}
+
 export async function generatePDF(
 	docType: DocumentType,
 	data: Record<string, unknown>,
 	template?: '1' | '2'
 ): Promise<Uint8Array> {
-	return renderPDF(renderHTML(docType, data, template));
+	const custom = await loadCustomCetak();
+	return renderPDF(renderHTMLWithCustom(docType, data, template, custom));
 }
 
 type BulkItem = {

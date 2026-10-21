@@ -1,6 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { sharedStyles, formatValue, formatUpper, FALLBACK, getTutwuriBwDataUri } from './shared';
+import {
+	sharedStyles,
+	formatValue,
+	formatUpper,
+	FALLBACK,
+	getTutwuriBwDataUri,
+	customDoc
+} from './shared';
 import { jenjangPendidikanSederajat, nauganHeaderByKey, type NauganKey } from '$lib/statics';
 
 export interface CoverPrintData {
@@ -207,6 +214,7 @@ body {
 }
 
 export function renderCoverHTML(data: CoverPrintData): string {
+	const custom = customDoc(data);
 	const bgLogoSrc = data.sekolah.logoSrc || getTutwuriBwDataUri();
 
 	const naunganKey: NauganKey = data.sekolah.naungan ?? 'kemendikbud';
@@ -234,13 +242,13 @@ ${coverStyles()}
 <body>
 <div class="cover-page">
 	<div class="cover-section top">
-		<div class="cover-title">LAPORAN</div>
-		<div class="cover-subtitle">HASIL BELAJAR MURID</div>
+		<div class="cover-title">${formatValue(custom.judul || 'LAPORAN')}</div>
+		<div class="cover-subtitle">${formatValue(custom.subjudul || 'HASIL BELAJAR MURID')}</div>
 		<div class="cover-school-name">${formatUpper(data.sekolah.nama)}</div>
 	</div>
 
 	<div class="cover-section middle">
-		<img src="${logoImgSrc}" alt="Logo" class="cover-logo">
+		${custom.tampilkanLogo ? `<img src="${logoImgSrc}" alt="Logo" class="cover-logo">` : ''}
 	</div>
 
 	<div class="cover-section bottom" style="gap:3mm">
@@ -318,6 +326,8 @@ ${coverStyles()}
 		</tr>
 	</table>
 </div>
+
+${custom.catatan ? `<div class="custom-note">${formatValue(custom.catatan)}</div>` : ''}
 </body>
 </html>`;
 }

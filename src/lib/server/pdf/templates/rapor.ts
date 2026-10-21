@@ -1,4 +1,11 @@
-import { sharedStyles, formatValue, formatUpper, escHtml, getTutwuriBwDataUri } from './shared';
+import {
+	sharedStyles,
+	formatValue,
+	formatUpper,
+	escHtml,
+	getTutwuriBwDataUri,
+	customDoc
+} from './shared';
 import { parseTingkat, lastGradeOfFase, isGraduatingFase, isGraduatingGrade } from '$lib/tingkat';
 
 export interface RaporPrintData {
@@ -71,6 +78,7 @@ export interface RaporPrintData {
 }
 
 export function renderRaporHTML(data: RaporPrintData): string {
+	const custom = customDoc(data);
 	const bgLogoSrc = data.showBgLogo ? data.sekolah.bgLogoSrc || getTutwuriBwDataUri() : null;
 
 	const isGenap =
@@ -320,8 +328,8 @@ body {
 ${bgLogoSrc ? `<img src="${bgLogoSrc}" alt="" class="watermark">` : ''}
 
 <!-- Title -->
-<div class="header-title">LAPORAN HASIL BELAJAR${data.raporPeriode === 'rts' ? '<br>TENGAH SEMESTER' : ''}</div>
-<div class="header-subtitle">(RAPOR)</div>
+<div class="header-title">${formatValue(custom.judul || 'LAPORAN HASIL BELAJAR')}${data.raporPeriode === 'rts' ? '<br>TENGAH SEMESTER' : ''}</div>
+<div class="header-subtitle">${formatValue(custom.subjudul || '(RAPOR)')}</div>
 
 <!-- Identity -->
 <div class="identity-grid">
@@ -613,6 +621,8 @@ ${
 		</tbody>
 	</table>
 </div>
+
+${custom.catatan ? `<div class="custom-note">${escHtml(custom.catatan)}</div>` : ''}
 
 </body>
 </html>`;
