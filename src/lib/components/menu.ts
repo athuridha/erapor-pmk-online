@@ -35,6 +35,11 @@
 				tags: ['mapel', 'mata pelajaran', 'kkm', 'pengampu', 'referensi']
 			},
 			{
+				title: 'Ekstrakurikuler',
+				path: '/master-data/ekstrakurikuler',
+				tags: ['ekstrakurikuler', 'ekskul', 'extracurricular', 'anggota', 'referensi']
+			},
+			{
 				title: 'Guru & Pegawai',
 				path: '/master-data/pengguna',
 				tags: ['guru', 'pegawai', 'nip', 'nik', 'referensi']
