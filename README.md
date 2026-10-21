@@ -31,6 +31,32 @@ Dokumentasi lengkap aplikasi ini disusun dalam bahasa Indonesia. File README ini
 - Dinas luar dan SPPD otomatis
 - Tarik data dari Dapodik (sinkronisasi sekolah, guru, kelas, murid, dan jadwal pembelajaran secara otomatis dari aplikasi Dapodik Desktop)
 - Kirim nilai akhir dan mata evaluasi (matev) langsung ke Dapodik
+- Kustomisasi cetak: mengubah teks kop, gambar (logo & watermark), dan jarak/layout dokumen cetak, lengkap dengan live preview dokumen sebelum disimpan.
+- Master Data terpadu: tahun ajaran, semester, kelas, murid, mata pelajaran, ekstrakurikuler (sekolah bisa menganggotakan murid ke ekstrakurikuler), data pengguna, orang tua, dan profil sekolah.
+- Manajemen data pengguna untuk guru & operator, termasuk impor daftar guru dari Excel/CSV (akun guru dibuat dengan kata sandi awal dan wajib menggantinya saat login pertama).
+- Mode "Semua Kelas" untuk admin dan kepala sekolah agar bisa melihat data seluruh kelas tanpa memilih kelas aktif.
+
+## Screenshot
+
+### Dashboard
+
+![Dashboard e-Rapor SMK Pratama Mulya](static/screenshot-dashboard.png)
+
+### Kustomisasi Cetak (live preview)
+
+![Halaman Kustomisasi Cetak](static/screenshot-kustomisasi-cetak.png)
+
+### Data Pengguna (Guru & Operator)
+
+![Halaman Data Pengguna](static/screenshot-data-pengguna.png)
+
+### Master Data
+
+![Halaman Master Data](static/screenshot-master-data.png)
+
+### Presensi Murid
+
+![Halaman Presensi Murid](static/screenshot-presensi-murid.png)
 
 ## Siapa yang Cocok Menggunakan e-Rapor SMK Pratama Mulya?
 
