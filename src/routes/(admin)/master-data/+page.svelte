@@ -44,7 +44,10 @@
 						<td class="text-sm opacity-70">{item.deskripsi}</td>
 						<td class="text-center">{item.jumlah ?? 0}</td>
 						<td class="text-center">
-							<a class="btn btn-soft btn-sm shadow-none" href={`/master-data/${item.key}`}>
+							<a
+								class="btn btn-soft btn-sm shadow-none"
+								href={item.path ?? `/master-data/${item.key}`}
+							>
 								<Icon name="edit" />
 								Kelola
 							</a>

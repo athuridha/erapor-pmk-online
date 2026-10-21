@@ -40,9 +40,19 @@
 				tags: ['ekstrakurikuler', 'ekskul', 'extracurricular', 'anggota', 'referensi']
 			},
 			{
-				title: 'Guru & Pegawai',
-				path: '/master-data/pengguna',
-				tags: ['guru', 'pegawai', 'nip', 'nik', 'referensi']
+				title: 'Data Pengguna',
+				subMenu: [
+					{
+						title: 'Guru',
+						path: '/master-data/pengguna/guru',
+						tags: ['guru', 'pengajar', 'wali kelas', 'wali asuh', 'akun', 'pengguna']
+					},
+					{
+						title: 'Operator',
+						path: '/master-data/pengguna/operator',
+						tags: ['operator', 'admin', 'kepala sekolah', 'akun', 'pengguna']
+					}
+				]
 			},
 			{
 				title: 'Orang Tua & Wali',

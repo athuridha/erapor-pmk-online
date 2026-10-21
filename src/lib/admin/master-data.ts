@@ -36,6 +36,8 @@ export interface MasterData {
 	ikon: 'calendar' | 'layers' | 'users' | 'book' | 'user' | 'school';
 	/** Nama tabel di database (untuk pesan hapus). */
 	tabel: string;
+	/** URL khusus (bila halaman entitas punya halaman sendiri). */
+	path?: string;
 	fields: FieldMaster[];
 	/** Kolom yang ditampilkan di tabel. */
 	kolom: Array<{ key: string; label: string }>;
@@ -218,6 +220,8 @@ export const MASTER_DATA: MasterData[] = [
 			'Akun guru, kepala sekolah, dan wali kelas. CRUD memakai form yang sama dengan Manajemen Pengguna.',
 		ikon: 'users',
 		tabel: 'auth_user',
+		/** Dikelompokkan jadi Data Pengguna: Guru & Operator. */
+		path: '/master-data/pengguna/guru',
 		/** Tambah/ubah memakai form pengguna (bukan form master data generik). */
 		formPengguna: true,
 		tambahPath: '/pengguna/form',

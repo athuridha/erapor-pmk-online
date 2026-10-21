@@ -149,6 +149,32 @@ html.erapor-dragging * {
 	cursor: grabbing !important;
 }
 
+/* === Sidebar navigasi desktop ===
+   DaisyUI memakai media query berbasis rem (`lg` = 64rem). Kalau font default
+   browser diperbesar, 64rem jadi jauh lebih lebar dari viewport sehingga
+   sidebar ikut tertutup. Pakai px supaya sidebar tetap tampil di layar lebar. */
+@media (min-width: 1024px) {
+	main.drawer > .drawer-toggle {
+		display: none;
+	}
+
+	main.drawer > .drawer-side {
+		pointer-events: auto;
+		visibility: visible;
+		position: sticky;
+		display: block;
+		width: auto;
+		overscroll-behavior: auto;
+		opacity: 1;
+		translate: 0%;
+	}
+
+	/* Tombol hamburger hanya untuk layar kecil. */
+	.navbar label[for='my-drawer-2'] {
+		display: none;
+	}
+}
+
 /* === Tema Hijau Emerald SMK Pratama Mulya Karawang === */
 aside.drawer-side-pmk,
 .drawer-side aside {

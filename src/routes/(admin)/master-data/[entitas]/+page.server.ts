@@ -10,7 +10,7 @@ import {
 	simpanMasterDataMassal
 } from '$lib/admin/master-data.server';
 import { pindahkanMuridKelas } from '$lib/server/murid-pindah-kelas';
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 
 export const load = async ({ params, locals, url, depends }) => {
@@ -29,6 +29,11 @@ export const load = async ({ params, locals, url, depends }) => {
 	const entitas = cariMasterData(params.entitas ?? '');
 	if (!entitas) {
 		throw error(404, 'Jenis master data tidak ditemukan');
+	}
+
+	// Akun pengguna dikelola lewat Data Pengguna (Guru/Operator).
+	if (entitas.key === 'pengguna') {
+		throw redirect(303, '/master-data/pengguna/guru');
 	}
 
 	const q = url.searchParams.get('q')?.trim() || null;

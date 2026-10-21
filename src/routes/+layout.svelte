@@ -434,56 +434,54 @@
 					</div>
 				</div>
 			</div>
-			<div class="drawer-side z-40">
-				<label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label>
-				<aside
-					class="flex h-dvh min-h-0 w-72 shrink-0 flex-col overflow-hidden bg-[#064e3b] text-emerald-100 border-r border-[#065f46] p-4 shadow-2xl"
+		</div>
+		<div class="drawer-side z-40">
+			<label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label>
+			<aside
+				class="flex h-dvh min-h-0 w-72 shrink-0 flex-col overflow-hidden bg-[#064e3b] text-emerald-100 border-r border-[#065f46] p-4 shadow-2xl"
+			>
+				<div
+					class="mt-14 lg:mt-0 flex items-center gap-3 p-3 mb-3 rounded-2xl bg-[#053d2e] border border-[#065f46]/70 shadow-md"
 				>
 					<div
-						class="mt-14 lg:mt-0 flex items-center gap-3 p-3 mb-3 rounded-2xl bg-[#053d2e] border border-[#065f46]/70 shadow-md"
+						class="w-11 h-11 rounded-xl bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm"
 					>
-						<div
-							class="w-11 h-11 rounded-xl bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm"
-						>
-							<img
-								class="w-full h-full object-contain"
-								src="/logo.png"
-								alt="Logo SMK Pratama Mulya"
-							/>
-						</div>
-						<div class="overflow-hidden">
-							<a href="/"
-								><h2 class="text-sm font-black text-white tracking-tight leading-tight truncate">
-									SMK Pratama Mulya
-								</h2></a
-							>
-							<p class="text-[11px] text-emerald-300 font-semibold truncate">e-Rapor Terpadu</p>
-						</div>
+						<img
+							class="w-full h-full object-contain"
+							src="/logo.png"
+							alt="Logo SMK Pratama Mulya"
+						/>
 					</div>
+					<div class="overflow-hidden">
+						<a href="/"
+							><h2 class="text-sm font-black text-white tracking-tight leading-tight truncate">
+								SMK Pratama Mulya
+							</h2></a
+						>
+						<p class="text-[11px] text-emerald-300 font-semibold truncate">e-Rapor Terpadu</p>
+					</div>
+				</div>
 
-					<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-						<Menu />
-					</div>
-					<div
-						class="mt-auto shrink-0 pt-3 border-t border-[#065f46]/70 flex flex-col gap-1 text-xs"
+				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+					<Menu />
+				</div>
+				<div class="mt-auto shrink-0 pt-3 border-t border-[#065f46]/70 flex flex-col gap-1 text-xs">
+					<a
+						href="/pengaturan"
+						class="flex items-center gap-2.5 px-3 py-2 rounded-xl font-semibold text-emerald-200 hover:text-white hover:bg-[#075e46] transition-colors"
 					>
-						<a
-							href="/pengaturan"
-							class="flex items-center gap-2.5 px-3 py-2 rounded-xl font-semibold text-emerald-200 hover:text-white hover:bg-[#075e46] transition-colors"
-						>
-							<Icon name="gear" class="text-emerald-300" />
-							<span>Pengaturan</span>
-						</a>
-						<a
-							href="/tentang"
-							class="flex items-center gap-2.5 px-3 py-2 rounded-xl font-semibold text-emerald-200 hover:text-white hover:bg-[#075e46] transition-colors"
-						>
-							<Icon name="info" class="text-emerald-300" />
-							<span>Tentang Aplikasi</span>
-						</a>
-					</div>
-				</aside>
-			</div>
+						<Icon name="gear" class="text-emerald-300" />
+						<span>Pengaturan</span>
+					</a>
+					<a
+						href="/tentang"
+						class="flex items-center gap-2.5 px-3 py-2 rounded-xl font-semibold text-emerald-200 hover:text-white hover:bg-[#075e46] transition-colors"
+					>
+						<Icon name="info" class="text-emerald-300" />
+						<span>Tentang Aplikasi</span>
+					</a>
+				</div>
+			</aside>
 		</div>
 	</main>
 {/if}
