@@ -79,6 +79,8 @@ export const FALLBACK = '\u2014';
 export interface CustomCetakDoc {
 	judul: string;
 	subjudul: string;
+	kopBaris1: string;
+	kopBaris2: string;
 	catatan: string;
 	tampilkanFoto: boolean;
 	tampilkanLogo: boolean;
@@ -96,6 +98,8 @@ export function customDoc(data: unknown): CustomCetakDoc {
 	return {
 		judul: typeof raw.judul === 'string' ? raw.judul : '',
 		subjudul: typeof raw.subjudul === 'string' ? raw.subjudul : '',
+		kopBaris1: typeof raw.kopBaris1 === 'string' ? raw.kopBaris1 : '',
+		kopBaris2: typeof raw.kopBaris2 === 'string' ? raw.kopBaris2 : '',
 		catatan: typeof raw.catatan === 'string' ? raw.catatan : '',
 		tampilkanFoto: raw.tampilkanFoto !== false,
 		tampilkanLogo: raw.tampilkanLogo !== false,

@@ -11,6 +11,8 @@ interface PageMeta {
 	title?: string;
 	description?: string;
 	logoUrl?: string;
+	/** Sembunyikan panel kanan "Daftar tugas" & "Menu Favorit" di halaman ini. */
+	hideTaskRail?: boolean;
 }
 
 interface CoverPrintData {

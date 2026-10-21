@@ -62,6 +62,10 @@ export interface CustomTeks {
 	judul: Record<DokumenCetak, string>;
 	/** Subjudul tiap dokumen. */
 	subjudul: Record<DokumenCetak, string>;
+	/** Baris kop pertama tiap dokumen (mis. nama Kementerian). */
+	kopBaris1: Record<DokumenCetak, string>;
+	/** Baris kop kedua tiap dokumen (mis. REPUBLIK INDONESIA). */
+	kopBaris2: Record<DokumenCetak, string>;
 	/** Catatan kaki tiap dokumen. */
 	catatan: Record<DokumenCetak, string>;
 	/** Tampilkan foto murid. */
@@ -114,6 +118,8 @@ export const DEFAULT_CUSTOM_CETAK: CustomCetak = {
 		tanggal: '',
 		judul: { ...DEFAULT_JUDUL },
 		subjudul: { ...DEFAULT_SUBJUDUL },
+		kopBaris1: { cover: '', biodata: '', rapor: '', piagam: '' },
+		kopBaris2: { cover: '', biodata: '', rapor: '', piagam: '' },
 		catatan: { cover: '', biodata: '', rapor: '', piagam: '' },
 		tampilkanFoto: true,
 		tampilkanLogo: true,
@@ -152,11 +158,15 @@ export function normalisasiCustomCetak(input: unknown): CustomCetak {
 
 	const judul = { ...DEFAULT_JUDUL };
 	const subjudul = { ...DEFAULT_SUBJUDUL };
+	const kopBaris1: Record<DokumenCetak, string> = { cover: '', biodata: '', rapor: '', piagam: '' };
+	const kopBaris2: Record<DokumenCetak, string> = { cover: '', biodata: '', rapor: '', piagam: '' };
 	const catatan: Record<DokumenCetak, string> = { cover: '', biodata: '', rapor: '', piagam: '' };
 	for (const doc of DOKUMEN_CETAK) {
 		// Judul/subjudul kosong berarti pakai bawaan template.
 		judul[doc] = teks(teksRaw.judul?.[doc]).trim() || DEFAULT_JUDUL[doc];
 		subjudul[doc] = teks(teksRaw.subjudul?.[doc]).trim() || DEFAULT_SUBJUDUL[doc];
+		kopBaris1[doc] = teks(teksRaw.kopBaris1?.[doc]).trim();
+		kopBaris2[doc] = teks(teksRaw.kopBaris2?.[doc]).trim();
 		catatan[doc] = teks(teksRaw.catatan?.[doc], '');
 	}
 
@@ -185,6 +195,8 @@ export function normalisasiCustomCetak(input: unknown): CustomCetak {
 			tanggal: teks(teksRaw.tanggal),
 			judul,
 			subjudul,
+			kopBaris1,
+			kopBaris2,
 			catatan,
 			tampilkanFoto: bool(teksRaw.tampilkanFoto, true),
 			tampilkanLogo: bool(teksRaw.tampilkanLogo, true),
@@ -300,6 +312,8 @@ export function terapkanCustom<T extends Record<string, unknown>>(
 		docType,
 		judul: custom.teks.judul[docType] || DEFAULT_JUDUL[docType],
 		subjudul: custom.teks.subjudul[docType] || DEFAULT_SUBJUDUL[docType],
+		kopBaris1: custom.teks.kopBaris1[docType] || '',
+		kopBaris2: custom.teks.kopBaris2[docType] || '',
 		catatan: custom.teks.catatan[docType] || ''
 	};
 

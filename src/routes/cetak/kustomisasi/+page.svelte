@@ -24,6 +24,8 @@
 			tanggal: string;
 			judul: Record<string, string>;
 			subjudul: Record<string, string>;
+			kopBaris1: Record<string, string>;
+			kopBaris2: Record<string, string>;
 			catatan: Record<string, string>;
 			tampilkanFoto: boolean;
 			tampilkanLogo: boolean;
@@ -69,9 +71,22 @@
 			alamat: data.custom.teks.alamat || sekolahSekarang.alamat,
 			email: data.custom.teks.email || sekolahSekarang.email,
 			kota: data.custom.teks.kota || sekolahSekarang.kota,
-			tanggal: data.custom.teks.tanggal || sekolahSekarang.tanggal
+			tanggal: data.custom.teks.tanggal || sekolahSekarang.tanggal,
+			kopBaris1: barisKop(1),
+			kopBaris2: barisKop(2)
 		}
 	});
+
+	// Baris kop bawaan tiap dokumen (kementerian, republic, dinas, dst).
+	function barisKop(nomor: 1 | 2): Record<string, string> {
+		const custom = data.custom.teks[`kopBaris${nomor}`] ?? {};
+		const bawaan = data.kopSekarang ?? {};
+		const hasil: Record<string, string> = {};
+		for (const item of DOKUMEN) {
+			hasil[item.value] = custom[item.value] || (bawaan[item.value]?.[nomor - 1] ?? '');
+		}
+		return hasil;
+	}
 	let previewHtml = $state('');
 	let previewLoading = $state(false);
 	let previewError = $state('');
@@ -341,6 +356,44 @@
 								oninput={(event) => (form.teks.subjudul[dokumen] = event.currentTarget.value)}
 								placeholder="Kosong = bawaan"
 							/>
+						</label>
+						<label class="form-control sm:col-span-2">
+							<span class="label-text mb-1 text-sm">Baris kop 1</span>
+							<div class="flex items-center gap-1">
+								<input
+									class="input input-sm w-full"
+									value={form.teks.kopBaris1[dokumen]}
+									oninput={(event) => (form.teks.kopBaris1[dokumen] = event.currentTarget.value)}
+									placeholder="Kosong = bawaan (mis. nama Kementerian)"
+								/>
+								<button
+									type="button"
+									class="btn btn-ghost btn-xs shrink-0"
+									title="Kembalikan ke bawaan"
+									onclick={() => (form.teks.kopBaris1[dokumen] = '')}
+								>
+									<Icon name="close" />
+								</button>
+							</div>
+						</label>
+						<label class="form-control sm:col-span-2">
+							<span class="label-text mb-1 text-sm">Baris kop 2</span>
+							<div class="flex items-center gap-1">
+								<input
+									class="input input-sm w-full"
+									value={form.teks.kopBaris2[dokumen]}
+									oninput={(event) => (form.teks.kopBaris2[dokumen] = event.currentTarget.value)}
+									placeholder="Kosong = bawaan (mis. REPUBLIK INDONESIA)"
+								/>
+								<button
+									type="button"
+									class="btn btn-ghost btn-xs shrink-0"
+									title="Kembalikan ke bawaan"
+									onclick={() => (form.teks.kopBaris2[dokumen] = '')}
+								>
+									<Icon name="close" />
+								</button>
+							</div>
 						</label>
 						<label class="form-control sm:col-span-2">
 							<span class="label-text mb-1 text-sm">Catatan kaki</span>

@@ -147,6 +147,10 @@
 		)
 	);
 
+	// Beberapa halaman (mis. Kustomisasi Cetak) butuh ruang penuh: panel
+	// "Daftar tugas" dan "Menu Favorit" disembunyikan.
+	const hideTaskRail = $derived(page.data.meta?.hideTaskRail === true);
+
 	async function handleHapusKegiatan(kode: string) {
 		if (!jadwalCanManage || !get(jadwalIsEditing)) return;
 		const formData = new FormData();
@@ -378,104 +382,108 @@
 								{@render children()}
 							</div>
 						</div>
-						<div class="sticky top-4 self-start">
-							{#if isJadwalPage && page.data.daftarKodeMapel}
-								<div class="hidden xl:block">
-									<div class="card bg-base-100 rounded-box mb-4 max-w-70 min-w-70 shadow-md">
-										<div class="p-4">
-											<div class="flex flex-row items-center gap-2">
-												<h2 class="text-sm font-bold">Kode Kegiatan</h2>
-												<div class="flex-1"></div>
-												<div class="join">
-													<button
-														type="button"
-														class="btn btn-sm join-item px-2 shadow-none"
-														onclick={() => (kodeKegiatanOpen = !kodeKegiatanOpen)}
-														title={kodeKegiatanOpen ? 'Tutup daftar kode' : 'Buka daftar kode'}
-													>
-														<Icon name={kodeKegiatanOpen ? 'up' : 'down'} />
-													</button>
+						{#if !hideTaskRail}
+							<div class="sticky top-4 self-start">
+								{#if isJadwalPage && page.data.daftarKodeMapel}
+									<div class="hidden xl:block">
+										<div class="card bg-base-100 rounded-box mb-4 max-w-70 min-w-70 shadow-md">
+											<div class="p-4">
+												<div class="flex flex-row items-center gap-2">
+													<h2 class="text-sm font-bold">Kode Kegiatan</h2>
+													<div class="flex-1"></div>
+													<div class="join">
+														<button
+															type="button"
+															class="btn btn-sm join-item px-2 shadow-none"
+															onclick={() => (kodeKegiatanOpen = !kodeKegiatanOpen)}
+															title={kodeKegiatanOpen ? 'Tutup daftar kode' : 'Buka daftar kode'}
+														>
+															<Icon name={kodeKegiatanOpen ? 'up' : 'down'} />
+														</button>
+													</div>
 												</div>
 											</div>
+											{#if kodeKegiatanOpen}
+												<div class="p-4 pt-0">
+													<KodeKegiatan
+														kodeMapelPerKelas={(page.data.kodeMapelPerKelas as Array<{
+															kelasId: number;
+															namaKelas: string;
+															kodeMapel: string[];
+														}>) ?? []}
+														kodeTambahan={['UPB', 'IST', 'PLG']}
+														kodeKokurikuler={(page.data.daftarKodeKokurikuler as string[]) ?? []}
+														kegiatanCustom={(page.data.kegiatanCustom as Array<{
+															kode: string;
+															nama: string;
+															durasi: number | null;
+														}>) ?? []}
+														canManage={jadwalCanManage && $jadwalIsEditing}
+														onHapusKegiatan={handleHapusKegiatan}
+														onEditKegiatan={openEditKegiatan}
+													/>
+												</div>
+											{/if}
 										</div>
-										{#if kodeKegiatanOpen}
-											<div class="p-4 pt-0">
-												<KodeKegiatan
-													kodeMapelPerKelas={(page.data.kodeMapelPerKelas as Array<{
-														kelasId: number;
-														namaKelas: string;
-														kodeMapel: string[];
-													}>) ?? []}
-													kodeTambahan={['UPB', 'IST', 'PLG']}
-													kodeKokurikuler={(page.data.daftarKodeKokurikuler as string[]) ?? []}
-													kegiatanCustom={(page.data.kegiatanCustom as Array<{
-														kode: string;
-														nama: string;
-														durasi: number | null;
-													}>) ?? []}
-													canManage={jadwalCanManage && $jadwalIsEditing}
-													onHapusKegiatan={handleHapusKegiatan}
-													onEditKegiatan={openEditKegiatan}
-												/>
-											</div>
-										{/if}
 									</div>
-								</div>
-							{/if}
-							<Task variant="sidebar" />
-							<FavoriteMenusSidebar />
-						</div>
+								{/if}
+								<Task variant="sidebar" />
+								<FavoriteMenusSidebar />
+							</div>
+						{/if}
 					</div>
 				</div>
 			</div>
-		</div>
-		<div class="drawer-side z-40">
-			<label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label>
-			<aside
-				class="flex h-dvh min-h-0 w-72 shrink-0 flex-col overflow-hidden bg-[#064e3b] text-emerald-100 border-r border-[#065f46] p-4 shadow-2xl"
-			>
-				<div
-					class="mt-14 lg:mt-0 flex items-center gap-3 p-3 mb-3 rounded-2xl bg-[#053d2e] border border-[#065f46]/70 shadow-md"
+			<div class="drawer-side z-40">
+				<label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label>
+				<aside
+					class="flex h-dvh min-h-0 w-72 shrink-0 flex-col overflow-hidden bg-[#064e3b] text-emerald-100 border-r border-[#065f46] p-4 shadow-2xl"
 				>
 					<div
-						class="w-11 h-11 rounded-xl bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm"
+						class="mt-14 lg:mt-0 flex items-center gap-3 p-3 mb-3 rounded-2xl bg-[#053d2e] border border-[#065f46]/70 shadow-md"
 					>
-						<img
-							class="w-full h-full object-contain"
-							src="/logo.png"
-							alt="Logo SMK Pratama Mulya"
-						/>
-					</div>
-					<div class="overflow-hidden">
-						<a href="/"
-							><h2 class="text-sm font-black text-white tracking-tight leading-tight truncate">
-								SMK Pratama Mulya
-							</h2></a
+						<div
+							class="w-11 h-11 rounded-xl bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm"
 						>
-						<p class="text-[11px] text-emerald-300 font-semibold truncate">e-Rapor Terpadu</p>
+							<img
+								class="w-full h-full object-contain"
+								src="/logo.png"
+								alt="Logo SMK Pratama Mulya"
+							/>
+						</div>
+						<div class="overflow-hidden">
+							<a href="/"
+								><h2 class="text-sm font-black text-white tracking-tight leading-tight truncate">
+									SMK Pratama Mulya
+								</h2></a
+							>
+							<p class="text-[11px] text-emerald-300 font-semibold truncate">e-Rapor Terpadu</p>
+						</div>
 					</div>
-				</div>
 
-				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-					<Menu />
-				</div>
-				<div class="mt-auto shrink-0 pt-3 border-t border-[#065f46]/70 flex flex-col gap-1 text-xs">
-					<a
-						href="/pengaturan"
-						class="flex items-center gap-2.5 px-3 py-2 rounded-xl font-semibold text-emerald-200 hover:text-white hover:bg-[#075e46] transition-colors"
+					<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+						<Menu />
+					</div>
+					<div
+						class="mt-auto shrink-0 pt-3 border-t border-[#065f46]/70 flex flex-col gap-1 text-xs"
 					>
-						<Icon name="gear" class="text-emerald-300" />
-						<span>Pengaturan</span>
-					</a>
-					<a
-						href="/tentang"
-						class="flex items-center gap-2.5 px-3 py-2 rounded-xl font-semibold text-emerald-200 hover:text-white hover:bg-[#075e46] transition-colors"
-					>
-						<Icon name="info" class="text-emerald-300" />
-						<span>Tentang Aplikasi</span>
-					</a>
-				</div>
-			</aside>
+						<a
+							href="/pengaturan"
+							class="flex items-center gap-2.5 px-3 py-2 rounded-xl font-semibold text-emerald-200 hover:text-white hover:bg-[#075e46] transition-colors"
+						>
+							<Icon name="gear" class="text-emerald-300" />
+							<span>Pengaturan</span>
+						</a>
+						<a
+							href="/tentang"
+							class="flex items-center gap-2.5 px-3 py-2 rounded-xl font-semibold text-emerald-200 hover:text-white hover:bg-[#075e46] transition-colors"
+						>
+							<Icon name="info" class="text-emerald-300" />
+							<span>Tentang Aplikasi</span>
+						</a>
+					</div>
+				</aside>
+			</div>
 		</div>
 	</main>
 {/if}

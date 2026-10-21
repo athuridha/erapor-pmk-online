@@ -10,6 +10,7 @@ import {
 	type CustomCetak
 } from '$lib/server/cetak/customization';
 import { composeAlamat, fallbackTempat, formatTanggal } from '$lib/server/pdf/preview-utils';
+import { getKopSuratLines, nauganHeaderByKey, type NauganKey } from '$lib/statics';
 
 const MAKS_UPLOAD_GAMBAR = 1_500_000; // 1,5 MB (data URL disimpan di app_meta)
 
@@ -18,6 +19,25 @@ function pastikanAdmin(loci: App.Locals) {
 	if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
 		throw error(403, 'Kustomisasi cetak hanya bisa diubah admin dan kepala sekolah.');
 	}
+}
+
+/** Baris kop bawaan tiap dokumen (dipakai sebagai teks awal form). */
+function kopSekarang(loci: App.Locals) {
+	const sekolah = loci.sekolah;
+	const naungan = (sekolah?.naungan ?? 'kemendikbud') as NauganKey;
+	const [cover1, cover2] = nauganHeaderByKey[naungan];
+	const piagam = getKopSuratLines({
+		jenjangVariant: sekolah?.jenjangVariant ?? null,
+		naungan,
+		kabupaten: sekolah?.alamat?.kabupaten ?? '',
+		provinsi: sekolah?.alamat?.provinsi ?? null
+	});
+	return {
+		cover: [cover1, cover2],
+		biodata: ['', ''],
+		rapor: ['', ''],
+		piagam: [piagam[0] ?? '', piagam[1] ?? '']
+	} as Record<'cover' | 'biodata' | 'rapor' | 'piagam', [string, string]>;
 }
 
 /** Nilai sekolah yang dipakai dokumen cetak saat ini (sebagai teks bawaan form). */
@@ -56,10 +76,11 @@ export const load = async ({ locals }) => {
 	]);
 
 	return {
-		meta: { title: 'Kustomisasi Cetak' },
+		meta: { title: 'Kustomisasi Cetak', hideTaskRail: true },
 		custom,
 		defaults: DEFAULT_CUSTOM_CETAK,
 		sekolahSekarang,
+		kopSekarang: kopSekarang(locals),
 		daftarMurid: muridRows
 	};
 };
@@ -80,6 +101,7 @@ export const actions = {
 		// Nilai yang sama dengan data sekolah = bukan override, supaya perubahan
 		// data master tetap ikut tercetak.
 		const sekarang = await ambilSekolahSekarang(locals);
+		const kop = kopSekarang(locals);
 		const sama = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 		if (sama(custom.teks.namaSekolah, sekarang.namaSekolah)) custom.teks.namaSekolah = '';
 		if (sama(custom.teks.npsn, sekarang.npsn)) custom.teks.npsn = '';
@@ -87,6 +109,10 @@ export const actions = {
 		if (sama(custom.teks.email, sekarang.email)) custom.teks.email = '';
 		if (sama(custom.teks.kota, sekarang.kota)) custom.teks.kota = '';
 		if (sama(custom.teks.tanggal, sekarang.tanggal)) custom.teks.tanggal = '';
+		for (const doc of ['cover', 'biodata', 'rapor', 'piagam'] as const) {
+			if (sama(custom.teks.kopBaris1[doc] ?? '', kop[doc][0])) custom.teks.kopBaris1[doc] = '';
+			if (sama(custom.teks.kopBaris2[doc] ?? '', kop[doc][1])) custom.teks.kopBaris2[doc] = '';
+		}
 
 		await simpanCustomCetak(custom);
 		return { message: 'Kustomisasi cetak disimpan.' };

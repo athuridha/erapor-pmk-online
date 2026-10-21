@@ -402,12 +402,18 @@ export function renderPiagamHTML(data: PiagamPrintData, template: '1' | '2'): st
 
 	const schoolHeadingText = escHtml(schoolHeading(data.sekolah.jenjang, data.sekolah.nama));
 
-	const kopLines = getKopSuratLines({
+	const kopBawaan = getKopSuratLines({
 		jenjangVariant: data.sekolah.jenjangVariant,
 		naungan: data.sekolah.naungan,
 		kabupaten: data.sekolah.alamat.kabupaten,
 		provinsi: data.sekolah.alamat.provinsi
-	}).map((line) => escHtml(line));
+	});
+	// Baris kop bisa dioverride lewat halaman Kustomisasi Cetak.
+	const kopLines = (
+		custom.kopBaris1 || custom.kopBaris2
+			? [custom.kopBaris1, custom.kopBaris2].filter(Boolean)
+			: kopBawaan
+	).map((line) => escHtml(line));
 
 	const penghargaan = data.penghargaan;
 	const periode = data.periode;

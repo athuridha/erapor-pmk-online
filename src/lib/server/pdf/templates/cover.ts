@@ -218,7 +218,9 @@ export function renderCoverHTML(data: CoverPrintData): string {
 	const bgLogoSrc = data.sekolah.logoSrc || getTutwuriBwDataUri();
 
 	const naunganKey: NauganKey = data.sekolah.naungan ?? 'kemendikbud';
-	const [header1, header2] = nauganHeaderByKey[naunganKey];
+	const [headerBawaan1, headerBawaan2] = nauganHeaderByKey[naunganKey];
+	const header1 = custom.kopBaris1 || headerBawaan1;
+	const header2 = custom.kopBaris2 || headerBawaan2;
 
 	const namaMurid = formatUpper(data.murid.nama);
 	const nisn = data.murid.nisn ?? null;
