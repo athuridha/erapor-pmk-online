@@ -1,6 +1,7 @@
 e-Rapor SMK Pratama Mulya v0.1.4
 
 Fitur baru
+
 - Kustomisasi Cetak (/cetak/kustomisasi): ubah teks, gambar, dan jarak/layout dokumen cetak
   (nama sekolah/NPSN/alamat/email di kop, kota & tanggal penutup, judul/subjudul/catatan kaki
   per dokumen, baris kop seperti nama Kementerian, upload logo kop & watermark, margin, ukuran
@@ -17,6 +18,7 @@ Fitur baru
   ruang penuh (panel "Daftar tugas" & "Menu Favorit" disembunyikan).
 
 Perbaikan
+
 - Master Data: tombol tambah/ubah tidak lagi error 500 dan form tambah tidak ikut memakai isi
   baris pertama.
 - Ekstrakurikuler umum (semua kelas) ikut tampil di halaman kelas dan input nilai.
