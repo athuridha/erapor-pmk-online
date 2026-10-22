@@ -699,32 +699,6 @@ export const tableKunciNilai = sqliteTable(
 	]
 );
 
-/**
- * Kunci nilai: operator/admin mengunci nilai sumatif sebuah mata pelajaran
- * supaya guru tidak bisa mengubahnya setelah rapor dibagikan.
- */
-export const tableKunciNilai = sqliteTable(
-	'kunci_nilai',
-	{
-		id: int().primaryKey({ autoIncrement: true }),
-		sekolahId: int()
-			.references(() => tableSekolah.id, { onDelete: 'cascade' })
-			.notNull(),
-		mataPelajaranId: int()
-			.references(() => tableMataPelajaran.id, { onDelete: 'cascade' })
-			.notNull(),
-		/** Akun yang mengunci (admin/kepala sekolah). */
-		dikunciOleh: int().references(() => tableAuthUser.id),
-		dikunciPada: text(),
-		alasan: text(),
-		...audit
-	},
-	(table) => [
-		unique().on(table.mataPelajaranId),
-		index('kunci_nilai_sekolah_idx').on(table.sekolahId)
-	]
-);
-
 export const tableMataPelajaranRelations = relations(tableMataPelajaran, ({ one, many }) => ({
 	tujuanPembelajaran: many(tableTujuanPembelajaran),
 	asesmenFormatif: many(tableAsesmenFormatif),
