@@ -54,7 +54,8 @@
 			['asesmen_formatif', 'Formatif'],
 			['asesmen_sumatif', 'Sumatif'],
 			['asesmen_kokurikuler', 'Kokurikuler'],
-			['nilai_ekstrakurikuler', 'Ekstrakurikuler']
+			['nilai_ekstrakurikuler', 'Ekstrakurikuler'],
+			['kunci_nilai', 'Kunci & Buka Kunci Nilai']
 		],
 		description: 'Input Nilai'
 	},
@@ -178,6 +179,8 @@ export const menuRoutePermissions: { path: string; permission: UserPermission }[
 	{ path: '/asesmen-sumatif', permission: 'input_nilai_asesmen_sumatif' },
 	{ path: '/asesmen-kokurikuler', permission: 'input_nilai_asesmen_kokurikuler' },
 	{ path: '/nilai-ekstrakurikuler', permission: 'input_nilai_nilai_ekstrakurikuler' },
+	{ path: '/kunci-nilai', permission: 'input_nilai_kunci_nilai' },
+	{ path: '/kunci-nilai', permission: 'input_nilai_kunci_nilai' },
 	{ path: '/presensi-murid', permission: 'administrasi_absen' },
 	{ path: '/rpm', permission: 'administrasi_rpm' },
 	{ path: '/jurnal-mengajar', permission: 'administrasi_jurnal_mengajar' },

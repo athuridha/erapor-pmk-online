@@ -146,6 +146,11 @@
 			{
 				title: 'Ekstrakurikuler',
 				path: '/nilai-ekstrakurikuler'
+			},
+			{
+				title: 'Kunci Nilai',
+				path: '/kunci-nilai',
+				tags: ['nilai', 'kunci', 'terkunci', 'operator']
 			}
 		]
 	},

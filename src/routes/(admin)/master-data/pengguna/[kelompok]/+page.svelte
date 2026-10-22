@@ -49,6 +49,7 @@
 					{ value: 'wali_kelas', label: 'Wali Kelas' }
 				] as Array<{ value: string; label: string }>)
 	);
+	const baris = $derived((data.baris ?? []) as Baris[]);
 	const daftarKelas = $derived(
 		(data.daftarKelas ?? []) as Array<{ id: number; nama: string; fase: string | null }>
 	);
@@ -58,8 +59,6 @@
 	const mapelSesuaiKelas = $derived(
 		kelasBaru ? daftarMapel.filter((m) => String(m.kelasId) === String(kelasBaru)) : daftarMapel
 	);
-
-	const baris = $derived((data.baris ?? []) as Baris[]);
 	const total = $derived(data.total ?? 0);
 	const totalHalaman = $derived(data.totalHalaman ?? 1);
 	const perHalaman = $derived(data.perHalaman ?? 50);
@@ -121,12 +120,14 @@
 </script>
 
 <div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="mb-4 flex items-start justify-between gap-2 max-sm:flex-col sm:flex-row">
-		<div>
+	<div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+		<div class="min-w-0 flex-1">
 			<h2 class="text-xl font-bold">Data Pengguna — {data.kelompok.judul}</h2>
-			<p class="text-base-content/80 block text-sm">{data.kelompok.deskripsi}</p>
+			<p class="text-base-content/80 mt-1 block max-w-2xl text-sm">
+				{data.kelompok.deskripsi}
+			</p>
 		</div>
-		<div class="flex flex-wrap items-center gap-2 max-sm:w-full">
+		<div class="flex shrink-0 flex-wrap items-center gap-2">
 			{#if terpilih.length}
 				<FormEnhance action="?/hapusMassal" showToast={false} onsuccess={handleSimpan}>
 					{#snippet children({ submitting })}
@@ -141,7 +142,7 @@
 			{#if kelompokKey === 'guru'}
 				<button
 					type="button"
-					class="btn btn-soft shadow-none max-sm:w-full"
+					class="btn btn-soft shadow-none"
 					onclick={() => (imporTerbuka = true)}
 				>
 					<Icon name="import" />
@@ -150,7 +151,7 @@
 			{/if}
 			<button
 				type="button"
-				class="btn btn-primary btn-soft shadow-none max-sm:w-full"
+				class="btn btn-primary btn-soft shadow-none"
 				onclick={() => {
 					roleBaru = kelompokKey === 'operator' ? 'admin' : 'user';
 					kelasBaru = '';
@@ -164,24 +165,8 @@
 		</div>
 	</div>
 
-	{#if rekapRole.length}
-		<div class="mb-4 flex flex-wrap gap-2">
-			{#each rekapRole as [role, jumlah] (role)}
-				<div class="bg-base-200 dark:bg-base-300 flex items-center gap-2 rounded-lg px-3 py-1.5">
-					<span class="badge badge-sm badge-soft badge-primary">{role}</span>
-					<span class="text-sm font-semibold">{jumlah}</span>
-				</div>
-			{/each}
-		</div>
-	{/if}
-
-	<form
-		class="mb-4 flex flex-col gap-2 sm:flex-row"
-		data-sveltekit-keepfocus
-		data-sveltekit-replacestate
-		onsubmit={(event) => event.preventDefault()}
-	>
-		<div class="join w-full">
+	<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+		<div class="join w-full sm:max-w-sm">
 			<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
 				<Icon name="search" />
 				<input
@@ -206,7 +191,12 @@
 				{/each}
 			</select>
 		</div>
-	</form>
+		<div class="flex flex-wrap items-center gap-2">
+			{#each rekapRole as [role, jumlah] (role)}
+				<span class="badge badge-sm badge-soft badge-primary">{role} {jumlah}</span>
+			{/each}
+		</div>
+	</div>
 
 	<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
 		<table class="border-base-200 table border dark:border-none">
@@ -224,14 +214,14 @@
 								))}
 						/>
 					</th>
-					<th style="min-width: 150px;">NIK / Username</th>
-					<th style="min-width: 180px;">Nama</th>
-					<th style="min-width: 130px;">Role</th>
-					<th style="min-width: 130px;">Kelas</th>
-					<th style="min-width: 150px;">Mata Pelajaran</th>
-					<th class="text-center" style="width: 110px;">Hak Akses</th>
-					<th style="min-width: 120px;">Dibuat</th>
-					<th class="text-center" style="width: 220px;">Aksi</th>
+					<th style="min-width: 140px;">NIK / Username</th>
+					<th style="min-width: 200px;">Nama</th>
+					<th style="min-width: 110px;">Role</th>
+					<th style="min-width: 110px;">Kelas</th>
+					<th style="min-width: 130px;">Mata Pelajaran</th>
+					<th class="text-center hidden xl:table-cell" style="width: 100px;">Hak Akses</th>
+					<th class="hidden xl:table-cell" style="min-width: 110px;">Dibuat</th>
+					<th class="text-center" style="width: 200px;">Aksi</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -251,15 +241,19 @@
 									))}
 							/>
 						</td>
-						<td>{row.nik_username}</td>
-						<td class="font-medium">{row.nama}</td>
+						<td class="whitespace-nowrap">{row.nik_username}</td>
+						<td>
+							<span class="font-medium">{row.nama}</span>
+						</td>
 						<td>
 							<span class="badge badge-sm badge-soft badge-primary">{row.role}</span>
 						</td>
 						<td>{row.kelas ?? '—'}</td>
 						<td>{row.mapel ?? '—'}</td>
-						<td class="text-center">{row.izin}</td>
-						<td>{formatTanggal(row.dibuat)}</td>
+						<td class="text-center hidden xl:table-cell">{row.izin}</td>
+						<td class="hidden xl:table-cell whitespace-nowrap">
+							{formatTanggal(row.dibuat)}
+						</td>
 						<td>
 							<div class="flex items-center justify-center gap-1">
 								{#if hapusId === row.id}
@@ -285,11 +279,17 @@
 										{/snippet}
 									</FormEnhance>
 								{:else}
-									<a class="btn btn-soft btn-sm shadow-none" href={`/pengguna/${row.id}`}>
+									<a
+										class="btn btn-soft btn-sm shadow-none whitespace-nowrap"
+										href={`/pengguna/${row.id}`}
+									>
 										<Icon name="eye" />
 										Kelola
 									</a>
-									<a class="btn btn-soft btn-sm shadow-none" href={`/pengguna/form/${row.id}`}>
+									<a
+										class="btn btn-soft btn-sm shadow-none whitespace-nowrap"
+										href={`/pengguna/form/${row.id}`}
+									>
 										<Icon name="edit" />
 										Ubah
 									</a>
@@ -618,11 +618,6 @@
 							</label>
 						{/if}
 					</div>
-
-					<p class="text-base-content/70 mt-3 text-xs">
-						Akun dibuat dengan hak akses bawaan sesuai role. Detail &amp; penyesuaian izin bisa
-						dibuka lewat tombol Kelola.
-					</p>
 
 					<div class="modal-action">
 						<button

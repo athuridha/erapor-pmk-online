@@ -29,6 +29,8 @@
 		mapelList: { id: number; nama: string }[];
 		pickerMapelId: number;
 		mapel: { id: number; kkm: number };
+		terkunci: boolean;
+		dikunciOleh: string | null;
 		sumatifWeights: { lingkup: number; sts: number; sas: number };
 		sumatifWeightsRts: { lingkup: number; sts: number };
 		hasLingkupComplete: boolean;
@@ -454,6 +456,17 @@
 			<input type="hidden" name="muridId" value={data.murid.id} />
 			<input type="hidden" name="mapelId" value={data.mapel.id} />
 
+			{#if data.terkunci}
+				<div class="alert alert-error mt-3 text-sm">
+					<Icon name="lock" />
+					<span>
+						Nilai mata pelajaran ini sudah dikunci operator{data.dikunciOleh
+							? ` (${data.dikunciOleh})`
+							: ''}. Hubungi operator sekolah untuk membuka kunci.
+					</span>
+				</div>
+			{/if}
+
 			<div class="flex flex-col gap-2 sm:flex-row">
 				<a href={kembaliHref} class="btn btn-soft shadow-none">
 					<Icon name="left" />
@@ -464,13 +477,13 @@
 					hasTujuan={data.hasTujuan}
 					initialNilaiAkhir={data.initialScores.nilaiAkhir}
 					{nilaiAkhir}
-					disabled={submitting}
+					disabled={submitting || data.terkunci}
 					on:apply={handleCheatApply}
 				/>
 				<button
 					type="submit"
 					class="btn btn-primary shadow-none sm:ml-auto"
-					disabled={!data.hasTujuan || !data.hasLingkupComplete || submitting}
+					disabled={!data.hasTujuan || !data.hasLingkupComplete || submitting || data.terkunci}
 				>
 					<Icon name="save" />
 					{submitting ? 'Menyimpan...' : 'Simpan'}

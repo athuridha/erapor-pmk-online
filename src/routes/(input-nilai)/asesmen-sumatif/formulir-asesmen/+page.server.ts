@@ -19,6 +19,7 @@ import {
 } from '$lib/server/mapel-picker';
 import { bolehAksesMapel, getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
 import { catatAudit } from '$lib/admin/audit.server';
+import { loadKunciNilai, pastikanNilaiTidakTerkunci } from '$lib/server/nilai-kunci';
 import {
 	konfigurasiNilaiDariSekolah,
 	hitungNilaiAkhirRts,
@@ -273,6 +274,9 @@ export async function load({ url, locals, depends, parent }) {
 		};
 	});
 
+	const kunciNilai = await loadKunciNilai([mapel.id]);
+	const infoKunci = kunciNilai.get(mapel.id) ?? null;
+
 	const meta: PageMeta = { title: `Form Asesmen Sumatif - ${mapel.nama}` };
 
 	return {
@@ -282,6 +286,8 @@ export async function load({ url, locals, depends, parent }) {
 		mapelList: picker.mapelList,
 		pickerMapelId: picker.pickerMapelId,
 		mapel: { id: mapel.id, nama: mapel.nama, kkm: mapel.kkm ?? 0 },
+		terkunci: Boolean(infoKunci),
+		dikunciOleh: infoKunci?.dikunciOleh ?? null,
 		hasTujuan: entries.length > 0,
 		hasLingkupComplete,
 		entries,
@@ -380,6 +386,7 @@ export const actions = {
 		}
 
 		await ensureAsesmenSumatifSchema();
+		await pastikanNilaiTidakTerkunci(mapel.id, mapel.nama);
 
 		// Nilai akhir lama dicatat untuk jejak audit (siapa mengubah nilai apa).
 		const nilaiSebelum = await db.query.tableAsesmenSumatif.findFirst({
