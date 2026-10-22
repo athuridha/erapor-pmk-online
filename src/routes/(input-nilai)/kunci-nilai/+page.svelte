@@ -214,6 +214,7 @@
 						<span class="label-text mb-1 text-sm">Alasan (opsional)</span>
 						<textarea
 							name="alasan"
+							bind:value={alasan}
 							class="textarea textarea-bordered w-full rounded-xl"
 							rows="3"
 							placeholder="Contoh: Rapor semester 1 sudah dibagikan ke wali kelas"

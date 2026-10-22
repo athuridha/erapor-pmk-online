@@ -6,7 +6,7 @@ import { authority } from '../../../pengguna/utils.server';
 import { ensureKunciNilaiSchema } from '$lib/server/db/ensure-kunci-nilai';
 import { bukaKunciNilaiMapel, kunciNilaiMapel, loadKunciNilai } from '$lib/server/nilai-kunci';
 
-async function listMapelKelas(kelasId: number, sekolahId: number) {
+async function listMapelKelas(kelasId: number) {
 	return db.query.tableMataPelajaran.findMany({
 		columns: { id: true, nama: true, pengampuId: true },
 		with: { pengampu: { columns: { nama: true } } },
@@ -37,7 +37,7 @@ export const load = async ({ parent, locals }) => {
 		};
 	}
 
-	const mapelRows = await listMapelKelas(kelasId, sekolahId);
+	const mapelRows = await listMapelKelas(kelasId);
 	const kunci = await loadKunciNilai(mapelRows.map((row) => row.id));
 
 	const mapel = mapelRows.map((row) => {
@@ -141,7 +141,7 @@ export const actions = {
 		});
 		if (!kelas) return fail(404, { fail: 'Kelas tidak ditemukan.' });
 
-		const mapelRows = await listMapelKelas(kelasId, sekolahId);
+		const mapelRows = await listMapelKelas(kelasId);
 		for (const mapel of mapelRows) {
 			await kunciNilaiMapel({
 				mapelId: mapel.id,
