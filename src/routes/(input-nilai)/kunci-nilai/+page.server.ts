@@ -2,7 +2,7 @@ import { error, fail } from '@sveltejs/kit';
 import { asc, eq } from 'drizzle-orm';
 import db from '$lib/server/db';
 import { tableKelas, tableMataPelajaran } from '$lib/server/db/schema';
-import { authority } from '../../../pengguna/utils.server';
+import { authority } from '../../pengguna/utils.server';
 import { ensureKunciNilaiSchema } from '$lib/server/db/ensure-kunci-nilai';
 import { bukaKunciNilaiMapel, kunciNilaiMapel, loadKunciNilai } from '$lib/server/nilai-kunci';
 
@@ -169,7 +169,7 @@ export const actions = {
 		});
 		if (!kelas) return fail(404, { fail: 'Kelas tidak ditemukan.' });
 
-		const mapelRows = await listMapelKelas(kelasId, sekolahId);
+		const mapelRows = await listMapelKelas(kelasId);
 		for (const mapel of mapelRows) {
 			await bukaKunciNilaiMapel({
 				mapelId: mapel.id,

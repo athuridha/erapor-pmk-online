@@ -18,6 +18,7 @@
 
 	let cari = $state('');
 	let targetKunci = $state<Mapel | null>(null);
+	let targetKunciId = $state(0);
 	let alasan = $state('');
 
 	const mapel = $derived((data.mapel ?? []) as Mapel[]);
@@ -47,6 +48,7 @@
 	async function handleSelesai({ data: hasil }: { data?: Record<string, unknown> }) {
 		await invalidateAll();
 		targetKunci = null;
+		targetKunciId = 0;
 		alasan = '';
 		toast({
 			message: typeof hasil?.message === 'string' ? hasil.message : 'Perubahan disimpan.',
@@ -176,6 +178,7 @@
 											class="btn btn-soft btn-sm shadow-none"
 											onclick={() => {
 												targetKunci = row;
+												targetKunciId = row.id;
 												alasan = '';
 											}}
 										>
@@ -209,7 +212,7 @@
 
 			<FormEnhance action="?/kunci" showToast={false} onsuccess={handleSelesai}>
 				{#snippet children({ submitting, invalid })}
-					<input type="hidden" name="mapelId" value={targetKunci.id} />
+					<input type="hidden" name="mapelId" value={targetKunciId} />
 					<label class="form-control">
 						<span class="label-text mb-1 text-sm">Alasan (opsional)</span>
 						<textarea
