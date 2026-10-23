@@ -171,12 +171,7 @@
 	// Restrict editing: admin, kepala sekolah, wali_kelas, dan guru-wali di kelasnya
 	const canEdit = $derived.by(() => {
 		const u = page.data.user as { type?: string } | null | undefined;
-		return (
-			u?.type === 'admin' ||
-			u?.type === 'kepala_sekolah' ||
-			u?.type === 'wali_kelas' ||
-			isWaliOwnClass
-		);
+		return isAdminUser(u) || u?.type === 'wali_kelas' || isWaliOwnClass;
 	});
 
 	const currentPage = $derived.by(() => data.page?.currentPage ?? 1);
@@ -223,6 +218,7 @@
 	});
 
 	import SvelteURLSearchParams from '$lib/svelte-helpers/url-search-params';
+	import { isAdminUser } from '../../pengguna/permissions';
 
 	function buildUrl(updateParams: (params: SvelteURLSearchParams) => void) {
 		const params = new SvelteURLSearchParams(page.url.search);

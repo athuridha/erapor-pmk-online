@@ -22,6 +22,7 @@ import {
 	TABLE_MISSING_MESSAGE
 } from './utils';
 import { isWaliKelasAccount, isWaliOfKelas } from '../kelas-akses';
+import { isAdminUser } from '../../../routes/pengguna/permissions';
 
 import {
 	simWriteKetidakhadiran,
@@ -878,7 +879,7 @@ export async function handleUpdateRapor({
 	}
 
 	const raporUser = locals.user;
-	const raporIsStaff = raporUser?.type === 'admin' || raporUser?.type === 'kepala_sekolah';
+	const raporIsStaff = isAdminUser(raporUser);
 	if (!raporIsStaff) {
 		// Guru merangkap wali kelas (tipe 'user' dengan relasi waliKelasId)
 		// diperlakukan sama seperti wali kelas lama; guru murni dan wali asuh ditolak.
@@ -972,7 +973,7 @@ export async function handleResetRapor({
 	}
 
 	const raporUser = locals.user;
-	const raporIsStaff = raporUser?.type === 'admin' || raporUser?.type === 'kepala_sekolah';
+	const raporIsStaff = isAdminUser(raporUser);
 	if (!raporIsStaff) {
 		// Guru merangkap wali kelas (tipe 'user' dengan relasi waliKelasId)
 		// diperlakukan sama seperti wali kelas lama; guru murni dan wali asuh ditolak.

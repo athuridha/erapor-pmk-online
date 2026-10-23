@@ -18,6 +18,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		config: {
 			accountId: config.accountId,
 			databaseId: config.databaseId || DEFAULT_CLOUDFLARE_DATABASE_ID,
+			hasApiUrl: Boolean(config.apiUrl),
 			hasToken: Boolean(config.apiToken),
 			tokenSource: config.tokenSource
 		}
@@ -34,6 +35,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	await saveD1Config(sekolahId, {
 		accountId: body.accountId || '',
 		databaseId: body.databaseId || DEFAULT_CLOUDFLARE_DATABASE_ID,
+		apiUrl: body.apiUrl || '',
 		apiToken: body.apiToken || ''
 	});
 

@@ -3,6 +3,7 @@ import { pindahkanMuridKelas } from '$lib/server/murid-pindah-kelas';
 import { canAccessKelas } from '$lib/server/kelas-akses';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 import { fail } from '@sveltejs/kit';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 const PER_PAGE = 50;
 
@@ -30,7 +31,7 @@ export const load = async ({ parent, locals, url, depends }) => {
 
 	const paramKelasId = Number(url.searchParams.get('kelas_id') ?? '');
 	let kelasId = Number.isInteger(paramKelasId) && paramKelasId > 0 ? paramKelasId : null;
-	const adminScope = user?.type === 'admin' || user?.type === 'kepala_sekolah';
+	const adminScope = isAdminUser(user);
 
 	// Non admin hanya boleh melihat kelas yang menjadi haknya.
 	if (!adminScope) {
@@ -107,7 +108,7 @@ export const actions = {
 			return fail(401, { fail: 'Sekolah tidak ditemukan' });
 		}
 		const user = locals.user;
-		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+		if (!user || !isAdminUser(user)) {
 			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa memindahkan murid' });
 		}
 

@@ -3,6 +3,7 @@
 	import Icon from '$lib/components/icon.svelte';
 	import { toast } from '$lib/components/toast.svelte';
 	import PdfPreviewModal from '$lib/components/cetak/PdfPreviewModal.svelte';
+	import { isFullAdmin } from '../pengguna/permissions';
 	import {
 		profilPelajarPancasilaDimensions,
 		profilPelajarPancasilaDimensionLabelByKey,
@@ -60,7 +61,7 @@
 	let printing = $state(false);
 	let errorMessage = $state('');
 	let aiStatus = $state<'checking' | 'ready' | 'unconfigured'>('checking');
-	let isAdminUser = $state(false);
+	let isAdminUserState = $state(false);
 	let pdfUrl = $state('');
 	let pdfTitle = $state('');
 	let pdfOpen = $state(false);
@@ -152,7 +153,7 @@
 				const response = await fetch('/api/ai/status');
 				const body = await response.json().catch(() => ({}));
 				aiStatus = response.ok && body?.configured ? 'ready' : 'unconfigured';
-				isAdminUser = Boolean(body?.isAdmin);
+				isAdminUserState = Boolean(body?.isAdmin);
 			} catch {
 				aiStatus = 'unconfigured';
 			}
@@ -231,10 +232,9 @@
 		if (!generated || !kelasAktif) return null;
 		return {
 			mapelNama,
-			penyusun:
-				data.user?.type === 'admin'
-					? '-'
-					: ((data.user as { pegawaiName?: string | null } | undefined)?.pegawaiName ?? '-'),
+			penyusun: isFullAdmin(data.user)
+				? '-'
+				: ((data.user as { pegawaiName?: string | null } | undefined)?.pegawaiName ?? '-'),
 			kelasLabel: kelasAktif.nama,
 			fase: kelasAktif.fase ?? null,
 			karakteristik: generated.karakteristik,
@@ -688,7 +688,7 @@
 			<div class="alert alert-warning mb-4" role="alert">
 				<Icon name="warning" />
 				<span>
-					Fitur AI belum aktif. Setel kunci API {isAdminUser ? '' : 'pribadi Anda '}di
+					Fitur AI belum aktif. Setel kunci API {isAdminUserState ? '' : 'pribadi Anda '}di
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- deep link to settings page AI key card -->
 					<a class="link" href="/pengaturan#ai-key">Pengaturan</a>.
 				</span>

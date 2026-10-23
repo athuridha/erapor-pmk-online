@@ -14,6 +14,7 @@ import { listGuruBySekolah } from '$lib/server/presensi-guru';
 import { eq, desc } from 'drizzle-orm';
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { isAdminUser } from '../../pengguna/permissions';
 
 async function resolveSekolahContext(sekolahId?: number) {
 	let sid: number;
@@ -199,7 +200,7 @@ async function insertPegawaiPengikut(
 }
 
 export const POST = (async ({ request, locals }) => {
-	if (!locals.user || (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah')) {
+	if (!locals.user || !isAdminUser(locals.user)) {
 		throw error(403, { message: 'Hanya admin yang dapat menambah data' });
 	}
 
@@ -256,7 +257,7 @@ export const POST = (async ({ request, locals }) => {
 }) satisfies RequestHandler;
 
 export const PATCH = (async ({ request, url, locals }) => {
-	if (!locals.user || (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah')) {
+	if (!locals.user || !isAdminUser(locals.user)) {
 		throw error(403, { message: 'Hanya admin yang dapat mengubah data' });
 	}
 
@@ -300,7 +301,7 @@ export const PATCH = (async ({ request, url, locals }) => {
 }) satisfies RequestHandler;
 
 export const DELETE = (async ({ url, locals }) => {
-	if (!locals.user || (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah')) {
+	if (!locals.user || !isAdminUser(locals.user)) {
 		throw error(403, { message: 'Hanya admin yang dapat menghapus data' });
 	}
 

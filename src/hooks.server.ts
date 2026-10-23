@@ -177,6 +177,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 				username: resolved.user.username,
 				permissions: resolved.user.permissions,
 				type: resolved.user.type,
+				operatorLevel: resolved.user.operatorLevel ?? null,
 				kelasId: resolved.user.kelasId,
 				pegawaiId: resolved.user.pegawaiId,
 				sekolahId: resolved.user.sekolahId,
@@ -326,8 +327,14 @@ const cookieParser: Handle = async ({ event, resolve }) => {
 	// Kepala sekolah is locked to their own sekolah: pin the active-sekolah cookie
 	// to the account's sekolahId so no other school can be reached (via a hand-edited
 	// cookie, the /akademik switch, or ?sekolahId= on /sekolah/form).
-	const activeUser = event.locals.user as { type?: string; sekolahId?: number } | null;
-	if (activeUser?.type === 'kepala_sekolah' && activeUser.sekolahId) {
+	const activeUser = event.locals.user as {
+		type?: string;
+		operatorLevel?: string | null;
+		sekolahId?: number;
+	} | null;
+	const pinnedKepalaSekolah =
+		activeUser?.type === 'kepala_sekolah' || activeUser?.operatorLevel === 'kepala_sekolah';
+	if (pinnedKepalaSekolah && activeUser?.sekolahId) {
 		if (sekolahId !== activeUser.sekolahId) {
 			event.cookies.set(cookieNames.ACTIVE_SEKOLAH_ID, String(activeUser.sekolahId), {
 				path: '/',

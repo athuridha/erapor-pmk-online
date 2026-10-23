@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '$lib/components/icon.svelte';
+	import KelasKontenPicker from '$lib/components/kelas-konten-picker.svelte';
 	import { autoSubmit, searchQueryMarker } from '$lib/utils';
 	import { onDestroy } from 'svelte';
 	import { toast } from '$lib/components/toast.svelte';
@@ -43,6 +44,7 @@
 		mapelList: MapelOption[];
 		selectedMapelValue: string | null;
 		selectedMapel: { id: number | null; nama: string } | null;
+		kelasKontenAktif?: { id: number; nama?: string; fase?: string } | null;
 		kelasAktif?: { nama?: string; fase?: string } | null;
 		daftarMurid: MuridRow[];
 		allowedAgamaForUser?: string[];
@@ -129,7 +131,7 @@
 		try {
 			// Fetch all students in the class (bypass pagination) so the template
 			// includes every student, not just the current page.
-			const kelasId = (data as any).kelasAktif?.id ?? null;
+			const kelasId = ((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id ?? null;
 			let allMurid: { id: number; nama: string; agama: string }[] | null = null;
 			if (kelasId) {
 				try {
@@ -189,7 +191,8 @@
 								// the resolved mapel id in the downloaded filename.
 								let finalLingkupGroups = lingkupGroups;
 								let resolvedMapelId: number | null = null;
-								const kelasId = (data as any).kelasAktif?.id ?? null;
+								const kelasId =
+									((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id ?? null;
 								if (kelasId && chosen && chosen.name) {
 									try {
 										const q = new URLSearchParams({ kelas_id: String(kelasId), name: chosen.name });
@@ -228,7 +231,7 @@
 									: daftarMuridExport;
 								await downloadTemplateXLSX({
 									mapelName: chosen.name,
-									kelasName: data.kelasAktif?.nama ?? 'Nama Kelas',
+									kelasName: (data.kelasKontenAktif ?? data.kelasAktif)?.nama ?? 'Nama Kelas',
 									daftarMurid: filteredMurid,
 									lingkupGroups: finalLingkupGroups,
 									mapelId: resolvedMapelId,
@@ -248,11 +251,11 @@
 
 			await downloadTemplateXLSX({
 				mapelName: currentMapelName,
-				kelasName: data.kelasAktif?.nama ?? 'Nama Kelas',
+				kelasName: (data.kelasKontenAktif ?? data.kelasAktif)?.nama ?? 'Nama Kelas',
 				daftarMurid: daftarMuridExport,
 				lingkupGroups,
 				mapelId: Number.isInteger(mapelId) && mapelId > 0 ? mapelId : null,
-				kelasId: (data as any).kelasAktif?.id ?? null
+				kelasId: ((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id ?? null
 			});
 		} catch (err) {
 			toast('Gagal membuat template: ' + String((err as Error)?.message ?? err), 'error');
@@ -323,7 +326,7 @@
 							const chosen =
 								(opts?.agamaOptions ?? agamaVariantOptions).find((o) => o.key === chosenKey) ??
 								(opts?.agamaOptions ?? agamaVariantOptions)[0];
-							const kelasId = (data as any).kelasAktif?.id;
+							const kelasId = ((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id;
 							if (kelasId && chosen && chosen.name) {
 								try {
 									const q = new URLSearchParams({ kelas_id: String(kelasId), name: chosen.name });
@@ -345,7 +348,7 @@
 						else
 							form.append('mapel_id', selectedMapelValue ?? String(data.selectedMapel?.id ?? ''));
 
-						const kelasId = (data as any).kelasAktif?.id;
+						const kelasId = ((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id;
 						if (kelasId) form.append('kelas_id', String(kelasId));
 						const res = await fetch('/api/asesmen-sumatif/import', { method: 'POST', body: form });
 						const json = await res.json().catch(() => ({}) as any);
@@ -489,7 +492,7 @@
 	});
 
 	const selectedMapelLabel = $derived.by(() => data.selectedMapel?.nama ?? null);
-	const kelasAktifLabel = $derived.by(() => data.kelasAktif?.nama ?? null);
+	const kelasLabel = $derived.by(() => (data.kelasKontenAktif ?? data.kelasAktif)?.nama ?? null);
 	const hasMapel = $derived(data.mapelList.length > 0);
 	const currentPage = $derived.by(() => data.page.currentPage ?? 1);
 	const totalPages = $derived.by(() => Math.max(1, data.page.totalPages ?? 1));
@@ -598,15 +601,18 @@
 				{/if}
 			</h2>
 
-			{#if kelasAktifLabel}
-				<p class="text-base-content/70 text-sm">Kelas aktif: {kelasAktifLabel}</p>
+			{#if kelasLabel}
+				<p class="text-base-content/70 text-sm">Kelas: {kelasLabel}</p>
 			{:else}
 				<p class="text-base-content/60 text-sm">
-					Pilih kelas di navbar untuk melihat mata pelajaran intrakurikuler.
+					Pilih kelas di navbar atau pemilih kelas untuk melihat mata pelajaran intrakurikuler.
 				</p>
 			{/if}
 		</div>
 		<div class="flex items-center gap-2 max-sm:w-full">
+			<KelasKontenPicker
+				currentId={((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id ?? null}
+			/>
 			<button
 				type="button"
 				class="btn btn-soft shadow-none max-sm:flex-1"

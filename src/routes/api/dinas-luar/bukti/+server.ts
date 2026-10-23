@@ -5,6 +5,7 @@ import { deleteBuktiFile, saveGambarFile, saveSppdFile } from '$lib/server/dinas
 import { error, json } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const MAX_FOTO_BYTES = 5 * 1024 * 1024;
@@ -63,7 +64,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	for (const id of removeIds) {
 		const target = existingById.get(id);
 		if (!target) throw error(404, { message: 'Bukti yang dihapus tidak ditemukan' });
-		if (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah') {
+		if (!isAdminUser(locals.user)) {
 			if (target.authUserId !== locals.user.id) {
 				throw error(403, { message: 'Tidak dapat menghapus bukti pengguna lain' });
 			}
@@ -185,7 +186,7 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
 	});
 	if (!bukti) throw error(404, { message: 'Bukti tidak ditemukan' });
 
-	if (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(locals.user)) {
 		if (bukti.authUserId !== locals.user.id) {
 			throw error(403, { message: 'Tidak dapat menghapus bukti pengguna lain' });
 		}

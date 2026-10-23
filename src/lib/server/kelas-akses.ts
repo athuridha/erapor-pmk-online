@@ -1,6 +1,14 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import db from './db';
-import { tableAuthUserKelas, tableKelas, tableMurid, tablePegawai } from './db/schema';
+import {
+	tableAuthUserKelas,
+	tableAuthUserMataPelajaran,
+	tableKelas,
+	tableMurid,
+	tableMataPelajaran,
+	tablePegawai
+} from './db/schema';
+import { isAdminUser } from '../../routes/pengguna/permissions';
 
 /**
  * True bila `user` adalah wali kelas dari `kelasId` (lewat relasi waliKelasId).
@@ -67,7 +75,7 @@ export async function canAccessKelas(
 	});
 	if (!kelasInSekolah) return false;
 
-	if (user.type === 'admin' || user.type === 'kepala_sekolah') return true;
+	if (isAdminUser(user)) return true;
 
 	if (user.type === 'wali_kelas') {
 		// Own class, fallback to user.kelasId (layout: ownIds = ownKelasIds.length > 0 ? ownKelasIds : [user.kelasId]).
@@ -145,4 +153,132 @@ export async function canAccessKelas(
 	}
 
 	return false;
+}
+
+export type KelasLite = { id: number; nama: string; fase: string | null };
+
+/**
+ * Set kelas yang DIAMPU guru (bukan kelas wali): kelas dari mapel yang
+ * di-assign ke akun (auth_user_mata_pelajaran + legacy kolom) dan mapel yang
+ * diampu pegawai (mata_pelajaran.pengampu_id), dibatasi sekolah. Kelas wali
+ * TIDAK ikut di sini — gabungkan sendiri dengan ownedKelasIdSet bila perlu.
+ */
+export async function kelasDiampuSet(
+	user:
+		| {
+				id?: number;
+				type?: string;
+				pegawaiId?: number | null;
+				mataPelajaranId?: number | null;
+		  }
+		| null
+		| undefined,
+	sekolahId: number,
+	semesterId: number | null = null
+): Promise<Set<number>> {
+	if (!user || sekolahId <= 0) return new Set();
+
+	const mapelIds = new Set<number>();
+	if (user.mataPelajaranId) mapelIds.add(user.mataPelajaranId);
+	if (user.id) {
+		const assigned = await db.query.tableAuthUserMataPelajaran.findMany({
+			columns: { mataPelajaranId: true },
+			where: eq(tableAuthUserMataPelajaran.authUserId, user.id)
+		});
+		for (const row of assigned) mapelIds.add(row.mataPelajaranId);
+	}
+
+	const kelasIdRows = new Set<number>();
+	const kelasSekolahFilter = semesterId
+		? and(eq(tableKelas.sekolahId, sekolahId), eq(tableKelas.semesterId, semesterId))
+		: eq(tableKelas.sekolahId, sekolahId);
+	const orConditions = [];
+	if (user.pegawaiId) orConditions.push(eq(tableMataPelajaran.pengampuId, user.pegawaiId));
+	if (mapelIds.size) orConditions.push(inArray(tableMataPelajaran.id, [...mapelIds]));
+	if (orConditions.length) {
+		const rows = await db
+			.select({ kelasId: tableMataPelajaran.kelasId })
+			.from(tableMataPelajaran)
+			.innerJoin(tableKelas, eq(tableKelas.id, tableMataPelajaran.kelasId))
+			.where(and(kelasSekolahFilter, or(...orConditions)));
+		for (const row of rows) kelasIdRows.add(row.kelasId);
+	}
+	return kelasIdRows;
+}
+
+/**
+ * Gabungan kelas wali + kelas yang diampu. Dipakai pemilih kelas per halaman:
+ * guru mapel tidak perlu "pindah kelas" global hanya untuk menilai kelas lain.
+ */
+export async function kelasKontenSet(
+	user:
+		| {
+				id?: number;
+				type?: string;
+				pegawaiId?: number | null;
+				mataPelajaranId?: number | null;
+		  }
+		| null
+		| undefined,
+	sekolahId: number,
+	semesterId: number | null = null
+): Promise<Set<number>> {
+	const hasil = await kelasDiampuSet(user, sekolahId, semesterId);
+	if (user?.pegawaiId) {
+		const ownFilter = semesterId
+			? and(
+					eq(tableKelas.sekolahId, sekolahId),
+					eq(tableKelas.semesterId, semesterId),
+					eq(tableKelas.waliKelasId, user.pegawaiId)
+				)
+			: and(eq(tableKelas.sekolahId, sekolahId), eq(tableKelas.waliKelasId, user.pegawaiId));
+		const ownRows = await db.query.tableKelas.findMany({
+			columns: { id: true },
+			where: ownFilter
+		});
+		for (const row of ownRows) hasil.add(row.id);
+	}
+	return hasil;
+}
+
+/**
+ * Resolusi "kelas konten" per halaman via `?kelas=` query param, TANPA
+ * menyentuh kelasAktif global (cookie). Aturan:
+ * - Tanpa param valid → kelasAktif (perilaku lama).
+ * - Admin/kepala sekolah → kelas mana pun dalam sekolah.
+ * - Guru ('user'/'wali_kelas') → hanya kelas wali ∪ kelas diampu.
+ * - Wali asuh → tetap kelasAktif (kategori tidak relevan saat ini).
+ */
+export async function resolveKelasKonten(
+	user: NonNullable<App.Locals['user']> | null | undefined,
+	sekolahId: number,
+	kelasParam: number | null,
+	kelasAktif: KelasLite | null,
+	semesterId: number | null = null
+): Promise<KelasLite | null> {
+	if (!kelasParam || !Number.isInteger(kelasParam) || kelasParam <= 0) return kelasAktif;
+	if (kelasAktif?.id === kelasParam) return kelasAktif;
+
+	const kelasFilter = semesterId
+		? and(
+				eq(tableKelas.id, kelasParam),
+				eq(tableKelas.sekolahId, sekolahId),
+				eq(tableKelas.semesterId, semesterId)
+			)
+		: and(eq(tableKelas.id, kelasParam), eq(tableKelas.sekolahId, sekolahId));
+	const kelas = await db.query.tableKelas.findFirst({
+		columns: { id: true, nama: true, fase: true },
+		where: kelasFilter
+	});
+	if (!kelas) return kelasAktif ?? null;
+
+	if (isAdminUser(user)) return kelas;
+	if (!user) return kelasAktif ?? null;
+
+	if (user.type !== 'user' && user.type !== 'wali_kelas') return kelasAktif ?? null;
+
+	const diizinkan = await kelasKontenSet(user, sekolahId, semesterId);
+	if (diizinkan.has(kelas.id)) return kelas;
+
+	return kelasAktif ?? null;
 }

@@ -1,6 +1,7 @@
 ﻿import { MASTER_DATA } from '$lib/admin/master-data';
 import { loadBarisMaster } from '$lib/admin/master-data.server';
 import { error } from '@sveltejs/kit';
+import { isAdminUser } from '../../pengguna/permissions';
 
 export const load = async ({ locals }) => {
 	const meta: PageMeta = { title: 'Master Data' };
@@ -10,7 +11,7 @@ export const load = async ({ locals }) => {
 	if (!sekolahId) {
 		throw error(401, 'Sekolah aktif tidak ditemukan');
 	}
-	if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+	if (!user || !isAdminUser(user)) {
 		throw error(403, 'Master data hanya bisa dikelola admin dan kepala sekolah.');
 	}
 

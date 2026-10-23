@@ -1,5 +1,6 @@
 ﻿import { loadAuditLog } from '$lib/admin/audit.server';
 import { error } from '@sveltejs/kit';
+import { isAdminUser } from '../../pengguna/permissions';
 
 export const load = async ({ locals, url, depends }) => {
 	depends('app:audit-log');
@@ -10,7 +11,7 @@ export const load = async ({ locals, url, depends }) => {
 	if (!sekolahId) {
 		throw error(401, 'Sekolah aktif tidak ditemukan');
 	}
-	if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+	if (!user || !isAdminUser(user)) {
 		throw error(403, 'Jejak audit hanya bisa dilihat admin dan kepala sekolah.');
 	}
 

@@ -8,11 +8,12 @@ import { renderBukuTamuHTML } from '$lib/server/pdf/templates/buku-tamu';
 import { signatureToDataUrl } from '$lib/server/ttd';
 import { formatTanggal } from '$lib/server/pdf/preview-utils';
 import type { RequestHandler } from './$types';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 export const GET = (async ({ locals, url }) => {
 	const user = locals.user;
 	if (!user) throw error(401, 'Unauthorized');
-	if (user.type !== 'admin' && user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(user)) {
 		throw error(403, 'Hanya admin yang dapat mencetak buku tamu.');
 	}
 

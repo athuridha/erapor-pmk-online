@@ -2,13 +2,14 @@ import { json, redirect } from '@sveltejs/kit';
 import { getRaporPreviewPayload } from '../rapor/preview-data';
 import { getKelasContextForUser } from '$lib/server/route-utils';
 import type { RequestHandler } from './$types';
+import { isAdminUser } from '../../pengguna/permissions';
 
 export const GET = (async ({ locals, url }) => {
 	if (!locals.user) {
 		throw redirect(303, '/login');
 	}
 
-	if (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(locals.user)) {
 		const muridIdParam = url.searchParams.get('murid_id');
 		if (muridIdParam) {
 			const { hasAccess } = await getKelasContextForUser(locals, url, muridIdParam);

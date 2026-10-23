@@ -6,6 +6,7 @@ import { ensurePresensiGuruSchema } from '$lib/server/db/ensure-presensi-guru';
 import { tableAuthUser, tablePegawai, tableSekolah } from '$lib/server/db/schema';
 import { listPresensiBulanan, getPresensiGuruSettings } from '$lib/server/presensi-guru';
 import type { RequestHandler } from './$types';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 const BULAN_NAMES = [
 	'Januari',
@@ -67,7 +68,7 @@ const thinBorder = {
 export const GET: RequestHandler = async ({ locals, url }) => {
 	const user = locals.user;
 	if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
-	if (user.type !== 'admin' && user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(user)) {
 		return json({ error: 'Hanya admin yang dapat mengunduh Laporan TPP.' }, { status: 403 });
 	}
 

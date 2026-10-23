@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
+import { isAdminUser } from '../../../pengguna/permissions';
 import {
 	readCombinedOriginsFromEnvAndFile,
 	writeFileTrustedOrigins,
@@ -7,7 +8,7 @@ import {
 } from '$lib/server/csrf-origins';
 
 function isAdmin(user: { type?: string } | undefined) {
-	return user?.type === 'admin' || user?.type === 'kepala_sekolah';
+	return isAdminUser(user);
 }
 
 export const GET = async (event: RequestEvent) => {

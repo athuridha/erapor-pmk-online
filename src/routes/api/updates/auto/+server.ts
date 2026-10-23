@@ -26,10 +26,7 @@ export const POST = async ({ request, locals }) => {
 			enabled: payload.enabled as boolean | undefined,
 			autoDownload: payload.autoDownload as boolean | undefined,
 			autoInstall: payload.autoInstall as boolean | undefined,
-			intervalMinutes: payload.intervalMinutes as number | undefined,
-			idleMinutes: payload.idleMinutes as number | undefined,
-			windowStartHour: payload.windowStartHour as number | undefined,
-			windowEndHour: payload.windowEndHour as number | undefined
+			intervalMinutes: payload.intervalMinutes as number | undefined
 		});
 
 		return json(await getUpdateOverview());

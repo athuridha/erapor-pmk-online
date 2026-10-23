@@ -11,6 +11,7 @@
 		id: number;
 		nama: string;
 		role: string;
+		operatorLevel?: string | null;
 		username: string;
 		bisaHapus: boolean;
 		nik_username: string;
@@ -33,6 +34,7 @@
 	let wajibGantiImport = $state(true);
 	let perbaruiNamaImport = $state(false);
 	let namaFileImport = $state('');
+	let submittingImpor = $state(false);
 	let roleBaru = $state<'user' | 'wali_kelas' | 'admin' | 'kepala_sekolah'>('user');
 	let kelasBaru = $state('');
 	let mapelBaru = $state('');
@@ -116,6 +118,15 @@
 			message: typeof hasil?.message === 'string' ? hasil.message : 'Tersimpan',
 			type: 'success'
 		});
+	}
+
+	function tutupImpor() {
+		sandiImport = 'username';
+		sandiTetap = '';
+		wajibGantiImport = true;
+		perbaruiNamaImport = false;
+		namaFileImport = '';
+		imporTerbuka = false;
 	}
 </script>
 
@@ -246,7 +257,14 @@
 							<span class="font-medium">{row.nama}</span>
 						</td>
 						<td>
-							<span class="badge badge-sm badge-soft badge-primary">{row.role}</span>
+							<div class="flex flex-wrap items-center gap-1">
+								<span class="badge badge-sm badge-soft badge-primary">{row.role}</span>
+								{#if row.operatorLevel}
+									<span class="badge badge-sm badge-soft badge-secondary">
+										{row.operatorLevel === 'kepala_sekolah' ? 'Kepala Sekolah' : 'Admin'}
+									</span>
+								{/if}
+							</div>
 						</td>
 						<td>{row.kelas ?? '—'}</td>
 						<td>{row.mapel ?? '—'}</td>
@@ -360,66 +378,77 @@
 </div>
 
 {#if imporTerbuka}
-	<dialog class="modal" open>
-		<div class="modal-box max-w-2xl">
-			<h3 class="mb-1 text-lg font-bold">Impor Daftar Guru</h3>
-			<p class="text-base-content/70 mb-3 text-sm">
-				Unggah file Excel (.xlsx) atau CSV dengan kolom <strong>Pengguna/Password</strong> dan
-				<strong>Nama</strong>. Akun yang sudah ada akan dilewati.
-			</p>
+	<dialog class="modal" open onclose={tutupImpor}>
+		<div class="modal-box flex max-h-[85vh] flex-col p-4 sm:max-w-2xl">
+			<h3 class="mb-2 shrink-0 text-lg font-bold">Impor Daftar Guru</h3>
 
-			<div class="mb-4 overflow-auto rounded-lg text-sm">
-				<table class="table-sm table-compact table-zebra table w-full border-collapse">
-					<thead class="bg-base-300">
-						<tr class="text-sm font-semibold">
-							<th class="pl-2">Pengguna/Password</th>
-							<th>Nama</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr>
-							<td class="pl-2 font-medium">201207002</td>
-							<td>Asmin Mulyana, S.Kom., M.M.</td>
-						</tr>
-						<tr>
-							<td class="pl-2 font-medium">201207003</td>
-							<td>Oos Bukhori, S.Pd., M.M.</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
+			<div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-1">
+				<p class="text-base-content/70 text-sm">
+					Unggah file Excel (.xlsx) atau CSV dengan kolom <strong>Pengguna/Password</strong> dan
+					<strong>Nama</strong>. Akun yang sudah ada akan dilewati.
+				</p>
 
-			<FormEnhance
-				action="?/imporGuru"
-				enctype="multipart/form-data"
-				showToast={false}
-				onsuccess={handleSimpan}
-			>
-				{#snippet children({ submitting, invalid })}
-					<label class="form-control mb-2">
-						<span class="label-text mb-1 text-sm">File daftar guru</span>
-						<input
-							name="file"
-							type="file"
-							accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-							class="file-input file-input-bordered w-full"
-							required
-							disabled={submitting}
-							onchange={(event) =>
-								(namaFileImport = (event.currentTarget as HTMLInputElement).files?.[0]?.name ?? '')}
-						/>
-						<span class="label-text-alt mt-1 text-xs opacity-70">
-							Maksimal 2 MB.
-							{#if namaFileImport}File dipilih: <strong>{namaFileImport}</strong>{/if}
-						</span>
-					</label>
+				<div class="overflow-auto rounded-lg text-sm">
+					<table class="table-sm table-compact table-zebra table w-full border-collapse">
+						<thead class="bg-base-300">
+							<tr class="text-sm font-semibold">
+								<th class="pl-2">Pengguna/Password</th>
+								<th>Nama</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td class="pl-2 font-medium">201207002</td>
+								<td>Asmin Mulyana, S.Kom., M.M.</td>
+							</tr>
+							<tr>
+								<td class="pl-2 font-medium">201207003</td>
+								<td>Oos Bukhori, S.Pd., M.M.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
 
-					<div class="mb-2 grid gap-2 sm:grid-cols-2">
-						<label class="form-control">
-							<span class="label-text mb-1 text-sm">Kata sandi awal</span>
+				<FormEnhance
+					id="form-impor-guru"
+					action="?/imporGuru"
+					enctype="multipart/form-data"
+					showToast={false}
+					onsuccess={handleSimpan}
+					submitStateChange={(submitting) => (submittingImpor = submitting)}
+				>
+					{#snippet children({ submitting })}
+						<fieldset class="fieldset">
+							<legend class="fieldset-legend font-semibold">Pilih file daftar guru</legend>
+							<input
+								id="impor-guru-file"
+								name="file"
+								type="file"
+								accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+								class="file-input file-input-ghost w-full"
+								required
+								disabled={submitting}
+								onchange={(event) =>
+									(namaFileImport =
+										(event.currentTarget as HTMLInputElement).files?.[0]?.name ?? '')}
+							/>
+							<label class="label" for="impor-guru-file">
+								<span class="label-text-alt text-base-content/60 text-xs text-wrap">
+									Maksimal 2 MB. Pastikan kolom <strong>Pengguna/Password</strong> dan
+									<strong>Nama</strong> tersedia.
+									{#if namaFileImport}
+										<span class="text-base-content">Dipilih: <strong>{namaFileImport}</strong></span
+										>
+									{/if}
+								</span>
+							</label>
+						</fieldset>
+
+						<fieldset class="fieldset">
+							<legend class="fieldset-legend font-semibold">Kata sandi awal</legend>
 							<select
 								name="sandi"
-								class="select select-bordered w-full rounded-xl"
+								class="select bg-base-200 dark:bg-base-300 w-full dark:border-none"
 								disabled={submitting}
 								onchange={(event) =>
 									(sandiImport = event.currentTarget.value as 'username' | 'tetap')}
@@ -429,80 +458,75 @@
 								</option>
 								<option value="tetap" selected={sandiImport === 'tetap'}>Sama untuk semua</option>
 							</select>
-						</label>
-						{#if sandiImport === 'tetap'}
-							<label class="form-control">
-								<span class="label-text mb-1 text-sm">Kata sandi bersama</span>
+							{#if sandiImport === 'tetap'}
 								<input
 									name="sandi_tetap"
 									type="text"
-									class="input input-bordered w-full rounded-xl"
+									class="input bg-base-200 dark:bg-base-300 mt-2 w-full dark:border-none"
 									bind:value={sandiTetap}
-									placeholder="Minimal 8 karakter"
+									placeholder="Kata sandi bersama, minimal 8 karakter"
 									disabled={submitting}
 								/>
-							</label>
-						{/if}
-					</div>
-
-					<div class="grid gap-2 sm:grid-cols-2">
-						<label class="flex cursor-pointer items-center gap-2">
-							<input
-								type="checkbox"
-								name="wajib_ganti"
-								class="checkbox checkbox-sm"
-								value="ya"
-								checked={wajibGantiImport}
-								disabled={submitting}
-								onchange={(event) =>
-									(wajibGantiImport = (event.currentTarget as HTMLInputElement).checked)}
-							/>
-							<span class="text-sm">Wajib ganti kata sandi saat login pertama</span>
-						</label>
-						<label class="flex cursor-pointer items-center gap-2">
-							<input
-								type="checkbox"
-								name="perbarui_nama"
-								class="checkbox checkbox-sm"
-								value="ya"
-								checked={perbaruiNamaImport}
-								disabled={submitting}
-								onchange={(event) =>
-									(perbaruiNamaImport = (event.currentTarget as HTMLInputElement).checked)}
-							/>
-							<span class="text-sm">Perbarui nama akun yang sudah ada</span>
-						</label>
-					</div>
-
-					<div class="modal-action">
-						<button
-							type="button"
-							class="btn btn-ghost rounded-xl"
-							onclick={() => (imporTerbuka = false)}
-							disabled={submitting}
-						>
-							<Icon name="close" />
-							Batal
-						</button>
-						<button
-							type="submit"
-							class="btn btn-primary btn-soft rounded-xl shadow-none"
-							disabled={submitting || invalid}
-						>
-							{#if submitting}
-								<span class="loading loading-spinner loading-sm"></span>
-							{:else}
-								<Icon name="import" />
 							{/if}
-							Impor
-						</button>
-					</div>
-				{/snippet}
-			</FormEnhance>
+						</fieldset>
+
+						<fieldset class="fieldset">
+							<legend class="fieldset-legend font-semibold">Opsi lainnya</legend>
+							<label class="label cursor-pointer justify-start gap-2 py-1">
+								<input
+									type="checkbox"
+									name="wajib_ganti"
+									class="checkbox checkbox-sm"
+									value="ya"
+									checked={wajibGantiImport}
+									disabled={submitting}
+									onchange={(event) =>
+										(wajibGantiImport = (event.currentTarget as HTMLInputElement).checked)}
+								/>
+								<span class="text-sm">Wajib ganti kata sandi saat login pertama</span>
+							</label>
+							<label class="label cursor-pointer justify-start gap-2 py-1">
+								<input
+									type="checkbox"
+									name="perbarui_nama"
+									class="checkbox checkbox-sm"
+									value="ya"
+									checked={perbaruiNamaImport}
+									disabled={submitting}
+									onchange={(event) =>
+										(perbaruiNamaImport = (event.currentTarget as HTMLInputElement).checked)}
+								/>
+								<span class="text-sm">Perbarui nama akun yang sudah ada</span>
+							</label>
+						</fieldset>
+					{/snippet}
+				</FormEnhance>
+			</div>
+
+			<div class="modal-action sticky bottom-0 z-10 shrink-0 pt-2">
+				<button
+					type="button"
+					class="btn btn-soft shadow-none mr-auto"
+					onclick={tutupImpor}
+					disabled={submittingImpor}>Batal</button
+				>
+				<button
+					type="submit"
+					form="form-impor-guru"
+					class="btn btn-primary btn-soft shadow-none"
+					disabled={submittingImpor || !namaFileImport}
+				>
+					{#if submittingImpor}
+						<span class="loading loading-spinner"></span>
+					{:else}
+						<Icon name="import" /> Impor
+					{/if}
+				</button>
+			</div>
 		</div>
-		<div class="modal-backdrop">
-			<button type="button" onclick={() => (imporTerbuka = false)}>close</button>
-		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button>Batal</button>
+		</form>
 	</dialog>
 {/if}
 
@@ -615,6 +639,21 @@
 										</option>
 									{/each}
 								</select>
+							</label>
+							<label class="form-control sm:col-span-2">
+								<span class="label-text mb-1 text-sm">Level Operator (opsional)</span>
+								<select
+									name="operator_level"
+									class="select select-bordered w-full rounded-xl"
+									disabled={submitting}
+								>
+									<option value="">—</option>
+									<option value="admin">Admin (akses operator penuh)</option>
+									<option value="kepala_sekolah">Kepala Sekolah (tanpa fitur global)</option>
+								</select>
+								<span class="label-text-alt text-base-content/60 mt-1 text-xs">
+									Beri akses operator kepada guru tanpa mengubah peran utamanya.
+								</span>
 							</label>
 						{/if}
 					</div>

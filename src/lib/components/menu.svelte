@@ -4,6 +4,7 @@
 	import Icon from './icon.svelte';
 	import { appMenuItems } from './menu';
 	import {
+		isAdminUser,
 		isAuthorizedUser,
 		resolveRoutePermission,
 		WALI_KELAS_ONLY_PERMISSIONS
@@ -45,24 +46,20 @@
 	function isHiddenForUser(path?: string): boolean {
 		// Menu items without a path (parent groups) are filtered recursively via subMenu
 		if (!path) return false;
+		const kelasOperis = isAdminUser(user ?? undefined);
 		if (path === '/presensi-guru' && !presensiGuruEnabled) return true;
 		// /dinas-luar is the permohonan feature for non-admin roles; admin & kepala
 		// sekolah manage perjalanan dinas via the full /sppd page instead.
-		if (
-			path === '/dinas-luar' &&
-			user &&
-			(user.type === 'admin' || user.type === 'kepala_sekolah')
-		) {
+		if (path === '/dinas-luar' && user && kelasOperis) {
 			return true;
 		}
 		// Tanda tangan: admin/kepala sekolah mengunggah untuk semua orang, wali kelas
 		// hanya untuk tanda tangannya sendiri.
 		if (path === '/tanda-tangan') {
-			const type = user?.type;
-			return type !== 'admin' && type !== 'kepala_sekolah' && type !== 'wali_kelas';
+			return !kelasOperis && user?.type !== 'wali_kelas';
 		}
 		// Guru on non-own class: sembunyikan menu khusus wali kelas
-		if (user && user.type !== 'admin' && user.type !== 'kepala_sekolah' && kelasAktif?.id != null) {
+		if (user && !kelasOperis && kelasAktif?.id != null) {
 			const ownIds = user.ownKelasIds?.length
 				? user.ownKelasIds
 				: user.kelasId != null

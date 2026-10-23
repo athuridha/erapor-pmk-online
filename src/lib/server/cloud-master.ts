@@ -1,32 +1,57 @@
-import { createHash } from 'node:crypto';
-import { eq, getTableColumns, sql } from 'drizzle-orm';
-import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
+﻿import { createHash } from 'node:crypto';
+import { eq, gt, isNull, getTableColumns, or, sql } from 'drizzle-orm';
+import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import db from '$lib/server/db';
 import {
 	tableAbsensi,
 	tableAlamat,
+	tableAsesmenEkstrakurikuler,
+	tableAsesmenFormatif,
+	tableAsesmenKokurikuler,
 	tableAsesmenSumatif,
+	tableAsesmenSumatifTujuan,
 	tableAuthUser,
 	tableAuthUserKelas,
 	tableAuthUserMataPelajaran,
 	tableCatatanWaliKelas,
 	tableCloudSyncLogs,
 	tableCloudSyncSettings,
+	tableEkstrakurikuler,
+	tableEkstrakurikulerTujuan,
 	tableJadwalPelajaran,
 	tableJurnalMengajar,
 	tableKehadiranMurid,
+	tableKeputusanMurid,
 	tableKelas,
+	tableKetidakhadiranHarian,
+	tableKetidakhadiranRapor,
+	tableKokurikuler,
 	tableMataPelajaran,
 	tableMurid,
+	tableMuridEkstrakurikuler,
 	tableMuridMataPelajaran,
 	tablePegawai,
+	tablePresensiGuru,
+	tablePresensiSettings,
 	tableSekolah,
 	tableSemester,
 	tableTahunAjaran,
+	tableTujuanPembelajaran,
 	tableWaliMurid
 } from '$lib/server/db/schema';
-import { executeD1Query, getD1Config } from '$lib/server/cloudflare-d1';
-import { mergeMasterData, type MergeSummary } from '$lib/server/cloud-master-merge';
+import { executeD1Query, getD1Config, type D1Config } from '$lib/server/cloudflare-d1';
+
+/** Mode proxy cukup dengan token+URL worker; mode direct butuh accountId juga. */
+function d1CredentialsReady(config: D1Config | null): boolean {
+	if (!config) return false;
+	return Boolean(config.apiToken && (config.apiUrl || config.accountId));
+}
+import {
+	mergeAkademikData,
+	mergeMasterData,
+	mergeMasterTables,
+	type MergeSummary
+} from '$lib/server/cloud-master-merge';
 import { defaultAdminUsernameNormalized, ensureDefaultAdmin } from '$lib/server/auth';
 
 /**
@@ -37,7 +62,7 @@ import { defaultAdminUsernameNormalized, ensureDefaultAdmin } from '$lib/server/
  * identitas sekolah, pegawai, siswa, kelas, mapel, sampai akun pengguna.
  *
  * Akun disalin apa adanya sebagai `password_hash` + `password_salt` (skema scrypt
- * di `src/lib/server/auth.ts`) — kata sandi polos tidak pernah ikut dikirim.
+ * di `src/lib/server/auth.ts`) â€” kata sandi polos tidak pernah ikut dikirim.
  *
  * Urutan tabel mengikuti dependensi: alamat dan wali murid lebih dulu karena
  * `sekolah.alamat_id` dan `murid.alamat_id` mengarah ke sana.
@@ -71,7 +96,7 @@ const SUMMARY_TABLES: readonly [string, SQLiteTable][] = [
 const BLOB_MARKER = '__blob';
 const INSERT_CHUNK_SIZE = 200;
 
-/** Koneksi biasa atau transaksi — keduanya bisa dipakai untuk menghapus/menyisipkan baris. */
+/** Koneksi biasa atau transaksi â€” keduanya bisa dipakai untuk menghapus/menyisipkan baris. */
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -92,6 +117,16 @@ export interface MasterPayload {
 	kind: 'master_data';
 	schema: 1;
 	exported_at: string;
+	tables: Record<string, Record<string, unknown>[]>;
+}
+
+/** Paket sinkron `all_data`: master penuh + delta akademik (lihat cloud-master-merge). */
+export interface AllDataPayload {
+	app: 'erapor-pmk';
+	kind: 'all_data';
+	schema: 1;
+	exported_at: string;
+	since: string | null;
 	tables: Record<string, Record<string, unknown>[]>;
 }
 
@@ -140,7 +175,7 @@ export async function exportMasterData(): Promise<MasterPayload> {
 	const tables: Record<string, Record<string, unknown>[]> = {};
 
 	// Tanda tangan pegawai (PNG data URL) bisa ratusan KB per orang dan tidak
-	// dibutuhkan untuk menyiapkan instalasi baru — biarkan ikut lewat backup
+	// dibutuhkan untuk menyiapkan instalasi baru â€” biarkan ikut lewat backup
 	// database, bukan lewat paket master.
 	const skippedColumns: Record<string, string[]> = { pegawai: ['tandaTangan'] };
 
@@ -166,7 +201,7 @@ export async function exportMasterData(): Promise<MasterPayload> {
 	};
 }
 
-export function countPayloadRows(payload: MasterPayload): MasterCounts {
+export function countPayloadRows(payload: MasterPayload | AllDataPayload): MasterCounts {
 	const counts: MasterCounts = {};
 	for (const [name] of MASTER_TABLES) counts[name] = payload.tables[name]?.length ?? 0;
 	return counts;
@@ -188,7 +223,7 @@ export async function countLocalMaster(): Promise<MasterCounts> {
  *
  * Catatan: `ensureSmkPratamaMulya` selalu menanam profil sekolah beserta tahun ajaran,
  * semester, dan satu kelas contoh, jadi kondisi "kosong" tidak bisa diukur dari tabel
- * sekolah — baris contoh itu memang diganti paket dari pusat.
+ * sekolah â€” baris contoh itu memang diganti paket dari pusat.
  */
 export async function isLocalMasterEmpty(): Promise<boolean> {
 	const counts = await countLocalMaster();
@@ -197,7 +232,7 @@ export async function isLocalMasterEmpty(): Promise<boolean> {
 	return counts.murid === 0 && accounts === 0 && activity === 0;
 }
 
-/** Total baris di tabel aktivitas — dipakai hanya sebagai penanda instalasi belum dipakai. */
+/** Total baris di tabel aktivitas â€” dipakai hanya sebagai penanda instalasi belum dipakai. */
 export async function countLocalActivity(): Promise<number> {
 	const results = await Promise.all(
 		ACTIVITY_TABLES.map((table) => db.select({ value: sql<number>`count(*)` }).from(table))
@@ -253,7 +288,7 @@ export async function countNonDefaultAccounts(): Promise<number> {
  */
 export async function pushMasterDataToCloud(sekolahId: number, userId: number | null) {
 	const config = await getD1Config(sekolahId);
-	if (!config.accountId || !config.apiToken) {
+	if (!d1CredentialsReady(config)) {
 		return {
 			success: false,
 			message:
@@ -361,7 +396,7 @@ export async function importMasterData(payload: MasterPayload) {
 	// Admin, dan baris contoh itu pasti bentrok dengan batas unik data asli (npsn sekolah,
 	// nama tahun ajaran). Jadi tabel master dibersihkan dulu, baru diisi paket pusat.
 	//
-	// Semuanya dalam satu transaksi dengan kunci asing ditunda: relasi sekolah ↔ pegawai
+	// Semuanya dalam satu transaksi dengan kunci asing ditunda: relasi sekolah â†” pegawai
 	// saling menunjuk, jadi urutan hapus murni "anak dulu" tidak mungkin. Pemeriksaan FK
 	// baru dijalankan saat commit, ketika seluruh paket sudah terpasang.
 	const imported: MasterCounts = {};
@@ -406,8 +441,8 @@ export interface PullMasterResult {
  * Sinkronisasi master dari tombol di /sinkronisasi.
  *
  * Dua mode:
- * - **ganti** (`replace`): instalasi baru — tabel master dikosongkan lalu diisi paket pusat.
- * - **gabung** (`merge`): instalasi sudah terisi — paket pusat digabung baris per baris
+ * - **ganti** (`replace`): instalasi baru â€” tabel master dikosongkan lalu diisi paket pusat.
+ * - **gabung** (`merge`): instalasi sudah terisi â€” paket pusat digabung baris per baris
  *   (baris baru disisipkan, baris yang berubah diperbarui, data lokal tidak dihapus).
  *
  * Mode lama selalu berhenti di instalasi yang sudah terisi, padahal operator sering
@@ -438,7 +473,7 @@ export async function pullMasterDataFromCloud(
 ): Promise<PullMasterResult> {
 	const config = await getD1Config(sekolahId);
 
-	if (!config?.accountId || !config.apiToken) {
+	if (!d1CredentialsReady(config)) {
 		return {
 			success: false,
 			message: config?.wranglerTokenExpired
@@ -636,4 +671,572 @@ function parseJsonObject(raw: unknown): Record<string, unknown> | null {
 
 function toNonEmptyString(value: unknown): string {
 	return typeof value === 'string' && value.length > 0 ? value : '';
+}
+
+/**
+ * ==========================================================================
+ * SINKRON DELTA "SEMUA" â€” master penuh + baris akademik yang berubah.
+ *
+ * Tiap paket `all_data` memuat SALINAN MASTER PENUH (supaya komputer lain
+ * bisa memetakan id: murid/mapel/kelas/akun) ditambah DELTA â€” baris akademik
+ * (nilai, absensi, jurnal, presensi) yang `updatedAt`-nya lebih baru daripada
+ * pemeriksaan sebelumnya. Konflik ditangani LWW per baris di cloud-master-merge
+ * (lokal yang lebih baru menang), dan sinkron delta TIDAK PERNAH MENGHAPUS.
+ * ==========================================================================
+ */
+
+/** Tabel akademik referensi; dikirim penuh tiap push, dipakai juga sebagai peta id. */
+const AKADEMIK_FULL_TABLES: readonly [string, SQLiteTable][] = [
+	['tujuan_pembelajaran', tableTujuanPembelajaran],
+	['ekstrakurikuler', tableEkstrakurikuler],
+	['ekstrakurikuler_tujuan', tableEkstrakurikulerTujuan],
+	['kokurikuler', tableKokurikuler]
+];
+
+/** Tabel akademik yang hanya mengirim baris yang berubah sejak pemeriksaan lalu. */
+const AKADEMIK_DELTA_TABLES: readonly [string, SQLiteTable][] = [
+	['asesmen_sumatif', tableAsesmenSumatif],
+	['asesmen_sumatif_tujuan', tableAsesmenSumatifTujuan],
+	['asesmen_formatif', tableAsesmenFormatif],
+	['murid_ekstrakurikuler', tableMuridEkstrakurikuler],
+	['asesmen_ekstrakurikuler', tableAsesmenEkstrakurikuler],
+	['asesmen_kokurikuler', tableAsesmenKokurikuler],
+	['catatan_wali_kelas', tableCatatanWaliKelas],
+	['kehadiran_murid', tableKehadiranMurid],
+	['keputusan_murid', tableKeputusanMurid],
+	['ketidakhadiran_harian', tableKetidakhadiranHarian],
+	['ketidakhadiran_rapor', tableKetidakhadiranRapor],
+	['absensi', tableAbsensi],
+	['jadwal_pelajaran', tableJadwalPelajaran],
+	['jurnal_mengajar', tableJurnalMengajar],
+	['presensi_guru', tablePresensiGuru],
+	['presensi_settings', tablePresensiSettings]
+];
+
+/**
+ * Kelompok pilihan scope sinkron (UI checkbox). Nama kelompok â†’ daftar nama
+ * tabel akademik. Tabel master dipilih per sub-kelompok lewat prefix `master:`.
+ */
+export const SYNC_AKADEMIK_GROUPS: Record<string, string[]> = {
+	nilai: ['asesmen_sumatif', 'asesmen_sumatif_tujuan', 'asesmen_formatif'],
+	presensi: [
+		'kehadiran_murid',
+		'ketidakhadiran_harian',
+		'ketidakhadiran_rapor',
+		'absensi',
+		'presensi_guru',
+		'presensi_settings'
+	],
+	jadwal: ['jadwal_pelajaran', 'jurnal_mengajar', 'tujuan_pembelajaran'],
+	ekstra: [
+		'ekstrakurikuler',
+		'ekstrakurikuler_tujuan',
+		'kokurikuler',
+		'murid_ekstrakurikuler',
+		'asesmen_ekstrakurikuler',
+		'asesmen_kokurikuler'
+	],
+	catatan: ['catatan_wali_kelas', 'keputusan_murid']
+};
+
+/** Sub-kelompok data induk (prefix `master:` di UI). */
+export const SYNC_MASTER_GROUPS: Record<string, string[]> = {
+	sekolah: ['sekolah', 'tahun_ajaran', 'semester', 'alamat'],
+	guru: ['pegawai'],
+	kelas: ['kelas'],
+	mapel: ['mata_pelajaran'],
+	murid: ['murid', 'wali_murid', 'murid_mata_pelajaran', 'alamat'],
+	akun: ['auth_user', 'auth_user_mata_pelajaran', 'auth_user_kelas']
+};
+
+/**
+ * Terjemahkan daftar pilihan (UI checkbox) menjadi daftar nama tabel yang
+ * unik. `master:sekolah` dsb. memilih tabel induk; sisanya kelompok akademik.
+ * `alamat` selalu menyertai pilihan induk mana pun (identitas sekolah & murid).
+ * Kosong â†’ null = semua tabel ikut.
+ */
+export function syncGroupsToTables(groups: string[]): string[] | null {
+	const picked = new Set<string>();
+	for (const group of groups) {
+		if (group.startsWith('master:')) {
+			for (const name of SYNC_MASTER_GROUPS[group.slice('master:'.length)] ?? []) picked.add(name);
+		} else {
+			for (const name of SYNC_AKADEMIK_GROUPS[group] ?? []) picked.add(name);
+		}
+	}
+	return picked.size === 0 ? null : Array.from(picked);
+}
+
+/** Kolom updatedAt sebuah tabel, mis. untuk predikat delta `updatedAt > since`. */
+function updatedAtColumn(table: SQLiteTable) {
+	return getTableColumns(table).updatedAt as unknown as AnySQLiteColumn;
+}
+
+/** Baris yang berubah sejak `since` (`updatedAt` kosong ikut sekali lalu distempel). */
+async function selectDeltaRows(table: SQLiteTable, since: string | null) {
+	const col = updatedAtColumn(table);
+	const rows = (await db
+		.select()
+		.from(table)
+		.where(since ? or(isNull(col), gt(col, since)) : undefined)) as unknown as Record<
+		string,
+		unknown
+	>[];
+	return rows.map((row) => {
+		const serialized: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(row)) serialized[key] = serializeValue(value);
+		return serialized;
+	});
+}
+
+/** Rekap baris delta akademik + master sejak `since` â€” dipakai agar push kosong bisa dilewati. */
+export async function countDeltaRows(
+	since: string | null,
+	tablesFilter: readonly string[] | null = null
+): Promise<MasterCounts> {
+	const counts: MasterCounts = {};
+	for (const [name, table] of MASTER_TABLES) {
+		if (name === 'auth_user') continue; // akun: ikut master penuh, delta tak dibedakan
+		const col = updatedAtColumn(table);
+		const [row] = await db
+			.select({ value: sql<number>`count(*)` })
+			.from(table)
+			.where(since ? or(isNull(col), gt(col, since)) : undefined);
+		counts[name] = Number(row?.value ?? 0);
+	}
+	for (const [name, table] of AKADEMIK_DELTA_TABLES) {
+		if (tablesFilter && !tablesFilter.includes(name)) continue;
+		const col = updatedAtColumn(table);
+		const [row] = await db
+			.select({ value: sql<number>`count(*)` })
+			.from(table)
+			.where(since ? or(isNull(col), gt(col, since)) : undefined);
+		counts[name] = Number(row?.value ?? 0);
+	}
+	return counts;
+}
+
+export interface AllDataPayloadResult {
+	payload: AllDataPayload;
+	deltaCounts: MasterCounts;
+	totalDeltaRows: number;
+}
+
+/**
+ * Susun paket ALL: master penuh + delta akademik sejak `since`.
+ * `tablesFilter` (hasil `syncGroupsToTables`) membatasi tabel akademik yang
+ * ikut; null = semua.
+ */
+export async function buildAllDataPayload(
+	since: string | null,
+	tablesFilter: readonly string[] | null = null,
+	includeMaster = true
+): Promise<AllDataPayloadResult> {
+	const masterPayload = await exportMasterData();
+	// Master penuh selalu tertanam (bisi pemetaan id); `tablesFilter` hanya
+	// membatasi tabel akademik yang ikut, bukan data induk.
+	const tables: Record<string, Record<string, unknown>[]> = !includeMaster
+		? {}
+		: { ...masterPayload.tables };
+
+	const deltaCounts = await countDeltaRows(since, tablesFilter);
+	const deltaTables = tablesFilter
+		? AKADEMIK_DELTA_TABLES.filter(([name]) => tablesFilter.includes(name))
+		: [...AKADEMIK_DELTA_TABLES];
+	// Delta master tabel besar (murid dsb.) ikut mendorong perubahan struktur induk.
+	// Master penuh sudah tertanam, jadi baris delta master hanya untuk hitungan rekap.
+	//
+	// Penting: perubahan HANYA pada data induk (guru/murid/akun baru) tetap harus
+	// memicu pengiriman. Sebelumnya hitungan delta cuma tabel akademik, sehingga
+	// paket master tidak pernah terkirim selama belum ada aktivitas nilai/presensi.
+	const masterDeltaRows = includeMaster
+		? MASTER_TABLES.reduce(
+				(sum, [name]) => (name === 'auth_user' ? sum : sum + (deltaCounts[name] ?? 0)),
+				0
+			)
+		: 0;
+
+	let totalDeltaRows = masterDeltaRows;
+	for (const [name, table] of deltaTables) {
+		const rows = await selectDeltaRows(table, since);
+		totalDeltaRows += rows.length;
+		tables[name] = rows;
+	}
+	const fullTables = tablesFilter
+		? AKADEMIK_FULL_TABLES.filter(([name]) => tablesFilter.includes(name))
+		: AKADEMIK_FULL_TABLES;
+	for (const [name, table] of fullTables) {
+		const rows = (await db.select().from(table)) as unknown as Record<string, unknown>[];
+		tables[name] = rows.map((row) => {
+			const serialized: Record<string, unknown> = {};
+			for (const [key, value] of Object.entries(row)) serialized[key] = serializeValue(value);
+			return serialized;
+		});
+	}
+
+	const payload: AllDataPayload = {
+		app: 'erapor-pmk',
+		kind: 'all_data',
+		schema: 1,
+		exported_at: masterPayload.exported_at,
+		since: since ?? null,
+		tables
+	};
+
+	return { payload, deltaCounts, totalDeltaRows };
+}
+
+export interface AllDataResult {
+	success: boolean;
+	message: string;
+	totalDeltaRecords: number;
+	counts: MasterCounts;
+	lwwSummary?: { master?: MergeSummary; akademik?: MergeSummary };
+}
+
+const NOT_READY = 'Kredensial Database Pusat belum siap, jadi sinkronisasi tidak dijalankan.';
+
+export interface AllDataPushOptions {
+	/** Daftar nama tabel akademik yang ikut (hasil `syncGroupsToTables`). null = semua. */
+	tablesFilter?: readonly string[] | null;
+	/** Master penuh babarblas (peta id) â€” sikolahkeun sok kaserna bisi id anyar. */
+	includeMaster?: boolean;
+}
+
+/**
+ * PUSH delta: kirim master penuh + baris yang berubah ke Database Pusat.
+ * `since` berasal dari app_meta key `sync.manual.lastPushAt` (sinkron manual di
+ * halaman sinkronisasi).
+ */
+export async function pushAllDataToCloud(
+	sekolahId: number,
+	userId: number | null,
+	since: string | null,
+	options: AllDataPushOptions = {}
+): Promise<AllDataResult> {
+	const tablesFilter = options.tablesFilter ?? null;
+	const includeMaster = options.includeMaster !== false;
+	const config = await getD1Config(sekolahId);
+	if (!d1CredentialsReady(config)) {
+		return { success: false, message: NOT_READY, totalDeltaRecords: 0, counts: {} };
+	}
+
+	const { payload, totalDeltaRows } = await buildAllDataPayload(since, tablesFilter, includeMaster);
+	if (totalDeltaRows === 0) {
+		return {
+			success: true,
+			message: 'Tidak ada perubahan baru yang perlu dikirim.',
+			totalDeltaRecords: 0,
+			counts: {}
+		};
+	}
+
+	// Penting: stamp dilakukan SETELAH payload disusun, supaya baris `updatedAt`
+	// NULL sempat ikut di dalam delta sekali (predikat `isNull`) sebelum distempel.
+	await stampNullUpdatedAt(since ?? null, tablesFilter, includeMaster);
+
+	const counts = countPayloadRows(payload);
+	const totalRecords = Object.values(counts).reduce((sum, value) => sum + value, 0);
+	const checksum = checksumOf(payload);
+	const stamp = new Date().toISOString();
+	const packageId = `all-${sekolahId}-${Date.now()}`;
+
+	const packageInsert = await executeD1Query(
+		config,
+		`INSERT INTO packages (id, school_id, package_type, file_name, version, checksum, payload_json, status, summary_json, created_by, created_at)
+		 VALUES (?, ?, 'all_data', 'all.erdata', '1.0', ?, ?, 'PUBLISHED', ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json, checksum=excluded.checksum, summary_json=excluded.summary_json, status='PUBLISHED'`,
+		[
+			packageId,
+			String(sekolahId),
+			checksum,
+			JSON.stringify(payload),
+			JSON.stringify({
+				delta_rows: totalDeltaRows,
+				since: since ?? null,
+				pushed_at: stamp
+			}),
+			userId ? String(userId) : null,
+			stamp
+		]
+	);
+
+	if (!packageInsert.success) {
+		const message = packageInsert.error ?? 'Gagal mengirim paket sinkron ke Database Pusat.';
+		await db.insert(tableCloudSyncLogs).values({
+			sekolahId,
+			userId,
+			action: 'PUSH',
+			status: 'FAILED',
+			totalRecords: totalRecords,
+			summary: JSON.stringify({
+				kind: 'all_data',
+				delta_rows: totalDeltaRows,
+				since: since ?? null
+			}),
+			errorMessage: message,
+			createdAt: stamp
+		});
+		return {
+			success: false,
+			message,
+			totalDeltaRecords: totalDeltaRows,
+			counts: {}
+		};
+	}
+
+	await executeD1Query(
+		config,
+		`INSERT INTO publish_versions (id, school_id, version_code, scope, checksum, metadata_json, total_records, status, published_by, published_at)
+		 VALUES (?, ?, ?, 'all_data', ?, ?, ?, 'published', ?, ?)`,
+		[
+			`pv-all-${Date.now()}`,
+			String(sekolahId),
+			stamp.replace(/[-:TZ.]/g, '').slice(0, 14),
+			checksum,
+			JSON.stringify({ package_id: packageId, delta_rows: totalDeltaRows, pushed_at: stamp }),
+			totalRecords,
+			userId ? String(userId) : null,
+			stamp
+		]
+	);
+
+	await db.insert(tableCloudSyncLogs).values({
+		sekolahId,
+		userId,
+		action: 'PUSH',
+		status: 'SUCCESS',
+		totalRecords,
+		summary: JSON.stringify({
+			kind: 'all_data',
+			delta_rows: totalDeltaRows,
+			since: since ?? null,
+			package_id: packageId
+		}),
+		createdAt: stamp
+	});
+
+	const stored = await db.query.tableCloudSyncSettings.findFirst({
+		where: eq(tableCloudSyncSettings.sekolahId, sekolahId)
+	});
+	if (stored) {
+		await db
+			.update(tableCloudSyncSettings)
+			.set({ lastPushedAt: stamp, lastChecksum: checksum, updatedAt: stamp })
+			.where(eq(tableCloudSyncSettings.id, stored.id));
+	} else {
+		await db.insert(tableCloudSyncSettings).values({
+			sekolahId,
+			lastPushedAt: stamp,
+			lastChecksum: checksum,
+			createdAt: stamp
+		});
+	}
+
+	return {
+		success: true,
+		message: `Sinkron terkirim: ${totalDeltaRows} baris berubah (total paket ${totalRecords} baris).`,
+		totalDeltaRecords: totalDeltaRows,
+		counts
+	};
+}
+
+/** Baris tanpa `updatedAt` distempel sekali supaya tidak ikut di seluruh delta berikutnya. */
+async function stampNullUpdatedAt(
+	_since: string | null,
+	tablesFilter: readonly string[] | null = null,
+	includeMaster = true
+) {
+	// Tabel delta akademik + master; stamp memakai waktu lampau agar delta berikutnya
+	// (`updatedAt > since`) tetap memuatnya untuk semua sisi tapi tidak berulang.
+	// Hanya menstempel tabel yang BENAR-BENAR ikut paket â€” tabel di luar scope
+	// tetap `updatedAt` NULL agar delta berikutnya (saat dipilih) memuatnya.
+	const deep = '1970-01-01T00:00:01.000Z';
+	if (includeMaster) {
+		for (const [, table] of MASTER_TABLES) {
+			const col = updatedAtColumn(table);
+			await db
+				.update(table)
+				.set({ updatedAt: deep } as never)
+				.where(isNull(col));
+		}
+	}
+	for (const [name, table] of AKADEMIK_DELTA_TABLES) {
+		if (tablesFilter && !tablesFilter.includes(name)) continue;
+		const col = updatedAtColumn(table);
+		await db
+			.update(table)
+			.set({ updatedAt: deep } as never)
+			.where(isNull(col));
+	}
+}
+
+/**
+ * PULL delta: baca penunjuk pembaruan `all_data` terakhir di pusat, lalu gabungkan:
+ * master penuh dipetakan dulu (peta id), kemudian baris akademik barunya LWW.
+ */
+export async function pullAllDataFromCloud(
+	sekolahId: number,
+	userId: number | null,
+	options: { tablesFilter?: readonly string[] | null; includeMaster?: boolean } = {}
+): Promise<AllDataResult & { pointerCreatedAt?: string | null }> {
+	const config = await getD1Config(sekolahId);
+	if (!d1CredentialsReady(config)) {
+		return { success: false, message: NOT_READY, totalDeltaRecords: 0, counts: {} };
+	}
+
+	const pointer = await executeD1Query(
+		config,
+		`SELECT metadata_json, checksum, published_at FROM publish_versions WHERE scope = 'all_data' ${sekolahId > 0 ? 'AND school_id = ?' : ''} ORDER BY published_at DESC LIMIT 1`,
+		sekolahId > 0 ? [String(sekolahId)] : []
+	);
+	if (!pointer.success) {
+		return {
+			success: false,
+			message: pointer.error ?? 'Gagal membaca penunjuk sinkron dari Database Pusat.',
+			totalDeltaRecords: 0,
+			counts: {}
+		};
+	}
+	const pointerRows = extractRows(pointer.result);
+	if (pointerRows.length === 0) {
+		return {
+			success: false,
+			message: 'Database Pusat belum punya paket sinkron. Tunggu operator lain mengirim.',
+			totalDeltaRecords: 0,
+			counts: {}
+		};
+	}
+	const pointerChecksum = toNonEmptyString(pointerRows[0]?.checksum);
+	const pointerCreatedAt = toNonEmptyString(pointerRows[0]?.published_at) || null;
+	const metadata = parseJsonObject(pointerRows[0]?.metadata_json);
+	const packageId = typeof metadata?.package_id === 'string' ? metadata.package_id : '';
+	if (!packageId) {
+		return {
+			success: false,
+			message: 'Penunjuk sinkron di pusat tidak memuat ID paket.',
+			totalDeltaRecords: 0,
+			counts: {}
+		};
+	}
+
+	const packageRes = await executeD1Query(
+		config,
+		`SELECT payload_json, checksum FROM packages WHERE id = ? LIMIT 1`,
+		[packageId]
+	);
+	if (!packageRes.success) {
+		return {
+			success: false,
+			message: packageRes.error ?? 'Gagal mengambil isi paket sinkron.',
+			totalDeltaRecords: 0,
+			counts: {}
+		};
+	}
+	const packageRows = extractRows(packageRes.result);
+	const rawPayload = packageRows[0]?.payload_json;
+	if (typeof rawPayload !== 'string') {
+		return {
+			success: false,
+			message: 'Paket sinkron di pusat tidak ditemukan atau isinya kosong.',
+			totalDeltaRecords: 0,
+			counts: {}
+		};
+	}
+	const packageChecksum = toNonEmptyString(packageRows[0]?.checksum);
+	if (pointerChecksum && packageChecksum && pointerChecksum !== packageChecksum) {
+		return {
+			success: false,
+			message: 'Penunjuk sinkron tidak cocok dengan paketnya di Database Pusat.',
+			totalDeltaRecords: 0,
+			counts: {}
+		};
+	}
+	const payload = parseJsonObject(rawPayload) as unknown as AllDataPayload | null;
+	if (!payload || payload?.kind !== 'all_data') {
+		return {
+			success: false,
+			message: 'Isi paket sinkron di pusat tidak bisa dibaca.',
+			totalDeltaRecords: 0,
+			counts: {}
+		};
+	}
+	if (packageChecksum && checksumOf(payload) !== packageChecksum) {
+		return {
+			success: false,
+			message: 'Checksum paket sinkron tidak cocok. Paket di pusat berubah sejak dikirim.',
+			totalDeltaRecords: 0,
+			counts: {}
+		};
+	}
+
+	// Scope pilihan UI: saring tabel dalam paket sebelum digabung.
+	const tablesFilter = options.tablesFilter ?? null;
+	const includeMaster = options.includeMaster !== false;
+	if (tablesFilter || !includeMaster) {
+		const masterNames = new Set(MASTER_TABLES.map(([name]) => name));
+		const filtered: Record<string, Record<string, unknown>[]> = {};
+		for (const [name, rows] of Object.entries(payload.tables)) {
+			if (masterNames.has(name)) {
+				// Master ikut jika dipilih eksplisit di tablesFilter, atau bila
+				// filter tidak dipakai dan includeMaster tetap menyala.
+				if (tablesFilter?.includes(name) || (!tablesFilter && includeMaster)) {
+					filtered[name] = rows;
+				}
+			} else if (tablesFilter?.includes(name) ?? true) {
+				filtered[name] = rows;
+			}
+		}
+		payload.tables = filtered;
+	}
+
+	// Merge master secara penuh dan baris akademik dari payload ini.
+	const masterMerged = await mergeMasterTables(payload, null);
+	const akademikSummary = await mergeAkademikData(payload, masterMerged.maps);
+
+	const nowIso = new Date().toISOString();
+	const targetSekolahId = masterMerged.sekolahId ?? sekolahId;
+
+	await db.insert(tableCloudSyncLogs).values({
+		sekolahId: targetSekolahId,
+		userId,
+		action: 'PULL',
+		status: 'SUCCESS',
+		totalRecords:
+			masterMerged.summary.inserted +
+			masterMerged.summary.updated +
+			akademikSummary.inserted +
+			akademikSummary.updated,
+		summary: JSON.stringify({
+			kind: 'all_data',
+			master: masterMerged.summary,
+			akademik: akademikSummary
+		}),
+		createdAt: nowIso
+	});
+
+	const stored = await db.query.tableCloudSyncSettings.findFirst({
+		where: eq(tableCloudSyncSettings.sekolahId, targetSekolahId)
+	});
+	if (stored) {
+		await db
+			.update(tableCloudSyncSettings)
+			.set({ lastPulledAt: nowIso, updatedAt: nowIso })
+			.where(eq(tableCloudSyncSettings.id, stored.id));
+	} else {
+		await db.insert(tableCloudSyncSettings).values({
+			sekolahId: targetSekolahId,
+			lastPulledAt: nowIso,
+			createdAt: nowIso
+		});
+	}
+
+	return {
+		success: true,
+		message: `Sinkron dari pusat diterima: ${akademikSummary.inserted + masterMerged.summary.inserted} baris baru, ${akademikSummary.updated + masterMerged.summary.updated} baris diperbarui.`,
+		totalDeltaRecords: 0,
+		counts: {},
+		lwwSummary: { master: masterMerged.summary, akademik: akademikSummary },
+		pointerCreatedAt
+	};
 }

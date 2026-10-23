@@ -197,6 +197,181 @@ async function main() {
 
 	// PagedJS + Puppeteer will use system Chrome/Chromium for PDF generation
 
+	// =====================================================================
+	// PEMBARUAN WAJIB (sebelum aplikasi jalan)
+	// Cek GitHub Releases: kalau versi terbaru > versi aplikasi, unduh
+	// installer lalu serahkan ke scripts/auto-update.mjs (yang menunggu port
+	// bebas, memasang /VERYSILENT, dan menjalankan ulang launcher ini).
+	//
+	// Jalan hanya di Windows. Bila cek gagal (offline / API GitHub error),
+	// aplikasi tetap jalankan versi lama supaya sekolah tidak terkunci.
+	// Setelah 3 upaya untuk versi target yang sama gagal terpasang, fallback
+	// menjalankan versi lama dan log peringatan — tidak ada siklus tak hingga.
+	// =====================================================================
+	if (process.platform === 'win32') {
+		const UPDATE_REPO = 'athuridha/eraport';
+		const UPDATES_DIR = path.join(process.env.LOCALAPPDATA || '', 'erapor-pmk', 'updates');
+		const guardFile = path.join(LAUNCHER_HOME, 'update-guard.json');
+		const MAX_ATTEMPTS = 3;
+
+		function normalizeVersion(input) {
+			if (!input) return '0.0.0';
+			return input.trim().replace(/^v/i, '') || '0.0.0';
+		}
+
+		function compareVersions(a, b) {
+			const parse = (v) =>
+				normalizeVersion(v)
+					.split('.')
+					.map((part) => Number.parseInt(part, 10) || 0);
+			const pa = parse(a);
+			const pb = parse(b);
+			for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+				if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+				if ((pa[i] || 0) < (pb[i] || 0)) return -1;
+			}
+			return 0;
+		}
+
+		async function runForcedUpdate() {
+			// 1) Versi aplikasi terpasang (yang update-version.mjs tulis saat packaging)
+			let current;
+			try {
+				const raw = await fsPromises.readFile(path.join(APP_HOME, 'package.json'), 'utf8');
+				const pkg = JSON.parse(raw);
+				current = normalizeVersion(pkg.version || '0.0.0');
+			} catch {
+				current = '0.0.0';
+			}
+
+			// 2) Rilis terbaru GitHub
+			let latest;
+			try {
+				const res = await fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`, {
+					headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'ERaporPMKLauncher' }
+				});
+				if (!res.ok) {
+					await appendLog(
+						LOG_FILE,
+						`Update check: fetch releases gagal (HTTP ${res.status}), lanjut jalankan aplikasi.`
+					);
+					return 'skip';
+				}
+				latest = await res.json();
+			} catch (err) {
+				await appendLog(
+					LOG_FILE,
+					`Update check: gagal jaringan (${String(err)}), lanjut jalankan aplikasi.`
+				);
+				return 'skip';
+			}
+
+			const latestVersion = normalizeVersion(latest.tag_name || latest.name || '');
+			if (!latestVersion || compareVersions(latestVersion, current) <= 0) {
+				return 'none';
+			}
+
+			const asset = (latest.assets || []).find((a) => /setup\.exe$/i.test(a.name || ''));
+
+			// 3) Batas percobaan supaya versi lama tetap bisa dipakai bila installer
+			//    selalu gagal untuk versi target ini.
+			let guard = { targetVersion: '', attempts: 0 };
+			try {
+				guard = JSON.parse(fs.readFileSync(guardFile, 'utf8'));
+			} catch {
+				// tidak ada — anggap kosong
+			}
+			if (guard.targetVersion !== latestVersion)
+				guard = { targetVersion: latestVersion, attempts: 0 };
+			if (guard.attempts >= MAX_ATTEMPTS) {
+				await appendLog(
+					LOG_FILE,
+					`Pembaruan ke v${latestVersion} gagal terpasang ${guard.attempts}x, fallback jalankan versi lama.`
+				);
+				console.log(
+					`Peringatan: pembaruan otomatis ke v${latestVersion} sudah gagal ${guard.attempts} kali. Aplikasi dijalankan dengan versi lama. Pasang installer terbaru manual bila perlu.`
+				);
+				return 'fallback';
+			}
+
+			if (!asset) {
+				await appendLog(
+					LOG_FILE,
+					`Rilis v${latestVersion} tidak punya installer .exe, lewati update.`
+				);
+				return 'skip';
+			}
+
+			// 4) Unduh installer
+			console.log(`Pembaruan ditemukan: v${current} → v${latestVersion}. Mengunduh installer...`);
+			await appendLog(
+				LOG_FILE,
+				`Pembaruan wajib: ${current} → ${latestVersion}, unduh ${asset.browser_download_url}`
+			);
+			let installerPath;
+			try {
+				await fsPromises.mkdir(UPDATES_DIR, { recursive: true });
+				installerPath = path.join(UPDATES_DIR, asset.name || 'ERaporPMKSetup.exe');
+				const res = await fetch(asset.browser_download_url, {
+					headers: { Accept: 'application/octet-stream', 'User-Agent': 'ERaporPMKLauncher' }
+				});
+				if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+				const buffer = Buffer.from(await res.arrayBuffer());
+				await fsPromises.writeFile(installerPath, buffer);
+				const size = (buffer.length / 1024 / 1024).toFixed(1);
+				await appendLog(LOG_FILE, `Installer terunduh (${size} MB): ${installerPath}`);
+				console.log(`Unduhan selesai (${size} MB). Memasang pembaruan...`);
+			} catch (err) {
+				await appendLog(LOG_FILE, `Gagal mengunduh installer: ${String(err)}`);
+				return 'fallback';
+			}
+
+			// 5) Catat percobaan lalu serahkan ke auto-update.mjs (proses terpisah).
+			try {
+				guard.attempts += 1;
+				await fsPromises.writeFile(guardFile, JSON.stringify(guard), 'utf8');
+			} catch {
+				// guard gagal ditulis — biarkan, jangan blok pembaruan karena itu
+			}
+
+			const autoUpdateScript = path.join(APP_HOME, 'scripts', 'auto-update.mjs');
+			if (!fs.existsSync(autoUpdateScript)) {
+				await appendLog(LOG_FILE, `auto-update.mjs tidak ditemukan di ${autoUpdateScript}`);
+				return 'fallback';
+			}
+			const updater = spawn(
+				process.execPath,
+				[
+					autoUpdateScript,
+					'--installer',
+					installerPath,
+					'--port',
+					String(PORT),
+					'--app-dir',
+					APP_HOME
+				],
+				{ stdio: 'ignore', detached: true, windowsHide: true }
+			);
+			updater.unref();
+			await appendLog(
+				LOG_FILE,
+				`auto-update dijalankan (percobaan ke-${guard.attempts}). Launcher berhenti menunggu pasang.`
+			);
+			console.log('Aplikasi akan berjalan otomatis setelah pembaruan selesai terpasang...');
+			return 'updated';
+		}
+
+		try {
+			const outcome = await runForcedUpdate();
+			if (outcome === 'updated') {
+				// auto-update.mjs menunggu port bebas → launcher keluar sekarang.
+				process.exit(0);
+			}
+		} catch (err) {
+			await appendLog(LOG_FILE, `Update check error: ${String(err)} — lanjut jalankan aplikasi.`);
+		}
+	}
+
 	// Prepare DB URL (replace backslashes with slashes)
 	const DB_URL = 'file:' + dstDb.replace(/\\/g, '/');
 

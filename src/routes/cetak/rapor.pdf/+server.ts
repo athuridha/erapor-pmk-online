@@ -4,13 +4,14 @@ import { generatePDF } from '$lib/server/pdf/generate';
 import { buildUrl } from '$lib/server/pdf/request-params';
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { isAdminUser } from '../../pengguna/permissions';
 
 async function handle({ locals, url }: { locals: App.Locals; url: URL }) {
 	if (!locals.user) {
 		throw redirect(303, '/login');
 	}
 
-	if (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(locals.user)) {
 		const muridIdParam = url.searchParams.get('murid_id');
 		if (muridIdParam) {
 			const { hasAccess } = await getKelasContextForUser(locals, url, muridIdParam);

@@ -1,5 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
-import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull, or, sql, type SQLWrapper } from 'drizzle-orm';
 import db from '$lib/server/db';
 import { tableAuthUser, tableKelas, tableMataPelajaran, tablePegawai } from '$lib/server/db/schema';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
@@ -8,6 +8,7 @@ import { hashPassword } from '$lib/server/auth';
 import { validatePasswordStrength } from '$lib/server/password-policy';
 import { defaultPermissionsByType } from '../../../../pengguna/permissions';
 import { readBufferToAoA } from '$lib/utils/excel.js';
+import { isAdminUser } from '../../../../pengguna/permissions';
 
 const MAKS_UPLOAD_DAFTAR = 2_000_000; // 2 MB
 
@@ -111,10 +112,12 @@ const KELOMPOK = {
 	},
 	operator: {
 		judul: 'Operator',
-		deskripsi: 'Akun operator sekolah: admin dan kepala sekolah.',
+		deskripsi: 'Akun operator sekolah: admin dan kepala sekolah (termasuk guru multi-role).',
 		types: ['admin', 'kepala_sekolah']
 	}
 } as const;
+
+const GURU_TYPES = ['user', 'wali_kelas', 'wali_asuh'] as const;
 
 type KunciKelompok = keyof typeof KELOMPOK;
 
@@ -128,6 +131,8 @@ function labelRole(role: string): string {
 			return 'Wali Kelas';
 		case 'wali_asuh':
 			return 'Wali Asuh';
+		case 'operator':
+			return 'Operator';
 		default:
 			return 'Guru';
 	}
@@ -145,7 +150,7 @@ export const load = async ({ params, locals, url }) => {
 		throw error(401, 'Sekolah aktif tidak ditemukan');
 	}
 	const user = locals.user;
-	if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+	if (!user || !isAdminUser(user)) {
 		throw error(403, 'Data pengguna hanya bisa dikelola admin dan kepala sekolah.');
 	}
 
@@ -154,7 +159,25 @@ export const load = async ({ params, locals, url }) => {
 	const perHalaman = normalisasiBarisPerHalaman(url.searchParams.get('per_page'), 50);
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 
-	const kondisi = [inArray(tableAuthUser.type, [...kelompok.types])];
+	// Mode multi-role: kelompok operator juga menampilkan akun guru yang diberi
+	// `operatorLevel` (admin/kepala_sekolah) tanpa mengubah peran utamanya,
+	// sedangkan kelompok guru juga memuat akun admin/kepala yang merangkap guru.
+	const rolesAda = (role: string) =>
+		sql`exists (select 1 from json_each(coalesce(${tableAuthUser.roles}, '[]')) where value = ${role})`;
+	const kondisiOperatorGuru = and(
+		isNotNull(tableAuthUser.operatorLevel),
+		inArray(tableAuthUser.type, [...GURU_TYPES])
+	);
+	const grupKondisi: (SQLWrapper | undefined)[] =
+		key === 'operator'
+			? [
+					inArray(tableAuthUser.type, [...kelompok.types]),
+					kondisiOperatorGuru,
+					rolesAda('operator'),
+					rolesAda('kepala_sekolah')
+				]
+			: [inArray(tableAuthUser.type, [...kelompok.types]), rolesAda('guru')];
+	const kondisi = [or(...grupKondisi)];
 	if (q) {
 		kondisi.push(
 			sql`(lower(auth_user.username) like ${like} or lower(coalesce(auth_user.nama_lengkap, '')) like ${like} or lower(coalesce(pegawai.nik, '')) like ${like})`
@@ -177,6 +200,8 @@ export const load = async ({ params, locals, url }) => {
 			username: tableAuthUser.username,
 			namaLengkap: tableAuthUser.namaLengkap,
 			role: tableAuthUser.type,
+			operatorLevel: tableAuthUser.operatorLevel,
+			roles: tableAuthUser.roles,
 			pegawaiNama: tablePegawai.nama,
 			nik: tablePegawai.nik,
 			kelas: sql<string | null>`(select k.nama from kelas k where k.id = auth_user.kelas_id)`,
@@ -193,18 +218,28 @@ export const load = async ({ params, locals, url }) => {
 		.limit(perHalaman)
 		.offset(offset);
 
-	const baris = rows.map((row) => ({
-		id: row.id,
-		nama: row.namaLengkap ?? row.pegawaiNama ?? row.username,
-		role: labelRole(row.role),
-		username: row.username,
-		bisaHapus: row.id !== 1 && row.username.trim().toLowerCase() !== 'admin',
-		nik_username: row.nik || row.username,
-		kelas: row.kelas,
-		mapel: row.mapel,
-		izin: row.izin,
-		dibuat: row.dibuat
-	}));
+	const baris = rows.map((row) => {
+		// Role gabungan dari daftar roles tersimpan (mis. Guru + Admin).
+		const savedRoles = Array.isArray(row.roles)
+			? row.roles.filter((r) => typeof r === 'string')
+			: [];
+		const roleLabel = savedRoles.length
+			? savedRoles.map((r) => labelRole(r) ?? r).join(' + ')
+			: labelRole(row.role);
+		return {
+			id: row.id,
+			nama: row.namaLengkap ?? row.pegawaiNama ?? row.username,
+			role: roleLabel,
+			operatorLevel: row.operatorLevel,
+			username: row.username,
+			bisaHapus: row.id !== 1 && row.username.trim().toLowerCase() !== 'admin',
+			nik_username: row.nik || row.username,
+			kelas: row.kelas,
+			mapel: row.mapel,
+			izin: row.izin,
+			dibuat: row.dibuat
+		};
+	});
 
 	const [daftarKelas, daftarMapel] = await Promise.all([
 		db
@@ -241,7 +276,7 @@ function pastikanBolehKelola(locals: App.Locals): number {
 	const sekolahId = locals.sekolah?.id;
 	if (!sekolahId) throw error(401, 'Sekolah aktif tidak ditemukan');
 	const user = locals.user;
-	if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+	if (!user || !isAdminUser(user)) {
 		throw error(403, 'Data pengguna hanya bisa dikelola admin dan kepala sekolah.');
 	}
 	return sekolahId;
@@ -423,6 +458,22 @@ export const actions = {
 			return fail(400, { fail: 'Role tidak sesuai kelompok pengguna ini.' });
 		}
 
+		// Level operator opsional (multi-role guru): hanya relevan untuk kelompok guru.
+		const opsiLevel = ['', 'admin', 'kepala_sekolah'];
+		const opLevelRaw = String(formData.get('operator_level') ?? '');
+		const operatorLevel =
+			key !== 'operator' && opsiLevel.includes(opLevelRaw) && opLevelRaw
+				? (opLevelRaw as 'admin' | 'kepala_sekolah')
+				: null;
+		const permissionsAwal = operatorLevel
+			? Array.from(
+					new Set([
+						...(defaultPermissionsByType[role as keyof typeof defaultPermissionsByType] ?? []),
+						...(defaultPermissionsByType[operatorLevel] ?? [])
+					])
+				)
+			: (defaultPermissionsByType[role as keyof typeof defaultPermissionsByType] ?? []);
+
 		const [bentrok] = await db
 			.select({ id: tableAuthUser.id })
 			.from(tableAuthUser)
@@ -447,8 +498,9 @@ export const actions = {
 				passwordHash: hash,
 				passwordSalt: salt,
 				passwordUpdatedAt: timestamp,
-				permissions: defaultPermissionsByType[role as keyof typeof defaultPermissionsByType] ?? [],
+				permissions: permissionsAwal,
 				type: role as 'admin' | 'kepala_sekolah' | 'wali_kelas' | 'user',
+				operatorLevel,
 				mataPelajaranId: mapelId ?? undefined,
 				kelasId: kelasId ?? undefined,
 				sekolahId,

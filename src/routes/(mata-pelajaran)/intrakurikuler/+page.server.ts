@@ -30,7 +30,7 @@ async function canManageImportUrutan(
 	kelasId: number | null
 ): Promise<boolean> {
 	if (!user) return false;
-	if (user.type === 'admin' || user.type === 'kepala_sekolah') return true;
+	if (isAdminUser(user)) return true;
 	// Model baru: guru merangkap wali kelas adalah type 'user', jadi status wali
 	// dicek dari relasi waliKelasId di tableKelas — bukan dari tipe akun. Akun
 	// wali kelas lama tetap lolos lewat fallback auth_user.kelasId.
@@ -329,6 +329,7 @@ import { readBufferToAoA, writeAoaToBuffer } from '$lib/utils/excel.js';
 import { fail } from '@sveltejs/kit';
 import { asc } from 'drizzle-orm';
 import { cookieNames } from '$lib/utils';
+import { isAdminUser } from '../../pengguna/permissions';
 
 const MAX_IMPORT_FILE_SIZE_MAPEL = 2 * 1024 * 1024; // 2MB
 

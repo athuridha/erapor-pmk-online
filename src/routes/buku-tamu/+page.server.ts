@@ -3,6 +3,7 @@ import { tableBukuTamu } from '$lib/server/db/schema';
 import db from '$lib/server/db';
 import { redirect } from '@sveltejs/kit';
 import { desc, sql, like } from 'drizzle-orm';
+import { isAdminUser } from '../pengguna/permissions';
 
 const PER_PAGE = 20;
 
@@ -30,7 +31,7 @@ export async function load({ locals, url, depends }) {
 
 	if (!locals.user) throw redirect(303, '/login');
 
-	if (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(locals.user)) {
 		throw redirect(303, '/forbidden?required=admin');
 	}
 

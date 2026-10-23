@@ -7,6 +7,7 @@
 	import { onDestroy } from 'svelte';
 	import LegerDownload from '$lib/components/LegerDownload.svelte';
 	import KirimDapodikPage from './kirim-dapodik/+page.svelte';
+	import { isAdminUser } from '../../pengguna/permissions';
 
 	let { data } = $props();
 	// svelte-ignore state_referenced_locally
@@ -30,9 +31,8 @@
 		};
 	});
 	const kelasAktif = $derived(page.data.kelasAktif ?? null);
-	const isAdmin = $derived(
-		(page.data.user as { type?: string } | null | undefined)?.type === 'admin' ||
-			(page.data.user as { type?: string } | null | undefined)?.type === 'kepala_sekolah'
+	const isAdmin = isAdminUser(
+		page.data.user as { type?: string; operatorLevel?: string | null } | null | undefined
 	);
 	const kelasAktifLabel = $derived.by(() => {
 		if (!kelasAktif) return null;

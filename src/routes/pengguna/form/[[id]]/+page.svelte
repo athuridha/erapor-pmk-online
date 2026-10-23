@@ -21,6 +21,35 @@
 			: 'Buat akun pengguna baru dan tentukan hak aksesnya.'
 	);
 
+	/** Pilihan role boleh dikombinasi; server mengarahkan ke `type` + `operatorLevel`. */
+	const ROLE_OPTIONS = [
+		{
+			value: 'guru',
+			label: 'Guru',
+			desc: 'Mengajar mata pelajaran pilihan, input nilai & presensi.'
+		},
+		{
+			value: 'wali_kelas',
+			label: 'Wali Kelas',
+			desc: 'Kelola satu kelas penuh: semua mapel, catatan, rapor.'
+		},
+		{
+			value: 'operator',
+			label: 'Operator',
+			desc: 'Mengelola data master, presensi guru, dan administrasi sekolah.'
+		},
+		{
+			value: 'kepala_sekolah',
+			label: 'Kepala Sekolah',
+			desc: 'Akses manajerial: monitor semua kelas & kepegawaian.'
+		},
+		{
+			value: 'admin',
+			label: 'Admin',
+			desc: 'Akses mutlak seluruh aplikasi, termasuk pengaturan sistem.'
+		}
+	] as const;
+
 	// svelte-ignore state_referenced_locally
 	let nama = $state(data.userDetail?.pegawaiName ?? '');
 	// svelte-ignore state_referenced_locally
@@ -29,7 +58,7 @@
 	let username = $state(data.userDetail?.username ?? '');
 	let password = $state('');
 	// svelte-ignore state_referenced_locally
-	let type = $state(data.userDetail?.type ?? 'user');
+	let roles = $state<string[]>(data.userDetail?.roles ?? ['guru']);
 	// svelte-ignore state_referenced_locally
 	let sekolahId = $state<string | number | null>(data.userDetail?.sekolahId ?? '');
 	// svelte-ignore state_referenced_locally
@@ -48,7 +77,13 @@
 		)
 	);
 
-	const isAdminRole = $derived(type === 'admin' || type === 'kepala_sekolah');
+	const rolesSet = $derived(new Set(roles));
+	const hasEducator = $derived(rolesSet.has('guru') || rolesSet.has('wali_kelas'));
+	// Admin & kepala sekolah murni selalu memegang seluruh izin.
+	const isAdminRole = $derived(
+		rolesSet.has('admin') || (rolesSet.has('kepala_sekolah') && !hasEducator)
+	);
+	const adminRoleLabel = $derived(rolesSet.has('admin') ? 'Admin' : 'Kepala Sekolah');
 	const multiKelas = $derived(kelasIds.size > 1);
 
 	// Izin yang benar-benar dikirim: kelas_pindah menyusul otomatis untuk akun
@@ -56,13 +91,26 @@
 	const effectivePermissions = $derived.by(() => {
 		if (isAdminRole) return new Set<string>(userPermissions);
 		const set = new Set(permissions);
-		if (multiKelas && (type === 'user' || type === 'wali_kelas')) set.add('kelas_pindah');
+		if (multiKelas && hasEducator) set.add('kelas_pindah');
 		return set;
 	});
 
-	function applyRoleTemplate(role: string) {
-		permissions = new Set<string>(defaultPermissionsByType[role as AuthUser['type']] ?? []);
-		if (role === 'kepala_sekolah' || role === 'admin') {
+	/** Gabungkan izin default dari semua role yang dicentang. */
+	function applyRoleTemplates() {
+		const templateKeys: string[] = [];
+		if (rolesSet.has('admin')) templateKeys.push('admin');
+		if (rolesSet.has('kepala_sekolah')) templateKeys.push('kepala_sekolah');
+		if (rolesSet.has('operator')) templateKeys.push('admin');
+		if (rolesSet.has('wali_kelas')) templateKeys.push('wali_kelas');
+		if (rolesSet.has('guru')) templateKeys.push('user');
+		const merged = new Set<string>();
+		for (const key of templateKeys) {
+			for (const permission of defaultPermissionsByType[key as AuthUser['type']] ?? []) {
+				merged.add(permission);
+			}
+		}
+		permissions = merged;
+		if (isAdminRole) {
 			mataPelajaranIds = new Set<number>();
 			kelasIds = new Set<number>();
 		}
@@ -122,7 +170,7 @@
 
 	const waliKelasIdSet = $derived(new Set(data.userDetail?.waliKelasIds ?? []));
 	const roleHint = $derived.by(() => {
-		if (!isEditMode || type !== 'wali_kelas') return '';
+		if (!isEditMode || !rolesSet.has('wali_kelas')) return '';
 		const list = (data.kelasList ?? []) as {
 			id: number;
 			nama: string;
@@ -211,7 +259,7 @@
 						Mata Pelajaran
 						{#if isAdminRole}
 							<span class="badge badge-sm badge-ghost text-xs ml-1"
-								>Opsional untuk {type === 'kepala_sekolah' ? 'Kepala Sekolah' : 'Admin'}</span
+								>Opsional untuk {adminRoleLabel}</span
 							>
 						{/if}
 						{#if mataPelajaranIds.size > 0}
@@ -226,8 +274,8 @@
 								>
 									<Icon name="info" class="w-4 h-4 shrink-0 text-info" />
 									<span>
-										Role <strong>{type === 'kepala_sekolah' ? 'Kepala Sekolah' : 'Admin'}</strong> memiliki
-										akses manajerial penuh ke seluruh mata pelajaran. Bagian ini tidak perlu diisi.
+										Role <strong>{adminRoleLabel}</strong> memiliki akses manajerial penuh ke seluruh
+										mata pelajaran. Bagian ini tidak perlu diisi.
 									</span>
 								</div>
 							{:else}
@@ -272,7 +320,7 @@
 						Kelas
 						{#if isAdminRole}
 							<span class="badge badge-sm badge-ghost text-xs ml-1"
-								>Opsional untuk {type === 'kepala_sekolah' ? 'Kepala Sekolah' : 'Admin'}</span
+								>Opsional untuk {adminRoleLabel}</span
 							>
 						{/if}
 						{#if visibleKelasCount > 0}
@@ -287,8 +335,8 @@
 								>
 									<Icon name="info" class="w-4 h-4 shrink-0 text-info" />
 									<span>
-										Role <strong>{type === 'kepala_sekolah' ? 'Kepala Sekolah' : 'Admin'}</strong> memiliki
-										akses ke semua kelas. Bagian ini tidak perlu dipilih jika tidak merangkap wali kelas.
+										Role <strong>{adminRoleLabel}</strong> memiliki akses ke semua kelas. Bagian ini tidak
+										perlu dipilih jika tidak merangkap wali kelas.
 									</span>
 								</div>
 							{:else}
@@ -354,24 +402,33 @@
 						<p class="label text-wrap">Nama lengkap pengguna dan gelar</p>
 					</fieldset>
 
-					<!-- Role -->
-					<fieldset class="fieldset">
+					<!-- Role (checkbox, boleh dikombinasi) -->
+					<fieldset class="fieldset sm:col-span-2">
 						<legend class="fieldset-legend">Role</legend>
-						<select
-							id="form-role"
-							class="select bg-base-200 dark:bg-base-300 w-full dark:border-none"
-							name="type"
-							bind:value={type}
-							onchange={(e) => applyRoleTemplate((e.currentTarget as HTMLSelectElement).value)}
-						>
-							<option value="admin">Admin</option>
-							<option value="kepala_sekolah">Kepala Sekolah</option>
-							<option value="user">Guru</option>
-							{#if type === 'wali_kelas'}
-								<option value="wali_kelas">Wali Kelas (Lama)</option>
-							{/if}
-						</select>
-						<p class="label text-wrap">Tentukan peran pengguna</p>
+						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+							{#each ROLE_OPTIONS as role (role.value)}
+								<label
+									class="bg-base-200 dark:bg-base-300 flex cursor-pointer items-start gap-2 rounded-lg p-2.5"
+								>
+									<input
+										type="checkbox"
+										class="checkbox checkbox-primary checkbox-sm mt-0.5"
+										name="roles"
+										bind:group={roles}
+										value={role.value}
+										onchange={applyRoleTemplates}
+									/>
+									<span>
+										<span class="text-sm font-semibold">{role.label}</span>
+										<span class="block text-xs opacity-70">{role.desc}</span>
+									</span>
+								</label>
+							{/each}
+						</div>
+						<p class="label text-wrap">
+							Centang lebih dari satu untuk akun peran ganda (contoh: operator yang juga guru atau
+							wali kelas).
+						</p>
 						{#if roleHint}
 							<p class="label text-wrap font-medium text-info">{roleHint}</p>
 						{/if}
@@ -458,8 +515,8 @@
 								<button
 									type="button"
 									class="btn btn-xs btn-soft shadow-none"
-									disabled={isAdminRole}
-									onclick={() => applyRoleTemplate(type)}
+									disabled={isAdminRole || roles.length === 0}
+									onclick={() => applyRoleTemplates()}
 								>
 									<Icon name="repeat" /> Sesuai template
 								</button>

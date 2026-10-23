@@ -12,6 +12,7 @@ import {
 import { pindahkanMuridKelas } from '$lib/server/murid-pindah-kelas';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 export const load = async ({ params, locals, url, depends }) => {
 	depends('app:master-data');
@@ -22,7 +23,7 @@ export const load = async ({ params, locals, url, depends }) => {
 	if (!sekolahId) {
 		throw error(401, 'Sekolah aktif tidak ditemukan');
 	}
-	if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+	if (!user || !isAdminUser(user)) {
 		throw error(403, 'Master data hanya bisa dikelola admin dan kepala sekolah.');
 	}
 
@@ -69,7 +70,7 @@ export const actions = {
 			return fail(401, { fail: 'Sekolah tidak ditemukan' });
 		}
 		const user = locals.user;
-		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+		if (!user || !isAdminUser(user)) {
 			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa mengubah master data.' });
 		}
 
@@ -90,7 +91,7 @@ export const actions = {
 			return fail(401, { fail: 'Sekolah tidak ditemukan' });
 		}
 		const user = locals.user;
-		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+		if (!user || !isAdminUser(user)) {
 			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa mengubah master data.' });
 		}
 
@@ -108,7 +109,7 @@ export const actions = {
 			return fail(401, { fail: 'Sekolah tidak ditemukan' });
 		}
 		const user = locals.user;
-		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+		if (!user || !isAdminUser(user)) {
 			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa menghapus master data.' });
 		}
 
@@ -147,7 +148,7 @@ export const actions = {
 			return fail(401, { fail: 'Sekolah tidak ditemukan' });
 		}
 		const user = locals.user;
-		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+		if (!user || !isAdminUser(user)) {
 			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa memindahkan murid.' });
 		}
 
@@ -190,7 +191,7 @@ export const actions = {
 			return fail(401, { fail: 'Sekolah tidak ditemukan' });
 		}
 		const user = locals.user;
-		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+		if (!user || !isAdminUser(user)) {
 			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa menghapus master data.' });
 		}
 
@@ -209,7 +210,7 @@ export const actions = {
 			return fail(401, { fail: 'Sekolah tidak ditemukan' });
 		}
 		const user = locals.user;
-		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+		if (!user || !isAdminUser(user)) {
 			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa mengubah anggota.' });
 		}
 

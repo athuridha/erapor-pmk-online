@@ -17,6 +17,7 @@ import {
 import { cookieNames, unflattenFormData } from '$lib/utils';
 import { readBufferToAoA } from '$lib/utils/excel.js';
 import { error, fail } from '@sveltejs/kit';
+import { isFullAdmin } from '../../pengguna/permissions';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -762,7 +763,7 @@ export const actions: Actions = {
 		// Persist the selected sekolah on the user's account so admin users
 		// will retain their last-active sekolah across server restarts.
 		try {
-			if (locals.user && (locals.user as { id?: number; type?: string }).type === 'admin') {
+			if (locals.user && isFullAdmin(locals.user)) {
 				await db
 					.update(tableAuthUser)
 					.set({ sekolahId: sekolah.id })

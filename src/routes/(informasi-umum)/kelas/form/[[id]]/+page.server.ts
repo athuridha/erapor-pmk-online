@@ -13,6 +13,7 @@ import { deletePegawaiIfOrphaned } from '$lib/server/pengguna-merge.js';
 import { error, fail } from '@sveltejs/kit';
 import { and, eq, sql } from 'drizzle-orm';
 import { authority } from '../../../../pengguna/utils.server';
+import { isAdminUser } from '../../../../pengguna/permissions';
 
 type TingkatOption = { fase: string; label: string };
 
@@ -217,8 +218,7 @@ export async function load({ params, locals }) {
 		return a.nama.localeCompare(b.nama);
 	});
 
-	const userType = (locals.user as { type?: string } | null)?.type;
-	const canResetWalas = userType === 'admin' || userType === 'kepala_sekolah';
+	const canResetWalas = isAdminUser(locals.user);
 
 	return {
 		meta,

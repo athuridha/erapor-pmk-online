@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import db from './db';
+import { env as dynamicEnv } from '$env/dynamic/private';
 import {
 	tableAsesmenEkstrakurikuler,
 	tableAsesmenFormatif,
@@ -20,11 +21,12 @@ import { and, eq } from 'drizzle-orm';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export type D1TokenSource = 'database' | 'env' | 'wrangler' | 'none';
+export type D1TokenSource = 'database' | 'env' | 'wrangler' | 'proxy' | 'none';
 
 export interface D1Config {
 	accountId: string;
 	databaseId: string;
+	apiUrl: string;
 	apiToken: string;
 	tokenSource: D1TokenSource;
 	wranglerTokenExpired: boolean;
@@ -73,6 +75,15 @@ function readWranglerToken(): { token: string; expiredAt: string | null; expired
 	return { token: '', expiredAt: null, expired: false };
 }
 
+/**
+ * Baca variabel env dengan dua sumber: `process.env` (dipakai runtime installer/
+ * build) dan `$env/dynamic/private` (yang membaca .env saat dev). Supaya
+ * CLOUDFLARE_API_URL/TOKEN bekerja di dev maupun produksi.
+ */
+function envVar(key: string): string {
+	return (process.env[key] ?? '').trim() || (dynamicEnv[key] ?? '').trim();
+}
+
 export async function getD1Config(sekolahId: number): Promise<D1Config> {
 	const stored = await db.query.tableCloudSyncSettings.findFirst({
 		where: eq(tableCloudSyncSettings.sekolahId, sekolahId)
@@ -80,7 +91,7 @@ export async function getD1Config(sekolahId: number): Promise<D1Config> {
 
 	const wrangler = readWranglerToken();
 	const storedToken = (stored?.apiToken || '').trim();
-	const envToken = (process.env.CLOUDFLARE_API_TOKEN || '').trim();
+	const envToken = envVar('CLOUDFLARE_API_TOKEN');
 	const storedDatabaseId = (stored?.databaseId || '').trim();
 	const storedAccountId = (stored?.accountId || '').trim();
 
@@ -104,12 +115,25 @@ export async function getD1Config(sekolahId: number): Promise<D1Config> {
 		tokenSource = 'wrangler';
 	}
 
+	const storedApiUrl = (stored?.apiUrl || '').trim();
+	const apiUrl = storedApiUrl || envVar('CLOUDFLARE_API_URL');
+	// Mode proxy D1: url worker + kunci statis, token Cloudflare tidak dipakai lagi
+	// (wrangler OAuth selalu kedaluwarsa).
+	//
+	// Kunci proxy harus selalu yang terbaru: token lama yang tersimpan di DB
+	// (biasanya api_token Cloudflare yang sudah mati) TIDAK boleh menimpa kunci
+	// env, atau worker selalu menolak dengan 401. Dalam mode proxy: env > DB.
+	if (apiUrl) {
+		apiToken = envToken || storedToken;
+		tokenSource = apiToken ? 'proxy' : 'none';
+	}
+
 	return {
-		accountId:
-			storedAccountId || process.env.CLOUDFLARE_ACCOUNT_ID || DEFAULT_CLOUDFLARE_ACCOUNT_ID,
+		accountId: storedAccountId || envVar('CLOUDFLARE_ACCOUNT_ID') || DEFAULT_CLOUDFLARE_ACCOUNT_ID,
 		databaseId: LEGACY_DATABASE_IDS.has(storedDatabaseId)
-			? process.env.CLOUDFLARE_DATABASE_ID || DEFAULT_CLOUDFLARE_DATABASE_ID
-			: storedDatabaseId || process.env.CLOUDFLARE_DATABASE_ID || DEFAULT_CLOUDFLARE_DATABASE_ID,
+			? envVar('CLOUDFLARE_DATABASE_ID') || DEFAULT_CLOUDFLARE_DATABASE_ID
+			: storedDatabaseId || envVar('CLOUDFLARE_DATABASE_ID') || DEFAULT_CLOUDFLARE_DATABASE_ID,
+		apiUrl,
 		apiToken,
 		tokenSource,
 		wranglerTokenExpired: Boolean(wrangler.token) && wrangler.expired
@@ -118,29 +142,28 @@ export async function getD1Config(sekolahId: number): Promise<D1Config> {
 
 export async function saveD1Config(
 	sekolahId: number,
-	config: { accountId: string; databaseId: string; apiToken: string }
+	config: { accountId: string; databaseId: string; apiUrl?: string; apiToken: string }
 ) {
 	const nowIso = new Date().toISOString();
 	const existing = await db.query.tableCloudSyncSettings.findFirst({
 		where: eq(tableCloudSyncSettings.sekolahId, sekolahId)
 	});
+	const values = {
+		accountId: config.accountId.trim() || DEFAULT_CLOUDFLARE_ACCOUNT_ID,
+		databaseId: config.databaseId.trim() || DEFAULT_CLOUDFLARE_DATABASE_ID,
+		apiUrl: (config.apiUrl || '').trim() || null,
+		apiToken: config.apiToken.trim()
+	};
 
 	if (existing) {
 		await db
 			.update(tableCloudSyncSettings)
-			.set({
-				accountId: config.accountId.trim() || DEFAULT_CLOUDFLARE_ACCOUNT_ID,
-				databaseId: config.databaseId.trim() || DEFAULT_CLOUDFLARE_DATABASE_ID,
-				apiToken: config.apiToken.trim(),
-				updatedAt: nowIso
-			})
+			.set({ ...values, updatedAt: nowIso })
 			.where(eq(tableCloudSyncSettings.id, existing.id));
 	} else {
 		await db.insert(tableCloudSyncSettings).values({
 			sekolahId,
-			accountId: config.accountId.trim() || DEFAULT_CLOUDFLARE_ACCOUNT_ID,
-			databaseId: config.databaseId.trim() || DEFAULT_CLOUDFLARE_DATABASE_ID,
-			apiToken: config.apiToken.trim(),
+			...values,
 			createdAt: nowIso
 		});
 	}
@@ -151,14 +174,23 @@ export async function executeD1Query(
 	sqlQuery: string,
 	params: unknown[] = []
 ): Promise<{ success: boolean; result?: unknown; error?: string }> {
-	if (!config.accountId || !config.apiToken) {
+	const isProxy = Boolean(config.apiUrl);
+	if (isProxy && !config.apiToken) {
+		return { success: false, error: 'API key untuk API Database Pusat belum diisi.' };
+	}
+	if (!isProxy && (!config.accountId || !config.apiToken)) {
 		return {
 			success: false,
 			error: 'Kredensial Database Pusat (Account ID & API Token) belum diisi.'
 		};
 	}
 
-	const url = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`;
+	// Nilai yang disimpan boleh dengan atau tanpa akhiran /query — idempoten.
+	const proxyBase = config.apiUrl.trim().replace(/\/+$/, '');
+	const proxyUrl = /\/query$/i.test(proxyBase) ? proxyBase : proxyBase + '/query';
+	const url = isProxy
+		? proxyUrl
+		: `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`;
 
 	try {
 		const res = await fetch(url, {
@@ -187,17 +219,20 @@ export async function executeD1Query(
 			if (res.status === 401 || code === 10000 || code === 1000) {
 				return {
 					success: false,
-					error: config.wranglerTokenExpired
-						? 'Sesi wrangler di komputer ini sudah kedaluwarsa. Masukkan API Token Database Pusat (izin D1 Edit) di Detail Kredensial, atau jalankan ulang "wrangler login".'
-						: 'Token Database Pusat ditolak (tidak valid atau sudah kedaluwarsa). Periksa kembali API Token di Detail Kredensial.'
+					error: isProxy
+						? 'API key ditolak oleh API Database Pusat (tidak valid/berubah). Periksa kunci di Detail Kredensial.'
+						: config.wranglerTokenExpired
+							? 'Sesi wrangler di komputer ini sudah kedaluwarsa. Masukkan API Token Database Pusat (izin D1 Edit) di Detail Kredensial, atau jalankan ulang "wrangler login".'
+							: 'Token Database Pusat ditolak (tidak valid atau sudah kedaluwarsa). Periksa kembali API Token di Detail Kredensial.'
 				};
 			}
 
 			if (res.status === 403 || code === 7403) {
 				return {
 					success: false,
-					error:
-						'Token Database Pusat tidak punya izin D1 untuk database ini. Buat API Token dengan izin "D1 Edit".'
+					error: isProxy
+						? 'API Database Pusat menolak kueri. Periksa binding D1 pada worker.'
+						: 'Token Database Pusat tidak punya izin D1 untuk database ini. Buat API Token dengan izin "D1 Edit".'
 				};
 			}
 
@@ -249,8 +284,18 @@ export async function testD1Connection(sekolahId: number): Promise<D1ConnectionT
 		tokenSource: config.tokenSource,
 		wranglerTokenExpired: config.wranglerTokenExpired,
 		accountId: config.accountId,
-		databaseId: config.databaseId
+		databaseId: config.databaseId,
+		apiUrl: config.apiUrl
 	};
+
+	if (config.apiUrl && !config.apiToken) {
+		return {
+			...base,
+			ok: false,
+			message:
+				'URL API Database Pusat sudah diisi tapi API key belum. Isi API key di Detail Kredensial.'
+		};
+	}
 
 	if (!config.apiToken) {
 		return {

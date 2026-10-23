@@ -9,6 +9,7 @@ import {
 import { buildLiburDates } from '$lib/server/absen/libur';
 import { dateStr, isValidDate, todayDateString } from '$lib/server/absen/utils';
 import { isSchoolDay } from '$lib/hari-sekolah';
+import { isAdminUser } from '../pengguna/permissions';
 
 const PER_PAGE = 20;
 
@@ -26,7 +27,7 @@ export async function load({ locals, url, depends }) {
 
 	if (!locals.user) throw redirect(303, '/login');
 
-	if (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(locals.user)) {
 		throw redirect(303, '/forbidden?required=admin');
 	}
 

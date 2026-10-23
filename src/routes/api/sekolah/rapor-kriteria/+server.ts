@@ -4,6 +4,7 @@ import { isAuthorizedUser } from '../../../pengguna/permissions';
 import { isWaliOfKelas } from '$lib/server/kelas-akses';
 import { json } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 const DEFAULT_CUKUP = 85;
 const DEFAULT_BAIK = 95;
@@ -20,7 +21,7 @@ function parseKelasId(value: string | null): number | null {
  * any class (or the school-wide fallback when no class is given).
  */
 async function canManageKelas(user: NonNullable<App.Locals['user']>, kelasId: number) {
-	if (user.type === 'admin' || user.type === 'kepala_sekolah') return true;
+	if (isAdminUser(user)) return true;
 	if (user.type === 'wali_kelas' && user.pegawaiId) {
 		const kelas = await db.query.tableKelas.findFirst({
 			columns: { waliKelasId: true },

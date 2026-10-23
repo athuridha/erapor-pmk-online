@@ -2,35 +2,48 @@
 	import Icon from '$lib/components/icon.svelte';
 	import { toast } from '$lib/components/toast.svelte';
 	import { invalidateAll } from '$app/navigation';
+	import FormEnhance from '$lib/components/form-enhance.svelte';
+	import { isFullAdmin } from '../../pengguna/permissions';
 
 	let { data } = $props();
 
 	let isPushing = $state(false);
-	let isPulling = $state(false);
 	let pushStep = $state('');
-	let pullStep = $state('');
 	let pushResult = $state<{ message?: string; checksum?: string } | null>(null);
-	let pullResult = $state<{
-		message?: string;
-		count?: number;
-		details?: { kelas?: number; murid?: number; mapel?: number };
-		mode?: 'replace' | 'merge';
-		merge?: { inserted?: number; updated?: number; unchanged?: number };
-	} | null>(null);
-	let pullError = $state('');
 	let pushError = $state('');
-	let isPushingMaster = $state(false);
-	let pushMasterResult = $state<{
-		message?: string;
-		counts?: { murid?: number; kelas?: number; auth_user?: number };
-	} | null>(null);
-	let pushMasterError = $state('');
+
+	// Pesan hasil sinkron (tarik pusat & kirim pusat)
+	let pullMessage = $state('');
+	let pullError = $state('');
+	let syncMessage = $state('');
+	let syncError = $state('');
+
+	// Modal pilih cakupan (tarik & kirim)
+	let pullModalOpen = $state(false);
+	let pushModalOpen = $state(false);
+
+	const MASTER_SCOPE_OPTIONS = [
+		{ value: 'master:sekolah', label: 'Identitas sekolah, tahun ajaran & semester' },
+		{ value: 'master:guru', label: 'Guru & pegawai' },
+		{ value: 'master:kelas', label: 'Kelas & rombongan belajar' },
+		{ value: 'master:mapel', label: 'Mata pelajaran' },
+		{ value: 'master:murid', label: 'Murid, wali murid & relasi' },
+		{ value: 'master:akun', label: 'Akun pengguna' }
+	];
+	const AKADEMIK_SCOPE_OPTIONS = [
+		{ value: 'nilai', label: 'Nilai (sumatif, formatif & tujuan)' },
+		{ value: 'presensi', label: 'Presensi murid & guru, absensi' },
+		{ value: 'jadwal', label: 'Jadwal, jurnal & tujuan pembelajaran' },
+		{ value: 'ekstra', label: 'Ekstrakurikuler & kokurikuler' },
+		{ value: 'catatan', label: 'Catatan wali kelas & keputusan' }
+	];
 
 	// Status koneksi (uji nyata ke Database Pusat)
 	let isTestingConnection = $state(false);
 	let connectionResult = $state<{ ok: boolean; message: string } | null>(null);
 
 	const tokenSourceLabel: Record<string, string> = {
+		proxy: 'API Database Pusat (worker)',
 		database: 'API Token yang tersimpan di aplikasi',
 		env: 'variabel lingkungan server',
 		wrangler: 'sesi wrangler lokal',
@@ -125,38 +138,6 @@
 		}
 	}
 
-	async function handlePull() {
-		isPulling = true;
-		pullResult = null;
-		pullError = '';
-		pullStep = 'Menghubungi Database Pusat...';
-
-		try {
-			await new Promise((r) => setTimeout(r, 400));
-			pullStep = 'Mengunduh data master terbaru (Rombel, Siswa, Mapel)...';
-
-			const res = await fetch('/api/cloud/pull', { method: 'POST' });
-			const json = await res.json();
-			if (!res.ok || !json.success) {
-				throw new Error(json.error || 'Gagal menyinkronkan data dari Database Pusat');
-			}
-
-			pullStep = 'Memperbarui database lokal...';
-			await new Promise((r) => setTimeout(r, 400));
-
-			pullResult = json;
-			toast(json.message, 'success');
-			await invalidateAll();
-		} catch (err: unknown) {
-			pullError =
-				err instanceof Error ? err.message : 'Gagal menyinkronkan data dari Database Pusat.';
-			toast(pullError, 'error');
-		} finally {
-			isPulling = false;
-			pullStep = '';
-		}
-	}
-
 	async function handlePush() {
 		isPushing = true;
 		pushResult = null;
@@ -188,30 +169,6 @@
 		} finally {
 			isPushing = false;
 			pushStep = '';
-		}
-	}
-
-	async function handlePushMaster() {
-		isPushingMaster = true;
-		pushMasterResult = null;
-		pushMasterError = '';
-
-		try {
-			const res = await fetch('/api/cloud/push-master', { method: 'POST' });
-			const json = await res.json();
-			if (!res.ok || !json.success) {
-				throw new Error(json.message || 'Gagal mengirim master data ke Database Pusat');
-			}
-
-			pushMasterResult = json;
-			toast(json.message, 'success');
-			await invalidateAll();
-		} catch (err: unknown) {
-			pushMasterError =
-				err instanceof Error ? err.message : 'Gagal mengirim master data ke Database Pusat.';
-			toast(pushMasterError, 'error');
-		} finally {
-			isPushingMaster = false;
 		}
 	}
 
@@ -259,7 +216,7 @@
 			</p>
 		</div>
 
-		{#if data.user?.type === 'admin'}
+		{#if isFullAdmin(data.user)}
 			<div class="flex flex-wrap items-center gap-2 shrink-0">
 				<button
 					type="button"
@@ -332,31 +289,25 @@
 					<Icon name="download" class="w-5 h-5" />
 				</div>
 				<h2 class="text-lg font-bold text-emerald-950 dark:text-emerald-300">
-					Sinkron Data Master
+					Tarik dari Pusat (Pull)
 				</h2>
 				<p class="text-xs text-base-content/70 leading-relaxed">
-					Sinkronkan data referensi rombel, murid, dan mata pelajaran terbaru dari Database Pusat
-					Sekolah. Jalankan saat awal semester atau bila ada pembaruan siswa dan guru baru dari
-					Operator. Pada instalasi yang sudah berisi data, data master digabung: baris baru
-					ditambahkan, baris yang berubah diperbarui, dan pekerjaan guru (nilai, absensi, jadwal)
-					tidak ikut tersentuh.
+					UNDUH pembaruan dari Database Pusat sesuai pilihan anda: data induk, nilai, presensi,
+					jadwal, ekstra, atau catatan. Data digabung LWW ("perubahan terbaru menang") dan TIDAK
+					PERNAH MENGHAPUS baris lokal.
 				</p>
 			</div>
-
 			<div class="space-y-3 pt-2">
 				<button
 					type="button"
 					class="btn btn-primary w-full shadow-none font-bold text-sm rounded-xl flex items-center justify-center gap-2"
-					onclick={handlePull}
-					disabled={isPulling || isPushing}
+					onclick={() => {
+						pullError = '';
+						pullModalOpen = true;
+					}}
 				>
-					{#if isPulling}
-						<span class="loading loading-spinner loading-xs"></span>
-						<span>{pullStep || 'Mengunduh data...'}</span>
-					{:else}
-						<Icon name="repeat" />
-						<span>Sinkron Data Terbaru</span>
-					{/if}
+					<Icon name="repeat" />
+					<span>Tarik dari Pusat (Pull)</span>
 				</button>
 
 				<div class="text-[11px] text-base-content/60 flex items-center justify-between">
@@ -366,20 +317,9 @@
 					</span>
 				</div>
 
-				{#if pullResult}
-					<div class="alert alert-success alert-soft p-3 rounded-xl text-xs space-y-0.5">
-						<div class="font-bold break-words">{pullResult.message}</div>
-						{#if pullResult.merge}
-							<div class="text-[11px] opacity-80">
-								Baris baru: {pullResult.merge.inserted} · Diperbarui: {pullResult.merge.updated} · Tetap:
-								{pullResult.merge.unchanged}
-							</div>
-						{:else if pullResult.details}
-							<div class="text-[11px] opacity-80">
-								Kelas: {pullResult.details.kelas ?? 0} &bull; Murid: {pullResult.details.murid ?? 0} &bull;
-								Mapel: {pullResult.details.mapel ?? 0}
-							</div>
-						{/if}
+				{#if pullMessage}
+					<div class="alert alert-success alert-soft p-3 rounded-xl text-xs items-start">
+						<div class="font-bold break-words">{pullMessage}</div>
 					</div>
 				{:else if pullError}
 					<div class="alert alert-error alert-soft p-3 rounded-xl text-xs items-start">
@@ -411,7 +351,7 @@
 					type="button"
 					class="btn btn-primary w-full shadow-none font-bold text-sm rounded-xl flex items-center justify-center gap-2"
 					onclick={handlePush}
-					disabled={isPushing || isPulling}
+					disabled={isPushing}
 				>
 					{#if isPushing}
 						<span class="loading loading-spinner loading-xs"></span>
@@ -444,7 +384,7 @@
 			</div>
 		</div>
 
-		<!-- 3. Kirim data master -->
+		<!-- 3. Kirim ke pusat (push) -->
 		<div
 			class="card bg-base-100 rounded-2xl border border-slate-200 dark:border-base-200 shadow-sm p-6 flex flex-col justify-between space-y-4"
 		>
@@ -452,13 +392,15 @@
 				<div
 					class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold"
 				>
-					<Icon name="database" class="w-5 h-5" />
+					<Icon name="export" class="w-5 h-5" />
 				</div>
-				<h2 class="text-lg font-bold text-emerald-950 dark:text-emerald-300">Kirim Master Data</h2>
+				<h2 class="text-lg font-bold text-emerald-950 dark:text-emerald-300">
+					Kirim ke Pusat (Push)
+				</h2>
 				<p class="text-xs text-base-content/70 leading-relaxed">
-					Unggah data induk ke Database Pusat: identitas sekolah, pegawai, kelas, mata pelajaran,
-					siswa, dan akun pengguna. Komputer baru menarik data ini dari halaman penyiapan sebelum
-					login, jadi jalankan setiap kali ada perubahan data induk.
+					UNGAH perubahan lokal ke Database Pusat sesuai pilihan anda: data induk penuh + baris yang
+					berubah sejak kirim terakhir. Konflik antar operator diselesaikan dengan "waktu perubahan
+					terbaru" per baris, dan TIDAK PERNAH MENGHAPUS baris di pusat.
 				</p>
 			</div>
 
@@ -466,29 +408,29 @@
 				<button
 					type="button"
 					class="btn btn-primary w-full shadow-none font-bold text-sm rounded-xl flex items-center justify-center gap-2"
-					onclick={handlePushMaster}
-					disabled={isPushingMaster || isPushing || isPulling}
+					onclick={() => {
+						syncError = '';
+						pushModalOpen = true;
+					}}
 				>
-					{#if isPushingMaster}
-						<span class="loading loading-spinner loading-xs"></span>
-						<span>Mengirim master data...</span>
-					{:else}
-						<Icon name="database" />
-						<span>Kirim Master</span>
-					{/if}
+					<Icon name="export" />
+					<span>Kirim ke Pusat (Push)</span>
 				</button>
 
-				{#if pushMasterResult}
-					<div class="alert alert-success alert-soft p-3 rounded-xl text-xs space-y-0.5">
-						<div class="font-bold break-words">{pushMasterResult.message}</div>
-						<div class="text-[11px] opacity-80">
-							Murid: {pushMasterResult.counts?.murid ?? 0} &bull; Kelas: {pushMasterResult.counts
-								?.kelas ?? 0} &bull; Akun: {pushMasterResult.counts?.auth_user ?? 0}
-						</div>
+				<div class="text-[11px] text-base-content/60 flex items-center justify-between">
+					<span>Terakhir dikirim:</span>
+					<span class="font-semibold text-emerald-700 dark:text-emerald-400">
+						{formatDate(data.syncSettings.lastPushedAt)}
+					</span>
+				</div>
+
+				{#if syncMessage}
+					<div class="alert alert-success alert-soft p-3 rounded-xl text-xs items-start">
+						<div class="font-bold break-words">{syncMessage}</div>
 					</div>
-				{:else if pushMasterError}
+				{:else if syncError}
 					<div class="alert alert-error alert-soft p-3 rounded-xl text-xs items-start">
-						<div class="font-bold break-words">{pushMasterError}</div>
+						<div class="font-bold break-words">{syncError}</div>
 					</div>
 				{/if}
 			</div>
@@ -675,6 +617,168 @@
 		</div>
 	</div>
 </div>
+
+<!-- Modal pilih cakupan: Tarik dari pusat (Pull) -->
+{#if pullModalOpen}
+	<div class="modal modal-open">
+		<div class="modal-box rounded-2xl max-w-md">
+			<h3 class="text-base font-bold">Tarik Data dari Pusat</h3>
+			<p class="text-xs text-base-content/70 mt-1">
+				Pilih data apa saja yang mau ditarik dari Database Pusat.
+			</p>
+
+			<FormEnhance
+				action="?/tarikPusat"
+				showToast={false}
+				onsuccess={({ data: result }) => {
+					pullModalOpen = false;
+					pullError = '';
+					pullMessage = (result?.message as string | undefined) || 'Sinkron dari pusat selesai.';
+					toast(pullMessage, 'success');
+				}}
+				onfailure={({ data }) => {
+					pullError = (data?.message as string | undefined) ?? 'Tarik dari pusat gagal.';
+					toast(pullError, 'error');
+				}}
+			>
+				{#snippet children({ submitting })}
+					<div class="mt-3 bg-base-200/60 rounded-xl p-3 space-y-1.5">
+						<p class="text-[11px] font-semibold text-base-content/70">Data induk</p>
+						{#each MASTER_SCOPE_OPTIONS as option (option.value)}
+							<label class="flex items-center gap-2 text-xs cursor-pointer">
+								<input
+									type="checkbox"
+									name="scope"
+									value={option.value}
+									checked
+									class="checkbox checkbox-xs checkbox-primary"
+								/>
+								<span>{option.label}</span>
+							</label>
+						{/each}
+						<p class="text-[11px] font-semibold text-base-content/70 pt-1.5">Data pembelajaran</p>
+						{#each AKADEMIK_SCOPE_OPTIONS as option (option.value)}
+							<label class="flex items-center gap-2 text-xs cursor-pointer">
+								<input
+									type="checkbox"
+									name="scope"
+									value={option.value}
+									checked
+									class="checkbox checkbox-xs checkbox-primary"
+								/>
+								<span>{option.label}</span>
+							</label>
+						{/each}
+					</div>
+
+					<div class="modal-action">
+						<button
+							type="button"
+							class="btn btn-sm btn-ghost rounded-xl shadow-none"
+							onclick={() => (pullModalOpen = false)}
+						>
+							Batal
+						</button>
+						<button
+							type="submit"
+							class="btn btn-sm btn-primary text-white rounded-xl shadow-none"
+							disabled={submitting}
+						>
+							{#if submitting}
+								<span class="loading loading-spinner loading-xs"></span>
+								<span>Menarik...</span>
+							{:else}
+								<Icon name="download" />
+								<span>Mulai Tarik</span>
+							{/if}
+						</button>
+					</div>
+				{/snippet}
+			</FormEnhance>
+		</div>
+	</div>
+{/if}
+
+<!-- Modal pilih cakupan: Kirim ke pusat (Push) -->
+{#if pushModalOpen}
+	<div class="modal modal-open">
+		<div class="modal-box rounded-2xl max-w-md">
+			<h3 class="text-base font-bold">Kirim Data ke Pusat</h3>
+			<p class="text-xs text-base-content/70 mt-1">
+				Pilih data apa saja yang mau dikirim ke Database Pusat.
+			</p>
+
+			<FormEnhance
+				action="?/pushPusat"
+				showToast={false}
+				onsuccess={({ data: result }) => {
+					pushModalOpen = false;
+					syncError = '';
+					syncMessage = (result?.message as string | undefined) || 'Kirim ke pusat selesai.';
+					toast(syncMessage, 'success');
+				}}
+				onfailure={({ data }) => {
+					syncError = (data?.message as string | undefined) ?? 'Kirim ke pusat gagal.';
+					toast(syncError, 'error');
+				}}
+			>
+				{#snippet children({ submitting })}
+					<div class="mt-3 bg-base-200/60 rounded-xl p-3 space-y-1.5">
+						<p class="text-[11px] font-semibold text-base-content/70">Data induk</p>
+						{#each MASTER_SCOPE_OPTIONS as option (option.value)}
+							<label class="flex items-center gap-2 text-xs cursor-pointer">
+								<input
+									type="checkbox"
+									name="scope"
+									value={option.value}
+									checked
+									class="checkbox checkbox-xs checkbox-primary"
+								/>
+								<span>{option.label}</span>
+							</label>
+						{/each}
+						<p class="text-[11px] font-semibold text-base-content/70 pt-1.5">Data pembelajaran</p>
+						{#each AKADEMIK_SCOPE_OPTIONS as option (option.value)}
+							<label class="flex items-center gap-2 text-xs cursor-pointer">
+								<input
+									type="checkbox"
+									name="scope"
+									value={option.value}
+									checked
+									class="checkbox checkbox-xs checkbox-primary"
+								/>
+								<span>{option.label}</span>
+							</label>
+						{/each}
+					</div>
+
+					<div class="modal-action">
+						<button
+							type="button"
+							class="btn btn-sm btn-ghost rounded-xl shadow-none"
+							onclick={() => (pushModalOpen = false)}
+						>
+							Batal
+						</button>
+						<button
+							type="submit"
+							class="btn btn-sm btn-primary text-white rounded-xl shadow-none"
+							disabled={submitting}
+						>
+							{#if submitting}
+								<span class="loading loading-spinner loading-xs"></span>
+								<span>Mengirim...</span>
+							{:else}
+								<Icon name="export" />
+								<span>Mulai Kirim</span>
+							{/if}
+						</button>
+					</div>
+				{/snippet}
+			</FormEnhance>
+		</div>
+	</div>
+{/if}
 
 <!-- Modal Tolak Paket Nilai -->
 {#if rejectModalOpen}

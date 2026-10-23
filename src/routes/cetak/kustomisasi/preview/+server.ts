@@ -6,12 +6,13 @@ import { getBiodataPreviewPayload } from '../../biodata/preview-data';
 import { getCoverPreviewPayload } from '../../cover/preview-data';
 import { getPiagamPreviewPayload } from '../../piagam/preview-data';
 import { getRaporPreviewPayload } from '../../rapor/preview-data';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 type Dokumen = 'cover' | 'biodata' | 'rapor' | 'piagam';
 
 function pastikanAdmin(loci: App.Locals) {
 	const user = loci.user as { type?: string } | null;
-	if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+	if (!user || !isAdminUser(user)) {
 		throw error(403, 'Kustomisasi cetak hanya bisa diubah admin dan kepala sekolah.');
 	}
 }

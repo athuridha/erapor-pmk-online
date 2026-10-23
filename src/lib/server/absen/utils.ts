@@ -1,4 +1,5 @@
 import { ownedKelasIdSet } from '../kelas-akses';
+import { isAdminUser } from '../../../routes/pengguna/permissions';
 
 /**
  * True bila `user` boleh mengedit/menghapus data kehadiran (trigger presensi).
@@ -12,7 +13,7 @@ export async function canUserEditAbsen(
 	_sekolahId: number,
 	kelasId?: number | null
 ): Promise<boolean> {
-	if (user.type === 'admin' || user.type === 'kepala_sekolah') return true;
+	if (isAdminUser(user)) return true;
 	// Akun wali kelas lama: akses penuh (perilaku sebelum refactor dipertahankan).
 	if (user.type === 'wali_kelas') return true;
 	if (user.type === 'user') {

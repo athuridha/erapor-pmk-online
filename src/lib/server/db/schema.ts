@@ -37,6 +37,15 @@ export const tableAuthUser = sqliteTable(
 		type: text({ enum: ['admin', 'kepala_sekolah', 'wali_kelas', 'wali_asuh', 'user'] })
 			.notNull()
 			.default('admin'),
+		// Multi-role: level operator opsional untuk akun guru (wali_kelas/wali_asuh/
+		// user) sekaligus admin/kepala sekolah. Kolom `type` tetap peran "utama"
+		// (fitur guru: mapel, wali kelas, presensi guru); `operatorLevel` membuka
+		// akses administrasi operator tanpa mengganti peran utama.
+		operatorLevel: text({ enum: ['admin', 'kepala_sekolah'] }),
+		// Daftar roles lengkap hasil centang form pengguna (bisa lebih dari satu,
+		// contoh: ["guru","operator"]). Nilai null = akun lama, turunkan dari
+		// `type` + `operatorLevel`.
+		roles: text({ mode: 'json' }).default('null').$type<string[] | null>(),
 		// optional: directly associate a user to a sekolah so login can pick it reliably
 		sekolahId: int().references((): AnySQLiteColumn => tableSekolah.id),
 		// referensi opsional ke pegawai (nama wali kelas disimpan di tablePegawai)
@@ -1605,6 +1614,7 @@ export const tableCloudSyncSettings = sqliteTable(
 			.notNull(),
 		accountId: text(),
 		databaseId: text().default('adcb638f-9adb-412b-8e61-cd80f1f1e062'),
+		apiUrl: text(),
 		apiToken: text(),
 		lastPulledAt: text(),
 		lastPushedAt: text(),

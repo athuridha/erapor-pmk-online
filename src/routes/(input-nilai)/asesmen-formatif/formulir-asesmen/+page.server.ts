@@ -22,7 +22,7 @@ const DEFAULT_LINGKUP = 'Tanpa lingkup materi';
 
 export async function load({ url, locals, depends, parent }) {
 	depends('app:asesmen-formatif/formulir');
-	const { user: enrichedUser, kelasAktif } = await parent();
+	const { user: enrichedUser } = await parent();
 	const muridIdParam = url.searchParams.get('murid_id');
 	const mapelIdParam = url.searchParams.get('mapel_id');
 
@@ -85,7 +85,7 @@ export async function load({ url, locals, depends, parent }) {
 	// restrict to assigned mata pelajaran only.
 	const userType = (locals.user as { type?: string } | null)?.type;
 	if (userType !== 'admin' && userType !== 'kepala_sekolah' && userType !== 'wali_asuh') {
-		if (needsMapelFilter(enrichedUser, kelasAktif?.id ?? null) && locals.user?.id) {
+		if (needsMapelFilter(enrichedUser, murid.kelasId) && locals.user?.id) {
 			const boleh = await bolehAksesMapel(locals.user, mapel);
 			if (!boleh) {
 				throw redirect(303, '/forbidden?required=mapel_id');
@@ -140,7 +140,7 @@ export async function load({ url, locals, depends, parent }) {
 		where: eq(tableMataPelajaran.kelasId, murid.kelasId),
 		orderBy: asc(tableMataPelajaran.nama)
 	});
-	const guruUser = needsMapelFilter(enrichedUser, kelasAktif?.id ?? null)
+	const guruUser = needsMapelFilter(enrichedUser, murid.kelasId)
 		? (locals.user as { id?: number; mataPelajaranId?: number | null } | null)
 		: null;
 	let picker;

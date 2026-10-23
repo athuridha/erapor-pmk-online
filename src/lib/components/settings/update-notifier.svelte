@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { toast } from '$lib/components/toast.svelte';
+	import { isAdminUser } from '../../../routes/pengguna/permissions';
 
 	/**
 	 * Pemberi tahu versi baru. Memeriksa status pembaruan dari server secara
@@ -16,7 +17,7 @@
 	const canCheck = $derived.by(() => {
 		const user = page.data.user as { type?: string; permissions?: string[] } | undefined;
 		if (!user) return false;
-		if (user.type === 'admin' || user.type === 'kepala_sekolah') return true;
+		if (isAdminUser(user)) return true;
 		return (user.permissions ?? []).includes('app_check_update');
 	});
 

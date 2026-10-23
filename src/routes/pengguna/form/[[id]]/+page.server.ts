@@ -18,9 +18,50 @@ import { validatePasswordStrength } from '$lib/server/password-policy';
 
 const u = tableAuthUser;
 
-const ALLOWED_USER_TYPES = ['admin', 'kepala_sekolah', 'wali_kelas', 'user'] as const;
-
 const VALID_PERMISSION_KEYS = new Set<string>(userPermissions);
+
+const OPERATOR_LEVELS = ['', 'admin', 'kepala_sekolah'];
+
+/**
+ * Pilihan multi-role form: checkbox boleh dikombinasi (guru + operator,
+ * wali kelas + operator, dll). Karena `type` hanya satu nilai, gunakan
+ * prioritas ring: admin > kepala sekolah > wali kelas > guru, sedangkan
+ * operator menjadi `operatorLevel` di atas peran dasar.
+ */
+function parseRoleSelection(form: FormData) {
+	const rolesSet = new Set(
+		form
+			.getAll('roles')
+			.map((value) => String(value))
+			.filter(Boolean)
+	);
+	if (rolesSet.size === 0) rolesSet.add('guru');
+
+	const hasEducator = rolesSet.has('guru') || rolesSet.has('wali_kelas');
+	let type: AuthUser['type'];
+	let operatorLevel: 'admin' | 'kepala_sekolah' | null = null;
+
+	if (rolesSet.has('admin')) {
+		type = 'admin';
+	} else if (rolesSet.has('kepala_sekolah')) {
+		// Kepala sekolah + guru/wali → tetap base type dengan operatorLevel,
+		// lama-lama `type` hanya bisa dua: user atau wali_kelas.
+		type = hasEducator ? 'user' : 'kepala_sekolah';
+	} else {
+		type = rolesSet.has('wali_kelas') ? 'wali_kelas' : 'user';
+	}
+
+	if (type !== 'admin') {
+		if (rolesSet.has('operator')) operatorLevel = 'admin';
+		else if (rolesSet.has('kepala_sekolah') && hasEducator) operatorLevel = 'kepala_sekolah';
+	}
+
+	if (!OPERATOR_LEVELS.includes(operatorLevel ?? '')) operatorLevel = null;
+	// Simpan daftar roles eksplisit (urutan tetap stabil) — kolom `roles`.
+	const ROLE_ORDER = ['guru', 'wali_kelas', 'operator', 'kepala_sekolah', 'admin'];
+	const roles = ROLE_ORDER.filter((role) => rolesSet.has(role));
+	return { type, operatorLevel, roles };
+}
 
 /**
  * Izin dari form bersifat opsional: bila tidak dikirim, pemanggil memakai
@@ -110,6 +151,8 @@ export async function load({ params }) {
 				id: u.id,
 				username: u.username,
 				type: u.type,
+				operatorLevel: u.operatorLevel,
+				roles: u.roles,
 				pegawaiId: u.pegawaiId,
 				pegawaiName: tablePegawai.nama,
 				pegawaiNik: tablePegawai.nik,
@@ -135,14 +178,32 @@ export async function load({ params }) {
 			db.select({ id: tableKelas.id }).from(tableKelas).where(eq(tableKelas.waliKelasId, pegawaiId))
 		]);
 
+		const roles: string[] = [];
+		if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
+			roles.push(...user.roles.filter((r) => typeof r === 'string'));
+		} else if (user.type === 'admin') {
+			roles.push('admin');
+		} else if (user.type === 'kepala_sekolah') {
+			roles.push('kepala_sekolah');
+		} else if (user.type === 'wali_kelas') {
+			roles.push('wali_kelas', 'guru');
+		} else {
+			roles.push('guru');
+		}
+		if (!Array.isArray(user.roles)) {
+			if (user.operatorLevel === 'admin') roles.push('operator');
+			if (user.operatorLevel === 'kepala_sekolah') roles.push('kepala_sekolah');
+		}
+
 		const kelasSet = new Set(kelasRows.map((r) => r.id));
 		if (user.kelasId != null) kelasSet.add(user.kelasId);
-		if (user.type === 'wali_kelas') {
+		if (roles.includes('wali_kelas')) {
 			for (const wk of waliKelas) kelasSet.add(wk.id);
 		}
 
 		userDetail = {
 			...user,
+			roles: Array.from(new Set(roles)),
 			mataPelajaranIds: mapelRows.map((r) => r.id),
 			kelasIds: Array.from(kelasSet),
 			waliKelasIds: waliKelas.map((r) => r.id)
@@ -171,10 +232,7 @@ async function createUser(request: Request) {
 	const password = String(form.get('password') ?? '').trim();
 	const nama = String(form.get('nama') ?? '').trim();
 	const nik = String(form.get('nik') ?? '').trim();
-	const roleValue = String(form.get('type') ?? 'user');
-	if (!(ALLOWED_USER_TYPES as readonly string[]).includes(roleValue)) {
-		return fail(400, { message: 'Tipe pengguna tidak valid.' });
-	}
+	const { type: roleValue, operatorLevel, roles: savedRoles } = parseRoleSelection(form);
 	const nikError = validateNik(nik);
 	if (nikError) return fail(400, { message: nikError });
 
@@ -239,7 +297,8 @@ async function createUser(request: Request) {
 		}
 
 		const permissions: UserPermission[] = parsePermissions(form.get('permissions'), roleValue) ?? [
-			...(defaultPermissionsByType[roleValue as AuthUser['type']] ?? [])
+			...(defaultPermissionsByType[roleValue as AuthUser['type']] ?? []),
+			...(operatorLevel ? (defaultPermissionsByType[operatorLevel] ?? []) : [])
 		];
 		if ((roleValue === 'user' || roleValue === 'wali_kelas') && kelasIds.length > 1) {
 			if (!permissions.includes('kelas_pindah')) permissions.push('kelas_pindah');
@@ -253,6 +312,8 @@ async function createUser(request: Request) {
 			passwordUpdatedAt: timestamp,
 			permissions,
 			type: roleValue,
+			operatorLevel,
+			roles: savedRoles,
 			mataPelajaranId: mataPelajaranIds.length === 1 ? mataPelajaranIds[0] : undefined,
 			kelasId: kelasIds.length > 0 ? kelasIds[0] : undefined,
 			sekolahId: sekolahId ?? undefined,
@@ -261,7 +322,6 @@ async function createUser(request: Request) {
 			updatedAt: timestamp
 		};
 
-		// @ts-expect-error: drizzle type inference issue with spread
 		await db.insert(tableAuthUser).values(insertData);
 
 		const [created] = await db
@@ -305,7 +365,7 @@ async function createUser(request: Request) {
 			}
 		}
 
-		if (roleValue === 'kepala_sekolah' && sekolahId && pegawaiId) {
+		if (savedRoles.includes('kepala_sekolah') && sekolahId && pegawaiId) {
 			await db
 				.update(tableSekolah)
 				.set({ kepalaSekolahId: pegawaiId })
@@ -351,10 +411,8 @@ async function updateUser(request: Request, id: number) {
 	const password = String(form.get('password') ?? '').trim();
 	const nama = String(form.get('nama') ?? '').trim();
 	const nik = String(form.get('nik') ?? '').trim();
-	const roleValue = String(form.get('type') ?? 'user');
-	if (!(ALLOWED_USER_TYPES as readonly string[]).includes(roleValue)) {
-		return fail(400, { message: 'Tipe pengguna tidak valid.' });
-	}
+	const role = parseRoleSelection(form);
+	const roleValue = role.type;
 	const nikError = validateNik(nik);
 	if (nikError) return fail(400, { message: nikError });
 
@@ -406,6 +464,7 @@ async function updateUser(request: Request, id: number) {
 		}
 
 		await db.transaction(async (tx) => {
+			const role = parseRoleSelection(form);
 			const updateData: Record<string, unknown> = {};
 			if (username !== existing.username) {
 				updateData.username = username;
@@ -416,7 +475,9 @@ async function updateUser(request: Request, id: number) {
 				updateData.passwordSalt = hashedPassword.salt;
 				updateData.passwordUpdatedAt = new Date().toISOString();
 			}
-			updateData.type = roleValue;
+			updateData.type = role.type;
+			updateData.operatorLevel = role.operatorLevel;
+			updateData.roles = role.roles;
 			updateData.sekolahId = sekolahId ?? null;
 			updateData.updatedAt = new Date().toISOString();
 			updateData.mataPelajaranId = mataPelajaranIds.length === 1 ? mataPelajaranIds[0] : null;
@@ -491,7 +552,7 @@ async function updateUser(request: Request, id: number) {
 				}
 
 				// Jika role pengguna adalah kepala_sekolah dan sekolah dipilih, kaitkan kepala sekolah di tabel sekolah
-				if (roleValue === 'kepala_sekolah' && sekolahId) {
+				if (role.roles.includes('kepala_sekolah') && sekolahId) {
 					await tx
 						.update(tableSekolah)
 						.set({ kepalaSekolahId: activePegawaiId })

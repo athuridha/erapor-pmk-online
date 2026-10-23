@@ -13,6 +13,7 @@ import { buildKelasContext } from '$lib/server/route-utils';
 import { agamaMapelNames } from '$lib/statics';
 import { getAksesMapelUser } from '$lib/server/mapel-access';
 import { isWaliOfKelas } from '$lib/server/kelas-akses';
+import { isAdminUser } from '../../pengguna/permissions';
 
 const PER_PAGE = 20;
 
@@ -81,7 +82,7 @@ export async function load({ locals, url, depends, parent }) {
 
 	let hasAnyMapel = false;
 
-	if (userType === 'admin' || userType === 'kepala_sekolah' || userType === 'wali_kelas') {
+	if (isAdminUser(user) || userType === 'wali_kelas') {
 		const dayNames = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
 		const dateObj = tanggal ? new Date(tanggal + 'T00:00:00') : new Date();
 		const hari = dayNames[dateObj.getDay()];
@@ -444,8 +445,7 @@ export const actions = {
 			if (
 				!existing ||
 				(existing.authUserId !== user.id &&
-					user.type !== 'admin' &&
-					user.type !== 'kepala_sekolah' &&
+					!isAdminUser(user) &&
 					user.type !== 'wali_kelas' &&
 					!waliMengampuJurnal)
 			) {
@@ -569,8 +569,7 @@ export const actions = {
 		if (
 			!existing ||
 			(existing.authUserId !== user.id &&
-				user.type !== 'admin' &&
-				user.type !== 'kepala_sekolah' &&
+				!isAdminUser(user) &&
 				user.type !== 'wali_kelas' &&
 				!waliMengampuJurnal)
 		) {

@@ -275,7 +275,11 @@ export async function ensureCoreSchema() {
 		['tanggal_pangkat', 'TEXT'],
 		['tanggal_diangkat', 'TEXT'],
 		['tanggal_bekerja', 'TEXT'],
-		['tanggal_gaji_berkala', 'TEXT']
+		['tanggal_gaji_berkala', 'TEXT'],
+		// Multi-role: level operator opsional (admin/kepala_sekolah) untuk akun guru.
+		['operator_level', 'TEXT'],
+		// Daftar roles hasil centang form (JSON array, null = turunkan dari type).
+		['roles', 'TEXT']
 	] as const;
 	for (const [column, type] of profileColumns) {
 		try {

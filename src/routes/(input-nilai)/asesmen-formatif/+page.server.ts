@@ -96,16 +96,19 @@ function buildSummarySentence(parts: ProgressSummaryPart[]): string | null {
 }
 export async function load({ parent, url, depends }) {
 	depends('app:asesmen-formatif');
-	const { kelasAktif, user } = await parent();
+	const { kelasAktif, kelasKonten, user } = await parent();
+	// Kelas konten dari pemilih per halaman (?kelas=); fallback kelasAktif.
+	const kelasKontenAktif = kelasKonten ?? kelasAktif;
 	const meta: PageMeta = { title: 'Asesmen Formatif' };
 	const perPage = 20;
 	const requestedPage = Number(url.searchParams.get('page')) || 1;
 	const pageNumber =
 		Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
 
-	if (!kelasAktif?.id) {
+	if (!kelasKontenAktif?.id) {
 		return {
 			meta,
+			kelasKontenAktif: null,
 			mapelList: [],
 			selectedMapelValue: null,
 			selectedMapel: null,
@@ -125,7 +128,7 @@ export async function load({ parent, url, depends }) {
 
 	let mapelRecords = await db.query.tableMataPelajaran.findMany({
 		columns: { id: true, nama: true, namaLokal: true },
-		where: eq(tableMataPelajaran.kelasId, kelasAktif.id),
+		where: eq(tableMataPelajaran.kelasId, kelasKontenAktif.id),
 		orderBy: asc(tableMataPelajaran.nama)
 	});
 
@@ -146,7 +149,10 @@ export async function load({ parent, url, depends }) {
 	let treatAssignedAgamaVariantAsBase = false;
 	let userAkses: Awaited<ReturnType<typeof getAksesMapelUser>> | null = null;
 	if (
-		needsMapelFilter({ ...maybeUser, ownKelasIds: guruOwnKelasIds }, kelasAktif?.id ?? null) &&
+		needsMapelFilter(
+			{ ...maybeUser, ownKelasIds: guruOwnKelasIds },
+			kelasKontenAktif?.id ?? null
+		) &&
 		maybeUser?.id
 	) {
 		try {
@@ -155,7 +161,7 @@ export async function load({ parent, url, depends }) {
 					id: maybeUser.id,
 					mataPelajaranId: maybeUser.mataPelajaranId
 				},
-				kelasAktif?.id ?? null
+				kelasKontenAktif?.id ?? null
 			);
 			mapelRecords = mapelRecords.filter(
 				(r) => userAkses!.ids.has(r.id) || userAkses!.names.has(normalizeText(r.nama))
@@ -191,7 +197,10 @@ export async function load({ parent, url, depends }) {
 	// Cache the user's assigned mapel record to avoid 4 identical DB queries
 	let userAssignedMapelRecord: { id: number; nama: string } | null = null;
 	if (
-		needsMapelFilter({ ...maybeUser, ownKelasIds: guruOwnKelasIds }, kelasAktif?.id ?? null) &&
+		needsMapelFilter(
+			{ ...maybeUser, ownKelasIds: guruOwnKelasIds },
+			kelasKontenAktif?.id ?? null
+		) &&
 		maybeUser?.mataPelajaranId
 	) {
 		try {
@@ -431,7 +440,7 @@ export async function load({ parent, url, depends }) {
 
 	const muridRecords = await db.query.tableMurid.findMany({
 		columns: { id: true, nama: true, agama: true },
-		where: eq(tableMurid.kelasId, kelasAktif.id),
+		where: eq(tableMurid.kelasId, kelasKontenAktif.id),
 		orderBy: asc(tableMurid.nama)
 	});
 
@@ -610,7 +619,8 @@ export async function load({ parent, url, depends }) {
 		const canAccess = (() => {
 			if (!maybeUser || maybeUser.type !== 'user') return true;
 			// Guru merangkap wali kelas di kelasnya sendiri: paritas wali kelas lama.
-			if (kelasAktif?.id != null && guruOwnKelasIds?.includes(kelasAktif.id)) return true;
+			if (kelasKontenAktif?.id != null && guruOwnKelasIds?.includes(kelasKontenAktif.id))
+				return true;
 
 			if ((isAgamaSelected || isPksSelected) && allowedAgamaVariants.size > 0) {
 				// Hanya murid dengan agama varian yang diajar guru (termasuk sub-nya).
@@ -690,7 +700,7 @@ export async function load({ parent, url, depends }) {
 			hasPenilaian,
 			nilaiHref:
 				targetMapelId && canAccess
-					? `/asesmen-formatif/formulir-asesmen?murid_id=${murid.id}&mapel_id=${targetMapelId}`
+					? `/asesmen-formatif/formulir-asesmen?kelas=${kelasKontenAktif.id}&murid_id=${murid.id}&mapel_id=${targetMapelId}`
 					: null,
 			canNilai: Boolean(canAccess)
 		};
@@ -714,6 +724,7 @@ export async function load({ parent, url, depends }) {
 
 	return {
 		meta,
+		kelasKontenAktif,
 		mapelList: mapelOptions,
 		selectedMapelValue,
 		selectedMapel,

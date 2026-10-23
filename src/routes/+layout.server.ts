@@ -11,11 +11,32 @@ import { cookieNames, findTitleByPath } from '$lib/utils.js';
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { and, asc, eq, inArray } from 'drizzle-orm';
-import { resolveRoutePermission, WALI_KELAS_ONLY_PERMISSIONS } from './pengguna/permissions';
+import {
+	isAdminUser,
+	resolveRoutePermission,
+	WALI_KELAS_ONLY_PERMISSIONS
+} from './pengguna/permissions';
 import { isLocalMasterEmpty } from '$lib/server/cloud-master';
+import { kelasKontenSet, resolveKelasKonten, type KelasLite } from '$lib/server/kelas-akses';
 
 /** Nilai penanda "di luar kelas" (data diambil dari semua kelas). */
 const SEMUA_KELAS = 'semua';
+
+/**
+ * Halaman kategori "Mata Pelajaran" — kelas kontennya bisa dibedakan dari
+ * kelasAktif global via `?kelas=`. Pada path ini layout menyiapkan pilihan
+ * kelas diampu + hasil resolusi `kelasKonten`.
+ */
+const KELAS_KONTEN_PREFIXES = [
+	'/asesmen-formatif',
+	'/asesmen-sumatif',
+	'/asesmen-kokurikuler',
+	'/intrakurikuler',
+	'/kokurikuler',
+	'/nilai-ekstrakurikuler',
+	'/ekstrakurikuler',
+	'/jurnal-mengajar'
+];
 
 type WaliKelasUser = {
 	type?: string;
@@ -179,7 +200,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	// Admin & kepala sekolah boleh berada "di luar kelas": data diambil dari
 	// semua kelas (tanpa filter kelas), dan bisa masuk ke kelas mana saja.
 	// Tanpa pilihan kelas eksplisit, keduanya default ke mode "Semua Kelas".
-	const bolehSemuaKelas = user?.type === 'admin' || user?.type === 'kepala_sekolah';
+	const bolehSemuaKelas = isAdminUser(user);
 	let pilihSemuaKelas = false;
 	if (bolehSemuaKelas) {
 		if (kelasIdParam === SEMUA_KELAS) pilihSemuaKelas = true;
@@ -296,7 +317,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	}
 
 	// Server-side guard: guru on non-own class cannot access wali-kelas-only pages.
-	if (user && user.type !== 'admin' && user.type !== 'kepala_sekolah' && kelasAktif) {
+	if (user && !isAdminUser(user) && kelasAktif) {
 		const isOwnClass = resolvedWaliOwnKelasIds.includes(kelasAktif.id);
 		if (!isOwnClass) {
 			const required = resolveRoutePermission(url.pathname);
@@ -343,8 +364,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		const canManageMapel = true;
 		const isOwnKelas = kelasAktif != null && resolvedWaliOwnKelasIds.includes(kelasAktif.id);
 		const canEditUrutan =
-			userType === 'admin' ||
-			userType === 'kepala_sekolah' ||
+			isAdminUser(user) ||
 			userType === 'wali_kelas' ||
 			// Guru merangkap wali kelas (type 'user'): boleh mengatur kelas diwali-nya.
 			(userType === 'user' && isOwnKelas);
@@ -398,11 +418,52 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		}
 	}
 
+	// Konteks "kelas konten" per halaman: hanya pada kategori Mata Pelajaran.
+	// Guru mapel memilih kelas yang diampu lewat pemilih (?kelas=) tanpa
+	// mengubah kelasAktif global. Di luar path ini keduanya kosong.
+	let kelasKonten: KelasLite | null = null;
+	let kelasKontenPilihan: KelasLite[] = [];
+	const pathname = url.pathname.replace(/\/+$/, '');
+	const pakaiKelasKonten =
+		sekolah?.id != null &&
+		user != null &&
+		KELAS_KONTEN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'));
+	if (pakaiKelasKonten && sekolah?.id) {
+		if (isAdminUser(user)) {
+			kelasKontenPilihan = daftarKelas.map(({ id, nama, fase }) => ({ id, nama, fase }));
+		} else if (user.type === 'user' || user.type === 'wali_kelas') {
+			const ids = await kelasKontenSet(user, sekolah.id, academicContext?.activeSemesterId ?? null);
+			if (ids.size > 0) {
+				const pilihanFilter = academicContext?.activeSemesterId
+					? and(
+							inArray(tableKelas.id, [...ids]),
+							eq(tableKelas.semesterId, academicContext.activeSemesterId)
+						)
+					: inArray(tableKelas.id, [...ids]);
+				kelasKontenPilihan = await db.query.tableKelas.findMany({
+					columns: { id: true, nama: true, fase: true },
+					where: pilihanFilter,
+					orderBy: asc(tableKelas.nama)
+				});
+			}
+		}
+		const requested = Number(url.searchParams.get('kelas')) || null;
+		kelasKonten = await resolveKelasKonten(
+			user as NonNullable<App.Locals['user']>,
+			sekolah.id,
+			requested,
+			kelasAktif ? { id: kelasAktif.id, nama: kelasAktif.nama, fase: kelasAktif.fase } : null,
+			academicContext?.activeSemesterId ?? null
+		);
+	}
+
 	return {
 		sekolah,
 		meta,
 		daftarKelas,
 		kelasAktif,
+		kelasKonten,
+		kelasKontenPilihan,
 		user: userForClient,
 		impersonator: locals.impersonator ?? null,
 		hasMataPelajaran,

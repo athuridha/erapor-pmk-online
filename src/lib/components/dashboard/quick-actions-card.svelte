@@ -6,6 +6,7 @@
 
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { isAdminUser } from '../../../routes/pengguna/permissions';
 
 	// single permission to manage dashboard quick actions
 	let canDashboardManage = $derived.by(() => {
@@ -15,10 +16,7 @@
 
 	// Backup endpoint is admin-only server-side; mirror that so the button is not
 	// shown enabled to a non-admin who merely has dashboard_manage.
-	let canDownloadBackup = $derived.by(() => {
-		const type = page.data.user?.type;
-		return type === 'admin' || type === 'kepala_sekolah';
-	});
+	let canDownloadBackup = isAdminUser(page.data.user);
 
 	// Impor data pokok (Excel) memakai izin data sekolah, sama seperti
 	// halamannya di /sinkronisasi/import-data.

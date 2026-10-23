@@ -3,9 +3,10 @@ import path from 'node:path';
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listDirectories, listRootDrives, type BrowseResponse } from '$lib/server/storage-browse';
+import { isFullAdmin } from '../../../pengguna/permissions';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-	if (locals.user?.type !== 'admin') {
+	if (!isFullAdmin(locals.user)) {
 		error(403, 'Hanya admin yang dapat menjelajah folder.');
 	}
 

@@ -10,9 +10,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const impersonator = locals.impersonator;
 
 	// Hanya boleh diakses bila akun saat ini adalah admin atau sedang dalam mode switch dari admin
-	const hasAccess =
-		isAdminUser(currentUser) ||
-		(impersonator && (impersonator.type === 'admin' || impersonator.type === 'kepala_sekolah'));
+	const hasAccess = isAdminUser(currentUser) || (impersonator && isAdminUser(impersonator));
 	if (!hasAccess) {
 		throw error(403, 'Hanya admin yang dapat melihat daftar pengguna switch akun.');
 	}

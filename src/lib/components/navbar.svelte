@@ -7,6 +7,7 @@
 	import { toast } from '$lib/components/toast.svelte';
 	import { showModal } from '$lib/components/global-modal.svelte';
 	import { favoritesStore } from '$lib/stores/favorites.svelte';
+	import { isAdminUser, isFullAdmin } from '../../routes/pengguna/permissions';
 	import { onMount } from 'svelte';
 	import type { Component } from 'svelte';
 
@@ -24,6 +25,7 @@
 		username?: string;
 		permissions?: string[];
 		type?: 'admin' | 'kepala_sekolah' | 'user' | 'wali_kelas';
+		operatorLevel?: 'admin' | 'kepala_sekolah' | null;
 		kelasId?: number | null;
 		ownKelasIds?: number[] | null;
 	};
@@ -47,10 +49,10 @@
 		if (!user) return false;
 		if (impersonator) return true;
 		const u = user as UserLike;
-		return u.type === 'admin' || u.type === 'kepala_sekolah';
+		return isAdminUser(u);
 	});
 
-	const bolehSemuaKelas = $derived(user?.type === 'admin' || user?.type === 'kepala_sekolah');
+	const bolehSemuaKelas = $derived(isAdminUser(user as UserLike | null));
 
 	const kelasAktifLabel = $derived.by(() => {
 		if (!kelasAktif) return bolehSemuaKelas ? 'Semua Kelas' : 'Pilih Kelas';
@@ -78,7 +80,7 @@
 	const canStopServer = $derived.by(() => {
 		if (!user) return false;
 		// Admins should be allowed regardless of explicit permissions
-		if ((user as UserLike).type === 'admin') return true;
+		if (isFullAdmin(user)) return true;
 		const perms = (user as UserLike)?.permissions ?? [];
 		return Array.isArray(perms) ? perms.includes('server_stop') : false;
 	});

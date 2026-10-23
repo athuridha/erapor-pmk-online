@@ -20,6 +20,7 @@
 	import PresensiGuruModal from '$lib/components/presensi-guru/presensi-guru-modal.svelte';
 	import OfflineSetupGate from '$lib/components/offline-setup-gate.svelte';
 	import UpdateNotifier from '$lib/components/settings/update-notifier.svelte';
+	import { isAdminUser } from './pengguna/permissions';
 	import '../app.css';
 
 	let { data, children } = $props();
@@ -207,12 +208,7 @@
 		const ownIds = (data.user as { ownKelasIds?: number[] })?.ownKelasIds ?? [];
 		return data.kelasAktif?.id != null && ownIds.includes(data.kelasAktif.id);
 	});
-	const disableInteraction = $derived(
-		data.user?.type !== 'admin' &&
-			data.user?.type !== 'kepala_sekolah' &&
-			!isOwnClass &&
-			isReadonlyPage
-	);
+	const disableInteraction = $derived(!isAdminUser(data.user) && !isOwnClass && isReadonlyPage);
 
 	async function stopServer() {
 		if (stoppingServer) return;

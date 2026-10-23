@@ -29,9 +29,6 @@
 		autoDownload: boolean;
 		autoInstall: boolean;
 		intervalMinutes: number;
-		idleMinutes: number;
-		windowStartHour: number;
-		windowEndHour: number;
 	}
 
 	interface AutoState {
@@ -54,10 +51,7 @@
 		enabled: false,
 		autoDownload: false,
 		autoInstall: false,
-		intervalMinutes: 360,
-		idleMinutes: 15,
-		windowStartHour: 19,
-		windowEndHour: 5
+		intervalMinutes: 60
 	});
 	let autoState = $state<AutoState>({
 		lastCheckAt: null,
@@ -80,8 +74,6 @@
 		{ minutes: 720, label: 'Setiap 12 jam' },
 		{ minutes: 1440, label: 'Setiap 24 jam' }
 	];
-
-	const hourOptions = Array.from({ length: 24 }, (_, index) => index);
 
 	const selectedAsset = $derived.by(() => pickPreferredAsset(latestRelease));
 	const downloadProgress = $derived.by(() => {
@@ -150,10 +142,6 @@
 			timeStyle: 'short',
 			hour12: false
 		});
-	}
-
-	function formatHour(hour: number) {
-		return `${String(hour).padStart(2, '0')}:00`;
 	}
 
 	async function loadAutoState() {
@@ -623,8 +611,8 @@
 							<h3 class="font-semibold">Pembaruan otomatis</h3>
 							<p class="text-base-content/60 text-xs">
 								Server memeriksa GitHub Releases sendiri, mengunduh installer di latar belakang,
-								lalu memasangnya saat aplikasi menganggur. Data siswa tetap aman karena data berada
-								di folder terpisah.
+								lalu memasangnya segera tanpa menunggu aplikasi menganggur. Data siswa tetap aman
+								karena data berada di folder terpisah.
 							</p>
 						</div>
 
@@ -672,7 +660,7 @@
 									bind:checked={autoSettings.autoInstall}
 									disabled={!autoSettings.enabled}
 								/>
-								<span class="label-text">Pasang otomatis saat aplikasi menganggur</span>
+								<span class="label-text">Pasang otomatis di latar belakang</span>
 							</label>
 
 							<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -688,46 +676,11 @@
 										{/each}
 									</select>
 								</fieldset>
-								<fieldset class="fieldset">
-									<legend class="fieldset-legend">Menit menganggur sebelum dipasang</legend>
-									<input
-										type="number"
-										min="1"
-										max="1440"
-										class="input w-full"
-										bind:value={autoSettings.idleMinutes}
-										disabled={!autoSettings.enabled || !autoSettings.autoInstall}
-									/>
-								</fieldset>
-								<fieldset class="fieldset">
-									<legend class="fieldset-legend">Jam mulai pemasangan</legend>
-									<select
-										class="select select-bordered w-full"
-										bind:value={autoSettings.windowStartHour}
-										disabled={!autoSettings.enabled || !autoSettings.autoInstall}
-									>
-										{#each hourOptions as hour (hour)}
-											<option value={hour}>{formatHour(hour)}</option>
-										{/each}
-									</select>
-								</fieldset>
-								<fieldset class="fieldset">
-									<legend class="fieldset-legend">Jam selesai pemasangan</legend>
-									<select
-										class="select select-bordered w-full"
-										bind:value={autoSettings.windowEndHour}
-										disabled={!autoSettings.enabled || !autoSettings.autoInstall}
-									>
-										{#each hourOptions as hour (hour)}
-											<option value={hour}>{formatHour(hour)}</option>
-										{/each}
-									</select>
-								</fieldset>
 							</div>
 
 							<p class="text-base-content/60 text-xs">
-								Jam mulai dan jam selesai yang sama berarti pemasangan boleh berjalan kapan saja.
-								Pemasangan otomatis hanya tersedia di Windows.
+								Pemasangan otomatis dijalankan segera setelah installer terunduh, tanpa menunggu
+								aplikasi menganggur. Pemasangan otomatis hanya tersedia di Windows.
 							</p>
 
 							<div class="flex justify-end">

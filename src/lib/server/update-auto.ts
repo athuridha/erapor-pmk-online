@@ -5,7 +5,6 @@ import { eq } from 'drizzle-orm';
 
 import db from '$lib/server/db';
 import { tableAppMeta } from '$lib/server/db/schema';
-import { getIdleMs } from './activity';
 import {
 	compareVersions,
 	fetchLatestRelease,
@@ -20,10 +19,10 @@ import {
  * Mesin auto update.
  *
  * Alur otomatis (semua berjalan di server, tanpa perlu admin menekan tombol):
- *   1. Cek GitHub Releases secara berkala (default setiap 6 jam + sekali saat start).
+ *   1. Cek GitHub Releases secara berkala (bawaan tiap 1 jam + sekali saat start).
  *   2. Kalau ada versi lebih baru → unduh installer di background.
- *   3. Kalau unduhan selesai → pasang otomatis saat aplikasi menganggur dan
- *      berada di dalam jam pemasangan (default 19:00–05:00), lalu aplikasi
+ *   3. Kalau unduhan selesai → installer dijalankan segera di latar belakang
+ *      (tanpa menunggu aplikasi menganggur maupun jendela jam), lalu aplikasi
  *      direstart oleh helper `scripts/auto-update.mjs`.
  *
  * Pengaturan & status disimpan di tabel `app_meta` (key-value) supaya tetap
@@ -38,26 +37,17 @@ export interface AutoUpdateSettings {
 	enabled: boolean;
 	/** Unduh installer di background begitu versi baru ditemukan. */
 	autoDownload: boolean;
-	/** Pasang otomatis (diam-diam) saat aplikasi menganggur. */
+	/** Pasang otomatis di latar belakang segera setelah installer terunduh. */
 	autoInstall: boolean;
 	/** Jarak antar pemeriksaan ke GitHub (menit). */
 	intervalMinutes: number;
-	/** Berapa lama aplikasi harus menganggur sebelum installer dijalankan (menit). */
-	idleMinutes: number;
-	/** Jam mulai jendela pemasangan otomatis (0-23). */
-	windowStartHour: number;
-	/** Jam selesai jendela pemasangan otomatis (0-23). Equal dengan start = selalu. */
-	windowEndHour: number;
 }
 
 export const DEFAULT_AUTO_UPDATE_SETTINGS: AutoUpdateSettings = {
 	enabled: true,
 	autoDownload: true,
 	autoInstall: true,
-	intervalMinutes: 360,
-	idleMinutes: 15,
-	windowStartHour: 19,
-	windowEndHour: 5
+	intervalMinutes: 60
 };
 
 export interface UpdateAutoState {
@@ -146,24 +136,6 @@ export async function getAutoUpdateSettings(): Promise<AutoUpdateSettings> {
 				15,
 				24 * 60,
 				DEFAULT_AUTO_UPDATE_SETTINGS.intervalMinutes
-			),
-			idleMinutes: clampInt(
-				parsed.idleMinutes,
-				1,
-				24 * 60,
-				DEFAULT_AUTO_UPDATE_SETTINGS.idleMinutes
-			),
-			windowStartHour: clampInt(
-				parsed.windowStartHour,
-				0,
-				23,
-				DEFAULT_AUTO_UPDATE_SETTINGS.windowStartHour
-			),
-			windowEndHour: clampInt(
-				parsed.windowEndHour,
-				0,
-				23,
-				DEFAULT_AUTO_UPDATE_SETTINGS.windowEndHour
 			)
 		};
 	} catch {
@@ -179,10 +151,7 @@ export async function saveAutoUpdateSettings(
 		enabled: toBoolean(input.enabled, current.enabled),
 		autoDownload: toBoolean(input.autoDownload, current.autoDownload),
 		autoInstall: toBoolean(input.autoInstall, current.autoInstall),
-		intervalMinutes: clampInt(input.intervalMinutes, 15, 24 * 60, current.intervalMinutes),
-		idleMinutes: clampInt(input.idleMinutes, 1, 24 * 60, current.idleMinutes),
-		windowStartHour: clampInt(input.windowStartHour, 0, 23, current.windowStartHour),
-		windowEndHour: clampInt(input.windowEndHour, 0, 23, current.windowEndHour)
+		intervalMinutes: clampInt(input.intervalMinutes, 15, 24 * 60, current.intervalMinutes)
 	};
 	await writeMeta(SETTINGS_KEY, JSON.stringify(next));
 	return next;
@@ -224,19 +193,6 @@ export function findDownloadedInstaller(
 	} catch {
 		return null;
 	}
-}
-
-/** Apakah sekarang berada di dalam jendelainstallation otomatis. */
-export function isWithinInstallWindow(
-	now: Date,
-	windowStartHour: number,
-	windowEndHour: number
-): boolean {
-	if (windowStartHour === windowEndHour) return true;
-	const hour = now.getHours();
-	if (windowStartHour < windowEndHour) return hour >= windowStartHour && hour < windowEndHour;
-	// jendela melintasi tengah malam (mis. 19:00 → 05:00)
-	return hour >= windowStartHour || hour < windowEndHour;
 }
 
 export interface UpdateCheckResult {
@@ -324,7 +280,8 @@ export async function runUpdateCheck(
 
 /**
  * Jalankan installer otomatis bila semua syarat terpenuhi: versi baru, unduhan
- * selesai, platform Windows, aplikasi menganggur, dan berada di jam pemasangan.
+ * selesai, dan platform Windows. Pemasangan berjalan instan di latar belakang —
+ * tanpa gerbang "aplikasi menganggur" maupun jendela jam pemasangan.
  */
 export async function maybeAutoInstall(): Promise<boolean> {
 	const settings = await getAutoUpdateSettings();
@@ -355,16 +312,6 @@ export async function maybeAutoInstall(): Promise<boolean> {
 	if (!existsSync(join(process.cwd(), 'start-erapor-pmk.mjs'))) {
 		console.warn(
 			'[update-auto] pemasangan otomatis hanya aktif pada instalasi Windows (launcher tidak ditemukan).'
-		);
-		return false;
-	}
-
-	const idleMs = getIdleMs();
-	if (idleMs < settings.idleMinutes * 60_000) return false;
-
-	if (!isWithinInstallWindow(new Date(), settings.windowStartHour, settings.windowEndHour)) {
-		console.info(
-			`[update-auto] v${state.latestVersion} siap, menunggu jam pemasangan ${String(settings.windowStartHour).padStart(2, '0')}:00–${String(settings.windowEndHour).padStart(2, '0')}:00`
 		);
 		return false;
 	}

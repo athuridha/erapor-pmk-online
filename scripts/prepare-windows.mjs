@@ -51,6 +51,32 @@ function readProjectEnv() {
 }
 
 /**
+ * Verifikasi kredensial proxy worker sebelum dipaket: kirim SELECT 1 dan lihat
+ * apakah diterima. Gagal jaringan hanya jadi peringatan.
+ */
+async function verifyProxyApi(url, apiKey) {
+	try {
+		const res = await fetch(url, {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({ sql: 'SELECT 1 AS ok', params: [] })
+		});
+		const data = await res.json().catch(() => null);
+		if (res.ok && data?.success) {
+			console.info('API proxy Database Pusat merespons kueri uji dengan baik.');
+		} else {
+			console.warn(
+				'API proxy Database Pusat menolak kueri uji:',
+				data?.errors?.[0]?.message ?? `HTTP ${res.status}`,
+				'- sinkronisasi cloud pada hasil build ini akan gagal.'
+			);
+		}
+	} catch (e) {
+		console.warn('API proxy tidak bisa diverifikasi (jaringan):', e.message);
+	}
+}
+
+/**
  * Verifikasi token sebelum dipaket, supaya installer tidak terkirim dengan
  * kredensial yang sudah mati. Gagal jaringan hanya jadi peringatan.
  */
@@ -267,17 +293,24 @@ async function main() {
 	const flagToken = (process.env.ERAPOR_PACKAGE_CLOUD_TOKEN ?? '').trim().toLowerCase();
 	const bolehTanamToken = !['0', 'false', 'n', 'tidak', 'off', 'no'].includes(flagToken);
 	const cloudToken = bolehTanamToken ? envValue('CLOUDFLARE_API_TOKEN') : '';
+	const cloudApiUrl = bolehTanamToken ? envValue('CLOUDFLARE_API_URL') : '';
 	const cloudAccountId = envValue('CLOUDFLARE_ACCOUNT_ID');
 	const cloudDatabaseId = envValue('CLOUDFLARE_DATABASE_ID');
+	const modeProxy = Boolean(cloudApiUrl);
 
 	const envLines = [
 		'DB_URL=file:%LOCALAPPDATA%/erapor-pmk-data/database.sqlite3',
 		'BODY_SIZE_LIMIT=5M'
 	];
 	if (cloudToken) {
-		envLines.push(`CLOUDFLARE_API_TOKEN=${cloudToken}`);
-		if (cloudAccountId) envLines.push(`CLOUDFLARE_ACCOUNT_ID=${cloudAccountId}`);
-		if (cloudDatabaseId) envLines.push(`CLOUDFLARE_DATABASE_ID=${cloudDatabaseId}`);
+		if (modeProxy && cloudApiUrl) {
+			envLines.push(`CLOUDFLARE_API_URL=${cloudApiUrl}`);
+			envLines.push(`CLOUDFLARE_API_TOKEN=${cloudToken}`);
+		} else {
+			envLines.push(`CLOUDFLARE_API_TOKEN=${cloudToken}`);
+			if (cloudAccountId) envLines.push(`CLOUDFLARE_ACCOUNT_ID=${cloudAccountId}`);
+			if (cloudDatabaseId) envLines.push(`CLOUDFLARE_DATABASE_ID=${cloudDatabaseId}`);
+		}
 	}
 
 	const envTarget = path.join(appStage, '.env');
@@ -288,7 +321,9 @@ async function main() {
 		cloudToken ? '(dengan kredensial cloud)' : '(tanpa kredensial cloud)'
 	);
 
-	if (cloudToken) {
+	if (cloudToken && modeProxy) {
+		await verifyProxyApi(cloudApiUrl, cloudToken);
+	} else if (cloudToken) {
 		await verifyCloudToken(cloudToken);
 	} else {
 		console.warn(

@@ -2,6 +2,7 @@ import { getRaporPreviewPayload } from './preview-data';
 import { getKelasContextForUser } from '$lib/server/route-utils';
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { isAdminUser } from '../../pengguna/permissions';
 export const load = (async (event) => {
 	event.depends('app:cetak-rapor');
 
@@ -10,7 +11,7 @@ export const load = (async (event) => {
 	}
 
 	// For non-admin users, verify they have access to the requested student's class
-	if (event.locals.user.type !== 'admin' && event.locals.user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(event.locals.user)) {
 		const muridIdParam = event.url.searchParams.get('murid_id');
 		if (muridIdParam) {
 			const { hasAccess } = await getKelasContextForUser(event.locals, event.url, muridIdParam);

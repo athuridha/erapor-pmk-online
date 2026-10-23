@@ -18,6 +18,7 @@ import {
 } from '$lib/server/pdf/templates/presensi-guru';
 import { personSignatureDataUrl, signatureToDataUrl } from '$lib/server/ttd';
 import type { RequestHandler } from './$types';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 const BULAN_NAMES = [
 	'Januari',
@@ -45,7 +46,7 @@ function formatTanggalInput(value: string | null | undefined): string {
 export const GET: RequestHandler = async ({ locals, url }) => {
 	const user = locals.user;
 	if (!user) throw error(401, 'Unauthorized');
-	if (user.type !== 'admin' && user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(user)) {
 		throw error(403, 'Hanya admin yang dapat mencetak presensi guru.');
 	}
 

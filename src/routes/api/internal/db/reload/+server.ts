@@ -1,11 +1,12 @@
 import { json, error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { reloadDbClient } from '$lib/server/db';
+import { isAdminUser } from '../../../../pengguna/permissions';
 
 export async function POST({ request, locals }) {
 	// Admin-only: reloading the DB client is an operational action that should
 	// not be reachable by any authenticated user, even when the secret is unset.
-	if (locals.user?.type !== 'admin' && locals.user?.type !== 'kepala_sekolah') {
+	if (isAdminUser(locals.user)) {
 		throw error(403, 'Forbidden');
 	}
 

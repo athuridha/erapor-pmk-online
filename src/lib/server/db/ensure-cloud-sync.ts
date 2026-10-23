@@ -1,6 +1,21 @@
+import db from '$lib/server/db';
 import { ensureSchema } from './ensure-helper';
 
 const CLOUD_SYNC = 'cloud_sync';
+
+/**
+ * URL API Database Pusat (worker proxy D1). Database lama belum punya kolom
+ * ini; diisi via /api/cloud/settings atau CLOUDFLARE_API_URL.
+ */
+export async function ensureCloudSyncApiUrlColumn() {
+	const result = await db.$client.execute('PRAGMA table_info("cloud_sync_settings")');
+	const hasColumn = result.rows.some(
+		(row: Record<string, unknown>) => String(row.name) === 'api_url'
+	);
+	if (!hasColumn) {
+		await db.$client.execute(`ALTER TABLE "cloud_sync_settings" ADD COLUMN "api_url" text`);
+	}
+}
 
 export async function ensureCloudSyncSchema() {
 	await ensureSchema(CLOUD_SYNC, [
@@ -9,6 +24,7 @@ export async function ensureCloudSyncSchema() {
 			sekolah_id INTEGER NOT NULL REFERENCES sekolah(id) ON DELETE CASCADE,
 			account_id TEXT,
 			database_id TEXT DEFAULT 'adcb638f-9adb-412b-8e61-cd80f1f1e062',
+			api_url TEXT,
 			api_token TEXT,
 			last_pulled_at TEXT,
 			last_pushed_at TEXT,

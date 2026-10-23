@@ -62,7 +62,7 @@ export const load: PageServerLoad = async ({ getClientAddress, url }) => {
 		appVersion: getAppVersion(),
 		counts,
 		credentials: {
-			ready: Boolean(config.accountId && config.apiToken),
+			ready: Boolean(config.apiToken && (config.apiUrl || config.accountId)),
 			tokenSource: config.tokenSource,
 			wranglerTokenExpired: config.wranglerTokenExpired,
 			databaseId: config.databaseId

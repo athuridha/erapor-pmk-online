@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 const SHUTDOWN_SIGNALS: NodeJS.Signals[] = ['SIGTERM', 'SIGINT', 'SIGBREAK'];
 
@@ -26,8 +27,7 @@ export const POST = async (event: RequestEvent) => {
 	// Server-side permission check: require 'server_stop', but allow admins
 	const user = locals?.user as { permissions?: string[]; type?: string } | undefined;
 	const hasPermission =
-		user?.type === 'admin' ||
-		user?.type === 'kepala_sekolah' ||
+		isAdminUser(user) ||
 		(Array.isArray(user?.permissions) && user!.permissions!.includes('server_stop'));
 	if (!hasPermission) {
 		return json(

@@ -7,6 +7,7 @@ import { runStartupEnsures, resetStartupEnsures } from '$lib/server/db/ensure-bo
 import { execFile } from 'node:child_process';
 import { cookieNames } from '$lib/utils';
 import { resolveSession } from '$lib/server/auth';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 function runScript(script: string, options: { env?: NodeJS.ProcessEnv; maxBuffer?: number } = {}) {
 	const scriptPath = resolve(process.cwd(), 'scripts', script);
@@ -51,11 +52,7 @@ export async function POST({ request, cookies }) {
 		console.warn('[database-import] gagal memverifikasi sesi sebelum import', e);
 		return null;
 	});
-	if (
-		!resolved ||
-		!resolved.user ||
-		(resolved.user.type !== 'admin' && resolved.user.type !== 'kepala_sekolah')
-	) {
+	if (!resolved || !resolved.user || !isAdminUser(resolved.user)) {
 		console.warn('[database-import] user tidak memiliki izin admin');
 		throw error(403, 'Akses ditolak');
 	}

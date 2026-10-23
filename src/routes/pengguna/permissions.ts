@@ -212,21 +212,44 @@ export function resolveRoutePermission(pathname: string): UserPermission | null 
 export function isAuthorizedUser(
 	allowedPermissions: UserPermission[],
 	// include 'type' so we can treat admins as authorized
-	user?: Pick<AuthUser, 'permissions' | 'type'>
+	user?: Pick<AuthUser, 'permissions' | 'type'> & Partial<Pick<AuthUser, 'operatorLevel'>>
 ) {
 	if (!user) return false;
 	// Admins are authorized for everything by policy
 	// wali_kelas and user (guru mapel) are NOT admins and must check permissions
-	if ('type' in user && (user.type === 'admin' || user.type === 'kepala_sekolah')) return true;
+	if (isAdminUser(user)) return true;
 	const userPermissions = user.permissions || [];
 	return allowedPermissions.some((r) => userPermissions.includes(r));
 }
 
 /**
- * True for roles with full administrative access (admin, kepala_sekolah).
- * Kepala sekolah has the same access as admin but is scoped to a specific
- * (active) sekolah rather than being a global account.
+ * True untuk peran dengan akses administrasi penuh (admin, kepala_sekolah), termasuk
+ * akun guru multi-role yang diberi `operatorLevel` (admin/kepala_sekolah).
+ * Kepala sekolah punya akses setara admin tapi scoped ke sekolah aktifnya.
  */
-export function isAdminUser(user?: Pick<AuthUser, 'type'> | null): boolean {
+export function isAdminUser(
+	user?: { type?: string | null; operatorLevel?: string | null } | null
+): boolean {
 	return user?.type === 'admin' || user?.type === 'kepala_sekolah';
+}
+
+/**
+ * True bila akun ini mengemban identitas kepala sekolah: peran utama
+ * `kepala_sekolah` ATAU level operator `kepala_sekolah` (multi-role guru).
+ */
+export function isKepalaSekolahUser(
+	user?: { type?: string | null; operatorLevel?: string | null } | null
+): boolean {
+	return user?.type === 'kepala_sekolah' || user?.operatorLevel === 'kepala_sekolah';
+}
+
+/**
+ * True bila akun punya kapasitas admin global: peran utama `admin` ATAU level
+ * operator `admin`. Dipakai untuk fitur penuh lintas sekolah (storage, stop
+ * server, sinkronisasi pusat) — kepala sekolah murni tetap di luar.
+ */
+export function isFullAdmin(
+	user?: { type?: string | null; operatorLevel?: string | null } | null
+): boolean {
+	return user?.type === 'admin' || user?.operatorLevel === 'admin';
 }

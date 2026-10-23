@@ -6,9 +6,10 @@ import { isAuthorizedUser } from '../../pengguna/permissions';
 import { error, json } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
+import { isAdminUser } from '../../pengguna/permissions';
 
 function isAdminUserType(user: Pick<AuthUser, 'type'> | null | undefined): boolean {
-	return user?.type === 'admin' || user?.type === 'kepala_sekolah';
+	return isAdminUser(user);
 }
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -81,7 +82,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 export const DELETE: RequestHandler = async ({ url, locals }) => {
 	if (!locals.user) throw error(401, { message: 'Harus login terlebih dahulu' });
 
-	if (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(locals.user)) {
 		if (!isAuthorizedUser(['administrasi_dinas_luar'], locals.user)) {
 			throw error(403, { message: 'Akses tidak diizinkan' });
 		}
@@ -102,7 +103,7 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
 	if (!existing) {
 		throw error(404, { message: 'Data tidak ditemukan' });
 	}
-	if (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(locals.user)) {
 		if (existing.authUserId !== locals.user.id) {
 			throw error(403, { message: 'Tidak dapat menghapus permohonan pengguna lain' });
 		}

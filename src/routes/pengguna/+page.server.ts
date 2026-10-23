@@ -30,6 +30,8 @@ export async function load({ url, locals }) {
 			username: u.username,
 			createdAt: u.createdAt,
 			type: u.type,
+			operatorLevel: u.operatorLevel,
+			roles: u.roles,
 			pegawaiId: u.pegawaiId,
 			pegawaiName: tablePegawai.nama,
 			pegawaiNik: tablePegawai.nik,
@@ -143,16 +145,38 @@ export async function load({ url, locals }) {
 	}
 
 	const users = dedupedUsers.map((row) => {
-		const roles: string[] = [];
-		if (row.type === 'kepala_sekolah' || (row.pegawaiId && kepalaPegawaiIds.has(row.pegawaiId))) {
-			roles.push('Kepala Sekolah');
-		}
-		if (row.type === 'admin') {
-			roles.push('Admin');
-		}
-		if (row.type === 'user' || row.type === 'wali_kelas') {
-			roles.push('Guru');
-		}
+		// Akun baru menyimpan daftar roles eksplisit hasil centang form.
+		const savedRoles = Array.isArray(row.roles)
+			? row.roles.filter((r) => typeof r === 'string')
+			: [];
+		const roleLabel: Record<string, string> = {
+			guru: 'Guru',
+			wali_kelas: 'Wali Kelas',
+			operator: 'Admin',
+			kepala_sekolah: 'Kepala Sekolah',
+			admin: 'Admin'
+		};
+		const roles: string[] =
+			savedRoles.length > 0
+				? savedRoles.map((r) => roleLabel[r] ?? r)
+				: ((): string[] => {
+						const list: string[] = [];
+						if (
+							row.type === 'kepala_sekolah' ||
+							(row.pegawaiId && kepalaPegawaiIds.has(row.pegawaiId))
+						) {
+							list.push('Kepala Sekolah');
+						}
+						if (row.type === 'admin') {
+							list.push('Admin');
+						}
+						if (row.type === 'user' || row.type === 'wali_kelas') {
+							list.push('Guru');
+						}
+						if (row.operatorLevel === 'admin') list.push('Admin');
+						else if (row.operatorLevel === 'kepala_sekolah') list.push('Kepala Sekolah');
+						return list;
+					})();
 		if (row.pegawaiId) {
 			const kelasWali = waliKelasByPegawai.get(row.pegawaiId) ?? [];
 			for (const nama of kelasWali) {

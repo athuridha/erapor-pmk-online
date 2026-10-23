@@ -25,6 +25,7 @@ import {
 	writeLauncherDataRootOverride
 } from '$lib/server/storage-settings';
 import { dataRoot, soundsDir, uploadsDir } from '$lib/server/data-dirs';
+import { isAdminUser, isFullAdmin } from '../pengguna/permissions';
 import { validatePasswordStrength } from '$lib/server/password-policy';
 import { isBukuTamuPasskeySet, setBukuTamuPasskey } from '$lib/server/buku-tamu-pass';
 import {
@@ -38,7 +39,7 @@ import {
 	saveUserAiSettings
 } from '$lib/server/ai';
 import path from 'node:path';
-import { isAdminUser, isAuthorizedUser } from '../pengguna/permissions';
+import { isAuthorizedUser } from '../pengguna/permissions';
 
 interface AddressEntry {
 	name: string;
@@ -113,8 +114,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		addresses.push(hostWithPort);
 	}
 
-	const isAdmin = locals.user?.type === 'admin';
-	const isAdminOrKepalaSekolah = isAdmin || locals.user?.type === 'kepala_sekolah';
+	const isAdmin = isFullAdmin(locals.user);
+	const isAdminOrKepalaSekolah = isAdminUser(locals.user);
 	const storage = isAdmin ? await getStorageInfo() : undefined;
 
 	const forcePasswordChange =
@@ -280,7 +281,7 @@ export const actions: Actions = {
 		return { message: 'Username berhasil diperbarui.' };
 	},
 	'update-storage-location': async ({ request, locals }) => {
-		if (locals.user?.type !== 'admin') {
+		if (!isFullAdmin(locals.user)) {
 			return fail(403, { message: 'Hanya admin yang dapat mengubah lokasi data.' });
 		}
 
@@ -380,7 +381,7 @@ export const actions: Actions = {
 		};
 	},
 	'buku-tamu-passkey': async ({ request, locals }) => {
-		if (locals.user?.type !== 'admin' && locals.user?.type !== 'kepala_sekolah') {
+		if (!isAdminUser(locals.user)) {
 			return fail(403, {
 				message: 'Hanya admin/kepala sekolah yang dapat mengatur passkey buku tamu.'
 			});
@@ -408,7 +409,7 @@ export const actions: Actions = {
 		return { message: 'Passkey buku tamu berhasil disimpan.' };
 	},
 	'buku-tamu-passkey-clear': async ({ locals }) => {
-		if (locals.user?.type !== 'admin' && locals.user?.type !== 'kepala_sekolah') {
+		if (!isAdminUser(locals.user)) {
 			return fail(403, {
 				message: 'Hanya admin/kepala sekolah yang dapat menonaktifkan passkey buku tamu.'
 			});
@@ -422,7 +423,7 @@ export const actions: Actions = {
 		return { message: 'Passkey buku tamu berhasil dinonaktifkan.' };
 	},
 	'save-gemini-key': async ({ request, locals }) => {
-		if (locals.user?.type !== 'admin' && locals.user?.type !== 'kepala_sekolah') {
+		if (!isAdminUser(locals.user)) {
 			return fail(403, {
 				message: 'Hanya admin/kepala sekolah yang dapat mengatur kunci API.'
 			});
@@ -447,7 +448,7 @@ export const actions: Actions = {
 		return { message: 'Kunci API berhasil disimpan.' };
 	},
 	'clear-gemini-key': async ({ locals }) => {
-		if (locals.user?.type !== 'admin' && locals.user?.type !== 'kepala_sekolah') {
+		if (!isAdminUser(locals.user)) {
 			return fail(403, {
 				message: 'Hanya admin/kepala sekolah yang dapat mengatur kunci API.'
 			});

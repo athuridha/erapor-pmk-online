@@ -5,6 +5,7 @@
 	type JenisImpor
 } from '$lib/admin/impor-nilai.server';
 import { fail } from '@sveltejs/kit';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 export const load = async ({ locals, url }) => {
 	const meta: PageMeta = { title: 'Impor Nilai dari Excel' };
@@ -14,7 +15,7 @@ export const load = async ({ locals, url }) => {
 	if (!sekolahId) {
 		return { meta, daftarKelas: [], jenis: 'sumatif' as JenisImpor, preview: null };
 	}
-	if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+	if (!user || !isAdminUser(user)) {
 		return { meta, daftarKelas: [], jenis: 'sumatif' as JenisImpor, preview: null };
 	}
 
@@ -54,7 +55,7 @@ export const actions = {
 		const sekolahId = locals.sekolah?.id;
 		if (!sekolahId) return fail(401, { fail: 'Sekolah tidak ditemukan.' });
 		const user = locals.user;
-		if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+		if (!user || !isAdminUser(user)) {
 			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa mengimpor nilai.' });
 		}
 		const formData = await request.formData();

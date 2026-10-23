@@ -12,11 +12,12 @@
 	import AiKeyCard from '$lib/components/settings/ai-key-card.svelte';
 	import UpdateModal from '$lib/components/settings/update-modal.svelte';
 	import type { PageData } from './$types';
+	import { isAdminUser, isFullAdmin } from '../pengguna/permissions';
 
 	const { data } = $props<{ data: PageData }>();
 
 	let user = $derived(page.data.user);
-	const isAdmin = $derived(user?.type === 'admin' || user?.type === 'kepala_sekolah');
+	const isAdmin = $derived(isAdminUser(user));
 	const isGuru = $derived(
 		user?.type === 'user' || user?.type === 'wali_kelas' || user?.type === 'wali_asuh'
 	);
@@ -68,7 +69,7 @@
 	<ChangePasswordCard onsuccess={handlePasswordSuccess} />
 </div>
 
-{#if user?.type === 'admin' && data.storage}
+{#if isFullAdmin(user) && data.storage}
 	<div class="mt-4">
 		<StorageLocationCard storage={data.storage} />
 	</div>

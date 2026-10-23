@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '$lib/components/icon.svelte';
+	import KelasKontenPicker from '$lib/components/kelas-konten-picker.svelte';
 	import { autoSubmit, searchQueryMarker } from '$lib/utils';
 	import { onDestroy } from 'svelte';
 
@@ -16,6 +17,7 @@
 		search: string | null;
 	};
 	type PageData = {
+		kelasKontenAktif?: { id: number; nama: string; fase: string | null } | null;
 		mapelList: Array<{ value: string; nama: string }>;
 		selectedMapelValue: string | null;
 		daftarMurid: Array<{
@@ -61,7 +63,7 @@
 	const pages = $derived.by(() => Array.from({ length: totalPages }, (_, index) => index + 1));
 
 	const kelasAktifLabel = $derived.by(() => {
-		const kelas = page.data.kelasAktif ?? null;
+		const kelas = data.kelasKontenAktif ?? page.data.kelasAktif ?? null;
 		if (!kelas) return null;
 		return kelas.fase ? `${kelas.nama} - ${kelas.fase}` : kelas.nama;
 	});
@@ -205,10 +207,11 @@
 				<p class="text-base-content/70 text-sm">Kelas aktif: {kelasAktifLabel}</p>
 			{:else}
 				<p class="text-base-content/60 text-sm">
-					Pilih kelas di navbar untuk melihat mata pelajaran intrakurikuler.
+					Pilih kelas di navbar atau pemilih kelas untuk melihat mata pelajaran intrakurikuler.
 				</p>
 			{/if}
 		</div>
+		<KelasKontenPicker currentId={data.kelasKontenAktif?.id ?? null} />
 	</div>
 
 	<div class="flex flex-col items-center gap-2 sm:flex-row">

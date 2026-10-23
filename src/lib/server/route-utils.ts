@@ -2,6 +2,7 @@ import db from '$lib/server/db';
 import { resolveSekolahAcademicContext, type AcademicContext } from '$lib/server/db/academic';
 import { tableMurid, tablePegawai, tableAuthUserKelas, tableKelas } from '$lib/server/db/schema';
 import { and, asc, eq, inArray } from 'drizzle-orm';
+import { isAdminUser } from '../../routes/pengguna/permissions';
 
 export interface KelasContext {
 	sekolahId: number | null;
@@ -66,7 +67,7 @@ export async function getKelasContextForUser(
 	};
 	const kelasId = student.kelasId;
 
-	if (user.type === 'admin' || user.type === 'kepala_sekolah') return { hasAccess: true };
+	if (isAdminUser(user)) return { hasAccess: true };
 	if ((user.type === 'wali_kelas' || user.type === 'user') && user.pegawaiId) {
 		// Guru merangkap wali kelas (type 'user') wajib dicek sama seperti wali lama.
 		const kelasRow = await db.query.tableKelas.findFirst({

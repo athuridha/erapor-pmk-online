@@ -5,6 +5,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { parseTingkat, lastGradeOfFase, isGraduatingFase, isGraduatingGrade } from '$lib/tingkat';
 import { isWaliKelasAccount } from '$lib/server/kelas-akses';
+import { isAdminUser } from '../../pengguna/permissions';
 
 const PER_PAGE = 20;
 const TABLE_MISSING_MESSAGE =
@@ -184,9 +185,7 @@ export const actions = {
 
 		// Permission check: admin/kepala_sekolah, atau wali kelas — termasuk guru
 		// merangkap wali kelas (tipe 'user' dengan relasi waliKelasId).
-		const saveUserType = (locals.user as { type?: string } | null)?.type;
-		const saveIsStaff = saveUserType === 'admin' || saveUserType === 'kepala_sekolah';
-		if (!saveIsStaff && !(await isWaliKelasAccount(locals.user))) {
+		if (!isAdminUser(locals.user) && !(await isWaliKelasAccount(locals.user))) {
 			return fail(403, {
 				fail: 'Anda tidak memiliki izin untuk menyimpan keputusan kenaikan kelas.'
 			});
@@ -218,6 +217,7 @@ export const actions = {
 		}
 
 		// Wali kelas (tipe legacy maupun guru-wali) diverifikasi terhadap kelas semua murid terpilih.
+		const saveIsStaff = isAdminUser(locals.user);
 		if (!saveIsStaff) {
 			const pegawaiId = (locals.user as { pegawaiId?: number | null }).pegawaiId;
 			if (!pegawaiId) {

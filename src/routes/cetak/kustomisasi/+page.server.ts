@@ -11,12 +11,13 @@ import {
 } from '$lib/server/cetak/customization';
 import { composeAlamat, fallbackTempat, formatTanggal } from '$lib/server/pdf/preview-utils';
 import { getKopSuratLines, nauganHeaderByKey, type NauganKey } from '$lib/statics';
+import { isAdminUser } from '../../pengguna/permissions';
 
 const MAKS_UPLOAD_GAMBAR = 1_500_000; // 1,5 MB (data URL disimpan di app_meta)
 
 function pastikanAdmin(loci: App.Locals) {
 	const user = loci.user as { type?: string } | null;
-	if (!user || (user.type !== 'admin' && user.type !== 'kepala_sekolah')) {
+	if (!user || !isAdminUser(user)) {
 		throw error(403, 'Kustomisasi cetak hanya bisa diubah admin dan kepala sekolah.');
 	}
 }

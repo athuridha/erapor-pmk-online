@@ -16,13 +16,14 @@ import { ensurePresensiGuruSchema } from '$lib/server/db/ensure-presensi-guru';
 import { resolveSekolahAcademicContext } from '$lib/server/db/academic';
 import { deleteSignatureFile, saveSignatureFile } from '$lib/server/ttd';
 import { isValidDate } from '$lib/server/absen/utils';
+import { isAdminUser } from '../../../pengguna/permissions';
 
 const ALLOWED_STATUS: PresensiGuruStatusValue[] = ['hadir', 'izin', 'sakit', 'dinas_luar', 'cuti'];
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) throw redirect(303, '/login');
 
-	if (locals.user.type !== 'admin' && locals.user.type !== 'kepala_sekolah') {
+	if (!isAdminUser(locals.user)) {
 		throw error(403, { message: 'Hanya admin yang dapat mengubah presensi guru.' });
 	}
 
