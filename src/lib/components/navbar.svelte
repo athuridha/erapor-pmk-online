@@ -415,9 +415,9 @@
 						{/if}
 
 						<li class="mt-1">
-							<a class="btn btn-sm rounded-none shadow-none" href="/pengaturan">
-								<Icon name="gear" />
-								Pengaturan
+							<a class="btn btn-sm rounded-none shadow-none" href="/tentang">
+								<Icon name="info" />
+								Tentang Aplikasi
 							</a>
 						</li>
 						{#if user}{/if}

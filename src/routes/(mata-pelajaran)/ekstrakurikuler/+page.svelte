@@ -15,6 +15,7 @@
 		data: {
 			kelasId: number | null;
 			tableReady: boolean;
+			lingkupUmum: boolean;
 			ekstrakurikuler: Ekstrakurikuler[];
 		};
 	} = $props();
@@ -35,6 +36,7 @@
 	let editingNamaInput = $state('');
 	let editingInputRef = $state<HTMLInputElement | null>(null);
 	let editingSubmitting = $state(false);
+	let addLingkup = $state<'kelas' | 'umum'>('kelas');
 
 	const totalData = $derived.by(() => data.ekstrakurikuler.length);
 
@@ -45,12 +47,21 @@
 	});
 	const anySelected = $derived.by(() => selectedIds.length > 0);
 	const allSelected = $derived.by(() => totalData > 0 && selectedIds.length === totalData);
-	const canManage = $derived.by(() => data.tableReady && !!data.kelasId);
+	// Admin/kepala sekolah boleh mengelola ekstrakurikuler umum tanpa kelas aktif.
+	const bolehUmum = $derived.by(() => {
+		const t = (page.data.user as { type?: string } | null)?.type;
+		return t === 'admin' || t === 'kepala_sekolah';
+	});
+	const canManage = $derived.by(
+		() => data.tableReady && (!!data.kelasId || (data.lingkupUmum && bolehUmum))
+	);
 	// Restrict editing for wali_asuh dan guru mapel murni; guru merangkap wali
 	// kelas boleh mengelola di kelas yang diwalikan.
 	const canEdit = $derived.by(() => {
 		const u = page.data.user as
 			{ type?: string; kelasId?: number | null; ownKelasIds?: number[] | null } | null | undefined;
+		// Mode Semua Kelas: hanya admin/kepala sekolah yang boleh mengubah data umum.
+		if (data.lingkupUmum) return bolehUmum;
 		if (u?.type === 'wali_asuh') return false;
 		if (u?.type === 'user') {
 			return data.kelasId != null && (u.ownKelasIds ?? []).includes(data.kelasId);
@@ -63,15 +74,20 @@
 		return true;
 	});
 	const addSaveDisabled = $derived.by(
-		() => addSubmitting || !addNamaInput.trim() || !data.kelasId || !data.tableReady
+		() =>
+			addSubmitting ||
+			!addNamaInput.trim() ||
+			!canManage ||
+			!canEdit ||
+			(addLingkup === 'kelas' && !data.kelasId)
 	);
 	const editingSaveDisabled = $derived.by(
 		() =>
 			editingRowId === null ||
 			editingSubmitting ||
 			!editingNamaInput.trim() ||
-			!data.kelasId ||
-			!data.tableReady
+			!canManage ||
+			!canEdit
 	);
 	const bulkDeleteDisabled = $derived.by(() => !anySelected || !canManage);
 	const isDeleteModalOpen = $derived.by(() => deleteDialogState !== null);
@@ -199,13 +215,12 @@
 	function toggleAddRow() {
 		if (!canManage) return;
 		if (addRowVisible) {
-			addRowVisible = false;
-			addNamaInput = '';
-			addSubmitting = false;
+			cancelAddRow();
 			return;
 		}
 		cancelEditRow();
 		addNamaInput = '';
+		addLingkup = data.lingkupUmum ? 'umum' : 'kelas';
 		addRowVisible = true;
 	}
 
@@ -213,6 +228,7 @@
 		addRowVisible = false;
 		addNamaInput = '';
 		addSubmitting = false;
+		addLingkup = data.lingkupUmum ? 'umum' : 'kelas';
 	}
 
 	function cancelEditRow() {
@@ -247,7 +263,11 @@
 	<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
 		<div>
 			<h2 class="text-xl font-bold">Daftar Ekstrakurikuler</h2>
-			{#if kelasAktifLabel}
+			{#if data.lingkupUmum}
+				<p class="text-base-content/70 text-sm">
+					Mode Semua Kelas — kelola ekstrakurikuler umum yang berlaku untuk semua kelas.
+				</p>
+			{:else if kelasAktifLabel}
 				<p class="text-base-content/70 text-sm">Kelas aktif: {kelasAktifLabel}</p>
 			{:else}
 				<p class="text-base-content/60 text-sm">
@@ -306,6 +326,7 @@
 									showModal({
 										title: 'Impor Ekstrakurikuler',
 										body: ImportEkstraDialog,
+										bodyProps: { lingkupUmum: data.lingkupUmum },
 										dismissible: true
 									})}
 							>
@@ -371,7 +392,7 @@
 		</div>
 	</div>
 
-	{#if !data.kelasId}
+	{#if !data.kelasId && !data.lingkupUmum}
 		<div
 			class="alert border-warning/60 bg-warning/10 text-warning-content mt-6 border border-dashed"
 		>
@@ -432,7 +453,41 @@
 								}}
 							>
 								{#snippet children({ submitting, invalid })}
-									<input name="kelasId" value={data.kelasId ?? ''} hidden />
+									{#if !data.lingkupUmum}
+										<input name="kelasId" value={data.kelasId ?? ''} hidden />
+									{/if}
+									{#if bolehUmum}
+										<label
+											class="mb-2 flex w-fit items-center gap-2 text-sm"
+											title="Ekstrakurikuler umum berlaku untuk semua kelas"
+										>
+											{#if data.lingkupUmum}
+												<!-- Checkbox terkunci: kirim nilainya lewat hidden input
+												karena input disabled tidak ikut terkirim. -->
+												<input type="hidden" name="lingkup" value="umum" />
+											{/if}
+											<input
+												type="checkbox"
+												class="checkbox checkbox-sm"
+												name={data.lingkupUmum ? undefined : 'lingkup'}
+												value="umum"
+												checked={data.lingkupUmum || addLingkup === 'umum'}
+												onchange={(event) => {
+													const el = event.currentTarget as HTMLInputElement;
+													if (data.lingkupUmum) {
+														el.checked = true;
+														return;
+													}
+													addLingkup = el.checked ? 'umum' : 'kelas';
+												}}
+											/>
+											<span>
+												Berlaku untuk semua kelas
+												{#if data.lingkupUmum}
+													<span class="text-base-content/60">(mode Semua Kelas)</span>{/if}
+											</span>
+										</label>
+									{/if}
 									<label class="flex flex-col gap-2" aria-busy={submitting}>
 										<input
 											bind:this={addInputRef}
@@ -509,7 +564,9 @@
 									}}
 								>
 									{#snippet children({ submitting, invalid })}
-										<input name="kelasId" value={data.kelasId ?? ''} hidden />
+										{#if !item.semuaKelas && !data.lingkupUmum}
+											<input name="kelasId" value={data.kelasId ?? ''} hidden />
+										{/if}
 										<input name="id" value={item.id} hidden />
 										<label class="flex flex-col gap-2" aria-busy={submitting}>
 											<input

@@ -6,9 +6,10 @@ import {
 	tableKelas
 } from '$lib/server/db/schema';
 import { fail } from '@sveltejs/kit';
-import { and, asc, eq, inArray, or } from 'drizzle-orm';
+import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import { readBufferToAoA } from '$lib/utils/excel.js';
 import { cookieNames } from '$lib/utils';
+import { isAdminUser } from '../../pengguna/permissions';
 
 const TABLE_MISSING_MESSAGE =
 	'Tabel ekstrakurikuler belum tersedia. Jalankan "pnpm db:push" untuk menerapkan migrasi terbaru.';
@@ -30,10 +31,24 @@ function isTableMissingError(error: unknown) {
 	);
 }
 
-export async function load({ depends, parent }) {
+/**
+ * Baca cookie kelas aktif dengan fallback nilai `semua`: pada mode Semua Kelas
+ * cookie bernilai `semua` (bukan angka) sehingga dianggap null oleh Number().
+ */
+function kelasIdDariCookie(nilai: string | undefined | null) {
+	if (!nilai || nilai === 'semua') return null;
+	const parsed = Number(nilai);
+	return Number.isFinite(parsed) && Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+export async function load({ depends, parent, locals }) {
 	depends('app:ekstrakurikuler');
 	const { kelasAktif } = await parent();
 	const kelasId = kelasAktif?.id ?? null;
+
+	// Mode "Semua Kelas" (admin/kepala sekolah): kelola ekstrakurikuler umum
+	// yang berlaku untuk semua kelas tanpa memilih kelas tertentu.
+	const umumMode = !kelasId && isAdminUser(locals.user ?? undefined);
 
 	let ekstrakurikulerRaw: Awaited<ReturnType<typeof db.query.tableEkstrakurikuler.findMany>> = [];
 	let tableReady = true;
@@ -55,11 +70,40 @@ export async function load({ depends, parent }) {
 				throw error;
 			}
 		}
+	} else if (umumMode) {
+		const sekolahId = locals.sekolah?.id ?? null;
+		if (sekolahId) {
+			try {
+				const kelasIds = (
+					await db
+						.select({ id: tableKelas.id })
+						.from(tableKelas)
+						.where(eq(tableKelas.sekolahId, sekolahId))
+				).map((row) => row.id);
+				if (kelasIds.length) {
+					ekstrakurikulerRaw = await db.query.tableEkstrakurikuler.findMany({
+						where: and(
+							inArray(tableEkstrakurikuler.kelasId, kelasIds),
+							eq(tableEkstrakurikuler.semuaKelas, 1)
+						),
+						orderBy: asc(tableEkstrakurikuler.createdAt)
+					});
+				}
+			} catch (error) {
+				if (isTableMissingError(error)) {
+					tableReady = false;
+					ekstrakurikulerRaw = [];
+				} else {
+					throw error;
+				}
+			}
+		}
 	}
 
 	return {
 		kelasId,
 		tableReady,
+		lingkupUmum: umumMode,
 		ekstrakurikuler: ekstrakurikulerRaw
 	};
 }
@@ -68,7 +112,64 @@ export const actions = {
 	add: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const kelasIdRaw = formData.get('kelasId');
+		const lingkupUmum = formData.get('lingkup')?.toString() === 'umum';
 		const nama = formData.get('nama')?.toString().trim() ?? '';
+
+		if (!nama) {
+			return fail(400, { fail: 'Nama ekstrakurikuler wajib diisi' });
+		}
+
+		// Lingkup umum: berlaku untuk semua kelas, hanya admin/kepala sekolah.
+		if (lingkupUmum) {
+			if (!isAdminUser(locals.user ?? undefined)) {
+				return fail(403, {
+					fail: 'Hanya admin/kepala sekolah yang bisa menambah ekstrakurikuler umum.'
+				});
+			}
+			const sekolahId = locals.sekolah?.id;
+			if (!sekolahId) {
+				return fail(400, { fail: 'Sekolah aktif tidak ditemukan' });
+			}
+			try {
+				const bentrok = await db
+					.select({ id: tableEkstrakurikuler.id })
+					.from(tableEkstrakurikuler)
+					.innerJoin(tableKelas, eq(tableEkstrakurikuler.kelasId, tableKelas.id))
+					.where(
+						and(
+							eq(tableKelas.sekolahId, sekolahId),
+							eq(tableEkstrakurikuler.semuaKelas, 1),
+							sql`lower(trim(${tableEkstrakurikuler.nama})) = ${nama.toLowerCase()}`
+						)
+					)
+					.limit(1);
+				if (bentrok.length) {
+					return fail(400, { fail: 'Ekstrakurikuler umum dengan nama itu sudah ada.' });
+				}
+				// Kelas acuan: kelas pertama sekolah (ekskul umum tetap butuh kelas_id).
+				const [pertama] = await db
+					.select({ id: tableKelas.id })
+					.from(tableKelas)
+					.where(eq(tableKelas.sekolahId, sekolahId))
+					.orderBy(asc(tableKelas.nama))
+					.limit(1);
+				if (!pertama) {
+					return fail(400, { fail: 'Belum ada kelas di sekolah ini.' });
+				}
+				await db
+					.insert(tableEkstrakurikuler)
+					.values({ kelasId: pertama.id, nama, semuaKelas: 1 });
+				return { message: 'Ekstrakurikuler umum ditambahkan (berlaku untuk semua kelas)' };
+			} catch (error) {
+				if (isTableMissingError(error)) {
+					return fail(500, { fail: TABLE_MISSING_MESSAGE });
+				}
+				if (isDuplicateNameError(error)) {
+					return fail(400, { fail: 'Nama ekstrakurikuler sudah digunakan' });
+				}
+				throw error;
+			}
+		}
 
 		if (!kelasIdRaw) {
 			return fail(400, { fail: 'Kelas aktif tidak ditemukan' });
@@ -97,12 +198,22 @@ export const actions = {
 			}
 		}
 
-		if (!nama) {
-			return fail(400, { fail: 'Nama ekstrakurikuler wajib diisi' });
-		}
-
 		try {
-			await db.insert(tableEkstrakurikuler).values({ kelasId, nama });
+			const bentrok = await db
+				.select({ id: tableEkstrakurikuler.id })
+				.from(tableEkstrakurikuler)
+				.where(
+					and(
+						eq(tableEkstrakurikuler.kelasId, kelasId),
+						eq(tableEkstrakurikuler.semuaKelas, 0),
+						sql`lower(trim(${tableEkstrakurikuler.nama})) = ${nama.toLowerCase()}`
+					)
+				)
+				.limit(1);
+			if (bentrok.length) {
+				return fail(400, { fail: 'Nama ekstrakurikuler sudah digunakan di kelas ini' });
+			}
+			await db.insert(tableEkstrakurikuler).values({ kelasId, nama, semuaKelas: 0 });
 			return { message: 'Ekstrakurikuler berhasil ditambahkan' };
 		} catch (error) {
 			if (isTableMissingError(error)) {
@@ -130,8 +241,34 @@ export const actions = {
 			return fail(400, { fail: 'ID ekstrakurikuler tidak valid' });
 		}
 
+		// Tanpa kelasId (mode Semua Kelas): hanya admin/kepala sekolah, dan hanya
+		// baris ekstrakurikuler umum yang boleh diubah.
 		if (!kelasIdRaw) {
-			return fail(400, { fail: 'Kelas aktif tidak ditemukan' });
+			if (!isAdminUser(locals.user ?? undefined)) {
+				return fail(403, { fail: 'Pilih kelas terlebih dahulu.' });
+			}
+			if (!nama) {
+				return fail(400, { fail: 'Nama ekstrakurikuler wajib diisi' });
+			}
+			try {
+				const updated = await db
+					.update(tableEkstrakurikuler)
+					.set({ nama, updatedAt: new Date().toISOString() })
+					.where(and(eq(tableEkstrakurikuler.id, id), eq(tableEkstrakurikuler.semuaKelas, 1)))
+					.returning({ id: tableEkstrakurikuler.id });
+				if (!updated.length) {
+					return fail(404, { fail: 'Ekstrakurikuler tidak ditemukan atau sudah dihapus' });
+				}
+				return { message: 'Ekstrakurikuler berhasil diperbarui', id: updated[0].id };
+			} catch (error) {
+				if (isTableMissingError(error)) {
+					return fail(500, { fail: TABLE_MISSING_MESSAGE });
+				}
+				if (isDuplicateNameError(error)) {
+					return fail(400, { fail: 'Nama ekstrakurikuler sudah digunakan' });
+				}
+				throw error;
+			}
 		}
 
 		const kelasId = Number(kelasIdRaw);
@@ -203,19 +340,37 @@ export const actions = {
 				columns: { id: true, kelasId: true, semuaKelas: true },
 				where: inArray(tableEkstrakurikuler.id, ids)
 			});
-			// Ekstrakurikuler umum berlaku untuk semua kelas, jadi dihapus lewat Master Data.
-			const bolehHapus = rows.filter((row) => !row.semuaKelas).map((row) => row.id);
+
+			// Scope sekolah: semua baris harus milik kelas di sekolah aktif.
+			const sekolahId = locals.sekolah?.id;
+			const kelasSekolah = sekolahId
+				? await db
+						.select({ id: tableKelas.id })
+						.from(tableKelas)
+						.where(eq(tableKelas.sekolahId, sekolahId))
+				: [];
+			const kelasSekolahIds = new Set(kelasSekolah.map((row) => row.id));
+
+			const admin = isAdminUser(locals.user ?? undefined);
+			// Ekstrakurikuler umum hanya bisa dihapus admin/kepala sekolah;
+			// ekstrakurikuler khusus kelas tetap boleh lewat sini.
+			const bolehHapus = rows
+				.filter((row) => (row.semuaKelas ? admin : true))
+				.filter((row) => kelasSekolahIds.has(row.kelasId))
+				.map((row) => row.id);
 			const dilewati = rows.length - bolehHapus.length;
 			if (!bolehHapus.length) {
 				return fail(400, {
-					fail: 'Ekstrakurikuler umum tidak bisa dihapus dari sini. Hapus lewat Master Data.'
+					fail: admin
+						? 'Data tidak ditemukan di sekolah ini.'
+						: 'Ekstrakurikuler umum hanya bisa dihapus admin/kepala sekolah.'
 				});
 			}
 
 			// wali kelas (termasuk guru merangkap wali) hanya boleh menghapus
 			// data di kelas yang dia wali
 			const deleteUser = locals.user as { type?: string; pegawaiId?: number | null } | null;
-			if (await isWaliKelasAccount(deleteUser)) {
+			if (!admin && (await isWaliKelasAccount(deleteUser))) {
 				const ownedIds = await ownedKelasIdSet(deleteUser);
 				const rowsOwned = rows.filter((row) => bolehHapus.includes(row.id));
 				if (rowsOwned.some((r) => !ownedIds.has(r.kelasId))) {
@@ -226,7 +381,7 @@ export const actions = {
 			}
 			await db.delete(tableEkstrakurikuler).where(inArray(tableEkstrakurikuler.id, bolehHapus));
 			return {
-				message: `${bolehHapus.length} ekstrakurikuler berhasil dihapus${dilewati ? `, ${dilewati} ekstrakurikuler umum dilewati` : ''}`
+				message: `${bolehHapus.length} ekstrakurikuler berhasil dihapus${dilewati ? `, ${dilewati} dilewati karena tidak berhak` : ''}`
 			};
 		} catch (error) {
 			if (isTableMissingError(error)) {
@@ -237,17 +392,28 @@ export const actions = {
 	},
 
 	import_ekstra: async ({ request, cookies, locals }) => {
-		const kelasIdCookie = cookies.get(cookieNames.ACTIVE_KELAS_ID) || null;
-		const kelasId = kelasIdCookie ? Number(kelasIdCookie) : null;
-		if (!kelasId || !Number.isFinite(kelasId)) {
+		// Mode Semua Kelas: cookie bernilai `semua` dianggap tanpa kelas. Admin/
+		// kepala sekolah boleh mengimpor sebagai ekstrakurikuler umum.
+		const kelasId = kelasIdDariCookie(cookies.get(cookieNames.ACTIVE_KELAS_ID));
+		const importUser = locals.user as { type?: string; pegawaiId?: number | null } | null;
+		const admin = isAdminUser(importUser);
+		// Mode Semua Kelas (tanpa kelas aktif): hanya admin/kepala sekolah; hasil
+		// impor menjadi ekstrakurikuler umum.
+		const lingkupUmum = !kelasId;
+		if (lingkupUmum && !admin) {
 			return fail(400, { fail: 'Pilih kelas aktif terlebih dahulu.' });
 		}
-
-		// Server-side permission: wali_kelas (termasuk guru merangkap wali)
-		// may only import for their own kelas
-		const importUser = locals.user as { type?: string; pegawaiId?: number | null } | null;
-		if ((await isWaliKelasAccount(importUser)) && !(await isWaliOfKelas(importUser, kelasId))) {
+		if (
+			kelasId &&
+			(await isWaliKelasAccount(importUser)) &&
+			!(await isWaliOfKelas(importUser, kelasId))
+		) {
 			return fail(403, { fail: 'Anda tidak memiliki izin untuk mengimpor di kelas ini.' });
+		}
+
+		const sekolahId = locals.sekolah?.id ?? null;
+		if (!sekolahId) {
+			return fail(400, { fail: 'Sekolah aktif tidak ditemukan' });
 		}
 
 		const MAX_IMPORT_FILE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -346,11 +512,36 @@ export const actions = {
 		let insertedTujuan = 0;
 		let skippedTujuan = 0;
 
+		// Kelas milik sekolah: kandidat ekstra umum untuk cek duplikat.
+		const kelasSekolahIds = lingkupUmum
+			? (
+					await db
+						.select({ id: tableKelas.id })
+						.from(tableKelas)
+						.where(eq(tableKelas.sekolahId, sekolahId))
+						.orderBy(asc(tableKelas.nama))
+				).map((row) => row.id)
+			: [];
+		// Kelas acuan penyimpanan: ekstra umum memakai kelas pertama sekolah
+		// (semuaKelas=1 tetap butuh kelas_id), lingkup kelas memakai kelas aktif.
+		const kelasAcuan = lingkupUmum ? (kelasSekolahIds[0] ?? null) : kelasId;
+		if (kelasAcuan == null) {
+			return fail(400, { fail: 'Belum ada kelas di sekolah ini.' });
+		}
+
+
 		try {
 			await db.transaction(async (tx) => {
-				// fetch existing ekstrakurikuler for kelas (case-insensitive matching)
+				// Kandidat ekstra yang sudah ada: lingkup umum mencakup seluruh ekstra
+				// umum sekolah, lingkup kelas hanya ekstra kelas aktif.
 				const existingEkstra = await tx.query.tableEkstrakurikuler.findMany({
-					where: eq(tableEkstrakurikuler.kelasId, kelasId)
+					where: lingkupUmum
+						? and(
+								inArray(tableEkstrakurikuler.kelasId, kelasSekolahIds),
+								eq(tableEkstrakurikuler.semuaKelas, 1)
+							)
+						: eq(tableEkstrakurikuler.kelasId, kelasAcuan),
+					columns: { id: true, nama: true }
 				});
 
 				const ekstraByName = new Map<string, number>();
@@ -363,7 +554,11 @@ export const actions = {
 						// create the ekstrakurikuler automatically
 						const insertRes = await tx
 							.insert(tableEkstrakurikuler)
-							.values({ nama: ekstraName, kelasId })
+							.values({
+								nama: ekstraName,
+								kelasId: kelasAcuan,
+								semuaKelas: lingkupUmum ? 1 : 0
+							})
 							.returning({ id: tableEkstrakurikuler.id });
 						ekstraId = insertRes?.[0]?.id ?? null;
 						if (ekstraId) {
@@ -411,7 +606,9 @@ export const actions = {
 			}
 			if (isDuplicateNameError(error)) {
 				return fail(400, {
-					fail: 'Nama ekstrakurikuler sudah digunakan di kelas ini. Periksa data yang diimpor.'
+					fail: lingkupUmum
+						? 'Nama ekstrakurikuler sudah digunakan sebagai ekstra umum. Periksa data yang diimpor.'
+						: 'Nama ekstrakurikuler sudah digunakan di kelas ini. Periksa data yang diimpor.'
 				});
 			}
 			throw error;

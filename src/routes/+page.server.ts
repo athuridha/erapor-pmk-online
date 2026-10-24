@@ -17,7 +17,7 @@ import {
 	tablePresensiSettings,
 	tableUserFavorites
 } from '$lib/server/db/schema';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { getRingkasanKelas } from '$lib/server/statistik-kelas';
 
 const AGAMA_BASE_SUBJECT = 'Pendidikan Agama dan Budi Pekerti';
@@ -162,7 +162,11 @@ export async function load(event) {
 
 		const ekstrakurikulerRows = await db.query.tableEkstrakurikuler.findMany({
 			columns: { id: true },
-			where: eq(tableEkstrakurikuler.kelasId, kelasAktifId)
+			// Ekstra umum (semuaKelas=1) ikut dihitung untuk setiap kelas.
+			where: or(
+				eq(tableEkstrakurikuler.kelasId, kelasAktifId),
+				eq(tableEkstrakurikuler.semuaKelas, 1)
+			)
 		});
 		statistikDashboard.ekstrakurikuler.total = ekstrakurikulerRows.length;
 

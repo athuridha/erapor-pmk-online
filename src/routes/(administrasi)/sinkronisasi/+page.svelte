@@ -204,6 +204,44 @@
 </script>
 
 <div class="space-y-6 max-w-5xl mx-auto">
+	<!-- Surface entry for the local Dapodik WebService integration. -->
+	<div
+		class="card bg-base-100 rounded-2xl border border-emerald-100 dark:border-base-200 shadow-sm p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+	>
+		<div class="flex items-start gap-3 min-w-0">
+			<span
+				class="w-10 h-10 shrink-0 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"
+			>
+				<Icon name="info" class="w-5 h-5" />
+			</span>
+			<div class="min-w-0 space-y-1">
+				<h2
+					class="text-base font-bold text-emerald-950 dark:text-emerald-300 flex items-center gap-2"
+				>
+					Tarik Data dari Dapodik
+				</h2>
+				<p class="text-xs text-base-content/70 leading-relaxed">
+					Sinkronkan sekolah, pegawai, kelas, murid, dan mata pelajaran langsung dari WebService
+					Dapodik lokal. Setelah nilai selesai diisi, kirim kembali ke Dapodik.
+				</p>
+				<a
+					href="/nilai-akhir/kirim-dapodik"
+					class="link link-hover text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1"
+				>
+					<Icon name="export" class="w-3.5 h-3.5" />
+					Kirim Nilai ke Dapodik
+				</a>
+			</div>
+		</div>
+		<a
+			href="/sekolah/form/sync-dapodik"
+			class="btn btn-primary w-full shadow-none font-bold text-sm rounded-xl flex items-center justify-center gap-2 sm:w-auto shrink-0"
+		>
+			<Icon name="download" />
+			<span>Buka Sinkronisasi Dapodik</span>
+		</a>
+	</div>
+
 	<!-- Header & Status Bar -->
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 		<div>

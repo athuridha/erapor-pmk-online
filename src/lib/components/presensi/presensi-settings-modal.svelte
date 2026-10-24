@@ -15,6 +15,20 @@
 		end: string;
 	}
 
+	interface KelasPresensiInfo {
+		hariAktif: string;
+		jamMasuk: string | null;
+		jamPulang: string | null;
+	}
+
+	interface KelasRow {
+		id: number;
+		nama: string;
+		hari: boolean[];
+		jamMasuk: string;
+		jamPulang: string;
+	}
+
 	interface Props {
 		tahunAjaranId: number | string;
 		jamMasuk?: string;
@@ -26,6 +40,8 @@
 		presensiGuruEnabled?: boolean;
 		liburNasional?: string;
 		liburSemester?: string;
+		kelasList?: Array<{ id: number; nama: string }>;
+		kelasPresensi?: Record<number, KelasPresensiInfo>;
 		onAction?: (actions: { submit: () => Promise<void>; cancel: () => void }) => void;
 	}
 
@@ -40,6 +56,8 @@
 		presensiGuruEnabled = true,
 		liburNasional = '[]',
 		liburSemester = '[]',
+		kelasList = [],
+		kelasPresensi = {},
 		onAction
 	}: Props = $props();
 
@@ -119,6 +137,49 @@
 		semesterRanges = semesterRanges.filter((_, i) => i !== index);
 	}
 
+	// Client-side copy of the Senin..Minggu day mask helpers (hari-efektif.ts is server-only).
+	function parseDayMask(mask: string | null | undefined): boolean[] {
+		const raw = mask ? mask.split(',') : [];
+		const flags = Array.from({ length: 7 }, (_, i) => (raw[i] ?? '1') !== '0');
+		if (!mask) flags[6] = false;
+		return flags;
+	}
+
+	const DAY_LABELS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+
+	// Intentional one-time form defaults from initial props.
+	// svelte-ignore state_referenced_locally
+	let kelasRows: KelasRow[] = $state(
+		kelasList.map((k) => {
+			const config = kelasPresensi[k.id];
+			return {
+				id: k.id,
+				nama: k.nama,
+				hari: parseDayMask(config?.hariAktif),
+				jamMasuk: config?.jamMasuk ?? '',
+				jamPulang: config?.jamPulang ?? ''
+			};
+		})
+	);
+
+	function toggleKelasHari(row: KelasRow, index: number) {
+		const next = [...kelasRows];
+		const i = next.findIndex((r) => r.id === row.id);
+		if (i === -1) return;
+		const hari = [...next[i].hari];
+		hari[index] = !hari[index];
+		next[i] = { ...next[i], hari };
+		kelasRows = next;
+	}
+
+	function setKelasJam(row: KelasRow, field: 'jamMasuk' | 'jamPulang', value: string) {
+		const next = [...kelasRows];
+		const i = next.findIndex((r) => r.id === row.id);
+		if (i === -1) return;
+		next[i] = { ...next[i], [field]: value };
+		kelasRows = next;
+	}
+
 	function updateSemesterRange(index: number, field: 'start' | 'end', value: string) {
 		const next = [...semesterRanges];
 		next[index] = { ...next[index], [field]: value };
@@ -149,6 +210,14 @@
 			return 'Tipe presensi Masuk Pulang/Masuk Saja hanya tersedia untuk jenis presensi Wali Kelas Saja';
 		if (!['wali_kelas_saja', 'tiap_mapel'].includes(jenisPresensiValue))
 			return 'Pilih jenis presensi';
+		for (const row of kelasRows) {
+			if (row.jamMasuk && !isValidTime(row.jamMasuk))
+				return 'Format jam masuk kelas tidak valid (HH:mm)';
+			if (row.jamPulang && !isValidTime(row.jamPulang))
+				return 'Format jam pulang kelas tidak valid (HH:mm)';
+			if (row.jamMasuk && row.jamPulang && row.jamMasuk >= row.jamPulang)
+				return 'Jam masuk kelas harus lebih awal dari jam pulang';
+		}
 		return null;
 	});
 
@@ -203,7 +272,33 @@
 			);
 			return false;
 		}
+		for (const row of kelasRows) {
+			if (row.jamMasuk && !isValidTime(row.jamMasuk)) {
+				toast(`Format jam masuk kelas ${row.nama} tidak valid (HH:mm)`, 'warning');
+				return false;
+			}
+			if (row.jamPulang && !isValidTime(row.jamPulang)) {
+				toast(`Format jam pulang kelas ${row.nama} tidak valid (HH:mm)`, 'warning');
+				return false;
+			}
+			if (row.jamMasuk && row.jamPulang && row.jamMasuk >= row.jamPulang) {
+				toast(`Jam masuk kelas ${row.nama} harus lebih awal dari jam pulang`, 'warning');
+				return false;
+			}
+		}
 		return true;
+	}
+
+	function buildKelasFormData(): FormData {
+		const formData = new FormData();
+		for (const row of kelasRows) {
+			row.hari.forEach((on, index) => {
+				if (on) formData.append(`kelas_${row.id}_hariAktif`, String(index));
+			});
+			formData.append(`kelas_${row.id}_jamMasuk`, row.jamMasuk);
+			formData.append(`kelas_${row.id}_jamPulang`, row.jamPulang);
+		}
+		return formData;
 	}
 
 	async function handleSubmit() {
@@ -241,6 +336,21 @@
 					.json()
 					.catch(() => ({ fail: 'Gagal menyimpan pengaturan presensi' }));
 				throw new Error(err.fail ?? `Error ${response.status}`);
+			}
+
+			// Per-class presensi config is a separate action when kelas data is present.
+			if (kelasRows.length > 0) {
+				const kelasResponse = await fetch('?/simpanPresensiKelas', {
+					method: 'POST',
+					body: buildKelasFormData(),
+					redirect: 'error'
+				});
+				if (!kelasResponse.ok) {
+					const err = await kelasResponse
+						.json()
+						.catch(() => ({ fail: 'Gagal menyimpan pengaturan presensi kelas' }));
+					throw new Error(err.fail ?? `Error ${kelasResponse.status}`);
+				}
 			}
 
 			hideModal();
@@ -489,6 +599,72 @@
 			<p class="text-base-content/50 text-xs">Belum ada rentang libur semester.</p>
 		{/if}
 	</div>
+
+	{#if kelasRows.length > 0}
+		<div class="flex flex-col gap-2">
+			<div class="divider divider-middle text-sm font-semibold">
+				Presensi Per Kelas (Halaman Pengaturan)
+			</div>
+			<div class="max-h-64 overflow-x-auto overflow-y-auto">
+				<table class="table table-sm">
+					<thead>
+						<tr>
+							<th class="text-sm">Kelas</th>
+							{#each DAY_LABELS as day (day)}
+								<th class="text-center text-xs">{day}</th>
+							{/each}
+							<th class="text-sm">Jam Masuk</th>
+							<th class="text-sm">Jam Pulang</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each kelasRows as row (row.id)}
+							<tr>
+								<td class="whitespace-nowrap text-sm">{row.nama}</td>
+								{#each row.hari as on, i (i)}
+									<td class="text-center">
+										<input
+											type="checkbox"
+											class="checkbox checkbox-sm"
+											checked={on}
+											onchange={() => toggleKelasHari(row, i)}
+											disabled={submitting}
+											aria-label="{row.nama} {DAY_LABELS[i]}"
+										/>
+									</td>
+								{/each}
+								<td>
+									<input
+										type="text"
+										class="input input-sm bg-base-200 dark:bg-base-300 w-20 dark:border-none"
+										value={row.jamMasuk}
+										onchange={(e) =>
+											setKelasJam(row, 'jamMasuk', (e.currentTarget as HTMLInputElement).value)}
+										placeholder="HH:mm"
+										disabled={submitting}
+									/>
+								</td>
+								<td>
+									<input
+										type="text"
+										class="input input-sm bg-base-200 dark:bg-base-300 w-20 dark:border-none"
+										value={row.jamPulang}
+										onchange={(e) =>
+											setKelasJam(row, 'jamPulang', (e.currentTarget as HTMLInputElement).value)}
+										placeholder="HH:mm"
+										disabled={submitting}
+									/>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+			<p class="text-base-content/50 text-xs">
+				Kosongkan jam untuk mengikuti jam masuk/pulang umum di atas.
+			</p>
+		</div>
+	{/if}
 
 	{#if validationError}
 		<div class="alert alert-soft alert-warning flex items-center gap-2" role="alert">

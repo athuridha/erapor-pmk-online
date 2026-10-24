@@ -14,7 +14,7 @@ import { sanitizeDimensionList } from '$lib/kokurikuler';
 
 type Person = { nama?: string; nip?: string };
 type SekolahLike = { nama?: string; kepalaSekolah?: Person };
-import { eq, inArray, asc, and } from 'drizzle-orm';
+import { eq, inArray, asc, and, or } from 'drizzle-orm';
 
 function normalizeText(value: string | null | undefined) {
 	return value?.trim().toLowerCase() ?? '';
@@ -262,7 +262,11 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			const id = Number(kelasIdParam);
 			if (Number.isInteger(id)) {
 				const rawEks = await db.query.tableEkstrakurikuler.findMany({
-					where: eq(tableEkstrakurikuler.kelasId, id),
+					// Ekstra umum (semuaKelas=1) berlaku untuk semua kelas.
+					where: or(
+						eq(tableEkstrakurikuler.kelasId, id),
+						eq(tableEkstrakurikuler.semuaKelas, 1)
+					),
 					columns: { id: true, nama: true, createdAt: true },
 					orderBy: [asc(tableEkstrakurikuler.createdAt)]
 				});

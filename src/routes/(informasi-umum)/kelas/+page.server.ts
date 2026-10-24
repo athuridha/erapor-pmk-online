@@ -52,28 +52,45 @@ export async function load({ depends, locals }) {
 		return { daftarKelas: [], academicContext };
 	}
 
-	const [muridCounts, mapelCounts, ekstrakCounts, kokurikulerCounts] = await Promise.all([
-		db
-			.select({ kelasId: tableMurid.kelasId, total: sql<number>`count(*)` })
-			.from(tableMurid)
-			.where(inArray(tableMurid.kelasId, kelasIds))
-			.groupBy(tableMurid.kelasId),
-		db
-			.select({ kelasId: tableMataPelajaran.kelasId, total: sql<number>`count(*)` })
-			.from(tableMataPelajaran)
-			.where(inArray(tableMataPelajaran.kelasId, kelasIds))
-			.groupBy(tableMataPelajaran.kelasId),
-		db
-			.select({ kelasId: tableEkstrakurikuler.kelasId, total: sql<number>`count(*)` })
-			.from(tableEkstrakurikuler)
-			.where(inArray(tableEkstrakurikuler.kelasId, kelasIds))
-			.groupBy(tableEkstrakurikuler.kelasId),
-		db
-			.select({ kelasId: tableKokurikuler.kelasId, total: sql<number>`count(*)` })
-			.from(tableKokurikuler)
-			.where(inArray(tableKokurikuler.kelasId, kelasIds))
-			.groupBy(tableKokurikuler.kelasId)
-	]);
+	const [muridCounts, mapelCounts, ekstrakCounts, ekstrakUmumCount, kokurikulerCounts] =
+		await Promise.all([
+			db
+				.select({ kelasId: tableMurid.kelasId, total: sql<number>`count(*)` })
+				.from(tableMurid)
+				.where(inArray(tableMurid.kelasId, kelasIds))
+				.groupBy(tableMurid.kelasId),
+			db
+				.select({ kelasId: tableMataPelajaran.kelasId, total: sql<number>`count(*)` })
+				.from(tableMataPelajaran)
+				.where(inArray(tableMataPelajaran.kelasId, kelasIds))
+				.groupBy(tableMataPelajaran.kelasId),
+			db
+				.select({ kelasId: tableEkstrakurikuler.kelasId, total: sql<number>`count(*)` })
+				.from(tableEkstrakurikuler)
+				.where(
+					and(
+						inArray(tableEkstrakurikuler.kelasId, kelasIds),
+						eq(tableEkstrakurikuler.semuaKelas, 0)
+					)
+				)
+				.groupBy(tableEkstrakurikuler.kelasId),
+			// Ekstra umum (semuaKelas=1) berlaku untuk setiap kelas, jadi dihitung
+			// terpisah lalu ditambahkan ke jumlah ekstra semua kelas.
+			db
+				.select({ total: sql<number>`count(*)` })
+				.from(tableEkstrakurikuler)
+				.where(
+					and(
+						inArray(tableEkstrakurikuler.kelasId, kelasIds),
+						eq(tableEkstrakurikuler.semuaKelas, 1)
+					)
+				),
+			db
+				.select({ kelasId: tableKokurikuler.kelasId, total: sql<number>`count(*)` })
+				.from(tableKokurikuler)
+				.where(inArray(tableKokurikuler.kelasId, kelasIds))
+				.groupBy(tableKokurikuler.kelasId)
+		]);
 
 	const muridMap = new Map<number, number>();
 	for (const row of muridCounts) {
@@ -89,6 +106,7 @@ export async function load({ depends, locals }) {
 	for (const row of ekstrakCounts) {
 		ekstrakMap.set(row.kelasId, row.total ?? 0);
 	}
+	const jumlahEkstraUmum = ekstrakUmumCount[0]?.total ?? 0;
 
 	const kokurikulerMap = new Map<number, number>();
 	for (const row of kokurikulerCounts) {
@@ -99,7 +117,7 @@ export async function load({ depends, locals }) {
 		...kelas,
 		jumlahMurid: muridMap.get(kelas.id) ?? 0,
 		jumlahMapel: mapelMap.get(kelas.id) ?? 0,
-		jumlahEkstrakurikuler: ekstrakMap.get(kelas.id) ?? 0,
+		jumlahEkstrakurikuler: (ekstrakMap.get(kelas.id) ?? 0) + jumlahEkstraUmum,
 		jumlahKokurikuler: kokurikulerMap.get(kelas.id) ?? 0
 	}));
 

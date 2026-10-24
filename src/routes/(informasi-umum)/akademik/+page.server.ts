@@ -6,6 +6,7 @@ import { parseHariSekolahCustom } from '$lib/hari-sekolah';
 import {
 	tableAlamat,
 	tableKelas,
+	tableKelasPresensi,
 	tableMurid,
 	tablePresensiSettings,
 	tableSekolah,
@@ -14,6 +15,12 @@ import {
 	tableWaliMurid,
 	tableAuthUser
 } from '$lib/server/db/schema';
+import {
+	loadKelasPresensi,
+	encodeHariAktif,
+	type HariAktifFlags,
+	type KelasPresensiConfig
+} from '$lib/server/absen/hari-efektif';
 import { cookieNames, unflattenFormData } from '$lib/utils';
 import { readBufferToAoA } from '$lib/utils/excel.js';
 import { error, fail } from '@sveltejs/kit';
@@ -708,11 +715,26 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
 	}
 
 	let presensiSettingsList: (typeof tablePresensiSettings.$inferSelect)[] = [];
+	let kelasList: Array<{ id: number; nama: string }> = [];
+	let kelasPresensi: Record<number, KelasPresensiConfig> = {};
 	if (activeSekolahId) {
 		await ensurePresensiSettingsSchema();
 		presensiSettingsList = await db.query.tablePresensiSettings.findMany({
 			where: eq(tablePresensiSettings.sekolahId, activeSekolahId)
 		});
+		if (activeSemesterId) {
+			[kelasList, kelasPresensi] = await Promise.all([
+				db.query.tableKelas.findMany({
+					where: and(
+						eq(tableKelas.sekolahId, activeSekolahId),
+						eq(tableKelas.semesterId, activeSemesterId)
+					),
+					columns: { id: true, nama: true },
+					orderBy: [tableKelas.nama]
+				}),
+				loadKelasPresensi(activeSekolahId)
+			]);
+		}
 	}
 
 	return {
@@ -724,7 +746,9 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
 		activeSemesterId,
 		tanggalBagiRaport,
 		tanggalMasuk,
-		presensiSettingsList
+		presensiSettingsList,
+		kelasList,
+		kelasPresensi
 	};
 };
 
@@ -1328,5 +1352,85 @@ export const actions: Actions = {
 			});
 
 		return { message: 'Pengaturan presensi berhasil disimpan' };
+	},
+	simpanPresensiKelas: async ({ request, locals }) => {
+		const sekolahId = locals.sekolah?.id ?? null;
+		if (!sekolahId) {
+			return fail(401, { fail: 'Sekolah tidak ditemukan' });
+		}
+
+		if (locals.user?.type === 'user' || locals.user?.type === 'wali_asuh') {
+			return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah pengaturan presensi' });
+		}
+
+		const formData = await request.formData();
+		const timeRegex = /^\d{2}:\d{2}$/;
+
+		// Collect distinct class ids from the per-class field names.
+		const kelasIds = new Set<number>();
+		for (const key of formData.keys()) {
+			const match = /^kelas_(\d+)_(?:hariAktif|jamMasuk|jamPulang)$/.exec(key);
+			if (match) kelasIds.add(Number(match[1]));
+		}
+		if (!kelasIds.size) {
+			return fail(400, { fail: 'Tidak ada data presensi kelas untuk disimpan' });
+		}
+
+		const ownedKelas = await db.query.tableKelas.findMany({
+			where: and(eq(tableKelas.sekolahId, sekolahId), inArray(tableKelas.id, [...kelasIds])),
+			columns: { id: true }
+		});
+		const ownedIds = new Set(ownedKelas.map((k) => k.id));
+
+		const timestamp = new Date().toISOString();
+		try {
+			for (const kelasId of kelasIds) {
+				if (!ownedIds.has(kelasId)) continue;
+
+				const flags = Array.from({ length: 7 }, () => false) as HariAktifFlags;
+				for (const value of formData.getAll(`kelas_${kelasId}_hariAktif`)) {
+					const index = Number(value);
+					if (Number.isInteger(index) && index >= 0 && index <= 6) flags[index] = true;
+				}
+				const hariAktif = encodeHariAktif(flags);
+
+				const jamMasuk = formData.get(`kelas_${kelasId}_jamMasuk`)?.toString().trim() ?? '';
+				const jamPulang = formData.get(`kelas_${kelasId}_jamPulang`)?.toString().trim() ?? '';
+				if (jamMasuk && !timeRegex.test(jamMasuk)) {
+					return fail(400, { fail: 'Format jam masuk tidak valid (HH:mm)' });
+				}
+				if (jamPulang && !timeRegex.test(jamPulang)) {
+					return fail(400, { fail: 'Format jam pulang tidak valid (HH:mm)' });
+				}
+				if (jamMasuk && jamPulang && jamMasuk >= jamPulang) {
+					return fail(400, { fail: 'Jam masuk harus lebih awal dari jam pulang' });
+				}
+
+				await db
+					.insert(tableKelasPresensi)
+					.values({
+						sekolahId,
+						kelasId,
+						hariAktif,
+						jamMasuk: jamMasuk || null,
+						jamPulang: jamPulang || null,
+						updatedAt: timestamp
+					})
+					.onConflictDoUpdate({
+						target: tableKelasPresensi.kelasId,
+						set: {
+							hariAktif,
+							jamMasuk: jamMasuk || null,
+							jamPulang: jamPulang || null,
+							updatedAt: timestamp
+						}
+					});
+			}
+		} catch (err) {
+			console.warn('[akademik.simpanPresensiKelas] failed to save kelas presensi', err);
+			return fail(500, { fail: 'Gagal menyimpan pengaturan presensi kelas' });
+		}
+
+		return { message: 'Pengaturan presensi kelas berhasil disimpan' };
 	}
 };

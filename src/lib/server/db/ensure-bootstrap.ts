@@ -33,6 +33,7 @@ import { ensureJadwalBellSchema } from './ensure-jadwal-bell';
 import { ensureLoginAttemptsSchema } from './ensure-login-attempts';
 import { ensurePermissionMigration } from './ensure-permission-migration';
 import { ensurePresensiSettingsSchema } from './ensure-presensi-settings';
+import { ensureEkspansiModulSchema } from './ensure-ekspansi-modul';
 import { resetEnsuredSchemas } from './ensure-helper';
 
 let startupEnsuresDone = false;
@@ -52,6 +53,7 @@ export async function runStartupEnsures() {
 	await ensureAcademicModulesSchema();
 	await ensureJadwalBellSchema();
 	await ensurePresensiSettingsSchema();
+	await ensureEkspansiModulSchema();
 	await ensureLoginAttemptsSchema();
 	await ensureBukuTamuSettingsSchema();
 	await ensureAiSettingsSchema();

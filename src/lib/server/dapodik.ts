@@ -2163,9 +2163,11 @@ async function syncEkskul(
 			}
 
 			for (const [kelasId, muridIds] of perKelas) {
+				// Pakai ekskul bernama sama yang sudah ada, baik milik kelas
+				// maupun lingkup umum, agar tidak membuat salinan baru.
 				let ekskul = await db.query.tableEkstrakurikuler.findFirst({
 					where: and(
-						eq(tableEkstrakurikuler.kelasId, kelasId),
+						or(eq(tableEkstrakurikuler.kelasId, kelasId), eq(tableEkstrakurikuler.semuaKelas, 1)),
 						eq(tableEkstrakurikuler.nama, namaEkskul)
 					)
 				});

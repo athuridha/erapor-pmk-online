@@ -461,7 +461,9 @@
 				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
 					<Menu />
 				</div>
-				<div class="mt-auto shrink-0 pt-3 border-t border-[#065f46]/70 flex flex-col gap-1 text-xs">
+				<div
+					class="mt-auto shrink-0 pt-3 border-t border-[#065f46]/70 flex flex-row items-center justify-between gap-1 text-xs"
+				>
 					<a
 						href="/pengaturan"
 						class="flex items-center gap-2.5 px-3 py-2 rounded-xl font-semibold text-emerald-200 hover:text-white hover:bg-[#075e46] transition-colors"
@@ -513,4 +515,7 @@
 		cursor: not-allowed !important;
 		pointer-events: none !important;
 	}
+
+	/* Ikon tautan bawah sidebar (Pengaturan & Tentang Aplikasi) cukup satu:
+	   <Icon> inline saja; tanpa ::before mask agar tidak ganda. */
 </style>

@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { asc, and, eq } from 'drizzle-orm';
+import { asc, and, eq, or } from 'drizzle-orm';
 import db from '$lib/server/db';
 import {
 	tableAsesmenEkstrakurikuler,
@@ -205,7 +205,11 @@ export async function getRaporPreviewPayload({ locals, url }: RaporContext) {
 			]
 		}),
 		db.query.tableEkstrakurikuler.findMany({
-			where: eq(tableEkstrakurikuler.kelasId, murid.kelasId),
+			// Ekstra umum (semuaKelas=1) berlaku untuk semua kelas, termasuk kelas murid.
+			where: or(
+				eq(tableEkstrakurikuler.kelasId, murid.kelasId),
+				eq(tableEkstrakurikuler.semuaKelas, 1)
+			),
 			orderBy: [asc(tableEkstrakurikuler.nama)]
 		}),
 		db.query.tableMuridEkstrakurikuler.findMany({

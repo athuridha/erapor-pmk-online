@@ -6,9 +6,10 @@
 
 	interface Props {
 		onSuccess?: () => void;
+		lingkupUmum?: boolean;
 	}
 
-	let { onSuccess }: Props = $props();
+	let { onSuccess, lingkupUmum = false }: Props = $props();
 
 	const fileInputId = 'import-ekstra-file';
 	let fileInput: HTMLInputElement | null = null;
@@ -85,6 +86,14 @@
 		}}
 	>
 		{#snippet children({ submitting })}
+			{#if lingkupUmum}
+				<div
+					class="alert border-primary/40 bg-primary/10 text-primary-content border border-dashed mb-4"
+				>
+					<Icon name="info" />
+					<span class="text-sm">Mode Semua Kelas — hasil impor berlaku untuk semua kelas.</span>
+				</div>
+			{/if}
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend font-semibold">Pilih File Excel (.xlsx)</legend>
 				<input

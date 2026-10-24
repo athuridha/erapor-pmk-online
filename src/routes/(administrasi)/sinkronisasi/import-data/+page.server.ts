@@ -8,6 +8,7 @@ import { bacaWorkbook } from '$lib/server/import-data/parse';
 import { kePratinjau, susunRencana } from '$lib/server/import-data/plan';
 import { SHEETS, SHEET_ORDER } from '$lib/server/import-data/sheets';
 import { ambilBerkas, hapusBerkas, simpanBerkas } from '$lib/server/import-data/stash';
+import { getDapodikSettings } from '$lib/server/dapodik';
 import { authority } from '../../../pengguna/utils.server';
 
 const MAKS_BERKAS = 2 * 1024 * 1024;
@@ -35,8 +36,17 @@ export async function load({ locals }) {
 	const sekolahId = locals.sekolah?.id;
 	const meta: PageMeta = { title: 'Impor Data Pokok' };
 
-	if (!sekolahId) return { meta, semester: null, hitung: null, sheets: daftarSheet() };
+	if (!sekolahId) {
+		return {
+			meta,
+			semester: null,
+			hitung: null,
+			sheets: daftarSheet(),
+			dapodik: { tersedia: false, url: null }
+		};
+	}
 
+	const dapodikSettings = await getDapodikSettings(sekolahId);
 	const ctx = await resolveSekolahAcademicContext(sekolahId);
 	const tahunAjaran = ctx.tahunAjaranList.find((t) => t.id === ctx.activeTahunAjaranId);
 	const semester = tahunAjaran?.semester.find((s) => s.id === ctx.activeSemesterId) ?? null;
@@ -66,7 +76,11 @@ export async function load({ locals }) {
 			murid: murid[0]?.jumlah ?? 0,
 			pegawai: pegawai[0]?.jumlah ?? 0
 		},
-		sheets: daftarSheet()
+		sheets: daftarSheet(),
+		dapodik: {
+			tersedia: Boolean(dapodikSettings?.url && dapodikSettings?.token),
+			url: dapodikSettings?.url ?? null
+		}
 	};
 }
 
