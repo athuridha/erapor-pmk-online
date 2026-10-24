@@ -62,3 +62,7 @@ openclaw.json
 
 # Strix pentest output
 /strix_runs
+# tooling scratch (dipakai proses eksternal, tidak ikut rilis).adcode/
+
+# tooling scratch (dipakai proses eksternal, tidak ikut rilis)
+.adcode/
