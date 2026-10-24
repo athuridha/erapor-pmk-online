@@ -263,10 +263,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			if (Number.isInteger(id)) {
 				const rawEks = await db.query.tableEkstrakurikuler.findMany({
 					// Ekstra umum (semuaKelas=1) berlaku untuk semua kelas.
-					where: or(
-						eq(tableEkstrakurikuler.kelasId, id),
-						eq(tableEkstrakurikuler.semuaKelas, 1)
-					),
+					where: or(eq(tableEkstrakurikuler.kelasId, id), eq(tableEkstrakurikuler.semuaKelas, 1)),
 					columns: { id: true, nama: true, createdAt: true },
 					orderBy: [asc(tableEkstrakurikuler.createdAt)]
 				});

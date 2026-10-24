@@ -156,9 +156,7 @@ export const actions = {
 				if (!pertama) {
 					return fail(400, { fail: 'Belum ada kelas di sekolah ini.' });
 				}
-				await db
-					.insert(tableEkstrakurikuler)
-					.values({ kelasId: pertama.id, nama, semuaKelas: 1 });
+				await db.insert(tableEkstrakurikuler).values({ kelasId: pertama.id, nama, semuaKelas: 1 });
 				return { message: 'Ekstrakurikuler umum ditambahkan (berlaku untuk semua kelas)' };
 			} catch (error) {
 				if (isTableMissingError(error)) {
@@ -528,7 +526,6 @@ export const actions = {
 		if (kelasAcuan == null) {
 			return fail(400, { fail: 'Belum ada kelas di sekolah ini.' });
 		}
-
 
 		try {
 			await db.transaction(async (tx) => {

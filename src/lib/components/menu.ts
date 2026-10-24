@@ -81,7 +81,7 @@
 				tags: ['jadwal', 'bell', 'sound']
 			},
 			{
-				title: 'Kelas',
+				title: 'Kelola Kelas',
 				subMenu: [
 					{
 						title: 'Kelas',
@@ -250,7 +250,7 @@
 		tags: ['portal', 'orang tua', 'wali', 'akun', 'password', 'publikasi']
 	},
 	{
-		title: 'Cetak Dokumen',
+		title: 'Cetak',
 		icon: 'print',
 		subMenu: [
 			{
