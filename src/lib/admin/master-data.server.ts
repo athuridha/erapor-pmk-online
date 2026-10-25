@@ -178,30 +178,53 @@ async function muatSemuaBaris(
 			return rows;
 		}
 		case 'mata_pelajaran': {
+			const totalKelasSekolah =
+				(
+					await db
+						.select({ count: count() })
+						.from(tableKelas)
+						.where(eq(tableKelas.sekolahId, sekolahId))
+				)[0]?.count ?? 0;
+
 			const rows = await db
 				.select({
-					id: tableMataPelajaran.id,
+					id: sql<number>`min(${tableMataPelajaran.id})`,
 					nama: tableMataPelajaran.nama,
-					kelas: sql<
-						string | null
-					>`(select k.nama from kelas k where k.id = mata_pelajaran.kelas_id)`,
-					jenis: tableMataPelajaran.jenis,
-					kode: tableMataPelajaran.kode,
-					kkm: tableMataPelajaran.kkm,
-					urutan: tableMataPelajaran.urutan,
-					pengampu: sql<
-						string | null
-					>`(select p.nama from pegawai p where p.id = mata_pelajaran.pengampu_id)`
+					jenis: sql<string>`max(${tableMataPelajaran.jenis})`,
+					kode: sql<string | null>`max(${tableMataPelajaran.kode})`,
+					kkm: sql<number>`max(${tableMataPelajaran.kkm})`,
+					urutan: sql<number | null>`min(${tableMataPelajaran.urutan})`,
+					total_kelas: sql<number>`count(distinct ${tableKelas.id})`,
+					kelas: sql<string | null>`case
+						when count(distinct ${tableKelas.id}) >= ${totalKelasSekolah} and ${totalKelasSekolah} > 0
+						then 'Semua Kelas (' || count(distinct ${tableKelas.id}) || ')'
+						else group_concat(distinct ${tableKelas.nama})
+					end`,
+					pengampu: sql<string | null>`group_concat(distinct ${tablePegawai.nama})`
 				})
 				.from(tableMataPelajaran)
 				.innerJoin(tableKelas, eq(tableMataPelajaran.kelasId, tableKelas.id))
+				.leftJoin(tablePegawai, eq(tableMataPelajaran.pengampuId, tablePegawai.id))
 				.where(
 					q
-						? and(eq(tableKelas.sekolahId, sekolahId), sql`mata_pelajaran.nama like ${like}`)
+						? and(
+								eq(tableKelas.sekolahId, sekolahId),
+								sql`(${tableMataPelajaran.nama} like ${like} or coalesce(${tableMataPelajaran.kode}, '') like ${like})`
+							)
 						: eq(tableKelas.sekolahId, sekolahId)
 				)
-				.orderBy(asc(tableMataPelajaran.nama));
-			return rows;
+				.groupBy(tableMataPelajaran.nama)
+				.orderBy(
+					sql`coalesce(min(${tableMataPelajaran.urutan}), 999)`,
+					asc(tableMataPelajaran.nama)
+				);
+
+			return rows.map((r) => ({
+				...r,
+				kode: r.kode ?? '—',
+				pengampu: r.pengampu || '—',
+				kelas: r.kelas || '—'
+			}));
 		}
 		case 'ekstrakurikuler': {
 			const rows = await db
@@ -515,36 +538,101 @@ export async function simpanMasterData(
 			return { message: 'Kelas ditambahkan.' };
 		}
 		case 'mata_pelajaran': {
-			const kelasId = Number(teks(formData, 'kelas_id'));
-			if (!kelasId) return { fail: 'Kelas wajib dipilih.' };
+			const nama = teks(formData, 'nama');
+			if (!nama) return { fail: 'Nama mata pelajaran wajib diisi.' };
+
 			const pengampuId = Number(teks(formData, 'pengampu_id')) || null;
-			const values = {
-				kelasId,
-				nama: teks(formData, 'nama'),
-				jenis: (teks(formData, 'jenis') || 'wajib') as
-					'belum_dipetakan' | 'wajib' | 'pilihan' | 'mulok' | 'kejuruan' | 'pemberdayaan',
-				kode: teks(formData, 'kode') || null,
-				kkm: angkaAtau(formData, 'kkm', 0) ?? 0,
-				urutan: angkaAtau(formData, 'urutan', null),
-				pengampuId,
-				updatedAt: now
-			};
-			if (id) {
-				const kelasIds = (
-					await db
-						.select({ id: tableKelas.id })
-						.from(tableKelas)
-						.where(eq(tableKelas.sekolahId, sekolahId))
-				).map((row) => row.id);
-				if (!kelasIds.length) return { fail: 'Data tidak ditemukan di sekolah ini.' };
+			const jenis = (teks(formData, 'jenis') || 'wajib') as
+				'belum_dipetakan' | 'wajib' | 'pilihan' | 'mulok' | 'kejuruan' | 'pemberdayaan';
+			const kode = teks(formData, 'kode') || null;
+			const kkm = angkaAtau(formData, 'kkm', 0) ?? 0;
+			const urutan = angkaAtau(formData, 'urutan', null);
+
+			const allSchoolKelasIds = (
 				await db
-					.update(tableMataPelajaran)
-					.set(values)
-					.where(and(eq(tableMataPelajaran.id, id), inArray(tableMataPelajaran.kelasId, kelasIds)));
-				return { message: 'Mata pelajaran diperbarui.' };
+					.select({ id: tableKelas.id })
+					.from(tableKelas)
+					.where(eq(tableKelas.sekolahId, sekolahId))
+			).map((row) => row.id);
+
+			if (!allSchoolKelasIds.length) return { fail: 'Belum ada kelas terdaftar di sekolah ini.' };
+
+			const semuaKelas =
+				formData.get('semua_kelas') === '1' ||
+				formData.get('semua_kelas') === 'on' ||
+				teks(formData, 'kelas_id') === 'semua' ||
+				teks(formData, 'kelas_id') === '';
+
+			const rawSelectedIds = formData.getAll('kelas_ids');
+			let targetKelasIds: number[] = [];
+
+			if (semuaKelas) {
+				targetKelasIds = allSchoolKelasIds;
+			} else if (rawSelectedIds.length > 0) {
+				targetKelasIds = rawSelectedIds
+					.map((kId) => Number(kId))
+					.filter((kId) => Number.isInteger(kId) && allSchoolKelasIds.includes(kId));
+			} else if (Number(teks(formData, 'kelas_id'))) {
+				targetKelasIds = [Number(teks(formData, 'kelas_id'))];
 			}
-			await db.insert(tableMataPelajaran).values({ ...values, createdAt: now });
-			return { message: 'Mata pelajaran ditambahkan.' };
+
+			if (!targetKelasIds.length) {
+				return { fail: 'Pilih minimal satu kelas tujuan untuk mata pelajaran ini.' };
+			}
+
+			for (const kId of targetKelasIds) {
+				const existing = await db.query.tableMataPelajaran.findFirst({
+					where: and(eq(tableMataPelajaran.kelasId, kId), eq(tableMataPelajaran.nama, nama))
+				});
+				if (existing) {
+					await db
+						.update(tableMataPelajaran)
+						.set({ jenis, kode, kkm, urutan, pengampuId, updatedAt: now })
+						.where(eq(tableMataPelajaran.id, existing.id));
+				} else {
+					await db.insert(tableMataPelajaran).values({
+						kelasId: kId,
+						nama,
+						jenis,
+						kode,
+						kkm,
+						urutan,
+						pengampuId,
+						createdAt: now
+					});
+				}
+			}
+
+			if (id && !semuaKelas) {
+				const unselectedKelasIds = allSchoolKelasIds.filter((kId) => !targetKelasIds.includes(kId));
+				if (unselectedKelasIds.length > 0) {
+					const orphanedMapels = await db
+						.select({ id: tableMataPelajaran.id })
+						.from(tableMataPelajaran)
+						.where(
+							and(
+								eq(tableMataPelajaran.nama, nama),
+								inArray(tableMataPelajaran.kelasId, unselectedKelasIds)
+							)
+						);
+					const orphanIds = orphanedMapels.map((m) => m.id);
+					if (orphanIds.length > 0) {
+						const [{ nScores }] = await db
+							.select({ nScores: count() })
+							.from(tableAsesmenSumatif)
+							.where(inArray(tableAsesmenSumatif.mataPelajaranId, orphanIds));
+						if (nScores === 0) {
+							await db.delete(tableMataPelajaran).where(inArray(tableMataPelajaran.id, orphanIds));
+						}
+					}
+				}
+			}
+
+			const ketKelas =
+				targetKelasIds.length === allSchoolKelasIds.length
+					? 'semua kelas'
+					: `${targetKelasIds.length} kelas terpilih`;
+			return { message: `Mata pelajaran "${nama}" berhasil disimpan untuk ${ketKelas}.` };
 		}
 		case 'ekstrakurikuler': {
 			const kelasRaw = teks(formData, 'kelas_id');
@@ -974,15 +1062,43 @@ export async function hapusMasterData(
 			return { message: 'Kelas dihapus.' };
 		}
 		case 'mata_pelajaran': {
+			const target = await db.query.tableMataPelajaran.findFirst({
+				where: eq(tableMataPelajaran.id, id),
+				columns: { id: true, nama: true }
+			});
+			if (!target) return { fail: 'Mata pelajaran tidak ditemukan.' };
+
+			const kelasIds = (
+				await db
+					.select({ id: tableKelas.id })
+					.from(tableKelas)
+					.where(eq(tableKelas.sekolahId, sekolahId))
+			).map((r) => r.id);
+
+			const matchingMapels = await db
+				.select({ id: tableMataPelajaran.id })
+				.from(tableMataPelajaran)
+				.where(
+					and(
+						eq(tableMataPelajaran.nama, target.nama),
+						inArray(tableMataPelajaran.kelasId, kelasIds)
+					)
+				);
+			const matchingIds = matchingMapels.map((m) => m.id);
+
 			const [{ n } = { n: 0 }] = await db
 				.select({ n: count() })
 				.from(tableAsesmenSumatif)
-				.where(sql`asesmen_sumatif.mata_pelajaran_id = ${id}`);
+				.where(inArray(tableAsesmenSumatif.mataPelajaranId, matchingIds));
+
 			if (n > 0) {
-				return { fail: `Mata pelajaran sudah memiliki ${n} nilai. Hapus nilainya lebih dulu.` };
+				return {
+					fail: `Mata pelajaran "${target.nama}" sudah memiliki ${n} data nilai. Hapus nilainya lebih dulu.`
+				};
 			}
-			await db.delete(tableMataPelajaran).where(eq(tableMataPelajaran.id, id));
-			return { message: 'Mata pelajaran dihapus.' };
+
+			await db.delete(tableMataPelajaran).where(inArray(tableMataPelajaran.id, matchingIds));
+			return { message: `Mata pelajaran "${target.nama}" berhasil dihapus.` };
 		}
 		case 'ekstrakurikuler': {
 			const ekstra = await db

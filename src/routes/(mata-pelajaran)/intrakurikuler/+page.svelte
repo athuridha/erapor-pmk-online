@@ -497,6 +497,45 @@
 								</button>
 							</form>
 						</li>
+						<li>
+							<form
+								method="POST"
+								action="?/tambah_mapel_umum"
+								class="w-full"
+								use:enhance={() => {
+									toast({ message: 'Menerapkan mata pelajaran umum...', type: 'info' });
+									return async ({ result }) => {
+										if (result.type === 'success') {
+											await Promise.all([
+												invalidate('app:mapel'),
+												invalidate('app:asesmen-formatif'),
+												invalidate('app:asesmen-sumatif')
+											]);
+											const data = result.data as { success?: string } | undefined;
+											toast({
+												message: data?.success || 'Mata pelajaran umum berhasil diterapkan.',
+												type: 'success'
+											});
+										} else if (result.type === 'failure') {
+											const data = result.data as { fail?: string } | undefined;
+											toast({
+												message: data?.fail || 'Gagal menerapkan mata pelajaran umum.',
+												type: 'error'
+											});
+										}
+									};
+								}}
+							>
+								<button
+									type="submit"
+									class="flex w-full items-center gap-2 text-primary font-medium"
+									title="Terapkan 13 mata pelajaran umum standar ke kelas / semua kelas"
+								>
+									<Icon name="layers" />
+									<span>Terapkan Mapel Umum</span>
+								</button>
+							</form>
+						</li>
 					</ul>
 				</div>
 			</div>

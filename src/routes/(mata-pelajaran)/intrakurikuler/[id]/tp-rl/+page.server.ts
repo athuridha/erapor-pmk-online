@@ -4,6 +4,7 @@ import { ensurePksMapelForClasses } from '$lib/server/mapel-pks.js';
 import {
 	tableMataPelajaran,
 	tableTujuanPembelajaran,
+	tableTeknikPenilaian,
 	tableAuthUserMataPelajaran,
 	tableAuthUser
 } from '$lib/server/db/schema.js';
@@ -33,7 +34,8 @@ function isXlsxMime(type: string | null | undefined) {
 	return type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 }
 
-export async function load({ depends, params, parent }) {
+export async function load({ depends, params, parent, locals }) {
+	const sekolahId = locals.sekolah?.id;
 	// Check permission: admin, kepala_sekolah, user, wali_kelas, wali_asuh can access
 	// Also allow 'user' type (guru mapel) since they're filtered server-side
 	const { user } = await parent();
@@ -268,6 +270,11 @@ export async function load({ depends, params, parent }) {
 			agamaSelection = String(assignedLocal.id);
 			tujuanPembelajaran = await db.query.tableTujuanPembelajaran.findMany({
 				where: eq(tableTujuanPembelajaran.mataPelajaranId, assignedLocal.id),
+				with: {
+					teknikPenilaian: {
+						columns: { id: true, nama: true, singkatan: true }
+					}
+				},
 				orderBy: asc(tableTujuanPembelajaran.createdAt)
 			});
 			// mark active
@@ -300,8 +307,20 @@ export async function load({ depends, params, parent }) {
 	// default behaviour: load tujuan for the requested mapel id
 	tujuanPembelajaran = await db.query.tableTujuanPembelajaran.findMany({
 		where: eq(tableTujuanPembelajaran.mataPelajaranId, +params.id),
+		with: {
+			teknikPenilaian: {
+				columns: { id: true, nama: true, singkatan: true }
+			}
+		},
 		orderBy: asc(tableTujuanPembelajaran.createdAt)
 	});
+
+	const teknikPenilaianList = sekolahId
+		? await db.query.tableTeknikPenilaian.findMany({
+				where: eq(tableTeknikPenilaian.sekolahId, sekolahId),
+				orderBy: [asc(tableTeknikPenilaian.urutan), asc(tableTeknikPenilaian.nama)]
+			})
+		: [];
 
 	const agamaSelectDisabledValue = Boolean(
 		user?.type === 'user' &&
@@ -315,6 +334,7 @@ export async function load({ depends, params, parent }) {
 
 	return {
 		tujuanPembelajaran,
+		teknikPenilaianList,
 		agamaOptions,
 		agamaSelection,
 		assignedLocalMapelId,

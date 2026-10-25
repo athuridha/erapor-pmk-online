@@ -116,6 +116,11 @@
 				tags: ['tujuan pembelajaran', 'lingkup materi', 'tp', 'mapel', 'mata pelajaran']
 			},
 			{
+				title: 'Teknik Penilaian',
+				path: '/teknik-penilaian',
+				tags: ['teknik', 'penilaian', 'asesmen', 'tes tulis', 'kinerja', 'portofolio', 'metode']
+			},
+			{
 				title: 'Kokurikuler',
 				path: '/kokurikuler'
 			},

@@ -831,5 +831,101 @@ export const actions = {
 		return {
 			success: 'Mata pelajaran Pendidikan Agama dan Budi Pekerti berhasil ditambahkan ke kelas.'
 		};
+	},
+
+	async tambah_mapel_umum({ cookies, locals }) {
+		const user = locals.user as { type?: string; pegawaiId?: number | null } | null;
+		const sekolahId = locals.sekolah?.id;
+		if (!sekolahId) return fail(400, { fail: 'Pilih sekolah aktif terlebih dahulu.' });
+
+		const kelasIdCookie = cookies.get(cookieNames.ACTIVE_KELAS_ID) || null;
+		const kelasId = kelasIdCookie && kelasIdCookie !== 'semua' ? Number(kelasIdCookie) : null;
+
+		let targetKelasIds: number[] = [];
+		if (kelasId && Number.isFinite(kelasId)) {
+			if (!(await canManageImportUrutan(user, kelasId))) {
+				return fail(403, {
+					fail: 'Anda tidak memiliki hak akses untuk mengelola mata pelajaran.'
+				});
+			}
+			targetKelasIds = [kelasId];
+		} else {
+			if (!isAdminUser(user ?? undefined)) {
+				return fail(403, {
+					fail: 'Hanya admin yang dapat menerapkan mapel umum ke semua kelas.'
+				});
+			}
+			const kelasRows = await db
+				.select({ id: tableKelas.id })
+				.from(tableKelas)
+				.where(eq(tableKelas.sekolahId, sekolahId));
+			targetKelasIds = kelasRows.map((k) => k.id);
+		}
+
+		if (!targetKelasIds.length) {
+			return fail(400, { fail: 'Belum ada kelas yang terdaftar.' });
+		}
+
+		const MAPEL_UMUM = [
+			{
+				nama: 'Pendidikan Agama Islam dan Budi Pekerti',
+				kode: 'PAI',
+				jenis: 'wajib' as const,
+				urutan: 1
+			},
+			{ nama: 'Pendidikan Pancasila', kode: 'PPKn', jenis: 'wajib' as const, urutan: 2 },
+			{ nama: 'Bahasa Indonesia', kode: 'BIN', jenis: 'wajib' as const, urutan: 3 },
+			{ nama: 'Matematika', kode: 'MTK', jenis: 'wajib' as const, urutan: 4 },
+			{ nama: 'Ilmu Pengetahuan Alam (IPA)', kode: 'IPA', jenis: 'wajib' as const, urutan: 5 },
+			{ nama: 'Ilmu Pengetahuan Sosial (IPS)', kode: 'IPS', jenis: 'wajib' as const, urutan: 6 },
+			{ nama: 'Bahasa Inggris', kode: 'BIG', jenis: 'wajib' as const, urutan: 7 },
+			{
+				nama: 'Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)',
+				kode: 'PJOK',
+				jenis: 'wajib' as const,
+				urutan: 8
+			},
+			{ nama: 'Informatika', kode: 'INF', jenis: 'wajib' as const, urutan: 9 },
+			{ nama: 'Seni dan Budaya', kode: 'SBU', jenis: 'wajib' as const, urutan: 10 },
+			{
+				nama: 'Prakarya dan Kewirausahaan',
+				kode: 'PKWU',
+				jenis: 'wajib' as const,
+				urutan: 11
+			},
+			{ nama: 'Muatan Lokal', kode: 'MLOK', jenis: 'mulok' as const, urutan: 12 },
+			{ nama: 'Mata Pelajaran Pilihan', kode: 'PIL', jenis: 'pilihan' as const, urutan: 13 }
+		];
+
+		const now = new Date().toISOString();
+		let added = 0;
+
+		await db.transaction(async (tx) => {
+			for (const idKelas of targetKelasIds) {
+				for (const m of MAPEL_UMUM) {
+					const existing = await tx.query.tableMataPelajaran.findFirst({
+						where: and(eq(tableMataPelajaran.kelasId, idKelas), eq(tableMataPelajaran.nama, m.nama))
+					});
+					if (!existing) {
+						await tx.insert(tableMataPelajaran).values({
+							kelasId: idKelas,
+							nama: m.nama,
+							kode: m.kode,
+							kkm: 75,
+							jenis: m.jenis,
+							urutan: m.urutan,
+							createdAt: now
+						});
+						added++;
+					}
+				}
+			}
+		});
+
+		const targetKet =
+			targetKelasIds.length > 1 ? `semua kelas (${targetKelasIds.length} kelas)` : 'kelas';
+		return {
+			success: `Mata pelajaran umum berhasil diterapkan ke ${targetKet} (${added} mapel baru ditambahkan).`
+		};
 	}
 };

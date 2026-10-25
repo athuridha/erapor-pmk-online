@@ -2,19 +2,29 @@ import db from '$lib/server/db/index.js';
 import { normMapelName, resolveReferensiMapelId } from '$lib/server/dapodik';
 import { opsiMapelDapodik } from '$lib/server/dapodik-mapel-options';
 import { tableDapodikPembelajaran, tableKelas, tableMataPelajaran } from '$lib/server/db/schema';
-import { isWaliOfKelas } from '$lib/server/kelas-akses';
 import { cookieNames, unflattenFormData } from '$lib/utils';
 import { fail } from '@sveltejs/kit';
 import { and, eq, sql } from 'drizzle-orm';
 
 export async function load({ parent, locals }) {
 	const { kelasAktif } = await parent();
+	const sekolahId = locals.sekolah?.id;
+
+	const daftarKelas = sekolahId
+		? await db.query.tableKelas.findMany({
+				where: eq(tableKelas.sekolahId, sekolahId),
+				columns: { id: true, nama: true, fase: true },
+				orderBy: (table, { asc }) => [asc(table.nama)]
+			})
+		: [];
+
 	const { dapodikMapelList, indukList } = kelasAktif?.id
 		? await opsiMapelDapodik(kelasAktif.id, locals.sekolah)
 		: { dapodikMapelList: [], indukList: [] };
 	return {
 		meta: { title: `Form Mata Pelajaran` },
 		kelasAktif,
+		daftarKelas,
 		dapodikMapelList,
 		indukList: indukList.sort((a, b) => a.nama.localeCompare(b.nama, 'id'))
 	};
@@ -22,6 +32,7 @@ export async function load({ parent, locals }) {
 
 export const actions = {
 	async add({ request, cookies, locals }) {
+		const rawFormData = await request.formData();
 		const formMapel = unflattenFormData<{
 			nama?: string;
 			nama_lokal?: string;
@@ -29,35 +40,41 @@ export const actions = {
 			kkm?: string;
 			kode?: string;
 			induk_pembelajaran_id?: string;
-		}>(await request.formData());
-
-		const kelasIdCookie = cookies.get(cookieNames.ACTIVE_KELAS_ID);
-		if (!kelasIdCookie) {
-			return fail(400, { fail: 'Pilih kelas aktif terlebih dahulu di navbar.' });
-		}
-
-		const kelasId = Number(kelasIdCookie);
-		if (!Number.isInteger(kelasId)) {
-			return fail(400, { fail: 'Kelas aktif tidak valid.' });
-		}
+		}>(rawFormData);
 
 		const sekolahId = locals.sekolah?.id;
 		if (!sekolahId) {
 			return fail(400, { fail: 'Pilih sekolah aktif terlebih dahulu.' });
 		}
 
-		const kelasAktif = await db.query.tableKelas.findFirst({
-			columns: { id: true },
-			where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
-		});
-		if (!kelasAktif) {
-			return fail(400, { fail: 'Kelas aktif tidak ditemukan.' });
+		const semuaKelasCheck =
+			rawFormData.get('semuaKelas') === 'on' ||
+			rawFormData.get('semuaKelas') === '1' ||
+			rawFormData.get('semuaKelas') === 'true';
+
+		const rawKelasIds = rawFormData.getAll('kelasIds');
+		const selectedKelasIds = rawKelasIds
+			.map((id) => Number(id))
+			.filter((id) => Number.isInteger(id) && id > 0);
+
+		const kelasIdCookie = cookies.get(cookieNames.ACTIVE_KELAS_ID);
+		const cookieKelasId = kelasIdCookie && kelasIdCookie !== 'semua' ? Number(kelasIdCookie) : null;
+
+		let targetKelasIds: number[] = [];
+		if (semuaKelasCheck) {
+			const allKelas = await db
+				.select({ id: tableKelas.id })
+				.from(tableKelas)
+				.where(eq(tableKelas.sekolahId, sekolahId));
+			targetKelasIds = allKelas.map((k) => k.id);
+		} else if (selectedKelasIds.length > 0) {
+			targetKelasIds = selectedKelasIds;
+		} else if (cookieKelasId && Number.isInteger(cookieKelasId)) {
+			targetKelasIds = [cookieKelasId];
 		}
 
-		// Wali kelas hanya boleh menambah mapel di kelas miliknya
-		const addUser = locals.user as { type?: string; pegawaiId?: number | null } | null;
-		if (addUser?.type === 'wali_kelas' && !(await isWaliOfKelas(addUser, kelasId))) {
-			return fail(403, { fail: 'Anda tidak memiliki izin untuk menambah di kelas ini.' });
+		if (!targetKelasIds.length) {
+			return fail(400, { fail: 'Pilih minimal satu kelas tujuan untuk mata pelajaran ini.' });
 		}
 
 		const nama = formMapel.nama?.trim();
@@ -86,74 +103,55 @@ export const actions = {
 			});
 		}
 
-		// Validasi duplikat: cek apakah sudah ada mapel dengan nama sama di kelas ini
-		const existing = await db.query.tableMataPelajaran.findFirst({
-			where: and(eq(tableMataPelajaran.kelasId, kelasId), eq(tableMataPelajaran.nama, nama))
-		});
-
-		if (existing) {
-			return fail(400, {
-				fail: `Mata pelajaran "${nama}" sudah ada di kelas ini. Tidak boleh duplikat.`
+		let insertedCount = 0;
+		for (const targetKelasId of targetKelasIds) {
+			const existing = await db.query.tableMataPelajaran.findFirst({
+				where: and(eq(tableMataPelajaran.kelasId, targetKelasId), eq(tableMataPelajaran.nama, nama))
 			});
-		}
 
-		// Opsi bind-at-create: bila nama terdaftar sebagai pembelajaran rombel
-		// Dapodik (mirror hasil sinkronisasi), simpan kode Dapodiknya langsung agar
-		// mapel bisa dikirim balik tanpa menunggu sinkron ulang. Bila tidak ada
-		// padanannya, mapel dibuat sebagai Sub Pembelajaran — wajib memilih
-		// pembelajaran induk yang terdaftar di Dapodik.
-		const mirrorRows = await db
-			.select()
-			.from(tableDapodikPembelajaran)
-			.where(eq(tableDapodikPembelajaran.kelasId, kelasId));
-		const namaKunci = normMapelName(nama);
-		const mirror =
-			mirrorRows.find((m) => m.mataPelajaranId && m.nama === nama) ??
-			mirrorRows.find((m) => m.mataPelajaranId && normMapelName(m.nama) === namaKunci);
-
-		let indukRow: (typeof mirrorRows)[number] | null = null;
-		const indukIdRaw = formMapel.induk_pembelajaran_id?.toString().trim() ?? '';
-		if (!mirror && indukIdRaw) {
-			indukRow = mirrorRows.find((m) => m.pembelajaranId === indukIdRaw) ?? null;
-			if (!indukRow) {
-				return fail(400, { fail: 'Pembelajaran induk tidak valid untuk kelas ini.' });
+			if (existing) {
+				continue;
 			}
-		}
-		if (!mirror && !indukRow && mirrorRows.length > 0) {
-			return fail(400, {
-				fail: `"${nama}" belum terdaftar sebagai pembelajaran Dapodik. Pilih "Mata Pelajaran Induk" agar dapat dikirim sebagai Sub Pembelajaran.`
+
+			const mirrorRows = await db
+				.select()
+				.from(tableDapodikPembelajaran)
+				.where(eq(tableDapodikPembelajaran.kelasId, targetKelasId));
+			const namaKunci = normMapelName(nama);
+			const mirror =
+				mirrorRows.find((m) => m.mataPelajaranId && m.nama === nama) ??
+				mirrorRows.find((m) => m.mataPelajaranId && normMapelName(m.nama) === namaKunci);
+
+			let indukRow: (typeof mirrorRows)[number] | null = null;
+			const indukIdRaw = formMapel.induk_pembelajaran_id?.toString().trim() ?? '';
+			if (!mirror && indukIdRaw) {
+				indukRow = mirrorRows.find((m) => m.pembelajaranId === indukIdRaw) ?? null;
+			}
+
+			const dapodikMatpelId = mirror?.mataPelajaranId ?? (await resolveReferensiMapelId(nama));
+
+			const [{ maxUrutan }] = await db
+				.select({ maxUrutan: sql<number>`coalesce(max(${tableMataPelajaran.urutan}), 0)` })
+				.from(tableMataPelajaran)
+				.where(eq(tableMataPelajaran.kelasId, targetKelasId));
+
+			await db.insert(tableMataPelajaran).values({
+				nama,
+				namaLokal: namaLokal || null,
+				jenis,
+				kkm,
+				kelasId: targetKelasId,
+				kode: kode || null,
+				urutan: (maxUrutan ?? 0) + 1,
+				...(mirror ? { dapodikPembelajaranId: mirror.pembelajaranId } : {}),
+				...(!mirror && indukRow ? { dapodikIndukPembelajaranId: indukRow.pembelajaranId } : {}),
+				...(dapodikMatpelId ? { dapodikMataPelajaranId: dapodikMatpelId } : {})
 			});
+			insertedCount++;
 		}
 
-		const dapodikMatpelId = mirror?.mataPelajaranId ?? (await resolveReferensiMapelId(nama));
-
-		// Mapel baru selalu diletakkan di nomor urut paling bawah.
-		const [{ maxUrutan }] = await db
-			.select({ maxUrutan: sql<number>`coalesce(max(${tableMataPelajaran.urutan}), 0)` })
-			.from(tableMataPelajaran)
-			.where(eq(tableMataPelajaran.kelasId, kelasId));
-
-		await db.insert(tableMataPelajaran).values({
-			nama,
-			namaLokal: namaLokal || null,
-			jenis,
-			kkm,
-			kelasId,
-			kode: kode || null,
-			urutan: (maxUrutan ?? 0) + 1,
-			...(mirror ? { dapodikPembelajaranId: mirror.pembelajaranId } : {}),
-			...(!mirror && indukRow ? { dapodikIndukPembelajaranId: indukRow.pembelajaranId } : {}),
-			...(dapodikMatpelId ? { dapodikMataPelajaranId: dapodikMatpelId } : {})
-		});
-		const suffix = mirror
-			? ' dan ter-binding ke pembelajaran Dapodik'
-			: indukRow
-				? ` sebagai Sub Pembelajaran dari "${indukRow.nama}"${
-						dapodikMatpelId
-							? ''
-							: '; ID referensi mapel belum ditemukan, akan dilengkapi saat kirim'
-					}`
-				: '';
-		return { message: `Data mata pelajaran berhasil ditambah${suffix}` };
+		return {
+			message: `Data mata pelajaran "${nama}" berhasil diterapkan ke ${insertedCount} kelas.`
+		};
 	}
 };

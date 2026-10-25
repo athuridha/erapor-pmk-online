@@ -154,7 +154,13 @@ export const MASTER_DATA: MasterData[] = [
 		tabel: 'mata_pelajaran',
 		fields: [
 			{ key: 'nama', label: 'Nama Mata Pelajaran', tipe: 'teks', wajib: true },
-			{ key: 'kelas_id', label: 'Kelas', tipe: 'relasi', relasi: 'kelas', wajib: true },
+			{
+				key: 'kelas_id',
+				label: 'Kelas / Rombel',
+				tipe: 'relasi',
+				relasi: 'kelas',
+				placeholder: 'Semua Kelas (Kosongkan jika berlaku untuk semua kelas)'
+			},
 			{
 				key: 'jenis',
 				label: 'Jenis',
@@ -177,9 +183,10 @@ export const MASTER_DATA: MasterData[] = [
 		],
 		kolom: [
 			{ key: 'nama', label: 'Mata Pelajaran' },
-			{ key: 'kelas', label: 'Kelas' },
+			{ key: 'kode', label: 'Kode' },
 			{ key: 'jenis', label: 'Jenis' },
 			{ key: 'kkm', label: 'KKM' },
+			{ key: 'kelas', label: 'Kelas / Rombel' },
 			{ key: 'pengampu', label: 'Guru Pengampu' }
 		]
 	},

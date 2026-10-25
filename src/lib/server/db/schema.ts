@@ -600,6 +600,22 @@ export const tableMataPelajaran = sqliteTable(
 	(table) => [unique().on(table.kelasId, table.nama)]
 );
 
+export const tableTeknikPenilaian = sqliteTable(
+	'teknik_penilaian',
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		sekolahId: int()
+			.references(() => tableSekolah.id, { onDelete: 'cascade' })
+			.notNull(),
+		nama: text().notNull(),
+		singkatan: text().notNull(),
+		keterangan: text(),
+		urutan: int().default(0),
+		...audit
+	},
+	(t) => [unique().on(t.sekolahId, t.nama)]
+);
+
 export const tableTujuanPembelajaran = sqliteTable('tujuan_pembelajaran', {
 	id: int().primaryKey({ autoIncrement: true }),
 	mataPelajaranId: int()
@@ -608,6 +624,7 @@ export const tableTujuanPembelajaran = sqliteTable('tujuan_pembelajaran', {
 	deskripsi: text().notNull(),
 	lingkupMateri: text().notNull(),
 	bobot: real().default(0).notNull(),
+	teknikPenilaianId: int().references(() => tableTeknikPenilaian.id, { onDelete: 'set null' }),
 	...audit
 });
 
@@ -725,10 +742,22 @@ export const tableMataPelajaranRelations = relations(tableMataPelajaran, ({ one,
 	muridMataPelajaran: many(tableMuridMataPelajaran)
 }));
 
+export const tableTeknikPenilaianRelations = relations(tableTeknikPenilaian, ({ one, many }) => ({
+	sekolah: one(tableSekolah, {
+		fields: [tableTeknikPenilaian.sekolahId],
+		references: [tableSekolah.id]
+	}),
+	tujuanPembelajaran: many(tableTujuanPembelajaran)
+}));
+
 export const tableTujuanPembelajaranRelations = relations(tableTujuanPembelajaran, ({ one }) => ({
 	mataPelajaran: one(tableMataPelajaran, {
 		fields: [tableTujuanPembelajaran.mataPelajaranId],
 		references: [tableMataPelajaran.id]
+	}),
+	teknikPenilaian: one(tableTeknikPenilaian, {
+		fields: [tableTujuanPembelajaran.teknikPenilaianId],
+		references: [tableTeknikPenilaian.id]
 	})
 }));
 

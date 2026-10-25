@@ -40,13 +40,28 @@
 		return nilai == null ? '' : String(nilai);
 	}
 
+	let mapelKelasTerpilih = $state<number[]>([]);
+
 	function bukaTambah() {
 		barisEdit = null;
+		mapelKelasTerpilih = (relasi.kelas ?? []).map((k) => Number(k.value));
 		formTerbuka = true;
 	}
 
 	function bukaUbah(row: Record<string, string | number | null>) {
 		barisEdit = row;
+		if (entitas?.key === 'mata_pelajaran') {
+			const kelasStr = String(row.kelas ?? '');
+			const isSemua = kelasStr.startsWith('Semua Kelas');
+			if (isSemua) {
+				mapelKelasTerpilih = (relasi.kelas ?? []).map((k) => Number(k.value));
+			} else {
+				const namaKelasList = kelasStr.split(',').map((s) => s.trim().toLowerCase());
+				mapelKelasTerpilih = (relasi.kelas ?? [])
+					.filter((k) => namaKelasList.includes(k.label.trim().toLowerCase()))
+					.map((k) => Number(k.value));
+			}
+		}
 		formTerbuka = true;
 	}
 
@@ -380,8 +395,12 @@
 
 					<div class="grid gap-3 sm:grid-cols-2">
 						{#each entitas.fields as field (field.key)}
-							<label class="form-control">
-								<span class="label-text mb-1 text-sm">
+							<div
+								class="form-control {entitas.key === 'mata_pelajaran' && field.key === 'kelas_id'
+									? 'sm:col-span-2'
+									: ''}"
+							>
+								<span class="label-text mb-1 text-sm font-medium">
 									{field.label}
 									{#if field.wajib}<span class="text-error">*</span>{/if}
 								</span>
@@ -408,28 +427,122 @@
 										{/each}
 									</select>
 								{:else if field.tipe === 'relasi'}
-									<select
-										name={field.key}
-										class="select select-bordered w-full rounded-xl"
-										required={field.wajib}
-										disabled={submitting}
-									>
-										{#if field.opsiTambahan}
-											{#each field.opsiTambahan as opsi (opsi.value)}
-												<option value={opsi.value} selected={nilaiField(field.key) === opsi.value}>
+									{#if entitas.key === 'mata_pelajaran' && field.key === 'kelas_id'}
+										{@const semuaOpsiKelas = relasi[field.relasi ?? 'kelas'] ?? []}
+										<div
+											class="border-base-300 dark:border-base-200 bg-base-200/50 space-y-2 rounded-xl border p-3"
+										>
+											<div class="flex items-center justify-between border-b pb-2">
+												<label class="flex cursor-pointer items-center gap-2 text-xs font-semibold">
+													<input
+														type="checkbox"
+														name="semua_kelas"
+														value="1"
+														class="checkbox checkbox-xs checkbox-primary"
+														checked={semuaOpsiKelas.length > 0 &&
+															mapelKelasTerpilih.length === semuaOpsiKelas.length}
+														onchange={(e) => {
+															if ((e.currentTarget as HTMLInputElement).checked) {
+																mapelKelasTerpilih = semuaOpsiKelas.map((k) => Number(k.value));
+															} else {
+																mapelKelasTerpilih = [];
+															}
+														}}
+													/>
+													<span>Pilih Semua Kelas ({semuaOpsiKelas.length} kelas)</span>
+												</label>
+												<div class="flex items-center gap-1.5">
+													<button
+														type="button"
+														class="btn btn-ghost btn-xs text-primary text-xs"
+														onclick={() =>
+															(mapelKelasTerpilih = semuaOpsiKelas.map((k) => Number(k.value)))}
+													>
+														Pilih Semua
+													</button>
+													<span class="opacity-30">•</span>
+													<button
+														type="button"
+														class="btn btn-ghost btn-xs text-xs text-error"
+														onclick={() => (mapelKelasTerpilih = [])}
+													>
+														Kosongkan
+													</button>
+												</div>
+											</div>
+
+											<!-- Daftar Pilihan Kelas Selalu Ditampilkan -->
+											<div
+												class="border-base-300 bg-base-100 grid max-h-48 grid-cols-2 gap-1.5 overflow-y-auto rounded-lg border p-2 sm:grid-cols-4"
+											>
+												{#each semuaOpsiKelas as k (k.value)}
+													<label
+														class="hover:bg-base-200 flex cursor-pointer items-center gap-1.5 rounded p-1 text-xs"
+													>
+														<input
+															type="checkbox"
+															name="kelas_ids"
+															value={k.value}
+															class="checkbox checkbox-xs"
+															checked={mapelKelasTerpilih.includes(Number(k.value))}
+															onchange={(e) => {
+																const val = Number(k.value);
+																if ((e.currentTarget as HTMLInputElement).checked) {
+																	mapelKelasTerpilih = [...mapelKelasTerpilih, val];
+																} else {
+																	mapelKelasTerpilih = mapelKelasTerpilih.filter(
+																		(id) => id !== val
+																	);
+																}
+															}}
+														/>
+														<span class="truncate">{k.label}</span>
+													</label>
+												{/each}
+											</div>
+											<div class="flex items-center justify-between text-xs opacity-70">
+												<span
+													>Terpilih: <strong>{mapelKelasTerpilih.length}</strong> dari {semuaOpsiKelas.length}
+													kelas</span
+												>
+												{#if semuaOpsiKelas.length > 0 && mapelKelasTerpilih.length === semuaOpsiKelas.length}
+													<span class="badge badge-success badge-xs font-semibold"
+														>Semua Kelas Terpilih</span
+													>
+												{:else if mapelKelasTerpilih.length === 0}
+													<span class="badge badge-error badge-xs font-semibold"
+														>Wajib pilih minimal 1 kelas</span
+													>
+												{/if}
+											</div>
+										</div>
+									{:else}
+										<select
+											name={field.key}
+											class="select select-bordered w-full rounded-xl"
+											required={field.wajib}
+											disabled={submitting}
+										>
+											{#if field.opsiTambahan}
+												{#each field.opsiTambahan as opsi (opsi.value)}
+													<option
+														value={opsi.value}
+														selected={nilaiField(field.key) === opsi.value}
+													>
+														{opsi.label}
+													</option>
+												{/each}
+											{:else if !field.wajib}<option value="">—</option>{/if}
+											{#each relasi[field.relasi ?? 'kelas'] ?? [] as opsi (opsi.value)}
+												<option
+													value={opsi.value}
+													selected={nilaiField(field.key) === String(opsi.value)}
+												>
 													{opsi.label}
 												</option>
 											{/each}
-										{:else if !field.wajib}<option value="">—</option>{/if}
-										{#each relasi[field.relasi ?? 'kelas'] ?? [] as opsi (opsi.value)}
-											<option
-												value={opsi.value}
-												selected={nilaiField(field.key) === String(opsi.value)}
-											>
-												{opsi.label}
-											</option>
-										{/each}
-									</select>
+										</select>
+									{/if}
 								{:else if field.tipe === 'textarea'}
 									<textarea
 										name={field.key}
@@ -457,7 +570,7 @@
 								{#if field.bantu}
 									<span class="label-text-alt mt-1 text-xs opacity-70">{field.bantu}</span>
 								{/if}
-							</label>
+							</div>
 						{/each}
 					</div>
 

@@ -34,6 +34,7 @@
 		mode?: 'add' | 'edit';
 		mapel?: FormMapel | null;
 		kelasAktif?: KelasLite | null;
+		daftarKelas?: Array<{ id: number; nama: string; fase?: string | null }>;
 		dapodikMapelList?: Array<{ nama: string; kode: string | null }>;
 		indukList?: Array<{ nama: string; pembelajaranId: string }>;
 	} & Record<string, unknown>;
@@ -42,6 +43,11 @@
 	const mode: 'add' | 'edit' = $derived(data?.mode === 'edit' ? 'edit' : 'add');
 	const mapel = $derived(data?.mapel ?? null);
 	const kelasAktif = $derived(data?.kelasAktif ?? mapel?.kelas ?? null);
+	const daftarKelas = $derived(data?.daftarKelas ?? []);
+
+	// svelte-ignore state_referenced_locally
+	let terpilihKelasIds = $state<number[]>(data?.kelasAktif?.id ? [data.kelasAktif.id] : []);
+
 	const kelasAktifLabel = $derived(
 		kelasAktif
 			? kelasAktif.fase
@@ -53,8 +59,8 @@
 	const isAgamaParent = $derived(!!mapel?.nama && mapel.nama === agamaParentName);
 	const isPksGroup = $derived(!!mapel?.nama && PKS_MAPEL_NAME_SET.has(mapel.nama));
 	const isPksParent = $derived(!!mapel?.nama && mapel.nama === pksParentName);
-	const disableNama = $derived(!kelasAktif || (mode === 'edit' && (isAgamaGroup || isPksGroup)));
-	const disableJenis = $derived(!kelasAktif || (mode === 'edit' && isAgamaGroup));
+	const disableNama = $derived(mode === 'edit' && (isAgamaGroup || isPksGroup));
+	const disableJenis = $derived(mode === 'edit' && isAgamaGroup);
 	const formAction = $derived(mode === 'edit' ? '?/update' : '?/add');
 	const invalidateTargets = $derived(
 		mode === 'edit'
@@ -242,16 +248,90 @@
 	{#snippet children({ submitting, invalid })}
 		<h3 class="mb-3 text-lg font-bold">{heading}</h3>
 		<div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-1">
-			{#if !kelasAktif}
-				<div
-					class="alert bg-warning/10 border-warning text-warning-content flex items-center gap-2 border border-dashed"
-				>
-					<Icon name="info" />
-					<span
-						>Pilih kelas di navbar sebelum {mode === 'edit' ? 'mengubah' : 'menambah'} mata pelajaran.</span
+			{#if mode === 'add'}
+				<fieldset class="fieldset border-base-300 dark:border-base-200 rounded-lg border p-3">
+					<legend class="fieldset-legend text-xs font-semibold">Pilih Kelas / Rombel</legend>
+					<div class="mb-2 flex items-center justify-between border-b pb-2">
+						<label class="flex cursor-pointer items-center gap-2 text-xs font-semibold">
+							<input
+								type="checkbox"
+								name="semuaKelas"
+								value="1"
+								class="checkbox checkbox-xs checkbox-primary"
+								checked={daftarKelas.length > 0 && terpilihKelasIds.length === daftarKelas.length}
+								onchange={(e) => {
+									if ((e.currentTarget as HTMLInputElement).checked) {
+										terpilihKelasIds = daftarKelas.map((k) => k.id);
+									} else {
+										terpilihKelasIds = [];
+									}
+								}}
+							/>
+							<span>Pilih Semua Kelas ({daftarKelas.length} kelas)</span>
+						</label>
+						<div class="flex items-center gap-1.5">
+							<button
+								type="button"
+								class="btn btn-ghost btn-xs text-primary text-xs"
+								onclick={() => (terpilihKelasIds = daftarKelas.map((k) => k.id))}
+							>
+								Pilih Semua
+							</button>
+							<span class="opacity-30">•</span>
+							<button
+								type="button"
+								class="btn btn-ghost btn-xs text-error text-xs"
+								onclick={() => (terpilihKelasIds = [])}
+							>
+								Kosongkan
+							</button>
+						</div>
+					</div>
+
+					<!-- Daftar Kelas Selalu Ditampilkan -->
+					<div
+						class="bg-base-200/50 grid max-h-40 grid-cols-2 gap-1.5 overflow-y-auto rounded-md p-1.5 sm:grid-cols-3"
 					>
-				</div>
+						{#each daftarKelas as k (k.id)}
+							<label
+								class="hover:bg-base-200 flex cursor-pointer items-center gap-1.5 rounded p-1 text-xs"
+							>
+								<input
+									type="checkbox"
+									name="kelasIds"
+									value={k.id}
+									class="checkbox checkbox-xs"
+									checked={terpilihKelasIds.includes(k.id)}
+									onchange={(e) => {
+										const checked = (e.currentTarget as HTMLInputElement).checked;
+										if (checked) {
+											terpilihKelasIds = [...terpilihKelasIds, k.id];
+										} else {
+											terpilihKelasIds = terpilihKelasIds.filter((id) => id !== k.id);
+										}
+									}}
+								/>
+								<span class="truncate">{k.nama}</span>
+							</label>
+						{/each}
+					</div>
+					<div class="mt-1 flex items-center justify-between text-xs opacity-70">
+						<span
+							>Terpilih: <strong>{terpilihKelasIds.length}</strong> dari {daftarKelas.length} kelas</span
+						>
+						{#if daftarKelas.length > 0 && terpilihKelasIds.length === daftarKelas.length}
+							<span class="badge badge-success badge-xs font-semibold">Semua Kelas Terpilih</span>
+						{:else if terpilihKelasIds.length === 0}
+							<span class="badge badge-error badge-xs font-semibold"
+								>Wajib pilih minimal 1 kelas</span
+							>
+						{/if}
+					</div>
+				</fieldset>
+			{:else}
+				<p class="text-base-content/70 text-sm">Kelas aktif: {kelasAktifLabel}</p>
 			{/if}
+
 			{#if mode === 'edit'}
 				<input name="id" value={mapel?.id ?? ''} hidden />
 			{/if}
@@ -261,7 +341,6 @@
 			{#if mode === 'edit' && disableJenis}
 				<input name="jenis" value={mapel?.jenis ?? ''} hidden />
 			{/if}
-			<p class="text-base-content/70 text-sm">Kelas aktif: {kelasAktifLabel}</p>
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Nama Mata Pelajaran</legend>
 				{#if pakaiSelectDapodik}

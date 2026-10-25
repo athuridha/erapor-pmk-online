@@ -185,6 +185,7 @@ export const menuRoutePermissions: { path: string; permission: UserPermission }[
 	{ path: '/kelas', permission: 'informasi_umum_kelas' },
 	{ path: '/murid', permission: 'informasi_umum_murid' },
 	{ path: '/intrakurikuler', permission: 'mata_pelajaran_intrakurikuler' },
+	{ path: '/teknik-penilaian', permission: 'mata_pelajaran_intrakurikuler' },
 	{ path: '/kokurikuler', permission: 'mata_pelajaran_kokurikuler' },
 	{ path: '/ekstrakurikuler', permission: 'mata_pelajaran_ekstrakurikuler' },
 	{ path: '/asesmen-formatif', permission: 'input_nilai_asesmen_formatif' },

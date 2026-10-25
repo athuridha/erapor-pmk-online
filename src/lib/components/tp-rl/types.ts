@@ -1,6 +1,7 @@
 export type GroupEntry = {
 	id?: number;
 	deskripsi: string;
+	teknikPenilaianId?: number | null;
 	deleted?: boolean;
 };
 
@@ -28,6 +29,8 @@ export type TujuanPembelajaranGroup = {
 		deskripsi: string;
 		bobot?: number | null;
 		lingkupMateri?: string | null;
+		teknikPenilaianId?: number | null;
+		teknikPenilaian?: { id: number; nama: string; singkatan: string } | null;
 	}>;
 	bobot: number | null;
 };
