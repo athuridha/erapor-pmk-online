@@ -60,9 +60,14 @@
 				tags: ['orang tua', 'wali', 'ayah', 'ibu', 'referensi']
 			},
 			{
-				title: 'Profil & Konfigurasi',
+				title: 'Bobot Penilaian',
+				path: '/master-data/bobot',
+				tags: ['bobot', 'penilaian', 'sumatif', 'sts', 'sas', 'lingkup', 'rts']
+			},
+			{
+				title: 'Profil Sekolah',
 				path: '/master-data/sekolah',
-				tags: ['sekolah', 'profil', 'bobot', 'kriteria', 'konfigurasi', 'referensi']
+				tags: ['sekolah', 'profil', 'kriteria', 'referensi']
 			}
 		]
 	},

@@ -23,6 +23,12 @@ export async function ensureMuridArsipSchema() {
 	if (!(await columnExists('murid', 'tanggal_lulus'))) {
 		await db.$client.execute(`ALTER TABLE "murid" ADD COLUMN "tanggal_lulus" text`);
 	}
+	if (!(await columnExists('murid', 'tanggal_keluar'))) {
+		await db.$client.execute(`ALTER TABLE "murid" ADD COLUMN "tanggal_keluar" text`);
+	}
+	if (!(await columnExists('murid', 'alasan_keluar'))) {
+		await db.$client.execute(`ALTER TABLE "murid" ADD COLUMN "alasan_keluar" text`);
+	}
 
 	await ensureSchema('murid_arsip', [
 		`CREATE TABLE IF NOT EXISTS "murid_lampiran" (

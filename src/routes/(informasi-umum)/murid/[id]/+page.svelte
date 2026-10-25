@@ -216,7 +216,12 @@
 						{@render field('Pendidikan Sebelumnya', data.murid.pendidikanSebelumnya)}
 						{@render field('Tanggal Masuk Sekolah Ini', data.murid.tanggalMasuk)}
 						{@render field('Status', statusLabel(data.murid.status))}
-						{@render field('Tanggal Lulus', data.murid.tanggalLulus)}
+						{#if data.murid.status === 'lulus'}
+							{@render field('Tanggal Lulus', data.murid.tanggalLulus)}
+						{:else if data.murid.status === 'keluar' || data.murid.status === 'pindah'}
+							{@render field('Tanggal Keluar', data.murid.tanggalKeluar)}
+							{@render field('Alasan Keluar', data.murid.alasanKeluar)}
+						{/if}
 					</div>
 				</div>
 			</div>

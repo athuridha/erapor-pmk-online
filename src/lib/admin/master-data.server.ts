@@ -748,11 +748,6 @@ export async function simpanMasterData(
 				jenjangPendidikan: (teks(formData, 'jenjang_pendidikan') || 'sma') as
 					'sd' | 'smp' | 'sma' | 'slb' | 'pkbm' | 'srt',
 				jenjangVariant: teks(formData, 'jenjang_variant') || null,
-				sumatifBobotLingkup: angkaAtau(formData, 'sumatif_bobot_lingkup', 60) ?? 60,
-				sumatifBobotSts: angkaAtau(formData, 'sumatif_bobot_sts', 20) ?? 20,
-				sumatifBobotSas: angkaAtau(formData, 'sumatif_bobot_sas', 20) ?? 20,
-				sumatifBobotRtsLingkup: angkaAtau(formData, 'sumatif_bobot_rts_lingkup', 70) ?? 70,
-				sumatifBobotRtsSts: angkaAtau(formData, 'sumatif_bobot_rts_sts', 30) ?? 30,
 				raporKriteriaCukup: angkaAtau(formData, 'rapor_kriteria_cukup', 85) ?? 85,
 				raporKriteriaBaik: angkaAtau(formData, 'rapor_kriteria_baik', 95) ?? 95,
 				statusKepalaSekolah: (teks(formData, 'status_kepala_sekolah') || 'definitif') as

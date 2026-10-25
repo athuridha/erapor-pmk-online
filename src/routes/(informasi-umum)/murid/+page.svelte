@@ -8,6 +8,7 @@
 	import { onDestroy } from 'svelte';
 	import MuridModals from '$lib/components/murid/modals.svelte';
 	import PindahMuridModal from '$lib/components/murid/pindah-murid-modal.svelte';
+	import { buildPageNumbers, OPSI_BARIS_PER_HALAMAN } from '$lib/utils/pagination';
 
 	type BulkModalData = {
 		type: 'bulk';
@@ -31,7 +32,7 @@
 	let searchTimer: ReturnType<typeof setTimeout> | undefined;
 	const currentPage = $derived.by(() => data.page.currentPage ?? 1);
 	const totalPages = $derived.by(() => Math.max(1, data.page.totalPages ?? 1));
-	const pages = $derived.by(() => Array.from({ length: totalPages }, (_, index) => index + 1));
+	const nomorHalaman = $derived(buildPageNumbers(currentPage, totalPages));
 
 	let selectedIds = $state<Set<number>>(new Set());
 	const hasSelection = $derived.by(() => selectedIds.size > 0);
@@ -55,6 +56,46 @@
 	let isBulkPhotoUploadOpen = $state(false);
 	let isMoveOpen = $state(false);
 	let dropdownToggle: HTMLButtonElement | null = $state(null);
+
+	type TargetMuridKeluarkan = {
+		id: number;
+		nama: string;
+		nis?: string | null;
+		nisn?: string | null;
+	};
+
+	let targetMuridKeluarkan = $state<TargetMuridKeluarkan | null>(null);
+	let isKeluarkanBulkOpen = $state(false);
+	let formTanggalKeluar = $state(new Date().toISOString().split('T')[0]);
+	let formAlasanKeluar = $state('Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)');
+	let formAlasanKustom = $state('');
+
+	function bukaKeluarkanModal(murid: {
+		id: number;
+		nama: string;
+		nis?: string | null;
+		nisn?: string | null;
+	}) {
+		targetMuridKeluarkan = murid;
+		formTanggalKeluar = new Date().toISOString().split('T')[0];
+		formAlasanKeluar = 'Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)';
+		formAlasanKustom = '';
+	}
+
+	async function setStatusFilter(statusKey: string) {
+		const params = new SvelteURLSearchParams(page.url.search);
+		if (statusKey === 'aktif') {
+			params.delete('status');
+		} else {
+			params.set('status', statusKey);
+		}
+		params.delete('page');
+		const nextQuery = params.toString();
+		await goto(`${page.url.pathname}${nextQuery ? `?${nextQuery}` : ''}`, {
+			replaceState: true,
+			keepFocus: true
+		});
+	}
 
 	function handleSubmittingChange(value: boolean) {
 		formSubmitting = value;
@@ -169,6 +210,17 @@
 		const target = buildPageUrl(pageNumber);
 		if (!target) return;
 		await goto(target, { replaceState: true, keepFocus: true });
+	}
+
+	async function gotoPerHalaman(jumlah: number) {
+		const params = new SvelteURLSearchParams(page.url.search);
+		params.set('per_page', String(jumlah));
+		params.delete('page');
+		const nextQuery = params.toString();
+		await goto(`${page.url.pathname}${nextQuery ? `?${nextQuery}` : ''}`, {
+			replaceState: true,
+			keepFocus: true
+		});
 	}
 
 	function handlePageClick(pageNumber: number) {
@@ -321,6 +373,21 @@
 						Pindahkan
 					</button>
 					<button
+						class="btn btn-soft btn-warning shadow-none"
+						type="button"
+						disabled={formSubmitting || !canEdit}
+						onclick={() => {
+							formTanggalKeluar = new Date().toISOString().split('T')[0];
+							formAlasanKeluar = 'Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)';
+							formAlasanKustom = '';
+							isKeluarkanBulkOpen = true;
+						}}
+						title={!canEdit ? 'Anda tidak memiliki izin' : 'Keluarkan murid terpilih dari sekolah'}
+					>
+						<Icon name="close" />
+						Keluarkan
+					</button>
+					<button
 						class="btn btn-soft btn-error shadow-none"
 						type="button"
 						disabled={formSubmitting || !canEdit}
@@ -384,6 +451,21 @@
 		</div>
 	</div>
 
+	<!-- Filter Status Murid -->
+	<div class="tabs tabs-box bg-base-200/50 mb-4 flex flex-wrap gap-1 p-1">
+		{#each [{ key: 'aktif', label: 'Aktif', count: data.statusCounts?.aktif ?? 0, badge: 'badge-success' }, { key: 'keluar', label: 'Dikeluarkan / Keluar', count: data.statusCounts?.keluar ?? 0, badge: 'badge-error' }, { key: 'pindah', label: 'Pindah', count: data.statusCounts?.pindah ?? 0, badge: 'badge-warning' }, { key: 'lulus', label: 'Lulus', count: data.statusCounts?.lulus ?? 0, badge: 'badge-info' }, { key: 'semua', label: 'Semua Status', count: data.statusCounts?.semua ?? 0, badge: 'badge-ghost' }] as tab (tab.key)}
+			<button
+				type="button"
+				class="tab text-xs font-medium"
+				class:tab-active={(data.page.status ?? 'aktif') === tab.key}
+				onclick={() => setStatusFilter(tab.key)}
+			>
+				{tab.label}
+				<span class="badge {tab.badge} badge-sm ml-1.5">{tab.count}</span>
+			</button>
+		{/each}
+	</div>
+
 	<form
 		class="flex flex-col items-center gap-2 sm:flex-row"
 		data-sveltekit-keepfocus
@@ -391,18 +473,31 @@
 		onsubmit={submitSearch}
 	>
 		<!-- Cari nama murid -->
-		<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
-			<Icon name="search" />
-			<input
-				type="search"
-				name="q"
-				value={searchTerm}
-				spellcheck="false"
-				placeholder="Cari nama murid..."
-				autocomplete="name"
-				oninput={handleSearchInput}
-			/>
-		</label>
+		<div class="join w-full">
+			<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
+				<Icon name="search" />
+				<input
+					type="search"
+					name="q"
+					value={searchTerm}
+					spellcheck="false"
+					placeholder="Cari nama murid..."
+					autocomplete="name"
+					oninput={handleSearchInput}
+				/>
+			</label>
+			<select
+				class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink dark:border-none"
+				value={data.page.perPage}
+				title="Baris per halaman"
+				onchange={(event) =>
+					gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
+			>
+				{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
+					<option value={jumlah}>{jumlah} / hal</option>
+				{/each}
+			</select>
+		</div>
 	</form>
 
 	<FormEnhance
@@ -455,7 +550,31 @@
 									/>
 								</td>
 								<td>{offset + index + 1}</td>
-								<td>{@html searchQueryMarker(data.page.search, murid.nama)}</td>
+								<td>
+									<div class="flex flex-wrap items-center gap-1.5">
+										<span class="font-medium"
+											>{@html searchQueryMarker(data.page.search, murid.nama)}</span
+										>
+										{#if murid.status === 'keluar'}
+											<span
+												class="badge badge-error badge-xs font-semibold"
+												title={`Dikeluarkan: ${murid.alasanKeluar ?? '-'} (${murid.tanggalKeluar ?? '-'})`}
+											>
+												Keluar
+											</span>
+										{:else if murid.status === 'pindah'}
+											<span class="badge badge-warning badge-xs font-semibold">Pindah</span>
+										{:else if murid.status === 'lulus'}
+											<span class="badge badge-info badge-xs font-semibold">Lulus</span>
+										{/if}
+									</div>
+									{#if murid.status === 'keluar' && murid.alasanKeluar}
+										<p class="text-error mt-0.5 text-xs opacity-80">
+											Alasan: {murid.alasanKeluar}
+											{murid.tanggalKeluar ? `(${murid.tanggalKeluar})` : ''}
+										</p>
+									{/if}
+								</td>
 								<td>{murid.agama}</td>
 								<td>{murid.tempatLahir}</td>
 								<td>{murid.tanggalLahir}</td>
@@ -471,11 +590,43 @@
 										</a>
 
 										{#if canEdit}
+											{#if murid.status === 'keluar'}
+												<!-- Tombol Aktifkan Kembali -->
+												<FormEnhance
+													action="?/aktifkanMurid"
+													onsuccess={() => {
+														toast('Status murid berhasil diaktifkan kembali.', 'success');
+													}}
+												>
+													{#snippet children({ submitting: subAktif })}
+														<input type="hidden" name="muridId" value={murid.id} />
+														<button
+															type="submit"
+															class="btn btn-sm btn-success btn-soft rounded-none shadow-none"
+															disabled={subAktif}
+															title="Aktifkan kembali murid ini"
+														>
+															<Icon name="check" />
+														</button>
+													{/snippet}
+												</FormEnhance>
+											{:else}
+												<!-- Tombol Keluarkan Murid -->
+												<button
+													type="button"
+													class="btn btn-sm btn-warning btn-soft rounded-none shadow-none"
+													onclick={() => bukaKeluarkanModal(murid)}
+													title="Keluarkan murid dari sekolah"
+												>
+													<Icon name="close" />
+												</button>
+											{/if}
+
 											<a
 												class="btn btn-sm btn-error btn-soft rounded-l-none shadow-none"
 												href="/murid/{murid.id}/delete"
 												use:modalRoute={'delete-murid'}
-												title="Hapus data murid"
+												title="Hapus data murid permanen"
 											>
 												<Icon name="del" />
 											</a>
@@ -484,7 +635,7 @@
 												type="button"
 												class="btn btn-sm btn-disabled rounded-l-none shadow-none"
 												disabled
-												title="Anda tidak memiliki izin untuk menghapus"
+												title="Anda tidak memiliki izin mengelola murid"
 											>
 												<Icon name="del" />
 											</button>
@@ -505,19 +656,47 @@
 		{/snippet}
 	</FormEnhance>
 	<!-- pagination -->
-	<div class="join mt-4 sm:mx-auto">
-		{#each pages as pageNumber (pageNumber)}
-			<button
-				type="button"
-				class="join-item btn pointer-events-auto"
-				class:btn-active={pageNumber === currentPage}
-				onclick={() => handlePageClick(pageNumber)}
-				aria-current={pageNumber === currentPage ? 'page' : undefined}
-			>
-				{pageNumber}
-			</button>
-		{/each}
-	</div>
+	{#if totalPages > 1}
+		<div class="mt-4 flex justify-center">
+			<div class="join">
+				<button
+					type="button"
+					class="join-item btn"
+					disabled={currentPage <= 1}
+					onclick={() => handlePageClick(currentPage - 1)}
+				>
+					«
+				</button>
+				{#each nomorHalaman as nomor, index (index)}
+					{#if nomor === '…'}
+						<button type="button" class="join-item btn" disabled>…</button>
+					{:else}
+						<button
+							type="button"
+							class="join-item btn pointer-events-auto"
+							class:btn-active={nomor === currentPage}
+							onclick={() => handlePageClick(nomor)}
+							aria-current={nomor === currentPage ? 'page' : undefined}
+						>
+							{nomor}
+						</button>
+					{/if}
+				{/each}
+				<button
+					type="button"
+					class="join-item btn"
+					disabled={currentPage >= totalPages}
+					onclick={() => handlePageClick(currentPage + 1)}
+				>
+					»
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	<p class="mt-3 text-center text-sm opacity-70">
+		Menampilkan {data.daftarMurid.length} dari {data.page.totalItems ?? 0} data
+	</p>
 </div>
 
 <MuridModals {formSubmitting} {submitBulkDelete} bind:isBulkPhotoUploadOpen />
@@ -533,3 +712,209 @@
 	action="?/pindahMurid"
 	onSuccess={handleBulkMoveSuccess}
 />
+
+<!-- Modal Keluarkan Satuan -->
+{#if targetMuridKeluarkan}
+	<dialog class="modal modal-open">
+		<div class="modal-box max-w-md">
+			<h3 class="text-error flex items-center gap-2 text-lg font-bold">
+				<Icon name="warning" />
+				Keluarkan Murid
+			</h3>
+			<p class="py-2 text-sm">
+				Anda akan mengeluarkan murid <strong>{targetMuridKeluarkan.nama}</strong>
+				{targetMuridKeluarkan.nis ? `(NIS: ${targetMuridKeluarkan.nis})` : ''}. Status murid akan
+				diubah menjadi <em>Keluar</em> dan tidak tampil di daftar murid aktif.
+			</p>
+
+			<FormEnhance
+				action="?/keluarkanMurid"
+				onsuccess={() => {
+					targetMuridKeluarkan = null;
+					toast('Murid berhasil dikeluarkan.', 'success');
+				}}
+			>
+				{#snippet children({ submitting })}
+					<input type="hidden" name="muridId" value={targetMuridKeluarkan?.id} />
+
+					<fieldset class="fieldset mt-3">
+						<legend class="fieldset-legend font-medium">Tanggal Keluar</legend>
+						<input
+							type="date"
+							name="tanggalKeluar"
+							class="input bg-base-200 dark:bg-base-300 w-full"
+							bind:value={formTanggalKeluar}
+							required
+						/>
+					</fieldset>
+
+					<fieldset class="fieldset mt-3">
+						<legend class="fieldset-legend font-medium">Alasan Keluar</legend>
+						<select
+							class="select bg-base-200 dark:bg-base-300 w-full"
+							bind:value={formAlasanKeluar}
+							onchange={(e) => {
+								const val = (e.currentTarget as HTMLSelectElement).value;
+								if (val !== 'Lainnya') formAlasanKustom = '';
+							}}
+						>
+							<option value="Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)">
+								Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)
+							</option>
+							<option value="Drop Out (DO) / Putus Sekolah">Drop Out (DO) / Putus Sekolah</option>
+							<option value="Mengundurkan Diri">Mengundurkan Diri</option>
+							<option value="Pindah Sekolah">Pindah Sekolah</option>
+							<option value="Bekerja">Bekerja</option>
+							<option value="Lainnya">Lainnya...</option>
+						</select>
+						{#if formAlasanKeluar === 'Lainnya'}
+							<input
+								type="text"
+								class="input bg-base-200 dark:bg-base-300 mt-2 w-full"
+								placeholder="Tuliskan alasan keluar..."
+								bind:value={formAlasanKustom}
+								required
+							/>
+						{/if}
+						<input
+							type="hidden"
+							name="alasanKeluar"
+							value={formAlasanKeluar === 'Lainnya' ? formAlasanKustom : formAlasanKeluar}
+						/>
+					</fieldset>
+
+					<div class="modal-action mt-6">
+						<button
+							type="button"
+							class="btn btn-ghost shadow-none"
+							onclick={() => (targetMuridKeluarkan = null)}
+							disabled={submitting}
+						>
+							Batal
+						</button>
+						<button
+							type="submit"
+							class="btn btn-error shadow-none"
+							disabled={submitting || (formAlasanKeluar === 'Lainnya' && !formAlasanKustom.trim())}
+						>
+							{#if submitting}
+								<span class="loading loading-spinner loading-sm"></span>
+							{/if}
+							Keluarkan Murid
+						</button>
+					</div>
+				{/snippet}
+			</FormEnhance>
+		</div>
+		<button
+			type="button"
+			class="modal-backdrop"
+			onclick={() => (targetMuridKeluarkan = null)}
+			aria-label="Tutup"
+		></button>
+	</dialog>
+{/if}
+
+<!-- Modal Keluarkan Massal -->
+{#if isKeluarkanBulkOpen}
+	<dialog class="modal modal-open">
+		<div class="modal-box max-w-md">
+			<h3 class="text-error flex items-center gap-2 text-lg font-bold">
+				<Icon name="warning" />
+				Keluarkan {selectedIds.size} Murid Terpilih
+			</h3>
+			<p class="py-2 text-sm">
+				Semua murid yang dipilih akan diubah statusnya menjadi <em>Keluar</em> dan dipindahkan ke arsip
+				murid non-aktif.
+			</p>
+
+			<FormEnhance
+				action="?/keluarkanBulk"
+				onsuccess={() => {
+					isKeluarkanBulkOpen = false;
+					selectedIds = new Set();
+					toast('Murid terpilih berhasil dikeluarkan.', 'success');
+				}}
+			>
+				{#snippet children({ submitting })}
+					{#each Array.from(selectedIds) as id (id)}
+						<input type="hidden" name="muridIds" value={id} />
+					{/each}
+
+					<fieldset class="fieldset mt-3">
+						<legend class="fieldset-legend font-medium">Tanggal Keluar</legend>
+						<input
+							type="date"
+							name="tanggalKeluar"
+							class="input bg-base-200 dark:bg-base-300 w-full"
+							bind:value={formTanggalKeluar}
+							required
+						/>
+					</fieldset>
+
+					<fieldset class="fieldset mt-3">
+						<legend class="fieldset-legend font-medium">Alasan Keluar</legend>
+						<select
+							class="select bg-base-200 dark:bg-base-300 w-full"
+							bind:value={formAlasanKeluar}
+							onchange={(e) => {
+								const val = (e.currentTarget as HTMLSelectElement).value;
+								if (val !== 'Lainnya') formAlasanKustom = '';
+							}}
+						>
+							<option value="Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)">
+								Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)
+							</option>
+							<option value="Drop Out (DO) / Putus Sekolah">Drop Out (DO) / Putus Sekolah</option>
+							<option value="Mengundurkan Diri">Mengundurkan Diri</option>
+							<option value="Pindah Sekolah">Pindah Sekolah</option>
+							<option value="Bekerja">Bekerja</option>
+							<option value="Lainnya">Lainnya...</option>
+						</select>
+						{#if formAlasanKeluar === 'Lainnya'}
+							<input
+								type="text"
+								class="input bg-base-200 dark:bg-base-300 mt-2 w-full"
+								placeholder="Tuliskan alasan keluar..."
+								bind:value={formAlasanKustom}
+								required
+							/>
+						{/if}
+						<input
+							type="hidden"
+							name="alasanKeluar"
+							value={formAlasanKeluar === 'Lainnya' ? formAlasanKustom : formAlasanKeluar}
+						/>
+					</fieldset>
+
+					<div class="modal-action mt-6">
+						<button
+							type="button"
+							class="btn btn-ghost shadow-none"
+							onclick={() => (isKeluarkanBulkOpen = false)}
+							disabled={submitting}
+						>
+							Batal
+						</button>
+						<button
+							type="submit"
+							class="btn btn-error shadow-none"
+							disabled={submitting || (formAlasanKeluar === 'Lainnya' && !formAlasanKustom.trim())}
+						>
+							{#if submitting}
+								<span class="loading loading-spinner loading-sm"></span>
+							{/if}
+							Keluarkan {selectedIds.size} Murid
+						</button>
+					</div>
+				{/snippet}
+			</FormEnhance>
+		</div>
+		<button
+			type="button"
+			class="modal-backdrop"
+			onclick={() => (isKeluarkanBulkOpen = false)}
+			aria-label="Tutup"
+		></button>
+	</dialog>
+{/if}

@@ -387,6 +387,8 @@ export const tableMurid = sqliteTable(
 			.default('aktif')
 			.notNull(),
 		tanggalLulus: text(),
+		tanggalKeluar: text(),
+		alasanKeluar: text(),
 		alamatId: int()
 			.references(() => tableAlamat.id)
 			.notNull(),

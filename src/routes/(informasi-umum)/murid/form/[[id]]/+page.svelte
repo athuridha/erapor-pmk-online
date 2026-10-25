@@ -203,6 +203,27 @@
 							/>
 						</fieldset>
 					</div>
+					<div class="flex flex-col gap-2 sm:flex-row">
+						<!-- Tanggal Keluar -->
+						<fieldset class="fieldset flex-1">
+							<legend class="fieldset-legend">Tanggal Keluar (Jika Keluar/Pindah)</legend>
+							<input
+								type="date"
+								class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								name="tanggalKeluar"
+							/>
+						</fieldset>
+						<!-- Alasan Keluar -->
+						<fieldset class="fieldset flex-1">
+							<legend class="fieldset-legend">Alasan Keluar</legend>
+							<input
+								type="text"
+								class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								name="alasanKeluar"
+								placeholder="Contoh: Dikeluarkan, Mengundurkan diri, Pindah..."
+							/>
+						</fieldset>
+					</div>
 				</div>
 
 				<!-- data Orang Tua -->

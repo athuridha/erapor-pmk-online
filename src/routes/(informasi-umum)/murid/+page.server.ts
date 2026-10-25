@@ -5,6 +5,7 @@ import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { buildKelasContext } from '$lib/server/route-utils';
 import { pindahkanMuridKelas } from '$lib/server/murid-pindah-kelas';
 import { isAuthorizedUser } from '../../pengguna/permissions';
+import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 
 export async function load({ locals, url, depends, parent }) {
 	depends('app:murid');
@@ -40,19 +41,27 @@ export async function load({ locals, url, depends, parent }) {
 				tahunAjaranNama: kelas.semester?.tahunAjaran?.nama ?? ''
 			}))
 		: [];
-	const perPage = 20;
+	const perPage = normalisasiBarisPerHalaman(url.searchParams.get('per_page'), 50);
 	const requestedPage = Number(url.searchParams.get('page')) || 1;
 	const pageNumber =
 		Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
+
+	const statusParam = url.searchParams.get('status') || 'aktif';
+	const statusFilter =
+		statusParam && statusParam !== 'semua'
+			? eq(tableMurid.status, statusParam as 'aktif' | 'lulus' | 'pindah' | 'keluar')
+			: undefined;
 
 	if (!sekolahId || !kelasIds.length) {
 		return {
 			daftarMurid: [],
 			academicContext,
 			kelasTujuan,
+			statusCounts: { aktif: 0, keluar: 0, pindah: 0, lulus: 0, semua: 0 },
 			page: {
 				kelasId,
 				search,
+				status: statusParam,
 				currentPage: 1,
 				totalPages: 1,
 				totalItems: 0,
@@ -61,16 +70,37 @@ export async function load({ locals, url, depends, parent }) {
 		};
 	}
 
-	const filter = and(
+	const baseClassFilter = and(
 		eq(tableMurid.sekolahId, sekolahId),
-		kelasId ? eq(tableMurid.kelasId, +kelasId) : inArray(tableMurid.kelasId, kelasIds),
-		search ? sql`${tableMurid.nama} LIKE ${'%' + search + '%'} COLLATE NOCASE` : undefined
+		kelasId ? eq(tableMurid.kelasId, +kelasId) : inArray(tableMurid.kelasId, kelasIds)
 	);
 
-	const [{ totalItems }] = await db
-		.select({ totalItems: sql<number>`count(*)` })
-		.from(tableMurid)
-		.where(filter);
+	const filter = and(
+		baseClassFilter,
+		search ? sql`${tableMurid.nama} LIKE ${'%' + search + '%'} COLLATE NOCASE` : undefined,
+		statusFilter
+	);
+
+	const [statusCountsRaw, [{ totalItems }]] = await Promise.all([
+		db
+			.select({ status: tableMurid.status, count: sql<number>`count(*)` })
+			.from(tableMurid)
+			.where(baseClassFilter)
+			.groupBy(tableMurid.status),
+		db
+			.select({ totalItems: sql<number>`count(*)` })
+			.from(tableMurid)
+			.where(filter)
+	]);
+
+	const countsMap: Record<string, number> = { aktif: 0, keluar: 0, pindah: 0, lulus: 0 };
+	let totalSemua = 0;
+	for (const row of statusCountsRaw) {
+		const s = row.status ?? 'aktif';
+		countsMap[s] = row.count;
+		totalSemua += row.count;
+	}
+	countsMap.semua = totalSemua;
 
 	const total = totalItems ?? 0;
 	const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -79,6 +109,18 @@ export async function load({ locals, url, depends, parent }) {
 
 	const daftarMurid = await db.query.tableMurid.findMany({
 		where: filter,
+		columns: {
+			id: true,
+			nama: true,
+			nis: true,
+			nisn: true,
+			agama: true,
+			tempatLahir: true,
+			tanggalLahir: true,
+			status: true,
+			tanggalKeluar: true,
+			alasanKeluar: true
+		},
 		orderBy: asc(tableMurid.nama),
 		limit: perPage,
 		offset
@@ -98,9 +140,11 @@ export async function load({ locals, url, depends, parent }) {
 		daftarMurid,
 		academicContext,
 		kelasTujuan,
+		statusCounts: countsMap,
 		page: {
 			kelasId,
 			search,
+			status: statusParam,
 			currentPage,
 			totalPages,
 			totalItems: total,
@@ -156,5 +200,91 @@ export const actions = {
 			return fail(400, { fail: hasil.fail });
 		}
 		return { message: hasil.message };
+	},
+
+	async keluarkanMurid({ request, locals }) {
+		const sekolahId = locals.sekolah?.id;
+		if (!sekolahId) return fail(401, { fail: 'Sekolah tidak ditemukan' });
+		if (!isAuthorizedUser(['informasi_umum_murid'], locals.user ?? undefined)) {
+			return fail(403, { fail: 'Anda tidak memiliki izin mengelola murid' });
+		}
+
+		const formData = await request.formData();
+		const muridId = Number(formData.get('muridId'));
+		const tanggalKeluar =
+			formData.get('tanggalKeluar')?.toString() || new Date().toISOString().split('T')[0];
+		const alasanKeluar =
+			formData.get('alasanKeluar')?.toString()?.trim() || 'Dikeluarkan oleh pihak sekolah';
+
+		if (!Number.isInteger(muridId) || muridId <= 0) {
+			return fail(400, { fail: 'Data murid tidak valid' });
+		}
+
+		await db
+			.update(tableMurid)
+			.set({
+				status: 'keluar',
+				tanggalKeluar,
+				alasanKeluar
+			})
+			.where(and(eq(tableMurid.id, muridId), eq(tableMurid.sekolahId, sekolahId)));
+
+		return { message: 'Murid berhasil dikeluarkan dari sekolah.' };
+	},
+
+	async aktifkanMurid({ request, locals }) {
+		const sekolahId = locals.sekolah?.id;
+		if (!sekolahId) return fail(401, { fail: 'Sekolah tidak ditemukan' });
+		if (!isAuthorizedUser(['informasi_umum_murid'], locals.user ?? undefined)) {
+			return fail(403, { fail: 'Anda tidak memiliki izin mengelola murid' });
+		}
+
+		const formData = await request.formData();
+		const muridId = Number(formData.get('muridId'));
+		if (!Number.isInteger(muridId) || muridId <= 0) {
+			return fail(400, { fail: 'Data murid tidak valid' });
+		}
+
+		await db
+			.update(tableMurid)
+			.set({
+				status: 'aktif',
+				tanggalKeluar: null,
+				alasanKeluar: null
+			})
+			.where(and(eq(tableMurid.id, muridId), eq(tableMurid.sekolahId, sekolahId)));
+
+		return { message: 'Status murid berhasil diaktifkan kembali.' };
+	},
+
+	async keluarkanBulk({ request, locals }) {
+		const sekolahId = locals.sekolah?.id;
+		if (!sekolahId) return fail(401, { fail: 'Sekolah tidak ditemukan' });
+		if (!isAuthorizedUser(['informasi_umum_murid'], locals.user ?? undefined)) {
+			return fail(403, { fail: 'Anda tidak memiliki izin mengelola murid' });
+		}
+
+		const formData = await request.formData();
+		const rawIds = formData.getAll('muridIds');
+		const muridIds = rawIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+		if (!muridIds.length) {
+			return fail(400, { fail: 'Pilih minimal satu murid' });
+		}
+
+		const tanggalKeluar =
+			formData.get('tanggalKeluar')?.toString() || new Date().toISOString().split('T')[0];
+		const alasanKeluar =
+			formData.get('alasanKeluar')?.toString()?.trim() || 'Dikeluarkan oleh pihak sekolah';
+
+		await db
+			.update(tableMurid)
+			.set({
+				status: 'keluar',
+				tanggalKeluar,
+				alasanKeluar
+			})
+			.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, muridIds)));
+
+		return { message: `${muridIds.length} murid berhasil dikeluarkan.` };
 	}
 };

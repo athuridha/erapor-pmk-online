@@ -321,9 +321,8 @@ export const MASTER_DATA: MasterData[] = [
 	},
 	{
 		key: 'sekolah',
-		judul: 'Profil & Konfigurasi Sekolah',
-		deskripsi:
-			'Identitas sekolah, bobot penilaian sumatif, dan ambang kriteria rapor. Semua dipakai otomatis saat menghitung nilai.',
+		judul: 'Profil Sekolah',
+		deskripsi: 'Identitas sekolah, jenjang pendidikan, dan kriteria penilaian rapor.',
 		ikon: 'school',
 		tabel: 'sekolah',
 		fields: [
@@ -351,16 +350,6 @@ export const MASTER_DATA: MasterData[] = [
 				tipe: 'teks',
 				placeholder: 'Teknik / Rekayasa'
 			},
-			{ key: 'sumatif_bobot_lingkup', label: 'Bobot Lingkup (%)', tipe: 'angka', default: 60 },
-			{ key: 'sumatif_bobot_sts', label: 'Bobot STS (%)', tipe: 'angka', default: 20 },
-			{ key: 'sumatif_bobot_sas', label: 'Bobot SAS (%)', tipe: 'angka', default: 20 },
-			{
-				key: 'sumatif_bobot_rts_lingkup',
-				label: 'Bobot Lingkup RTS (%)',
-				tipe: 'angka',
-				default: 70
-			},
-			{ key: 'sumatif_bobot_rts_sts', label: 'Bobot STS RTS (%)', tipe: 'angka', default: 30 },
 			{ key: 'rapor_kriteria_cukup', label: 'Ambang Kriteria Cukup', tipe: 'angka', default: 85 },
 			{ key: 'rapor_kriteria_baik', label: 'Ambang Kriteria Baik', tipe: 'angka', default: 95 },
 			{
