@@ -487,7 +487,7 @@ export async function pullMasterDataFromCloud(
 	const schoolFilter = sekolahId > 0 ? `AND school_id = ?` : '';
 	const pointer = await executeD1Query(
 		config,
-		`SELECT metadata_json, checksum FROM publish_versions WHERE scope = 'master_data' ${schoolFilter} ORDER BY published_at DESC LIMIT 1`,
+		`SELECT metadata_json, checksum FROM publish_versions WHERE scope IN ('master_data', 'all_data') ${schoolFilter} ORDER BY published_at DESC LIMIT 1`,
 		sekolahId > 0 ? [String(sekolahId)] : []
 	);
 
@@ -647,12 +647,21 @@ export async function pullMasterDataFromCloud(
 	};
 }
 
-/** D1 membalas `result` sebagai array hasil per-statement; ambil barisnya. */
+/** D1 membalas `result` sebagai array hasil per-statement atau objek { results }; ambil barisnya. */
 function extractRows(result: unknown): Record<string, unknown>[] {
-	if (!Array.isArray(result)) return [];
-	const first = result[0] as { results?: unknown } | undefined;
-	if (first && Array.isArray(first.results)) {
-		return first.results as Record<string, unknown>[];
+	if (!result) return [];
+	if (Array.isArray(result)) {
+		const first = result[0] as { results?: unknown } | undefined;
+		if (first && Array.isArray(first.results)) {
+			return first.results as Record<string, unknown>[];
+		}
+		return result as Record<string, unknown>[];
+	}
+	if (typeof result === 'object' && result !== null) {
+		const obj = result as { results?: unknown };
+		if (Array.isArray(obj.results)) {
+			return obj.results as Record<string, unknown>[];
+		}
 	}
 	return [];
 }
@@ -995,6 +1004,22 @@ export async function pushAllDataToCloud(
 			stamp.replace(/[-:TZ.]/g, '').slice(0, 14),
 			checksum,
 			JSON.stringify({ package_id: packageId, delta_rows: totalDeltaRows, pushed_at: stamp }),
+			totalRecords,
+			userId ? String(userId) : null,
+			stamp
+		]
+	);
+
+	await executeD1Query(
+		config,
+		`INSERT INTO publish_versions (id, school_id, version_code, scope, checksum, metadata_json, total_records, status, published_by, published_at)
+		 VALUES (?, ?, ?, 'master_data', ?, ?, ?, 'published', ?, ?)`,
+		[
+			`pv-master-${Date.now()}`,
+			String(sekolahId),
+			stamp.replace(/[-:TZ.]/g, '').slice(0, 14),
+			checksum,
+			JSON.stringify({ package_id: packageId, counts, total_records: totalRecords }),
 			totalRecords,
 			userId ? String(userId) : null,
 			stamp

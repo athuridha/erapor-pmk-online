@@ -256,7 +256,14 @@ export async function executeD1Query(
 			};
 		}
 
-		return { success: true, result: data.result };
+		// Normalisasi format hasil kueri: jika proxy mengembalikan objek { results, meta },
+		// bungkus jadi array [ { results, meta } ] agar kompatibel dengan Cloudflare direct API.
+		const normalizedResult =
+			data.result && !Array.isArray(data.result) && typeof data.result === 'object'
+				? [data.result]
+				: data.result;
+
+		return { success: true, result: normalizedResult };
 	} catch (err: unknown) {
 		return {
 			success: false,

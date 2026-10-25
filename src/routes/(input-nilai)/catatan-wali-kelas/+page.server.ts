@@ -5,8 +5,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { buildKelasContext } from '$lib/server/route-utils';
 import { isWaliKelasAccount } from '$lib/server/kelas-akses';
-
-const PER_PAGE = 20;
+import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 
 export async function load({ locals, url, depends, parent }) {
 	depends('app:catatan-wali-kelas');
@@ -20,6 +19,7 @@ export async function load({ locals, url, depends, parent }) {
 	);
 	const searchRaw = url.searchParams.get('q')?.trim() ?? '';
 	const search = searchRaw || null;
+	const perPage = normalisasiBarisPerHalaman(url.searchParams.get('per_page'), 50);
 	const requestedPage = Number(url.searchParams.get('page')) || 1;
 	const pageNumber =
 		Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
@@ -35,7 +35,7 @@ export async function load({ locals, url, depends, parent }) {
 				currentPage: 1,
 				totalPages: 1,
 				totalItems: 0,
-				perPage: PER_PAGE
+				perPage
 			}
 		};
 	}
@@ -52,9 +52,9 @@ export async function load({ locals, url, depends, parent }) {
 		.where(filter);
 
 	const total = totalItems ?? 0;
-	const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+	const totalPages = Math.max(1, Math.ceil(total / perPage));
 	const currentPage = Math.min(Math.max(pageNumber, 1), totalPages);
-	const offset = (currentPage - 1) * PER_PAGE;
+	const offset = (currentPage - 1) * perPage;
 
 	if (pageNumber !== currentPage) {
 		const params = new URLSearchParams(url.searchParams);
@@ -77,7 +77,7 @@ export async function load({ locals, url, depends, parent }) {
 		.leftJoin(tableCatatanWaliKelas, eq(tableMurid.id, tableCatatanWaliKelas.muridId))
 		.where(filter)
 		.orderBy(asc(tableMurid.nama))
-		.limit(PER_PAGE)
+		.limit(perPage)
 		.offset(offset);
 
 	const daftarCatatan = rows.map((row, index) => ({
@@ -98,7 +98,7 @@ export async function load({ locals, url, depends, parent }) {
 			currentPage,
 			totalPages,
 			totalItems: total,
-			perPage: PER_PAGE
+			perPage
 		}
 	};
 }

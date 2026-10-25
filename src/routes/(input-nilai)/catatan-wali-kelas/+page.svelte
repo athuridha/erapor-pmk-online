@@ -7,6 +7,7 @@
 	import { hideModal, showModal } from '$lib/components/global-modal.svelte';
 	import { toast } from '$lib/components/toast.svelte';
 	import { searchQueryMarker } from '$lib/utils';
+	import { buildPageNumbers, OPSI_BARIS_PER_HALAMAN } from '$lib/utils/pagination';
 	import { onDestroy, tick } from 'svelte';
 
 	let { data } = $props();
@@ -23,7 +24,7 @@
 
 	const currentPage = $derived.by(() => data.page.currentPage ?? 1);
 	const totalPages = $derived.by(() => Math.max(1, data.page.totalPages ?? 1));
-	const pages = $derived.by(() => Array.from({ length: totalPages }, (_, index) => index + 1));
+	const nomorHalaman = $derived(buildPageNumbers(currentPage, totalPages));
 
 	const kelasAktif = $derived(page.data.kelasAktif ?? null);
 	const kelasAktifLabel = $derived.by(() => {
@@ -119,6 +120,17 @@
 		const target = buildPageUrl(pageNumber);
 		if (!target) return;
 		await goto(target, { replaceState: true, keepFocus: true });
+	}
+
+	async function gotoPerHalaman(jumlah: number) {
+		const params = new SvelteURLSearchParams(page.url.search);
+		params.set('per_page', String(jumlah));
+		params.delete('page');
+		const nextQuery = params.toString();
+		await goto(`${page.url.pathname}${nextQuery ? `?${nextQuery}` : ''}`, {
+			replaceState: true,
+			keepFocus: true
+		});
 	}
 
 	function handlePageClick(pageNumber: number) {
@@ -250,18 +262,31 @@
 		data-sveltekit-replacestate
 		onsubmit={submitSearch}
 	>
-		<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
-			<Icon name="search" />
-			<input
-				type="search"
-				name="q"
-				value={searchTerm}
-				spellcheck="false"
-				placeholder="Cari nama murid..."
-				autocomplete="name"
-				oninput={handleSearchInput}
-			/>
-		</label>
+		<div class="join w-full">
+			<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
+				<Icon name="search" />
+				<input
+					type="search"
+					name="q"
+					value={searchTerm}
+					spellcheck="false"
+					placeholder="Cari nama murid..."
+					autocomplete="name"
+					oninput={handleSearchInput}
+				/>
+			</label>
+			<select
+				class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink dark:border-none"
+				value={data.page.perPage}
+				title="Baris per halaman"
+				onchange={(event) =>
+					gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
+			>
+				{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
+					<option value={jumlah}>{jumlah} / hal</option>
+				{/each}
+			</select>
+		</div>
 	</form>
 
 	<div
@@ -368,17 +393,45 @@
 		</table>
 	</div>
 
-	<div class="join mt-4 sm:mx-auto">
-		{#each pages as pageNumber (pageNumber)}
-			<button
-				type="button"
-				class="join-item btn pointer-events-auto"
-				class:btn-active={pageNumber === currentPage}
-				onclick={() => handlePageClick(pageNumber)}
-				aria-current={pageNumber === currentPage ? 'page' : undefined}
-			>
-				{pageNumber}
-			</button>
-		{/each}
-	</div>
+	{#if totalPages > 1}
+		<div class="mt-4 flex justify-center">
+			<div class="join">
+				<button
+					type="button"
+					class="join-item btn"
+					disabled={currentPage <= 1}
+					onclick={() => handlePageClick(currentPage - 1)}
+				>
+					«
+				</button>
+				{#each nomorHalaman as nomor, index (index)}
+					{#if nomor === '…'}
+						<button type="button" class="join-item btn" disabled>…</button>
+					{:else}
+						<button
+							type="button"
+							class="join-item btn pointer-events-auto"
+							class:btn-active={nomor === currentPage}
+							onclick={() => handlePageClick(nomor)}
+							aria-current={nomor === currentPage ? 'page' : undefined}
+						>
+							{nomor}
+						</button>
+					{/if}
+				{/each}
+				<button
+					type="button"
+					class="join-item btn"
+					disabled={currentPage >= totalPages}
+					onclick={() => handlePageClick(currentPage + 1)}
+				>
+					»
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	<p class="mt-3 text-center text-sm opacity-70">
+		Menampilkan {data.daftarCatatan.length} dari {data.page.totalItems ?? 0} data
+	</p>
 </div>
