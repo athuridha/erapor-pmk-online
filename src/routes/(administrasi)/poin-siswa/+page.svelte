@@ -138,12 +138,23 @@
 	}
 
 	const adaKelasAktif = $derived(!!data.kelasAktif);
+	let filterStatusPoin = $state<'semua' | 'ada_poin' | 'bersih'>('semua');
+	let searchNama = $state('');
+
 	// Group students per class when browsing all classes (admin mode),
 	// otherwise they already belong to the active class.
 	const rekapGrup = $derived.by(() => {
-		if (adaKelasAktif) return [{ kelasNama: data.kelasAktif!.nama, murid: data.rekap }];
+		const q = searchNama.trim().toLowerCase();
+		const filteredMurids = data.rekap.filter((m) => {
+			if (q && !m.nama.toLowerCase().includes(q)) return false;
+			if (filterStatusPoin === 'ada_poin') return m.totalPoin > 0;
+			if (filterStatusPoin === 'bersih') return m.totalPoin === 0;
+			return true;
+		});
+
+		if (adaKelasAktif) return [{ kelasNama: data.kelasAktif!.nama, murid: filteredMurids }];
 		const map = new Map<string, MuridRekap[]>();
-		for (const murid of data.rekap) {
+		for (const murid of filteredMurids) {
 			const key = murid.kelasNama ?? '(Tanpa Kelas)';
 			const list = map.get(key);
 			if (list) list.push(murid);
@@ -224,7 +235,53 @@
 		<!-- Rekap murid + riwayat -->
 		<div class="flex flex-col gap-4">
 			<div class="card bg-base-200/50 rounded-md p-3">
-				<h3 class="mb-2 font-bold">Rekap Murid</h3>
+				<div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+					<h3 class="font-bold">Rekap Murid</h3>
+
+					<div class="flex flex-wrap items-center gap-2">
+						<!-- Filter Status Poin -->
+						<div class="join">
+							<button
+								type="button"
+								class="btn btn-xs join-item"
+								class:btn-active={filterStatusPoin === 'semua'}
+								onclick={() => (filterStatusPoin = 'semua')}
+							>
+								Semua
+							</button>
+							<button
+								type="button"
+								class="btn btn-xs join-item"
+								class:btn-active={filterStatusPoin === 'ada_poin'}
+								onclick={() => (filterStatusPoin = 'ada_poin')}
+							>
+								Ada Poin
+							</button>
+							<button
+								type="button"
+								class="btn btn-xs join-item"
+								class:btn-active={filterStatusPoin === 'bersih'}
+								onclick={() => (filterStatusPoin = 'bersih')}
+							>
+								Bersih (0)
+							</button>
+						</div>
+
+						<!-- Search Murid -->
+						<label
+							class="input input-xs bg-base-100 flex items-center gap-1.5 rounded-lg border border-base-300"
+						>
+							<Icon name="search" />
+							<input
+								type="search"
+								placeholder="Cari murid..."
+								class="grow"
+								bind:value={searchNama}
+							/>
+						</label>
+					</div>
+				</div>
+
 				{#if !data.rekap.length}
 					<div class="alert alert-soft alert-info">
 						<Icon name="info" />

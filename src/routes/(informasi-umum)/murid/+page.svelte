@@ -223,6 +223,21 @@
 		});
 	}
 
+	async function gotoKelasFilter(kId: string) {
+		const params = new SvelteURLSearchParams(page.url.search);
+		if (!kId) {
+			params.delete('kelas_id');
+		} else {
+			params.set('kelas_id', kId);
+		}
+		params.delete('page');
+		const nextQuery = params.toString();
+		await goto(`${page.url.pathname}${nextQuery ? `?${nextQuery}` : ''}`, {
+			replaceState: true,
+			keepFocus: true
+		});
+	}
+
 	function handlePageClick(pageNumber: number) {
 		if (pageNumber === currentPage) return;
 		void gotoPage(pageNumber);
@@ -474,6 +489,19 @@
 	>
 		<!-- Cari nama murid -->
 		<div class="join w-full">
+			{#if data.kelasTujuan && data.kelasTujuan.length > 0}
+				<select
+					class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink font-medium dark:border-none"
+					value={data.page.kelasId ?? ''}
+					title="Filter Kelas"
+					onchange={(event) => gotoKelasFilter((event.currentTarget as HTMLSelectElement).value)}
+				>
+					<option value="">Semua Kelas</option>
+					{#each data.kelasTujuan as k (k.id)}
+						<option value={String(k.id)}>{k.nama}</option>
+					{/each}
+				</select>
+			{/if}
 			<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
 				<Icon name="search" />
 				<input

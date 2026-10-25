@@ -99,18 +99,20 @@ function readScopeOptions(form: FormData) {
 		.getAll('scope')
 		.map((value) => String(value))
 		.filter(Boolean);
+	const mode = (form.get('mode') === 'replace' ? 'replace' : 'merge') as 'replace' | 'merge';
 	if (scope.length === 0) {
-		return { scope, options: null };
+		return { scope, mode, options: null };
 	}
-	return { scope, options: { tablesFilter: syncGroupsToTables(scope) } };
+	return { scope, mode, options: { tablesFilter: syncGroupsToTables(scope), mode } };
 }
 
 /** Pilih minimal satu jenis data — kalau kosong, tolak dengan pesan jelas. */
 function needScopeOptions(form: FormData) {
-	const { scope, options } = readScopeOptions(form);
+	const { scope, mode, options } = readScopeOptions(form);
 	if (!options) {
 		return {
 			scope,
+			mode,
 			options: null,
 			failed: {
 				scope,
@@ -118,7 +120,7 @@ function needScopeOptions(form: FormData) {
 			}
 		};
 	}
-	return { scope, options, failed: null };
+	return { scope, mode, options, failed: null };
 }
 
 export const actions = {
@@ -137,6 +139,12 @@ export const actions = {
 			}
 			if (!pull.success) {
 				return { success: true as const, message: pull.message };
+			}
+			if (picked.options?.mode === 'replace') {
+				return {
+					success: true as const,
+					message: pull.message
+				};
 			}
 			const mergedMaster =
 				(pull.lwwSummary?.master?.inserted ?? 0) + (pull.lwwSummary?.master?.updated ?? 0);

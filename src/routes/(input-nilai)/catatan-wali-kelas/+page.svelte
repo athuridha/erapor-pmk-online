@@ -133,6 +133,21 @@
 		});
 	}
 
+	async function setStatusFilter(statusKey: string) {
+		const params = new SvelteURLSearchParams(page.url.search);
+		if (statusKey === 'all') {
+			params.delete('status');
+		} else {
+			params.set('status', statusKey);
+		}
+		params.delete('page');
+		const nextQuery = params.toString();
+		await goto(`${page.url.pathname}${nextQuery ? `?${nextQuery}` : ''}`, {
+			replaceState: true,
+			keepFocus: true
+		});
+	}
+
 	function handlePageClick(pageNumber: number) {
 		if (pageNumber === currentPage) return;
 		void gotoPage(pageNumber);
@@ -254,6 +269,21 @@
 			<Icon name="copy" />
 			<span>Isi Sekaligus</span>
 		</button>
+	</div>
+
+	<!-- Filter Status Catatan -->
+	<div class="tabs tabs-box bg-base-200/50 mb-4 flex flex-wrap gap-1 p-1">
+		{#each [{ key: 'all', label: 'Semua Murid', count: data.statusCounts?.all ?? 0, badge: 'badge-ghost' }, { key: 'filled', label: 'Sudah Diisi', count: data.statusCounts?.filled ?? 0, badge: 'badge-success' }, { key: 'empty', label: 'Belum Diisi', count: data.statusCounts?.empty ?? 0, badge: 'badge-warning' }] as tab (tab.key)}
+			<button
+				type="button"
+				class="tab text-xs font-medium"
+				class:tab-active={(data.page.status ?? 'all') === tab.key}
+				onclick={() => setStatusFilter(tab.key)}
+			>
+				{tab.label}
+				<span class="badge {tab.badge} badge-sm ml-1.5">{tab.count}</span>
+			</button>
+		{/each}
 	</div>
 
 	<form

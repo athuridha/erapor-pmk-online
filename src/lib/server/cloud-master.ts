@@ -1103,7 +1103,11 @@ async function stampNullUpdatedAt(
 export async function pullAllDataFromCloud(
 	sekolahId: number,
 	userId: number | null,
-	options: { tablesFilter?: readonly string[] | null; includeMaster?: boolean } = {}
+	options: {
+		tablesFilter?: readonly string[] | null;
+		includeMaster?: boolean;
+		mode?: 'replace' | 'merge';
+	} = {}
 ): Promise<AllDataResult & { pointerCreatedAt?: string | null }> {
 	const config = await getD1Config(sekolahId);
 	if (!d1CredentialsReady(config)) {
@@ -1213,6 +1217,80 @@ export async function pullAllDataFromCloud(
 			}
 		}
 		payload.tables = filtered;
+	}
+
+	// Mode Timpa Penuh / Reset DB dari Pusat: bersihkan tabel lokal lalu pasang baris paket.
+	if (options.mode === 'replace') {
+		const counts: Record<string, number> = {};
+		let totalInserted = 0;
+		await db.transaction(async (tx) => {
+			await tx.run(sql`PRAGMA defer_foreign_keys = ON`);
+			if (includeMaster) {
+				for (const [, table] of MASTER_TABLES) {
+					await tx.delete(table);
+				}
+				for (const [name, table] of MASTER_TABLES) {
+					const rows = payload.tables?.[name] ?? [];
+					await insertRows(tx, table, rows);
+					counts[name] = rows.length;
+					totalInserted += rows.length;
+				}
+			}
+			for (const [name, table] of AKADEMIK_DELTA_TABLES) {
+				if (payload.tables?.[name]) {
+					await tx.delete(table);
+					const rows = payload.tables[name];
+					await insertRows(tx, table, rows);
+					counts[name] = rows.length;
+					totalInserted += rows.length;
+				}
+			}
+		});
+
+		const admins = await db
+			.select({ id: tableAuthUser.id })
+			.from(tableAuthUser)
+			.where(eq(tableAuthUser.type, 'admin'));
+		if (admins.length === 0) {
+			await ensureDefaultAdmin();
+		}
+
+		const sekolahRows = await db.select({ id: tableSekolah.id }).from(tableSekolah);
+		const targetSekolahId = sekolahRows[0]?.id ?? sekolahId;
+		const nowIso = new Date().toISOString();
+
+		await db.insert(tableCloudSyncLogs).values({
+			sekolahId: targetSekolahId,
+			userId,
+			action: 'PULL',
+			status: 'SUCCESS',
+			totalRecords: totalInserted,
+			summary: JSON.stringify({ kind: 'all_data', mode: 'replace', counts }),
+			createdAt: nowIso
+		});
+
+		const stored = await db.query.tableCloudSyncSettings.findFirst({
+			where: eq(tableCloudSyncSettings.sekolahId, targetSekolahId)
+		});
+		if (stored) {
+			await db
+				.update(tableCloudSyncSettings)
+				.set({ lastPulledAt: nowIso, updatedAt: nowIso })
+				.where(eq(tableCloudSyncSettings.id, stored.id));
+		} else {
+			await db.insert(tableCloudSyncSettings).values({
+				sekolahId: targetSekolahId,
+				lastPulledAt: nowIso,
+				createdAt: nowIso
+			});
+		}
+
+		return {
+			success: true,
+			message: `Database berhasil di-reset dan ditimpa penuh dari pusat (${totalInserted} baris terpasang).`,
+			totalDeltaRecords: totalInserted,
+			counts
+		};
 	}
 
 	// Merge master secara penuh dan baris akademik dari payload ini.

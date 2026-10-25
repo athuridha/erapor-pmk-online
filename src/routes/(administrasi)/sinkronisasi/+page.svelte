@@ -680,6 +680,48 @@
 				}}
 			>
 				{#snippet children({ submitting })}
+					<!-- Pilihan Mode Tarik -->
+					<div
+						class="mt-3 space-y-2 rounded-xl border border-base-300 dark:border-base-200 bg-base-200/50 p-3"
+					>
+						<p class="text-[11px] font-bold text-base-content/80">Metode Penarikan Data</p>
+						<div class="space-y-2">
+							<label class="flex items-start gap-2.5 text-xs cursor-pointer">
+								<input
+									type="radio"
+									name="mode"
+									value="merge"
+									checked
+									class="radio radio-xs radio-primary mt-0.5"
+								/>
+								<div>
+									<span class="font-semibold text-base-content"
+										>Perbarui / Gabung Data (Update)</span
+									>
+									<p class="text-[11px] text-base-content/60">
+										Menambah data baru & memperbarui perubahan tanpa menghapus data lokal yang ada.
+									</p>
+								</div>
+							</label>
+
+							<label class="flex items-start gap-2.5 text-xs cursor-pointer">
+								<input
+									type="radio"
+									name="mode"
+									value="replace"
+									class="radio radio-xs radio-error mt-0.5"
+								/>
+								<div>
+									<span class="font-semibold text-error">Reset DB / Timpa Penuh dari Pusat</span>
+									<p class="text-[11px] text-base-content/60">
+										Mengosongkan tabel lokal dan menimpa penuh persis 100% sama dengan Database
+										Pusat.
+									</p>
+								</div>
+							</label>
+						</div>
+					</div>
+
 					<div class="mt-3 bg-base-200/60 rounded-xl p-3 space-y-1.5">
 						<p class="text-[11px] font-semibold text-base-content/70">Data induk</p>
 						{#each MASTER_SCOPE_OPTIONS as option (option.value)}

@@ -2,7 +2,7 @@ import db from '$lib/server/db';
 import { ensureCatatanWaliSchema } from '$lib/server/db/ensure-catatan-wali';
 import { tableCatatanWaliKelas, tableMurid, tableKelas } from '$lib/server/db/schema';
 import { fail, redirect } from '@sveltejs/kit';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { buildKelasContext } from '$lib/server/route-utils';
 import { isWaliKelasAccount } from '$lib/server/kelas-akses';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
@@ -19,6 +19,7 @@ export async function load({ locals, url, depends, parent }) {
 	);
 	const searchRaw = url.searchParams.get('q')?.trim() ?? '';
 	const search = searchRaw || null;
+	const status = url.searchParams.get('status') || 'all';
 	const perPage = normalisasiBarisPerHalaman(url.searchParams.get('per_page'), 50);
 	const requestedPage = Number(url.searchParams.get('page')) || 1;
 	const pageNumber =
@@ -29,9 +30,11 @@ export async function load({ locals, url, depends, parent }) {
 			meta: { title: 'Catatan Wali Kelas' },
 			academicContext,
 			daftarCatatan: [],
+			statusCounts: { all: 0, filled: 0, empty: 0 },
 			page: {
 				kelasId,
 				search,
+				status,
 				currentPage: 1,
 				totalPages: 1,
 				totalItems: 0,
@@ -40,16 +43,57 @@ export async function load({ locals, url, depends, parent }) {
 		};
 	}
 
-	const filter = and(
+	const baseFilter = and(
 		eq(tableMurid.sekolahId, sekolahId),
 		kelasId ? eq(tableMurid.kelasId, Number(kelasId)) : inArray(tableMurid.kelasId, kelasIds),
 		search ? sql`${tableMurid.nama} LIKE ${'%' + search + '%'} COLLATE NOCASE` : undefined
 	);
 
-	const [{ totalItems }] = await db
-		.select({ totalItems: sql<number>`count(*)` })
-		.from(tableMurid)
-		.where(filter);
+	const statusCondition =
+		status === 'filled'
+			? and(
+					isNotNull(tableCatatanWaliKelas.catatan),
+					sql`trim(coalesce(${tableCatatanWaliKelas.catatan}, '')) != ''`
+				)
+			: status === 'empty'
+				? or(
+						isNull(tableCatatanWaliKelas.catatan),
+						sql`trim(coalesce(${tableCatatanWaliKelas.catatan}, '')) = ''`
+					)
+				: undefined;
+
+	const filter = and(baseFilter, statusCondition);
+
+	const [statusCountsRaw, [{ totalItems }]] = await Promise.all([
+		db
+			.select({
+				hasCatatan: sql<number>`case when trim(coalesce(${tableCatatanWaliKelas.catatan}, '')) != '' then 1 else 0 end`,
+				count: sql<number>`count(*)`
+			})
+			.from(tableMurid)
+			.leftJoin(tableCatatanWaliKelas, eq(tableMurid.id, tableCatatanWaliKelas.muridId))
+			.where(baseFilter)
+			.groupBy(
+				sql`case when trim(coalesce(${tableCatatanWaliKelas.catatan}, '')) != '' then 1 else 0 end`
+			),
+		db
+			.select({ totalItems: sql<number>`count(*)` })
+			.from(tableMurid)
+			.leftJoin(tableCatatanWaliKelas, eq(tableMurid.id, tableCatatanWaliKelas.muridId))
+			.where(filter)
+	]);
+
+	let filledCount = 0;
+	let emptyCount = 0;
+	for (const row of statusCountsRaw) {
+		if (row.hasCatatan === 1) filledCount = row.count;
+		else emptyCount = row.count;
+	}
+	const statusCounts = {
+		all: filledCount + emptyCount,
+		filled: filledCount,
+		empty: emptyCount
+	};
 
 	const total = totalItems ?? 0;
 	const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -92,9 +136,11 @@ export async function load({ locals, url, depends, parent }) {
 		meta: { title: 'Catatan Wali Kelas' },
 		academicContext,
 		daftarCatatan,
+		statusCounts,
 		page: {
 			kelasId,
 			search,
+			status,
 			currentPage,
 			totalPages,
 			totalItems: total,
