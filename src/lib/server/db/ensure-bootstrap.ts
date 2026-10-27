@@ -19,7 +19,6 @@ import { ensurePegawaiTtdSchema } from './ensure-pegawai-ttd';
 import { ensurePegawaiNikSchema } from './ensure-pegawai-nik';
 import { ensureMuridArsipSchema } from './ensure-murid-arsip';
 import { ensureSppdSchema } from './ensure-sppd';
-import { ensureCloudSyncSchema, ensureCloudSyncApiUrlColumn } from './ensure-cloud-sync';
 import { ensurePortalOrangtuaSchema } from './ensure-portal-orangtua';
 import { ensureAuditLogSchema } from './ensure-audit-log';
 import { ensureKepalaSekolahAccounts } from '$lib/server/kepala-sekolah';
@@ -79,8 +78,6 @@ export async function runStartupEnsures() {
 	await ensureKetidakhadiranRaporSchema();
 	await ensurePresensiGuruSchema();
 	await ensureSppdSchema();
-	await ensureCloudSyncSchema();
-	await ensureCloudSyncApiUrlColumn();
 	await ensurePortalOrangtuaSchema();
 	await ensureAuditLogSchema();
 	await ensureDefaultAdmin();

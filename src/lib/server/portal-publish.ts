@@ -15,7 +15,6 @@ import {
 	tableSemester,
 	tableTahunAjaran
 } from '$lib/server/db/schema';
-import { executeD1Query, getD1Config, type D1Config } from '$lib/server/cloudflare-d1';
 import { personSignatureDataUrl } from '$lib/server/ttd';
 
 /** D1 khusus portal; jangan pakai database pusat e-Rapor. */
@@ -23,6 +22,83 @@ export const PORTAL_D1_DATABASE_ID =
 	env.PORTAL_D1_DATABASE_ID?.trim() ||
 	process.env.PORTAL_D1_DATABASE_ID?.trim() ||
 	'bbaeedd9-5622-4d17-af03-b726e7fba400';
+
+export const PORTAL_CLOUDFLARE_ACCOUNT_ID =
+	env.CLOUDFLARE_ACCOUNT_ID?.trim() ||
+	process.env.CLOUDFLARE_ACCOUNT_ID?.trim() ||
+	'b456e767d6306149a24d6228c8a65b6d';
+
+export interface PortalD1Config {
+	accountId: string;
+	databaseId: string;
+	apiToken: string;
+}
+
+function getPortalD1Config(): PortalD1Config {
+	const apiToken = (
+		env.PORTAL_D1_API_TOKEN ||
+		process.env.PORTAL_D1_API_TOKEN ||
+		env.CLOUDFLARE_API_TOKEN ||
+		process.env.CLOUDFLARE_API_TOKEN ||
+		''
+	).trim();
+
+	return {
+		accountId: PORTAL_CLOUDFLARE_ACCOUNT_ID,
+		databaseId: PORTAL_D1_DATABASE_ID,
+		apiToken
+	};
+}
+
+async function executeD1Query(
+	config: PortalD1Config,
+	sqlQuery: string,
+	params: unknown[] = []
+): Promise<{ success: boolean; result?: unknown; error?: string }> {
+	if (!config.accountId || !config.apiToken) {
+		return {
+			success: false,
+			error: 'Kredensial D1 Portal (Account ID & API Token) belum diisi.'
+		};
+	}
+
+	const url = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`;
+
+	try {
+		const res = await fetch(url, {
+			method: 'POST',
+			headers: {
+				Authorization: 'Bearer ' + config.apiToken,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				sql: sqlQuery,
+				params
+			})
+		});
+
+		const data = (await res.json().catch(() => null)) as {
+			success?: boolean;
+			result?: unknown;
+			errors?: { code?: number; message?: string }[];
+		} | null;
+
+		if (!res.ok || !data?.success) {
+			const message = data?.errors?.[0]?.message;
+			return {
+				success: false,
+				error: message || `Permintaan D1 portal gagal dengan status ${res.status}.`
+			};
+		}
+
+		return { success: true, result: data.result };
+	} catch (err) {
+		return {
+			success: false,
+			error: err instanceof Error ? err.message : 'Koneksi ke D1 portal gagal.'
+		};
+	}
+}
 
 type Row = Record<string, unknown>;
 
@@ -41,16 +117,7 @@ export interface PortalPublishResult {
 	subjects: number;
 }
 
-function portalConfig(base: D1Config): D1Config {
-	const apiToken = (env.PORTAL_D1_API_TOKEN || process.env.PORTAL_D1_API_TOKEN)?.trim();
-	return {
-		...base,
-		databaseId: PORTAL_D1_DATABASE_ID,
-		...(apiToken ? { apiToken, tokenSource: 'env' as const } : {})
-	};
-}
-
-async function d1(config: D1Config, sql: string, params: unknown[] = []): Promise<D1QueryResult[]> {
+async function d1(config: PortalD1Config, sql: string, params: unknown[] = []): Promise<D1QueryResult[]> {
 	const result = await executeD1Query(config, sql, params);
 	if (!result.success) {
 		throw new Error(result.error || 'Kueri D1 portal gagal.');
@@ -59,7 +126,7 @@ async function d1(config: D1Config, sql: string, params: unknown[] = []): Promis
 }
 
 async function insertRows(
-	config: D1Config,
+	config: PortalD1Config,
 	table: string,
 	columns: string[],
 	rows: Row[]
@@ -246,7 +313,7 @@ export async function publishPortalToD1(sekolahId: number): Promise<PortalPublis
 		subjectRows.map((row) => [String(row.id), row.namaLokal || row.nama])
 	);
 
-	const config = portalConfig(await getD1Config(sekolahId));
+	const config = getPortalD1Config();
 
 	// Hapus data anak dulu, lalu data induk. Akun orang tua tidak dihapus agar
 	// password yang sudah diganti di portal tetap tersimpan.
@@ -563,7 +630,7 @@ export async function publishPortalToD1(sekolahId: number): Promise<PortalPublis
 }
 
 async function upsertAccounts(
-	config: D1Config,
+	config: PortalD1Config,
 	columns: string[],
 	rows: Row[],
 	forcePassword: boolean

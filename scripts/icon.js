@@ -43,5 +43,7 @@ const shutdown = () => {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
-generate_types();
-run_watcher();
+await generate_types();
+if (!process.argv.includes('--once')) {
+	run_watcher();
+}

@@ -16,7 +16,6 @@ import {
 	resolveRoutePermission,
 	WALI_KELAS_ONLY_PERMISSIONS
 } from './pengguna/permissions';
-import { isLocalMasterEmpty } from '$lib/server/cloud-master';
 import { kelasKontenSet, resolveKelasKonten, type KelasLite } from '$lib/server/kelas-akses';
 
 /** Nilai penanda "di luar kelas" (data diambil dari semua kelas). */
@@ -409,14 +408,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure });
 	}
 
-	let setupNeeded = false;
-	if (!user) {
-		try {
-			setupNeeded = await isLocalMasterEmpty();
-		} catch {
-			setupNeeded = false;
-		}
-	}
+	const setupNeeded = false;
 
 	// Konteks "kelas konten" per halaman: hanya pada kategori Mata Pelajaran.
 	// Guru mapel memilih kelas yang diampu lewat pemilih (?kelas=) tanpa

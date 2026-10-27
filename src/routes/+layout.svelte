@@ -18,7 +18,6 @@
 	import ScrollToTop from '$lib/components/scroll-to-top.svelte';
 	import FavoriteMenusFab from '$lib/components/dashboard/favorite-menus-fab.svelte';
 	import PresensiGuruModal from '$lib/components/presensi-guru/presensi-guru-modal.svelte';
-	import OfflineSetupGate from '$lib/components/offline-setup-gate.svelte';
 	import { isAdminUser } from './pengguna/permissions';
 	import '../app.css';
 
@@ -63,7 +62,6 @@
 	const isTamuPage = $derived(page.url.pathname === '/tamu');
 	const isJadwalPublikPage = $derived(page.url.pathname === '/jadwal-pelajaran');
 	const isVerifikasiRapor = $derived(page.url.pathname === '/rapor/verifikasi');
-	const isSiapkanPage = $derived(page.url.pathname === '/siapkan');
 	// When not authenticated, never render the drawer/navbar shell — not even for
 	// error pages (e.g. 404 on an unknown URL). This avoids exposing the app menu
 	// structure to anonymous visitors.
@@ -74,7 +72,6 @@
 		isLoginPage ||
 			isTamuPage ||
 			isJadwalPublikPage ||
-			isSiapkanPage ||
 			page.url.pathname.startsWith('/logout') ||
 			data.presensiGuruEnabled === false
 	);
@@ -299,9 +296,7 @@
 	<title>{appName}{page.data.meta.title ? ' - ' + page.data.meta.title : ''}</title>
 </svelte:head>
 
-{#if (data.setupNeeded || isSiapkanPage) && !isOnline}
-	<OfflineSetupGate onOnline={() => (isOnline = true)} />
-{:else if isLoginPage || isTamuPage || isUnauthenticatedError}
+{#if isLoginPage || isTamuPage || isUnauthenticatedError}
 	<div
 		class="bg-gradient-to-br from-slate-100 via-emerald-50/50 to-slate-200 dark:from-slate-950 dark:via-emerald-950/30 dark:to-slate-900 flex min-h-screen flex-col items-center justify-center p-6"
 	>
@@ -313,7 +308,7 @@
 			{@render children()}
 		{/if}
 	</div>
-{:else if isJadwalPublikPage || isSiapkanPage}
+{:else if isJadwalPublikPage}
 	<div class="bg-base-200 flex min-h-screen flex-col p-6">
 		{@render children()}
 	</div>
