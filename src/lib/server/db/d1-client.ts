@@ -77,12 +77,12 @@ export function createD1HttpClient(config: D1HttpConfig): Client {
 
 		const columns = rawResults.length > 0 ? Object.keys(rawResults[0]) : [];
 		const rows: Row[] = rawResults.map((r: Record<string, unknown>) => {
-			const rowObj: Row = { ...r } as unknown as Row;
-			// LibSQL allows index-based access: row[0], row[1]
-			columns.forEach((col, idx) => {
-				(rowObj as unknown as Record<number, unknown>)[idx] = r[col];
+			// In @libsql/client, Row is an Array of values with named properties attached!
+			const rowArr: unknown[] = columns.map((col) => r[col]);
+			columns.forEach((col) => {
+				(rowArr as Record<string, unknown>)[col] = r[col];
 			});
-			return rowObj;
+			return rowArr as unknown as Row;
 		});
 
 		return {
