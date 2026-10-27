@@ -250,6 +250,11 @@
 				title: 'Poin Siswa',
 				path: '/poin-siswa',
 				tags: ['poin', 'pelanggaran', 'tata tertib', 'siswa', 'riwayat']
+			},
+			{
+				title: 'Impor Data',
+				path: '/import-data',
+				tags: ['import', 'impor', 'excel', 'data pokok', 'murid', 'kelas', 'pegawai']
 			}
 		]
 	},
@@ -272,22 +277,6 @@
 				title: 'Kustomisasi',
 				path: '/cetak/kustomisasi',
 				tags: ['kustomisasi', 'cetak', 'template', 'logo', 'kop', 'watermark', 'layout', 'jarak']
-			}
-		]
-	},
-	{
-		title: 'Sinkronisasi',
-		icon: 'database',
-		subMenu: [
-			{
-				title: 'Database Pusat',
-				path: '/sinkronisasi',
-				tags: ['sinkron', 'sinkronisasi', 'database pusat', 'kirim nilai', 'ambil master']
-			},
-			{
-				title: 'Impor Data',
-				path: '/sinkronisasi/import-data',
-				tags: ['import', 'impor', 'excel', 'data pokok', 'murid', 'kelas', 'pegawai']
 			}
 		]
 	}

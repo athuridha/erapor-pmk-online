@@ -176,8 +176,8 @@
 		// Beranda ("/") hanya aktif di halaman beranda. Tanpa ini, path kosong
 		// membuat semua halaman dianggap turunan "/" sehingga Beranda selalu aktif.
 		if (normalizedItemPath === '') return normalizedPath === '';
-		// Item yang lebih spesifik menang: di /sinkronisasi/import-data, menu
-		// "Database Pusat" (/sinkronisasi) tidak boleh ikut ditandai aktif.
+		// Item yang lebih spesifik menang: jika ada sibling dengan path yang cocok persis,
+		// path induk yang lebih pendek tidak boleh ikut ditandai aktif.
 		const adaYangLebihSpesifik = siblingPaths.some((path) => {
 			if (!path) return false;
 			const normalizedSibling = path.replace(/\/+$/, '');

@@ -19,7 +19,7 @@
 	let canDownloadBackup = isAdminUser(page.data.user);
 
 	// Impor data pokok (Excel) memakai izin data sekolah, sama seperti
-	// halamannya di /sinkronisasi/import-data.
+	// halamannya di /import-data.
 	let canImportPokok = $derived.by(() => {
 		const perms = (page.data.user ?? { permissions: [] }).permissions ?? [];
 		return (perms as string[]).includes('informasi_umum_sekolah');
@@ -85,10 +85,6 @@
 			Tindakan Cepat
 		</h2>
 		<div class="grid grid-cols-1 gap-2">
-			<a href={resolve('/sinkronisasi')} class="btn btn-primary w-full shadow-none font-bold">
-				<Icon name="repeat" />
-				Sinkronisasi Data
-			</a>
 			<a
 				href={resolve('/pengaturan')}
 				onclick={(e) => {
@@ -138,7 +134,7 @@
 				</button>
 			</div>
 			<a
-				href={resolve('/sinkronisasi/import-data')}
+				href={resolve('/import-data')}
 				onclick={(e) => {
 					if (!canImportPokok) {
 						e.preventDefault();
