@@ -16,7 +16,6 @@ import { runStartupEnsures } from '$lib/server/db/ensure-bootstrap';
 import { isAuthorizedUser, resolveRoutePermission } from './routes/pengguna/permissions';
 import { startBellScheduler } from '$lib/server/bell-scheduler';
 import { markActivity } from '$lib/server/activity';
-import { startUpdateScheduler } from '$lib/server/update-auto';
 
 setTimeout(() => {
 	startBellScheduler().catch((e) => {
@@ -24,9 +23,6 @@ setTimeout(() => {
 	});
 	runStartupEnsures().catch((e) => {
 		console.error('[hooks] startup ensures failed:', e);
-	});
-	startUpdateScheduler().catch((e) => {
-		console.error('[hooks] update scheduler failed to start:', e);
 	});
 }, 1000);
 

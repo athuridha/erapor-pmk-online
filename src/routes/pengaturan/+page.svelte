@@ -10,7 +10,6 @@
 	import DatabaseCard from '$lib/components/settings/database-card.svelte';
 	import BukuTamuPasskeyCard from '$lib/components/settings/buku-tamu-passkey-card.svelte';
 	import AiKeyCard from '$lib/components/settings/ai-key-card.svelte';
-	import UpdateModal from '$lib/components/settings/update-modal.svelte';
 	import type { PageData } from './$types';
 	import { isAdminUser, isFullAdmin } from '../pengguna/permissions';
 
@@ -25,7 +24,6 @@
 	// svelte-ignore state_referenced_locally
 	let wasForcePasswordChange = $state(data.forcePasswordChange);
 	let passwordChanged = $state(false);
-	let updateModalOpen = $state(false);
 
 	onMount(() => {
 		if (data.forcePasswordChange && browser) {
@@ -43,8 +41,6 @@
 	addresses={data.appAddresses ?? []}
 	protocol={data.protocol ?? 'http:'}
 	{isAdmin}
-	canCheckUpdate={data.canCheckUpdate ?? false}
-	oncheckupdate={() => (updateModalOpen = true)}
 />
 
 {#if wasForcePasswordChange}
@@ -112,10 +108,3 @@
 		<DatabaseCard />
 	</div>
 {/if}
-
-<UpdateModal
-	open={updateModalOpen}
-	currentVersion={data.appVersion ?? '0.0.0'}
-	canManage={data.canManageUpdate ?? false}
-	on:close={() => (updateModalOpen = false)}
-/>

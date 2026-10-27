@@ -19,7 +19,6 @@
 	import FavoriteMenusFab from '$lib/components/dashboard/favorite-menus-fab.svelte';
 	import PresensiGuruModal from '$lib/components/presensi-guru/presensi-guru-modal.svelte';
 	import OfflineSetupGate from '$lib/components/offline-setup-gate.svelte';
-	import UpdateNotifier from '$lib/components/settings/update-notifier.svelte';
 	import { isAdminUser } from './pengguna/permissions';
 	import '../app.css';
 
@@ -487,7 +486,6 @@
 <Toast />
 <GlobalModal />
 <NavIndicator />
-<UpdateNotifier />
 {#if dev && simulasiTanggalJam && data.user}
 	<div class="fixed right-4 bottom-4 z-40 flex items-center gap-2">
 		<div class="alert alert-soft alert-warning shadow-lg">

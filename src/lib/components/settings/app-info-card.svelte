@@ -8,16 +8,12 @@
 		currentVersion,
 		addresses,
 		protocol,
-		isAdmin,
-		canCheckUpdate = false,
-		oncheckupdate
+		isAdmin
 	}: {
 		currentVersion: string;
 		addresses: string[];
 		protocol: string;
 		isAdmin: boolean;
-		canCheckUpdate?: boolean;
-		oncheckupdate?: () => void;
 	} = $props();
 
 	// svelte-ignore state_referenced_locally
@@ -118,16 +114,6 @@
 		</fieldset>
 	</div>
 	<div class="mt-4 flex flex-col justify-end gap-2 sm:flex-row">
-		{#if canCheckUpdate}
-			<button
-				class="btn btn-soft btn-warning shadow-none"
-				type="button"
-				onclick={() => oncheckupdate?.()}
-			>
-				<Icon name="download" />
-				Cek Pembaruan
-			</button>
-		{/if}
 		{#if isAdmin}
 			<a class="btn btn-soft btn-info shadow-none" href="/pengguna">
 				<Icon name="users" />
