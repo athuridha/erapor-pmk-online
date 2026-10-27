@@ -9,7 +9,7 @@ import { kePratinjau, susunRencana } from '$lib/server/import-data/plan';
 import { SHEETS, SHEET_ORDER } from '$lib/server/import-data/sheets';
 import { ambilBerkas, hapusBerkas, simpanBerkas } from '$lib/server/import-data/stash';
 import { getDapodikSettings } from '$lib/server/dapodik';
-import { authority } from '../../../pengguna/utils.server';
+import { authority } from '../../pengguna/utils.server';
 
 const MAKS_BERKAS = 2 * 1024 * 1024;
 

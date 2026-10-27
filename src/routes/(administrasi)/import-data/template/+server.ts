@@ -1,5 +1,5 @@
 import { buatTemplateBuffer } from '$lib/server/import-data/template';
-import { authority } from '../../../../pengguna/utils.server';
+import { authority } from '../../../pengguna/utils.server';
 
 export async function GET() {
 	authority('informasi_umum_sekolah');
