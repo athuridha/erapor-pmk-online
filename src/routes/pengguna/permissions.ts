@@ -74,8 +74,7 @@
 			['buku_tamu', 'Buku Tamu'],
 			['presensi_guru', 'Presensi Guru'],
 			['sppd', 'SPPD'],
-			['dinas_luar', 'Dinas Luar'],
-			['sinkronisasi', 'Sinkronisasi Database Pusat']
+			['dinas_luar', 'Dinas Luar']
 		],
 		description: 'Administrasi'
 	},
@@ -119,7 +118,6 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'administrasi_legger',
 		'administrasi_keputusan',
 		'administrasi_dinas_luar',
-		'administrasi_sinkronisasi',
 		'cetak_dokumen'
 	],
 	wali_asuh: ['cetak_dokumen', 'administrasi_dinas_luar'],
@@ -142,7 +140,6 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'administrasi_poin_siswa',
 		'administrasi_legger',
 		'administrasi_dinas_luar',
-		'administrasi_sinkronisasi',
 		'cetak_dokumen'
 	]
 };
@@ -167,7 +164,8 @@ export const removedLegacyPermissionKeys = new Set([
 	'kelas_manage',
 	// Keasramaan dihapus (sekolah tanpa program asrama).
 	'mata_pelajaran_keasramaan',
-	'input_nilai_asesmen_keasramaan'
+	'input_nilai_asesmen_keasramaan',
+	'administrasi_sinkronisasi'
 ]);
 
 /**
@@ -177,9 +175,7 @@ export const removedLegacyPermissionKeys = new Set([
 export const menuRoutePermissions: { path: string; permission: UserPermission }[] = [
 	{ path: '/master-data', permission: 'overview_semua_kelas' },
 	{ path: '/semua-kelas', permission: 'overview_semua_kelas' },
-	// Impor data induk stayed require sekolah-level permission (cuma admin/kepala sekolah),
-	// meski halamannya berada di bawah /sinkronisasi.
-	{ path: '/sinkronisasi/import-data', permission: 'informasi_umum_sekolah' },
+	{ path: '/import-data', permission: 'informasi_umum_sekolah' },
 	{ path: '/sekolah', permission: 'informasi_umum_sekolah' },
 	{ path: '/akademik', permission: 'informasi_umum_akademik' },
 	{ path: '/kelas', permission: 'informasi_umum_kelas' },
@@ -208,7 +204,6 @@ export const menuRoutePermissions: { path: string; permission: UserPermission }[
 	{ path: '/presensi-guru', permission: 'administrasi_presensi_guru' },
 	{ path: '/sppd', permission: 'administrasi_sppd' },
 	{ path: '/dinas-luar', permission: 'administrasi_dinas_luar' },
-	{ path: '/sinkronisasi', permission: 'administrasi_sinkronisasi' },
 	{ path: '/portal-orang-tua', permission: 'portal_orang_tua' },
 	{ path: '/cetak', permission: 'cetak_dokumen' }
 ];

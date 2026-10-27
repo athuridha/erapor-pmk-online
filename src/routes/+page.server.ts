@@ -13,7 +13,6 @@ import {
 	tableJadwalPelajaran,
 	tableMataPelajaran,
 	tableMurid,
-	tableCloudSyncSettings,
 	tablePresensiSettings,
 	tableUserFavorites
 } from '$lib/server/db/schema';
@@ -282,7 +281,7 @@ export async function load(event) {
 		};
 	}
 
-	const [bellRow, presensiRow, kegiatanCustom, jadwalPelajaran, syncSettings] = await Promise.all([
+	const [bellRow, presensiRow, kegiatanCustom, jadwalPelajaran] = await Promise.all([
 		sekolahId
 			? db.query.tableBellSettings.findFirst({
 					where: eq(tableBellSettings.sekolahId, sekolahId)
@@ -312,12 +311,7 @@ export async function load(event) {
 					where: eq(tableJadwalPelajaran.sekolahId, sekolahId),
 					columns: { hari: true, jamKe: true, kelasId: true, kodeKegiatan: true }
 				})
-			: Promise.resolve([]),
-		sekolahId
-			? db.query.tableCloudSyncSettings.findFirst({
-					where: eq(tableCloudSyncSettings.sekolahId, sekolahId)
-				})
-			: Promise.resolve(null)
+			: Promise.resolve([])
 	]);
 
 	let daftarKodeMapel: string[] = [];
@@ -393,7 +387,6 @@ export async function load(event) {
 			: null,
 		kegiatanCustom,
 		jadwalPelajaran,
-		daftarKodeMapel,
-		needsInitialPull: !syncSettings?.lastPulledAt
+		daftarKodeMapel
 	};
 }

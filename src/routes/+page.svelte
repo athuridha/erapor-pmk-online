@@ -329,28 +329,6 @@
 
 <BellStatus {bellActive} {hariIni} {nextEventMessage} class="alert alert-info alert-soft mb-4" />
 
-{#if data.needsInitialPull}
-	<div
-		class="alert alert-info alert-soft mb-4 flex items-center justify-between gap-3 border border-emerald-500/30"
-	>
-		<div class="flex items-center gap-2 text-xs">
-			<Icon name="download" class="h-5 w-5 text-emerald-600 shrink-0" />
-			<span>
-				<strong>Data Master Belum Disinkronkan:</strong> Silakan lakukan
-				<strong>Sinkron Data</strong> dari Database Pusat agar kelas, mata pelajaran, dan daftar siswa
-				terbarui sesuai pemetaan Operator.
-			</span>
-		</div>
-		<a
-			href="/sinkronisasi"
-			class="btn btn-primary btn-xs rounded-lg shrink-0 font-bold shadow-none"
-		>
-			<Icon name="repeat" class="w-3.5 h-3.5" />
-			<span>Tarik Data Sekarang</span>
-		</a>
-	</div>
-{/if}
-
 {#if presensiWarningVisible}
 	<div class="alert alert-warning alert-soft mb-4 flex items-center gap-3">
 		<Icon name="warning" class="h-5 w-5 shrink-0" />
