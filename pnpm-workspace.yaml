@@ -6,6 +6,3 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - daisyui@5.6.13
-
-patchedDependencies:
-  '@vercel/nft@0.30.4': patches/@vercel__nft@0.30.4.patch
