@@ -62,10 +62,8 @@ export interface CustomTeks {
 	judul: Record<DokumenCetak, string>;
 	/** Subjudul tiap dokumen. */
 	subjudul: Record<DokumenCetak, string>;
-	/** Baris kop pertama tiap dokumen (mis. nama Kementerian). */
-	kopBaris1: Record<DokumenCetak, string>;
-	/** Baris kop kedua tiap dokumen (mis. REPUBLIK INDONESIA). */
-	kopBaris2: Record<DokumenCetak, string>;
+	/** Baris kop tiap dokumen (mis. nama Kementerian, REPUBLIK INDONESIA). */
+	kopBaris: Record<DokumenCetak, string[]>;
 	/** Catatan kaki tiap dokumen. */
 	catatan: Record<DokumenCetak, string>;
 	/** Tampilkan foto murid. */
@@ -118,8 +116,7 @@ export const DEFAULT_CUSTOM_CETAK: CustomCetak = {
 		tanggal: '',
 		judul: { ...DEFAULT_JUDUL },
 		subjudul: { ...DEFAULT_SUBJUDUL },
-		kopBaris1: { cover: '', biodata: '', rapor: '', piagam: '' },
-		kopBaris2: { cover: '', biodata: '', rapor: '', piagam: '' },
+		kopBaris: { cover: [], biodata: [], rapor: [], piagam: [] },
 		catatan: { cover: '', biodata: '', rapor: '', piagam: '' },
 		tampilkanFoto: true,
 		tampilkanLogo: true,
@@ -153,20 +150,37 @@ function nomor(value: unknown, fallback: number, min: number, max: number): numb
 export function normalisasiCustomCetak(input: unknown): CustomCetak {
 	const raw = (input ?? {}) as Partial<CustomCetak>;
 	const layout = (raw.layout ?? {}) as Partial<CustomLayout>;
-	const teksRaw = (raw.teks ?? {}) as Partial<CustomTeks>;
+	const teksRaw = (raw.teks ?? {}) as Partial<CustomTeks> & {
+		kopBaris1?: Record<string, unknown>;
+		kopBaris2?: Record<string, unknown>;
+	};
 	const gambar = (raw.gambar ?? {}) as Partial<CustomGambar>;
 
 	const judul = { ...DEFAULT_JUDUL };
 	const subjudul = { ...DEFAULT_SUBJUDUL };
-	const kopBaris1: Record<DokumenCetak, string> = { cover: '', biodata: '', rapor: '', piagam: '' };
-	const kopBaris2: Record<DokumenCetak, string> = { cover: '', biodata: '', rapor: '', piagam: '' };
+	const kopBaris: Record<DokumenCetak, string[]> = {
+		cover: [],
+		biodata: [],
+		rapor: [],
+		piagam: []
+	};
 	const catatan: Record<DokumenCetak, string> = { cover: '', biodata: '', rapor: '', piagam: '' };
 	for (const doc of DOKUMEN_CETAK) {
 		// Judul/subjudul kosong berarti pakai bawaan template.
 		judul[doc] = teks(teksRaw.judul?.[doc]).trim() || DEFAULT_JUDUL[doc];
 		subjudul[doc] = teks(teksRaw.subjudul?.[doc]).trim() || DEFAULT_SUBJUDUL[doc];
-		kopBaris1[doc] = teks(teksRaw.kopBaris1?.[doc]).trim();
-		kopBaris2[doc] = teks(teksRaw.kopBaris2?.[doc]).trim();
+		const rawLines = teksRaw.kopBaris?.[doc];
+		if (Array.isArray(rawLines)) {
+			kopBaris[doc] = rawLines
+				.filter((line): line is string => typeof line === 'string')
+				.map((line) => line.trim())
+				.filter(Boolean);
+		} else {
+			// Migrasi data lama (kopBaris1/kopBaris2) menjadi array.
+			kopBaris[doc] = [teks(teksRaw.kopBaris1?.[doc]), teks(teksRaw.kopBaris2?.[doc])]
+				.map((line) => line.trim())
+				.filter(Boolean);
+		}
 		catatan[doc] = teks(teksRaw.catatan?.[doc], '');
 	}
 
@@ -195,8 +209,7 @@ export function normalisasiCustomCetak(input: unknown): CustomCetak {
 			tanggal: teks(teksRaw.tanggal),
 			judul,
 			subjudul,
-			kopBaris1,
-			kopBaris2,
+			kopBaris,
 			catatan,
 			tampilkanFoto: bool(teksRaw.tampilkanFoto, true),
 			tampilkanLogo: bool(teksRaw.tampilkanLogo, true),
@@ -261,11 +274,13 @@ img.watermark-cover {
 	width: ${layout.watermarkWidth};
 }
 
-img.cover-logo,
-img.header-logo {
-	width: ${layout.logoWidth};
-	height: auto;
-}
+	img.cover-logo,
+	img.header-logo,
+	img.t2-header-logo,
+	img.kop-logo {
+		width: ${layout.logoWidth};
+		height: auto;
+	}
 ${padding ? `table td, table th { padding: ${padding} !important; }` : ''}
 `;
 }
@@ -312,8 +327,9 @@ export function terapkanCustom<T extends Record<string, unknown>>(
 		docType,
 		judul: custom.teks.judul[docType] || DEFAULT_JUDUL[docType],
 		subjudul: custom.teks.subjudul[docType] || DEFAULT_SUBJUDUL[docType],
-		kopBaris1: custom.teks.kopBaris1[docType] || '',
-		kopBaris2: custom.teks.kopBaris2[docType] || '',
+		kopBaris: custom.teks.kopBaris[docType] ?? [],
+		kopBaris1: custom.teks.kopBaris[docType]?.[0] ?? '',
+		kopBaris2: custom.teks.kopBaris[docType]?.[1] ?? '',
 		catatan: custom.teks.catatan[docType] || ''
 	};
 

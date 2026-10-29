@@ -24,8 +24,7 @@
 			tanggal: string;
 			judul: Record<string, string>;
 			subjudul: Record<string, string>;
-			kopBaris1: Record<string, string>;
-			kopBaris2: Record<string, string>;
+			kopBaris: Record<string, string[]>;
 			catatan: Record<string, string>;
 			tampilkanFoto: boolean;
 			tampilkanLogo: boolean;
@@ -72,20 +71,33 @@
 			email: data.custom.teks.email || sekolahSekarang.email,
 			kota: data.custom.teks.kota || sekolahSekarang.kota,
 			tanggal: data.custom.teks.tanggal || sekolahSekarang.tanggal,
-			kopBaris1: barisKop(1),
-			kopBaris2: barisKop(2)
+			kopBaris: barisKop()
 		}
 	});
 
-	// Baris kop bawaan tiap dokumen (kementerian, republic, dinas, dst).
-	function barisKop(nomor: 1 | 2): Record<string, string> {
-		const custom = data.custom.teks[`kopBaris${nomor}`] ?? {};
+	// Baris kop bawaan tiap dokumen (kementerian, republik, dinas, dst).
+	function barisKop(): Record<string, string[]> {
+		const custom = data.custom.teks.kopBaris ?? {};
 		const bawaan = data.kopSekarang ?? {};
-		const hasil: Record<string, string> = {};
+		const hasil: Record<string, string[]> = {};
 		for (const item of DOKUMEN) {
-			hasil[item.value] = custom[item.value] || (bawaan[item.value]?.[nomor - 1] ?? '');
+			const tersimpan = Array.isArray(custom[item.value]) ? custom[item.value] : [];
+			hasil[item.value] = tersimpan.length ? [...tersimpan] : [...(bawaan[item.value] ?? [])];
 		}
 		return hasil;
+	}
+
+	// Ukuran logo dalam px (slider 30-200). Nilai non-px jatuh ke 70.
+	const logoPx = $derived.by(() => {
+		const parsed = Number.parseFloat(String(form.layout.logoWidth).replace(',', '.'));
+		if (!Number.isFinite(parsed)) return 70;
+		return Math.min(200, Math.max(30, Math.round(parsed)));
+	});
+
+	function setLogoPx(value: number) {
+		if (!Number.isFinite(value)) return;
+		const clamped = Math.min(200, Math.max(30, Math.round(value)));
+		form.layout.logoWidth = `${clamped}px`;
 	}
 	let previewHtml = $state('');
 	let previewLoading = $state(false);
@@ -357,44 +369,53 @@
 								placeholder="Kosong = bawaan"
 							/>
 						</label>
-						<label class="form-control sm:col-span-2">
-							<span class="label-text mb-1 text-sm">Baris kop 1</span>
-							<div class="flex items-center gap-1">
-								<input
-									class="input input-sm w-full"
-									value={form.teks.kopBaris1[dokumen]}
-									oninput={(event) => (form.teks.kopBaris1[dokumen] = event.currentTarget.value)}
-									placeholder="Kosong = bawaan (mis. nama Kementerian)"
-								/>
+						<div class="form-control sm:col-span-2">
+							<span class="label-text mb-1 text-sm">Baris kop</span>
+							<div class="space-y-1.5">
+								{#each form.teks.kopBaris[dokumen] as baris, index (index)}
+									<div class="flex items-center gap-1">
+										<span class="w-4 shrink-0 text-right text-[11px] text-base-content/50">
+											{index + 1}
+										</span>
+										<input
+											class="input input-sm w-full"
+											value={baris}
+											oninput={(event) => {
+												const next = [...form.teks.kopBaris[dokumen]];
+												next[index] = event.currentTarget.value;
+												form.teks.kopBaris[dokumen] = next;
+											}}
+											placeholder="Teks baris kop"
+										/>
+										<button
+											type="button"
+											class="btn btn-ghost btn-xs shrink-0"
+											title="Hapus baris"
+											onclick={() => {
+												form.teks.kopBaris[dokumen] = form.teks.kopBaris[dokumen].filter(
+													(_, i) => i !== index
+												);
+											}}
+										>
+											<Icon name="del" />
+										</button>
+									</div>
+								{/each}
+								{#if form.teks.kopBaris[dokumen].length === 0}
+									<p class="text-[11px] italic text-base-content/60">Kosong = pakai kop bawaan.</p>
+								{/if}
 								<button
 									type="button"
-									class="btn btn-ghost btn-xs shrink-0"
-									title="Kembalikan ke bawaan"
-									onclick={() => (form.teks.kopBaris1[dokumen] = '')}
+									class="btn btn-ghost btn-xs gap-1"
+									onclick={() => {
+										form.teks.kopBaris[dokumen] = [...form.teks.kopBaris[dokumen], ''];
+									}}
 								>
-									<Icon name="close" />
+									<Icon name="plus" />
+									Tambah baris
 								</button>
 							</div>
-						</label>
-						<label class="form-control sm:col-span-2">
-							<span class="label-text mb-1 text-sm">Baris kop 2</span>
-							<div class="flex items-center gap-1">
-								<input
-									class="input input-sm w-full"
-									value={form.teks.kopBaris2[dokumen]}
-									oninput={(event) => (form.teks.kopBaris2[dokumen] = event.currentTarget.value)}
-									placeholder="Kosong = bawaan (mis. REPUBLIK INDONESIA)"
-								/>
-								<button
-									type="button"
-									class="btn btn-ghost btn-xs shrink-0"
-									title="Kembalikan ke bawaan"
-									onclick={() => (form.teks.kopBaris2[dokumen] = '')}
-								>
-									<Icon name="close" />
-								</button>
-							</div>
-						</label>
+						</div>
 						<label class="form-control sm:col-span-2">
 							<span class="label-text mb-1 text-sm">Catatan kaki</span>
 							<input
@@ -576,14 +597,51 @@
 								placeholder="1.4"
 							/>
 						</label>
-						<label class="form-control">
-							<span class="label-text mb-1 text-sm">Lebar logo kop</span>
-							<input
-								class="input input-sm w-full"
-								bind:value={form.layout.logoWidth}
-								placeholder="70px"
-							/>
-						</label>
+						<div class="form-control">
+							<span class="label-text mb-1 text-sm">Ukuran logo kop</span>
+							<div class="flex items-center gap-2">
+								<input
+									type="range"
+									class="range range-primary range-xs grow"
+									min="30"
+									max="200"
+									step="1"
+									value={logoPx}
+									oninput={(event) => setLogoPx(Number(event.currentTarget.value))}
+								/>
+								<label class="input input-sm flex w-24 shrink-0 items-center gap-1">
+									<input
+										type="number"
+										class="grow text-right"
+										min="30"
+										max="200"
+										step="1"
+										value={logoPx}
+										oninput={(event) => {
+											const raw = event.currentTarget.value;
+											if (raw === '') return;
+											setLogoPx(Number(raw));
+										}}
+									/>
+									<span class="text-xs text-base-content/60">px</span>
+								</label>
+							</div>
+							<div class="mt-1 flex flex-wrap gap-1">
+								{#each [{ label: 'Kecil', px: 50 }, { label: 'Sedang', px: 70 }, { label: 'Besar', px: 100 }] as preset}
+									<button
+										type="button"
+										class="btn btn-ghost btn-xs"
+										class:btn-active={logoPx === preset.px}
+										onclick={() => setLogoPx(preset.px)}
+									>
+										{preset.label}
+									</button>
+								{/each}
+							</div>
+							<p class="mt-1 text-[11px] text-base-content/60">
+								Berlaku untuk cover, piagam, dan kop surat.
+							</p>
+						</div>
 						<label class="form-control">
 							<span class="label-text mb-1 text-sm">Lebar watermark</span>
 							<input

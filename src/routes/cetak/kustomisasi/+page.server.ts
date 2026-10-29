@@ -111,8 +111,12 @@ export const actions = {
 		if (sama(custom.teks.kota, sekarang.kota)) custom.teks.kota = '';
 		if (sama(custom.teks.tanggal, sekarang.tanggal)) custom.teks.tanggal = '';
 		for (const doc of ['cover', 'biodata', 'rapor', 'piagam'] as const) {
-			if (sama(custom.teks.kopBaris1[doc] ?? '', kop[doc][0])) custom.teks.kopBaris1[doc] = '';
-			if (sama(custom.teks.kopBaris2[doc] ?? '', kop[doc][1])) custom.teks.kopBaris2[doc] = '';
+			const lines = custom.teks.kopBaris[doc] ?? [];
+			const bawaan = kop[doc] ?? [];
+			const samaSemua =
+				lines.length === bawaan.length &&
+				lines.every((line, index) => sama(line, bawaan[index]));
+			if (samaSemua) custom.teks.kopBaris[doc] = [];
 		}
 
 		await simpanCustomCetak(custom);

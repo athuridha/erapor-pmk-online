@@ -68,6 +68,7 @@ export const FALLBACK = '\u2014';
 export interface CustomCetakDoc {
 	judul: string;
 	subjudul: string;
+	kopBaris: string[];
 	kopBaris1: string;
 	kopBaris2: string;
 	catatan: string;
@@ -84,11 +85,20 @@ export interface CustomCetakDoc {
 export function customDoc(data: unknown): CustomCetakDoc {
 	const raw = (data as { custom?: Record<string, unknown> } | null)?.custom ?? {};
 	const teks = (raw.teks ?? {}) as { labelMengetahui?: string };
+	const legacy1 = typeof raw.kopBaris1 === 'string' ? raw.kopBaris1 : '';
+	const legacy2 = typeof raw.kopBaris2 === 'string' ? raw.kopBaris2 : '';
+	const lines = Array.isArray(raw.kopBaris)
+		? raw.kopBaris
+				.filter((line): line is string => typeof line === 'string')
+				.map((line) => line.trim())
+				.filter(Boolean)
+		: [legacy1, legacy2].map((line) => line.trim()).filter(Boolean);
 	return {
 		judul: typeof raw.judul === 'string' ? raw.judul : '',
 		subjudul: typeof raw.subjudul === 'string' ? raw.subjudul : '',
-		kopBaris1: typeof raw.kopBaris1 === 'string' ? raw.kopBaris1 : '',
-		kopBaris2: typeof raw.kopBaris2 === 'string' ? raw.kopBaris2 : '',
+		kopBaris: lines,
+		kopBaris1: lines[0] ?? '',
+		kopBaris2: lines[1] ?? '',
 		catatan: typeof raw.catatan === 'string' ? raw.catatan : '',
 		tampilkanFoto: raw.tampilkanFoto !== false,
 		tampilkanLogo: raw.tampilkanLogo !== false,

@@ -5,7 +5,8 @@ import {
 	formatUpper,
 	FALLBACK,
 	getTutwuriBwDataUri,
-	customDoc
+	customDoc,
+	escHtml
 } from './shared';
 import { jenjangPendidikanSederajat, nauganHeaderByKey, type NauganKey } from '$lib/statics';
 
@@ -210,8 +211,7 @@ export function renderCoverHTML(data: CoverPrintData): string {
 
 	const naunganKey: NauganKey = data.sekolah.naungan ?? 'kemendikbud';
 	const [headerBawaan1, headerBawaan2] = nauganHeaderByKey[naunganKey];
-	const header1 = custom.kopBaris1 || headerBawaan1;
-	const header2 = custom.kopBaris2 || headerBawaan2;
+	const kopLines = custom.kopBaris.length ? custom.kopBaris : [headerBawaan1, headerBawaan2];
 
 	const namaMurid = formatUpper(data.murid.nama);
 	const nisn = data.murid.nisn ?? null;
@@ -253,8 +253,12 @@ ${coverStyles()}
 			<div style="font-size:13pt;margin-bottom:1mm">NISN / NIS</div>
 			<div style="border:2px solid #000;padding:3mm 8mm;font-size:13pt;font-weight:bold;text-align:center;min-width:120mm">${nisnNis}</div>
 		</div>
-		<div class="cover-bottom-line" style="margin-top:5mm">${header1}</div>
-		<div class="cover-bottom-line">${header2}</div>
+		${kopLines
+			.map(
+				(line, index) =>
+					`<div class="cover-bottom-line"${index === 0 ? ' style="margin-top:5mm"' : ''}>${escHtml(line)}</div>`
+			)
+			.join('\n\t\t')}
 	</div>
 </div>
 

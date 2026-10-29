@@ -394,11 +394,9 @@ export function renderPiagamHTML(data: PiagamPrintData, template: '1' | '2'): st
 		provinsi: data.sekolah.alamat.provinsi
 	});
 	// Baris kop bisa dioverride lewat halaman Kustomisasi Cetak.
-	const kopLines = (
-		custom.kopBaris1 || custom.kopBaris2
-			? [custom.kopBaris1, custom.kopBaris2].filter(Boolean)
-			: kopBawaan
-	).map((line) => escHtml(line));
+	const kopLines = (custom.kopBaris.length ? custom.kopBaris : kopBawaan).map((line) =>
+		escHtml(line)
+	);
 
 	const penghargaan = data.penghargaan;
 	const periode = data.periode;
