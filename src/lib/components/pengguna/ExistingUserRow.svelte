@@ -4,7 +4,7 @@
 	const isMasterAdmin = $derived(u.id === 1 || u.username?.toLowerCase() === 'admin');
 </script>
 
-<td>{u.pegawaiName ?? u.username}</td>
+<td>{u.pegawaiName ?? u.pegawaiNik ?? u.username}</td>
 <td>{(u.roles ?? []).join(', ')}</td>
 <td>{u.pegawaiNik || u.username || '-'}</td>
 <td>
