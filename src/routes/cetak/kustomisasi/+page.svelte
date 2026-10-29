@@ -10,9 +10,11 @@
 			fontSize: string;
 			lineHeight: string;
 			logoWidth: string;
+			coverLogoWidth: string;
 			watermarkWidth: string;
 			watermarkOpacity: number;
 			cellPadding: string;
+			coverSectionGap: string;
 		};
 		teks: {
 			namaSekolah: string;
@@ -98,6 +100,32 @@
 		if (!Number.isFinite(value)) return;
 		const clamped = Math.min(200, Math.max(30, Math.round(value)));
 		form.layout.logoWidth = `${clamped}px`;
+	}
+
+	/** Konversi nilai ukuran (px/mm/pt) ke px untuk slider. */
+	function ukuranKePx(value: string, fallback: number): number {
+		const cocok = String(value)
+			.trim()
+			.match(/^([\d.,]+)\s*(px|mm|pt)?$/i);
+		if (!cocok) return fallback;
+		const angka = Number.parseFloat(cocok[1].replace(',', '.'));
+		if (!Number.isFinite(angka)) return fallback;
+		const satuan = (cocok[2] ?? 'px').toLowerCase();
+		if (satuan === 'mm') return angka * 3.7795;
+		if (satuan === 'pt') return angka * 1.3333;
+		return angka;
+	}
+
+	// Ukuran logo cover (slider 40-260 px). 55mm bawaan template ≈ 208px.
+	const coverLogoPx = $derived.by(() => {
+		const px = ukuranKePx(String(form.layout.coverLogoWidth), 208);
+		return Math.min(260, Math.max(40, Math.round(px)));
+	});
+
+	function setCoverLogoPx(value: number) {
+		if (!Number.isFinite(value)) return;
+		const clamped = Math.min(260, Math.max(40, Math.round(value)));
+		form.layout.coverLogoWidth = `${clamped}px`;
 	}
 	let previewHtml = $state('');
 	let previewLoading = $state(false);
@@ -598,6 +626,49 @@
 							/>
 						</label>
 						<div class="form-control">
+							<span class="label-text mb-1 text-sm">Ukuran logo cover</span>
+							<div class="flex items-center gap-2">
+								<input
+									type="range"
+									class="range range-primary range-xs grow"
+									min="40"
+									max="260"
+									step="1"
+									value={coverLogoPx}
+									oninput={(event) => setCoverLogoPx(Number(event.currentTarget.value))}
+								/>
+								<label class="input input-sm flex w-24 shrink-0 items-center gap-1">
+									<input
+										type="number"
+										class="grow text-right"
+										min="40"
+										max="260"
+										step="1"
+										value={coverLogoPx}
+										oninput={(event) => {
+											const raw = event.currentTarget.value;
+											if (raw === '') return;
+											setCoverLogoPx(Number(raw));
+										}}
+									/>
+									<span class="text-xs text-base-content/60">px</span>
+								</label>
+							</div>
+							<div class="mt-1 flex flex-wrap gap-1">
+								{#each [{ label: 'Kecil', px: 120 }, { label: 'Sedang', px: 160 }, { label: 'Besar', px: 208 }] as preset}
+									<button
+										type="button"
+										class="btn btn-ghost btn-xs"
+										class:btn-active={coverLogoPx === preset.px}
+										onclick={() => setCoverLogoPx(preset.px)}
+									>
+										{preset.label}
+									</button>
+								{/each}
+							</div>
+							<p class="mt-1 text-[11px] text-base-content/60">Khusus logo di halaman cover.</p>
+						</div>
+						<div class="form-control">
 							<span class="label-text mb-1 text-sm">Ukuran logo kop</span>
 							<div class="flex items-center gap-2">
 								<input
@@ -639,7 +710,7 @@
 								{/each}
 							</div>
 							<p class="mt-1 text-[11px] text-base-content/60">
-								Berlaku untuk cover, piagam, dan kop surat.
+								Berlaku untuk kop piagam, rapor, dan SPPD.
 							</p>
 						</div>
 						<label class="form-control">
@@ -667,6 +738,14 @@
 								class="input input-sm w-full"
 								bind:value={form.layout.cellPadding}
 								placeholder="Kosong = bawaan template"
+							/>
+						</label>
+						<label class="form-control">
+							<span class="label-text mb-1 text-sm">Jarak antar bagian cover</span>
+							<input
+								class="input input-sm w-full"
+								bind:value={form.layout.coverSectionGap}
+								placeholder="mis. 5mm (kosong = tanpa jarak)"
 							/>
 						</label>
 					</div>

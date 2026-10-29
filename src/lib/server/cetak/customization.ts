@@ -28,12 +28,16 @@ export interface CustomLayout {
 	lineHeight: string;
 	/** Lebar logo kop, contoh "70px". */
 	logoWidth: string;
+	/** Lebar logo khusus halaman cover, contoh "55mm". */
+	coverLogoWidth: string;
 	/** Lebar watermark, contoh "45%". */
 	watermarkWidth: string;
 	/** Opasitas watermark 0-1. */
 	watermarkOpacity: number;
 	/** Padding sel tabel (px). Kosong = pakai padding bawaan template. */
 	cellPadding: string;
+	/** Jarak antar bagian cover (top/middle/bottom), contoh "10mm". Kosong = tidak ada jarak. */
+	coverSectionGap: string;
 }
 
 export interface CustomGambar {
@@ -102,9 +106,11 @@ export const DEFAULT_CUSTOM_CETAK: CustomCetak = {
 		fontSize: '11pt',
 		lineHeight: '1.4',
 		logoWidth: '70px',
+		coverLogoWidth: '55mm',
 		watermarkWidth: '45%',
 		watermarkOpacity: 0.12,
-		cellPadding: ''
+		cellPadding: '',
+		coverSectionGap: ''
 	},
 	teks: {
 		namaSekolah: '',
@@ -190,6 +196,7 @@ export function normalisasiCustomCetak(input: unknown): CustomCetak {
 			fontSize: teks(layout.fontSize, DEFAULT_CUSTOM_CETAK.layout.fontSize),
 			lineHeight: teks(layout.lineHeight, DEFAULT_CUSTOM_CETAK.layout.lineHeight),
 			logoWidth: teks(layout.logoWidth, DEFAULT_CUSTOM_CETAK.layout.logoWidth),
+			coverLogoWidth: teks(layout.coverLogoWidth, DEFAULT_CUSTOM_CETAK.layout.coverLogoWidth),
 			watermarkWidth: teks(layout.watermarkWidth, DEFAULT_CUSTOM_CETAK.layout.watermarkWidth),
 			watermarkOpacity: nomor(
 				layout.watermarkOpacity,
@@ -197,7 +204,8 @@ export function normalisasiCustomCetak(input: unknown): CustomCetak {
 				0,
 				1
 			),
-			cellPadding: teks(layout.cellPadding, '')
+			cellPadding: teks(layout.cellPadding, ''),
+			coverSectionGap: teks(layout.coverSectionGap, '')
 		},
 		teks: {
 			namaSekolah: teks(teksRaw.namaSekolah),
@@ -251,6 +259,7 @@ export async function simpanCustomCetak(custom: CustomCetak): Promise<void> {
 export function customCss(custom: CustomCetak): string {
 	const { layout } = custom;
 	const padding = layout.cellPadding.trim();
+	const coverGap = layout.coverSectionGap.trim();
 	return `
 /* — kustomisasi cetak — */
 @page {
@@ -274,13 +283,18 @@ img.watermark-cover {
 	width: ${layout.watermarkWidth};
 }
 
-	img.cover-logo,
+	img.cover-logo {
+		width: ${layout.coverLogoWidth};
+		height: auto;
+	}
+
 	img.header-logo,
 	img.t2-header-logo,
 	img.kop-logo {
 		width: ${layout.logoWidth};
 		height: auto;
 	}
+${coverGap ? `.cover-page { gap: ${coverGap}; }` : ''}
 ${padding ? `table td, table th { padding: ${padding} !important; }` : ''}
 `;
 }

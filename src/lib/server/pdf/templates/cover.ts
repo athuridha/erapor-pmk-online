@@ -60,8 +60,8 @@ function coverStyles(): string {
 	return `
 .cover-page {
 	position: relative;
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-rows: auto 1fr auto;
 	height: 100%;
 	padding: 5mm 10mm;
 }
@@ -78,7 +78,6 @@ function coverStyles(): string {
 }
 
 .cover-section {
-	flex: 1;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -91,6 +90,7 @@ function coverStyles(): string {
 
 .cover-section.middle {
 	justify-content: center;
+	min-height: 0;
 }
 
 .cover-section.bottom {
