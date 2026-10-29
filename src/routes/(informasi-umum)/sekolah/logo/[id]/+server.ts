@@ -1,16 +1,16 @@
 import db from '$lib/server/db';
 import { tableSekolah } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import { tutwuriLogoDataUri, dataUriBytes } from '$lib/server/bundled-assets';
 import type { RequestHandler } from './$types';
 
 let placeholderCache: Uint8Array | null = null;
 
 async function getPlaceholder() {
 	if (!placeholderCache) {
-		const filePath = path.resolve('static/logo.png');
-		placeholderCache = await fs.readFile(filePath);
+		// Logo bawaan di-inline lewat bundle (bundled-assets) — bebas filesystem
+		// saat runtime (dibutuhkan pada serverless Vercel).
+		placeholderCache = dataUriBytes(tutwuriLogoDataUri);
 	}
 	return placeholderCache;
 }

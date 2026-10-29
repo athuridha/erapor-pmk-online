@@ -1,6 +1,7 @@
 import db from '$lib/server/db';
 import { tableKelas, tableMurid } from '$lib/server/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
+import { queryInChunks, runInChunks } from '$lib/server/db/chunk';
 
 export interface HasilPindahKelas {
 	message?: string;
@@ -37,10 +38,12 @@ export async function pindahkanMuridKelas(opts: {
 		return { fail: 'Kelas tujuan tidak ditemukan di sekolah ini' };
 	}
 
-	const muridList = await db.query.tableMurid.findMany({
-		columns: { id: true, nama: true, kelasId: true, semesterId: true },
-		where: and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, muridIds))
-	});
+	const muridList = await queryInChunks(muridIds, (ids) =>
+		db.query.tableMurid.findMany({
+			columns: { id: true, nama: true, kelasId: true, semesterId: true },
+			where: and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, ids))
+		})
+	);
 	if (muridList.length !== muridIds.length) {
 		return { fail: 'Sebagian murid tidak ditemukan. Muat ulang halaman lalu coba lagi.' };
 	}
@@ -57,18 +60,14 @@ export async function pindahkanMuridKelas(opts: {
 		return { message: `Semua murid sudah berada di kelas ${kelasTujuan.nama}` };
 	}
 
-	await db
-		.update(tableMurid)
-		.set({ kelasId: kelasTujuan.id, updatedAt: new Date().toISOString() })
-		.where(
-			and(
-				eq(tableMurid.sekolahId, sekolahId),
-				inArray(
-					tableMurid.id,
-					akanPindah.map((murid) => murid.id)
-				)
-			)
-		);
+	await runInChunks(
+		akanPindah.map((murid) => murid.id),
+		(ids) =>
+			db
+				.update(tableMurid)
+				.set({ kelasId: kelasTujuan.id, updatedAt: new Date().toISOString() })
+				.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, ids)))
+	);
 
 	const dilewati = muridList.length - akanPindah.length;
 	return {

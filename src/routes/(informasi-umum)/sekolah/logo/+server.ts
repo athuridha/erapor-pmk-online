@@ -1,8 +1,7 @@
 import db from '$lib/server/db/index.js';
 import { tableSekolah } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import { tutwuriLogoDataUri, dataUriBytes } from '$lib/server/bundled-assets';
 
 const LOGO_CACHE_TTL = 60_000; // 60 seconds
 let placeholderCache: Uint8Array | null = null;
@@ -10,8 +9,9 @@ const logoCache = new Map<number, { data: Uint8Array; type: string; expires: num
 
 async function getPlaceholder() {
 	if (!placeholderCache) {
-		const placeholderPath = path.resolve('static/logo.png');
-		placeholderCache = await fs.readFile(placeholderPath);
+		// Logo bawaan di-inline lewat bundle (bundled-assets) — bebas filesystem
+		// saat runtime (dibutuhkan pada serverless Vercel).
+		placeholderCache = dataUriBytes(tutwuriLogoDataUri);
 	}
 	return placeholderCache;
 }

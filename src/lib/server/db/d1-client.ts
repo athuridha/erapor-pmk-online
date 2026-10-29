@@ -80,7 +80,7 @@ export function createD1HttpClient(config: D1HttpConfig): Client {
 			// In @libsql/client, Row is an Array of values with named properties attached!
 			const rowArr: unknown[] = columns.map((col) => r[col]);
 			columns.forEach((col) => {
-				(rowArr as Record<string, unknown>)[col] = r[col];
+				(rowArr as unknown as Record<string, unknown>)[col] = r[col];
 			});
 			return rowArr as unknown as Row;
 		});

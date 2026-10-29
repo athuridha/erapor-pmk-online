@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { tutwuriLogoDataUri } from '../../bundled-assets';
 import {
 	sharedStyles,
 	formatValue,
@@ -37,17 +36,9 @@ export interface CoverPrintData {
 	};
 }
 
-let tutwuriDataUri: string | null = null;
-
 function getTutwuriDataUri(): string {
-	if (tutwuriDataUri) return tutwuriDataUri;
-	try {
-		const buf = readFileSync(resolve('static/logo.png'));
-		tutwuriDataUri = `data:image/png;base64,${buf.toString('base64')}`;
-	} catch {
-		tutwuriDataUri = '';
-	}
-	return tutwuriDataUri;
+	// Di-inline lewat bundle (bundled-assets) — bebas filesystem saat runtime.
+	return tutwuriLogoDataUri;
 }
 
 function getSchoolJenjang(data: CoverPrintData): string | null {

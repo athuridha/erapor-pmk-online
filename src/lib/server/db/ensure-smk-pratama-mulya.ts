@@ -8,23 +8,14 @@ import {
 	tableTahunAjaran
 } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import fs from 'node:fs';
-import path from 'node:path';
+import { tutwuriLogoDataUri, dataUriBytes } from '$lib/server/bundled-assets';
 
 let ensuredDone = false;
 
 function readOfficialLogo(): Uint8Array | null {
-	const candidates = [path.resolve('public/logo.png'), path.resolve('static/logo.png')];
-	for (const p of candidates) {
-		try {
-			if (fs.existsSync(p)) {
-				return new Uint8Array(fs.readFileSync(p));
-			}
-		} catch {
-			// ignore read error
-		}
-	}
-	return null;
+	// Logo bawaan di-inline lewat bundle (bundled-assets) — bebas filesystem
+	// saat runtime (dibutuhkan pada serverless Vercel).
+	return dataUriBytes(tutwuriLogoDataUri);
 }
 
 /**

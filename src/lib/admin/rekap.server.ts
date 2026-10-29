@@ -9,6 +9,7 @@ import {
 	tableTahunAjaran
 } from '$lib/server/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
+import { queryInChunks } from '$lib/server/db/chunk';
 import { relevanMapelUntukMurid } from '$lib/server/mapel-picker';
 import {
 	hitungNilaiAkhirSumatif,
@@ -354,29 +355,29 @@ export async function buildRekapKeseluruhan(
 
 	// 4) Mapel per kelas + semester mapel tersebut + daftar mapel & guru.
 	const kelasIds = kelasInfo.map((row) => row.id);
-	const semuaMapel = kelasIds.length
-		? await db.query.tableMataPelajaran.findMany({
-				columns: {
-					id: true,
-					kelasId: true,
-					nama: true,
-					urutan: true,
-					kkm: true,
-					pengampuId: true
-				},
-				where: inArray(tableMataPelajaran.kelasId, kelasIds)
-			})
-		: [];
+	const semuaMapel = await queryInChunks(kelasIds, (ids) =>
+		db.query.tableMataPelajaran.findMany({
+			columns: {
+				id: true,
+				kelasId: true,
+				nama: true,
+				urutan: true,
+				kkm: true,
+				pengampuId: true
+			},
+			where: inArray(tableMataPelajaran.kelasId, ids)
+		})
+	);
 
 	const pengampuIds = [
 		...new Set(semuaMapel.map((row) => row.pengampuId).filter((v) => v != null))
 	];
-	const pegawai = pengampuIds.length
-		? await db.query.tablePegawai.findMany({
-				columns: { id: true, nama: true },
-				where: inArray(tablePegawai.id, pengampuIds as number[])
-			})
-		: [];
+	const pegawai = await queryInChunks(pengampuIds as number[], (ids) =>
+		db.query.tablePegawai.findMany({
+			columns: { id: true, nama: true },
+			where: inArray(tablePegawai.id, ids)
+		})
+	);
 	const namaGuru = new Map(pegawai.map((row) => [row.id, row.nama]));
 
 	const mapelGuru = new Map<string, Map<number, string>>();
@@ -463,22 +464,24 @@ export async function buildRekapKeseluruhan(
 	// 5) Nilai akhir tiap murid per mapel (komponen + nilai tersimpan).
 	const muridIds = [...muridCohort.keys()];
 	const mapelIds = semuaMapel.map((row) => row.id);
+	const mapelIdSet = new Set(mapelIds);
 	const nilaiRecords =
 		muridIds.length && mapelIds.length
-			? await db.query.tableAsesmenSumatif.findMany({
-					columns: {
-						muridId: true,
-						mataPelajaranId: true,
-						naLingkup: true,
-						sts: true,
-						sas: true,
-						nilaiAkhir: true
-					},
-					where: and(
-						inArray(tableAsesmenSumatif.muridId, muridIds),
-						inArray(tableAsesmenSumatif.mataPelajaranId, mapelIds)
+			? (
+					await queryInChunks(muridIds, (ids) =>
+						db.query.tableAsesmenSumatif.findMany({
+							columns: {
+								muridId: true,
+								mataPelajaranId: true,
+								naLingkup: true,
+								sts: true,
+								sas: true,
+								nilaiAkhir: true
+							},
+							where: inArray(tableAsesmenSumatif.muridId, ids)
+						})
 					)
-				})
+				).filter((row) => mapelIdSet.has(row.mataPelajaranId))
 			: [];
 
 	const namaMapelId = new Map(semuaMapel.map((row) => [row.id, row.nama ?? '']));

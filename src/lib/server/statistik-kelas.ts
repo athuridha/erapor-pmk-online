@@ -1,6 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 
 import db from '$lib/server/db';
+import { queryInChunks } from '$lib/server/db/chunk';
 import {
 	tableAsesmenSumatif,
 	tableAuthUser,
@@ -110,26 +111,26 @@ export async function getRingkasanKelas(
 	const mapelIds = mapelRows.map((mapel) => mapel.id);
 	const mapelKelas = new Map(mapelRows.map((mapel) => [mapel.id, mapel.kelasId]));
 
-	const sumatifRows = muridIds.length
-		? await db.query.tableAsesmenSumatif.findMany({
-				where: inArray(tableAsesmenSumatif.muridId, muridIds),
-				columns: { muridId: true, mataPelajaranId: true, nilaiAkhir: true }
-			})
-		: [];
+	const sumatifRows = await queryInChunks(muridIds, (ids) =>
+		db.query.tableAsesmenSumatif.findMany({
+			where: inArray(tableAsesmenSumatif.muridId, ids),
+			columns: { muridId: true, mataPelajaranId: true, nilaiAkhir: true }
+		})
+	);
 
-	const kehadiranRows = muridIds.length
-		? await db.query.tableKehadiranMurid.findMany({
-				where: inArray(tableKehadiranMurid.muridId, muridIds),
-				columns: { muridId: true, sakit: true, izin: true, alfa: true }
-			})
-		: [];
+	const kehadiranRows = await queryInChunks(muridIds, (ids) =>
+		db.query.tableKehadiranMurid.findMany({
+			where: inArray(tableKehadiranMurid.muridId, ids),
+			columns: { muridId: true, sakit: true, izin: true, alfa: true }
+		})
+	);
 
-	const assignmentRows = mapelIds.length
-		? await db.query.tableAuthUserMataPelajaran.findMany({
-				where: inArray(tableAuthUserMataPelajaran.mataPelajaranId, mapelIds),
-				columns: { authUserId: true, mataPelajaranId: true }
-			})
-		: [];
+	const assignmentRows = await queryInChunks(mapelIds, (ids) =>
+		db.query.tableAuthUserMataPelajaran.findMany({
+			where: inArray(tableAuthUserMataPelajaran.mataPelajaranId, ids),
+			columns: { authUserId: true, mataPelajaranId: true }
+		})
+	);
 
 	const authUserIds = [...new Set(assignmentRows.map((row) => row.authUserId))];
 	const authUsers = authUserIds.length

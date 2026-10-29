@@ -2,6 +2,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { error } from '@sveltejs/kit';
 import { uploadsDir } from '$lib/server/data-dirs';
+import {
+	bgCertificateDataUri,
+	bgCertificate2DataUri,
+	dataUriBytes
+} from '$lib/server/bundled-assets';
 import { isAuthorizedUser } from '../../routes/pengguna/permissions';
 
 const ALLOWED_TEMPLATES = new Set(['1', '2']);
@@ -43,13 +48,10 @@ export async function handleGet({
 	const template = params.template;
 	const sekolahId = locals.sekolah?.id;
 	const staticFile = async (tpl: string | null) => {
-		try {
-			const filename = tpl === '2' ? 'bg-certificate2.png' : 'bg-certificate.png';
-			const p = path.resolve('static', filename);
-			return await fs.readFile(p);
-		} catch {
-			throw error(404, 'Not found');
-		}
+		// Latar bawaan di-inline lewat bundle (bundled-assets) — bebas filesystem
+		// saat runtime (dibutuhkan pada serverless Vercel).
+		const uri = tpl === '2' ? bgCertificate2DataUri : bgCertificateDataUri;
+		return dataUriBytes(uri);
 	};
 
 	const resolved = resolveTemplate(template);

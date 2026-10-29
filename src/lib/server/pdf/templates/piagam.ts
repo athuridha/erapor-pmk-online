@@ -1,8 +1,14 @@
-import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import fs from 'node:fs';
+import { join } from 'node:path';
 import { uploadsDir } from '$lib/server/data-dirs';
 import { getKopSuratLines } from '$lib/statics';
 import { sharedStyles, formatUpper, formatValue, escHtml, customDoc } from './shared';
+import {
+	kumerLogoDataUri as bundledKumerLogo,
+	bgCertificateDataUri as bundledBgCertificate,
+	bgCertificate2DataUri as bundledBgCertificate2,
+	piagamFontDataUris
+} from '../../bundled-assets';
 
 export interface PiagamPrintData {
 	sekolah: {
@@ -55,19 +61,9 @@ export interface PiagamPrintData {
 	};
 }
 
-let kumerLogoDataUri: string | null = null;
-let bgCertificateDataUri: string | null = null;
-let bgCertificate2DataUri: string | null = null;
-
 function getKumerLogoDataUri(): string | null {
-	if (kumerLogoDataUri) return kumerLogoDataUri;
-	try {
-		const buf = readFileSync(resolve('static/logo-kumer.png'));
-		kumerLogoDataUri = `data:image/png;base64,${buf.toString('base64')}`;
-	} catch {
-		kumerLogoDataUri = null;
-	}
-	return kumerLogoDataUri;
+	// Di-inline lewat bundle (bundled-assets) — bebas filesystem saat runtime.
+	return bundledKumerLogo;
 }
 
 function getCustomBgPath(sekolahId: number, template: '1' | '2'): string {
@@ -77,39 +73,32 @@ function getCustomBgPath(sekolahId: number, template: '1' | '2'): string {
 function getBgCertificateDataUri(sekolahId?: number): string | null {
 	if (sekolahId) {
 		try {
-			const buf = readFileSync(getCustomBgPath(sekolahId, '1'));
+			const buf = readCustomBg(getCustomBgPath(sekolahId, '1'));
 			return `data:image/png;base64,${buf.toString('base64')}`;
 		} catch {
 			// fall through
 		}
 	}
-	if (bgCertificateDataUri) return bgCertificateDataUri;
-	try {
-		const buf = readFileSync(resolve('static/bg-certificate.png'));
-		bgCertificateDataUri = `data:image/png;base64,${buf.toString('base64')}`;
-	} catch {
-		bgCertificateDataUri = null;
-	}
-	return bgCertificateDataUri;
+	// Di-inline lewat bundle (bundled-assets) — bebas filesystem saat runtime.
+	return bundledBgCertificate;
 }
 
 function getBgCertificate2DataUri(sekolahId?: number): string | null {
 	if (sekolahId) {
 		try {
-			const buf = readFileSync(getCustomBgPath(sekolahId, '2'));
+			const buf = readCustomBg(getCustomBgPath(sekolahId, '2'));
 			return `data:image/png;base64,${buf.toString('base64')}`;
 		} catch {
 			// fall through
 		}
 	}
-	if (bgCertificate2DataUri) return bgCertificate2DataUri;
-	try {
-		const buf = readFileSync(resolve('static/bg-certificate2.png'));
-		bgCertificate2DataUri = `data:image/png;base64,${buf.toString('base64')}`;
-	} catch {
-		bgCertificate2DataUri = null;
-	}
-	return bgCertificate2DataUri;
+	// Di-inline lewat bundle (bundled-assets) — bebas filesystem saat runtime.
+	return bundledBgCertificate2;
+}
+
+/** Baca latar piagam kustom dari uploadsDir (runtime, ephemeral di Vercel). */
+function readCustomBg(filePath: string): Buffer {
+	return fs.readFileSync(filePath);
 }
 
 function getJenjangLabel(jenjang: string | null): string {
@@ -140,13 +129,9 @@ function piagamStyles(margin16mm = true): string {
 		['Playfair Display', 'PlayfairDisplay.woff2', 'normal', '400 700'],
 		['Playfair Display', 'PlayfairDisplay-Italic.woff2', 'italic', '400 700']
 	] as const) {
-		try {
-			const buf = readFileSync(resolve('static/fonts', file));
-			const dataUri = `data:font/woff2;base64,${buf.toString('base64')}`;
-			fontCss += `@font-face{font-family:'${name}';src:url('${dataUri}') format('woff2');font-weight:${weight};font-style:${style}}\n`;
-		} catch {
-			// font not available, fallback to system
-		}
+		const dataUri = piagamFontDataUris[file];
+		if (!dataUri) continue;
+		fontCss += `@font-face{font-family:'${name}';src:url('${dataUri}') format('woff2');font-weight:${weight};font-style:${style}}\n`;
 	}
 
 	return `${fontCss}

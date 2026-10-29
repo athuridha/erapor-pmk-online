@@ -1,11 +1,13 @@
 import puppeteer from 'puppeteer-core';
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { isVercel } from '$lib/server/vercel-env';
+// Polyfill PagedJS di-inline sebagai teks lewat virtual module (dibaca Vite
+// saat build) — bebas filesystem dan resolusi package saat runtime,
+// aman untuk serverless Vercel (node_modules pnpm tidak hoisted).
+import pagedPolyfillSource from 'virtual:pagedjs-polyfill';
 
-const __filename = fileURLToPath(import.meta.url);
+// ── Chrome/Chromium discovery ────────────────────────────────────────────────
 
 declare global {
 	interface Window {
@@ -28,16 +30,34 @@ let polyfillScript: string | null = null;
 
 function getPolyfillScript(): string {
 	if (polyfillScript) return polyfillScript;
-	const require = createRequire(__filename);
-	const cliMain = require.resolve('pagedjs-cli');
-	const pkgDir = resolve(dirname(cliMain), '..');
-	const polyfillPath = resolve(pkgDir, 'dist/browser.js');
-	polyfillScript = readFileSync(polyfillPath, 'utf-8');
+	// pagedjs-cli (0.4.3) hanya membungkus pagedjs@0.4.3; isi
+	// dist/paged.polyfill.js adalah polyfill yang sama, sehingga renderPDF
+	// tetap berperilaku identik tanpa membaca node_modules saat runtime.
+	polyfillScript = pagedPolyfillSource;
 	return polyfillScript;
 }
 
-function findChromeExecutable(): string | undefined {
+let chromiumExtractor: (() => Promise<string>) | null = null;
+
+/**
+ * Chrome untuk serverless Vercel: @sparticuz/chromium (biner brotli di
+ * node_modules, diekstrak ke /tmp pada pemanggilan pertama). Di-import
+ * dinamis supaya biaya cold-start hanya dibayar oleh platform yang memakainya.
+ */
+function serverlessChromiumPath(): Promise<string> {
+	chromiumExtractor ??= async () => {
+		const { default: Chromium } = await import('@sparticuz/chromium');
+		// executablePath() mengekstrak chromium + fonts + swiftshader ke /tmp dan
+		// menyiapkan FONTCONFIG_PATH/LD_LIBRARY_PATH untuk Amazon Linux 2023.
+		return await Chromium.executablePath();
+	};
+	return chromiumExtractor();
+}
+
+async function findChromeExecutable(): Promise<string | undefined> {
 	if (process.env.PUPPETEER_EXECUTABLE_PATH) return process.env.PUPPETEER_EXECUTABLE_PATH;
+	// Vercel: pakai Chromium serverless dari @sparticuz/chromium.
+	if (isVercel()) return await serverlessChromiumPath().catch(() => undefined);
 	if (process.platform === 'win32') {
 		const localAppData = process.env.LOCALAPPDATA || '';
 		const programFiles = process.env.PROGRAMFILES || 'C:\\Program Files';
@@ -74,7 +94,9 @@ function findChromeExecutable(): string | undefined {
 	for (const p of commonPaths) {
 		if (existsSync(p)) return p;
 	}
-	return undefined;
+	// Linux non-Vercel tanpa Chrome terpasang (mis. container Docker): coba
+	// Chromium serverless @sparticuz/chromium sebagai fallback terakhir.
+	return await serverlessChromiumPath().catch(() => undefined);
 }
 
 let browser: Browser | null = null;
@@ -88,7 +110,7 @@ async function getBrowser(): Promise<Browser> {
 			browser = null;
 		}
 	}
-	const executablePath = findChromeExecutable();
+	const executablePath = await findChromeExecutable();
 	if (!executablePath) {
 		throw new Error(
 			'Chromium/Chrome/Edge tidak ditemukan. ' +
@@ -97,15 +119,20 @@ async function getBrowser(): Promise<Browser> {
 				'ke path lengkap browser executable.'
 		);
 	}
+	const args = [
+		'--no-sandbox',
+		'--disable-setuid-sandbox',
+		'--disable-dev-shm-usage',
+		'--export-tagged-pdf'
+	];
+	if (isVercel()) {
+		// Kontainer lambda: FS read-only & tanpa zygote — flag ketat wajib.
+		args.push('--no-zygote', '--single-process', '--disable-gpu');
+	}
 	browser = await puppeteer.launch({
 		executablePath,
 		headless: true,
-		args: [
-			'--no-sandbox',
-			'--disable-setuid-sandbox',
-			'--disable-dev-shm-usage',
-			'--export-tagged-pdf'
-		]
+		args
 	});
 	browser.on('disconnected', () => {
 		browser = null;

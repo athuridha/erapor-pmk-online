@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import db from '$lib/server/db';
+import { queryInChunks } from '$lib/server/db/chunk';
 import {
 	tableAsesmenSumatif,
 	tableCatatanWaliKelas,
@@ -249,40 +250,44 @@ export async function publishPortalToD1(sekolahId: number): Promise<PortalPublis
 	const studentIds = studentRows.map((row) => row.id);
 	const subjectIds = subjectRows.map((row) => row.id);
 	const accountIds = accountRows.map((row) => row.id);
+	const subjectIdSet = new Set(subjectIds);
 
 	const [gradeRows, attendanceRows, noteRows, scheduleRows, linkRows] = await Promise.all([
 		studentIds.length && subjectIds.length
-			? db.query.tableAsesmenSumatif.findMany({
-					where: and(
-						inArray(tableAsesmenSumatif.muridId, studentIds),
-						inArray(tableAsesmenSumatif.mataPelajaranId, subjectIds),
-						isNotNull(tableAsesmenSumatif.nilaiAkhir)
+			? (
+					await queryInChunks(studentIds, (ids) =>
+						db.query.tableAsesmenSumatif.findMany({
+							where: and(
+								inArray(tableAsesmenSumatif.muridId, ids),
+								isNotNull(tableAsesmenSumatif.nilaiAkhir)
+							)
+						})
 					)
-				})
+				).filter((row) => subjectIdSet.has(row.mataPelajaranId))
 			: Promise.resolve([]),
-		studentIds.length
-			? db.query.tableKetidakhadiranRapor.findMany({
-					where: and(
-						eq(tableKetidakhadiranRapor.semesterId, activeSemester.id),
-						inArray(tableKetidakhadiranRapor.muridId, studentIds)
-					)
-				})
-			: Promise.resolve([]),
-		studentIds.length
-			? db.query.tableCatatanWaliKelas.findMany({
-					where: inArray(tableCatatanWaliKelas.muridId, studentIds)
-				})
-			: Promise.resolve([]),
+		queryInChunks(studentIds, (ids) =>
+			db.query.tableKetidakhadiranRapor.findMany({
+				where: and(
+					eq(tableKetidakhadiranRapor.semesterId, activeSemester.id),
+					inArray(tableKetidakhadiranRapor.muridId, ids)
+				)
+			})
+		),
+		queryInChunks(studentIds, (ids) =>
+			db.query.tableCatatanWaliKelas.findMany({
+				where: inArray(tableCatatanWaliKelas.muridId, ids)
+			})
+		),
 		classIds.length
 			? db.query.tableJadwalPelajaran.findMany({
 					where: inArray(tableJadwalPelajaran.kelasId, classIds)
 				})
 			: Promise.resolve([]),
-		accountIds.length
-			? db.query.tablePortalOrangtuaMurid.findMany({
-					where: inArray(tablePortalOrangtuaMurid.orangtuaId, accountIds)
-				})
-			: Promise.resolve([])
+		queryInChunks(accountIds, (ids) =>
+			db.query.tablePortalOrangtuaMurid.findMany({
+				where: inArray(tablePortalOrangtuaMurid.orangtuaId, ids)
+			})
+		)
 	]);
 
 	const schoolAddress = addressMap.get(school.alamatId);

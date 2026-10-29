@@ -1,5 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
+import { isVercel } from '$lib/server/vercel-env';
 
 /**
  * Helpers to read/update the `.env` file that the app loads at startup
@@ -9,6 +11,10 @@ import path from 'node:path';
  */
 
 export function envFilePath(): string {
+	// On Vercel the app dir is read-only — keep runtime .env writes on the
+	// writable ephemeral disk (/tmp) so the admin settings page does not crash.
+	// Values written there only live until the next cold start.
+	if (isVercel()) return path.join(os.tmpdir(), 'erapor-pmk', '.env');
 	return path.resolve(process.cwd(), '.env');
 }
 

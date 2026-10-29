@@ -1,18 +1,7 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
-let tutwuriBwDataUri: string | null = null;
-let tutwuriBwChecked = false;
+import { tutwuriBwDataUri } from '../../bundled-assets';
 
 export function getTutwuriBwDataUri(): string {
-	if (tutwuriBwChecked) return tutwuriBwDataUri ?? '';
-	tutwuriBwChecked = true;
-	try {
-		const buf = readFileSync(resolve('static/tutwuri-bw.png'));
-		tutwuriBwDataUri = `data:image/png;base64,${buf.toString('base64')}`;
-	} catch {
-		tutwuriBwDataUri = '';
-	}
+	// Di-inline lewat bundle (bundled-assets) — bebas filesystem saat runtime.
 	return tutwuriBwDataUri;
 }
 

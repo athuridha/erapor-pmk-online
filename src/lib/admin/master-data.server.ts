@@ -15,6 +15,7 @@ import {
 	tableWaliMurid
 } from '$lib/server/db/schema';
 import { and, asc, count, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
+import { chunk, queryInChunks, runInChunks } from '$lib/server/db/chunk';
 import { MASTER_DATA } from '$lib/admin/master-data';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 
@@ -617,12 +618,18 @@ export async function simpanMasterData(
 						);
 					const orphanIds = orphanedMapels.map((m) => m.id);
 					if (orphanIds.length > 0) {
-						const [{ nScores }] = await db
-							.select({ nScores: count() })
-							.from(tableAsesmenSumatif)
-							.where(inArray(tableAsesmenSumatif.mataPelajaranId, orphanIds));
+						let nScores = 0;
+						await runInChunks(orphanIds, async (ids) => {
+							const [{ n }] = await db
+								.select({ n: count() })
+								.from(tableAsesmenSumatif)
+								.where(inArray(tableAsesmenSumatif.mataPelajaranId, ids));
+							nScores += n;
+						});
 						if (nScores === 0) {
-							await db.delete(tableMataPelajaran).where(inArray(tableMataPelajaran.id, orphanIds));
+							await runInChunks(orphanIds, (ids) =>
+								db.delete(tableMataPelajaran).where(inArray(tableMataPelajaran.id, ids))
+							);
 						}
 					}
 				}
@@ -1086,10 +1093,14 @@ export async function hapusMasterData(
 				);
 			const matchingIds = matchingMapels.map((m) => m.id);
 
-			const [{ n } = { n: 0 }] = await db
-				.select({ n: count() })
-				.from(tableAsesmenSumatif)
-				.where(inArray(tableAsesmenSumatif.mataPelajaranId, matchingIds));
+			let n = 0;
+			await runInChunks(matchingIds, async (ids) => {
+				const [row] = await db
+					.select({ n: count() })
+					.from(tableAsesmenSumatif)
+					.where(inArray(tableAsesmenSumatif.mataPelajaranId, ids));
+				n += row?.n ?? 0;
+			});
 
 			if (n > 0) {
 				return {
@@ -1097,7 +1108,9 @@ export async function hapusMasterData(
 				};
 			}
 
-			await db.delete(tableMataPelajaran).where(inArray(tableMataPelajaran.id, matchingIds));
+			await runInChunks(matchingIds, (ids) =>
+				db.delete(tableMataPelajaran).where(inArray(tableMataPelajaran.id, ids))
+			);
 			return { message: `Mata pelajaran "${target.nama}" berhasil dihapus.` };
 		}
 		case 'ekstrakurikuler': {
@@ -1285,10 +1298,12 @@ export async function simpanAnggotaEkstrakurikuler(
 
 	const validIds = muridIds.length
 		? (
-				await db
-					.select({ id: tableMurid.id })
-					.from(tableMurid)
-					.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, muridIds)))
+				await queryInChunks(muridIds, (ids) =>
+					db
+						.select({ id: tableMurid.id })
+						.from(tableMurid)
+						.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, ids)))
+				)
 			).map((row) => row.id)
 		: [];
 
@@ -1304,19 +1319,23 @@ export async function simpanAnggotaEkstrakurikuler(
 			const tambah = validIds.filter((muridId) => !lamaSet.has(muridId));
 
 			if (hapus.length) {
-				await tx
-					.delete(tableMuridEkstrakurikuler)
-					.where(
-						and(
-							eq(tableMuridEkstrakurikuler.ekstrakurikulerId, ekstrakurikulerId),
-							inArray(tableMuridEkstrakurikuler.muridId, hapus)
+				await runInChunks(hapus, (muridChunk) =>
+					tx
+						.delete(tableMuridEkstrakurikuler)
+						.where(
+							and(
+								eq(tableMuridEkstrakurikuler.ekstrakurikulerId, ekstrakurikulerId),
+								inArray(tableMuridEkstrakurikuler.muridId, muridChunk)
+							)
 						)
-					);
+				);
 			}
 			if (tambah.length) {
-				await tx
-					.insert(tableMuridEkstrakurikuler)
-					.values(tambah.map((muridId) => ({ muridId, ekstrakurikulerId })));
+				for (const muridChunk of chunk(tambah, 40)) {
+					await tx
+						.insert(tableMuridEkstrakurikuler)
+						.values(muridChunk.map((muridId) => ({ muridId, ekstrakurikulerId })));
+				}
 			}
 		});
 	} catch (error) {

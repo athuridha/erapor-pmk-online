@@ -42,6 +42,10 @@ function resolveScriptPath(): string | null {
 export function triggerSchemaSync(): void {
 	if (inFlight) return;
 	if (Date.now() - lastTriggeredAt < DEBOUNCE_MS) return;
+	// Vercel serverless: spawn proses latar belakang tidak didukung (filesystem
+	// read-only & process env ephemeral) — skema tetap direkonsiliasi oleh
+	// ensure-* saat startup.
+	if (process.env.VERCEL === '1') return;
 	const script = resolveScriptPath();
 	if (!script) {
 		console.info(

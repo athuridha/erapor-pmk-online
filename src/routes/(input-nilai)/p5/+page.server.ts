@@ -11,6 +11,7 @@ import {
 import { fail, redirect } from '@sveltejs/kit';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { isAuthorizedUser } from '../../pengguna/permissions';
+import { chunk, queryInChunks } from '$lib/server/db/chunk';
 import type { Actions, PageServerLoad } from './$types';
 
 const REQUIRED_PERMISSION: UserPermission = 'input_nilai_p5';
@@ -283,18 +284,20 @@ export const actions: Actions = {
 			}
 			if (addIds.length) {
 				// Hanya murid aktif dari kelas projek yang boleh jadi anggota.
-				const muridRows = await db.query.tableMurid.findMany({
-					columns: { id: true },
-					where: and(
-						eq(tableMurid.kelasId, projekRow.kelasId),
-						inArray(tableMurid.id, addIds),
-						eq(tableMurid.status, 'aktif')
-					)
-				});
-				if (muridRows.length) {
+				const muridRows = await queryInChunks(addIds, (ids) =>
+					db.query.tableMurid.findMany({
+						columns: { id: true },
+						where: and(
+							eq(tableMurid.kelasId, projekRow.kelasId),
+							inArray(tableMurid.id, ids),
+							eq(tableMurid.status, 'aktif')
+						)
+					})
+				);
+				for (const muridChunk of chunk(muridRows, 30)) {
 					await db
 						.insert(tableP5Anggota)
-						.values(muridRows.map((murid) => ({ sekolahId, projekId, muridId: murid.id })))
+						.values(muridChunk.map((murid) => ({ sekolahId, projekId, muridId: murid.id })))
 						.onConflictDoNothing();
 				}
 			}

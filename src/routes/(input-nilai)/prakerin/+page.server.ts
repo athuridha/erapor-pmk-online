@@ -11,6 +11,7 @@ import {
 import { fail, redirect } from '@sveltejs/kit';
 import { and, asc, eq, inArray, max } from 'drizzle-orm';
 import { isAuthorizedUser } from '../../pengguna/permissions';
+import { chunk, queryInChunks, runInChunks } from '$lib/server/db/chunk';
 
 // The PKL tables ship via ensure-ekspansi-modul; pnpm db:push may be pending.
 function isTableMissingError(error: unknown) {
@@ -331,31 +332,35 @@ export const actions = {
 
 		try {
 			if (addIds.length) {
-				const validMurid = await db
-					.select({ id: tableMurid.id })
-					.from(tableMurid)
-					.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, addIds)));
+				const validMurid = await queryInChunks(addIds, (ids) =>
+					db
+						.select({ id: tableMurid.id })
+						.from(tableMurid)
+						.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, ids)))
+				);
 				const validIds = new Set(validMurid.map((m) => m.id));
 				const toInsert = addIds.filter((id) => validIds.has(id));
-				if (toInsert.length) {
+				for (const muridChunk of chunk(toInsert, 30)) {
 					await db
 						.insert(tablePklMurid)
-						.values(toInsert.map((muridId) => ({ sekolahId, kelompokId, muridId })))
+						.values(muridChunk.map((muridId) => ({ sekolahId, kelompokId, muridId })))
 						// Unique (kelompokId, muridId) — silently skip already-member duplicates.
 						.onConflictDoNothing();
 				}
 			}
 
 			if (removeIds.length) {
-				await db
-					.delete(tablePklMurid)
-					.where(
-						and(
-							eq(tablePklMurid.sekolahId, sekolahId),
-							eq(tablePklMurid.kelompokId, kelompokId),
-							inArray(tablePklMurid.muridId, removeIds)
+				await runInChunks(removeIds, (ids) =>
+					db
+						.delete(tablePklMurid)
+						.where(
+							and(
+								eq(tablePklMurid.sekolahId, sekolahId),
+								eq(tablePklMurid.kelompokId, kelompokId),
+								inArray(tablePklMurid.muridId, ids)
+							)
 						)
-					);
+				);
 			}
 		} catch (error) {
 			if (isTableMissingError(error)) {

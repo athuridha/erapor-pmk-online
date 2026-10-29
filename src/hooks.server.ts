@@ -16,11 +16,16 @@ import { runStartupEnsures } from '$lib/server/db/ensure-bootstrap';
 import { isAuthorizedUser, resolveRoutePermission } from './routes/pengguna/permissions';
 import { startBellScheduler } from '$lib/server/bell-scheduler';
 import { markActivity } from '$lib/server/activity';
+import { isVercel } from '$lib/server/vercel-env';
 
 setTimeout(() => {
-	startBellScheduler().catch((e) => {
-		console.error('[hooks] bell scheduler failed to start:', e);
-	});
+	if (!isVercel()) {
+		// Scheduler bel sekolah (setInterval + spawn pemutar audio) hanya relevan
+		// di server lokal/installer — di Vercel instance-nya ephemeral & tanpa speaker.
+		startBellScheduler().catch((e) => {
+			console.error('[hooks] bell scheduler failed to start:', e);
+		});
+	}
 	runStartupEnsures().catch((e) => {
 		console.error('[hooks] startup ensures failed:', e);
 	});

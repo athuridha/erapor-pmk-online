@@ -6,6 +6,7 @@ import { buildKelasContext } from '$lib/server/route-utils';
 import { pindahkanMuridKelas } from '$lib/server/murid-pindah-kelas';
 import { isAuthorizedUser } from '../../pengguna/permissions';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
+import { runInChunks } from '$lib/server/db/chunk';
 
 export async function load({ locals, url, depends, parent }) {
 	depends('app:murid');
@@ -168,9 +169,11 @@ export const actions = {
 			return fail(400, { fail: 'Pilih minimal satu murid untuk dihapus' });
 		}
 
-		await db
-			.delete(tableMurid)
-			.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, muridIds)));
+		await runInChunks(muridIds, (ids) =>
+			db
+				.delete(tableMurid)
+				.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, ids)))
+		);
 
 		return { message: `${muridIds.length} murid berhasil dihapus` };
 	},

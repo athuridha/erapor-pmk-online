@@ -1,5 +1,7 @@
 import path from 'node:path';
+import os from 'node:os';
 import { env as dynamicEnv } from '$env/dynamic/private';
+import { isVercel } from '$lib/server/vercel-env';
 
 /**
  * Root directory for all user data (uploads, ttd, dinas-luar, sounds,
@@ -9,8 +11,9 @@ import { env as dynamicEnv } from '$env/dynamic/private';
  *
  * Resolution order:
  *   1. ERAPOR_PMK_DATA_DIR env (explicit override, e.g. set by the installer)
- *   2. Windows: %LOCALAPPDATA%\erapor-pmk-data
- *   3. Fallback: <cwd>/data
+ *   2. Vercel (serverless, only /tmp is writable & ephemeral): /tmp/erapor-pmk
+ *   3. Windows: %LOCALAPPDATA%\erapor-pmk-data
+ *   4. Fallback: <cwd>/data
  */
 export function dataRoot(): string {
 	const override =
@@ -19,6 +22,7 @@ export function dataRoot(): string {
 		dynamicEnv.ERAPOR_PMK_DATA_DIR ||
 		process.env.ERAPOR_PMK_DATA_DIR;
 	if (override) return path.resolve(override);
+	if (isVercel()) return path.join(os.tmpdir(), 'erapor-pmk');
 	return defaultDataRoot();
 }
 
