@@ -24,8 +24,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			username: u.username,
 			type: u.type,
 			pegawaiId: u.pegawaiId,
-			pegawaiName: tablePegawai.nama,
-			kelasId: u.kelasId,
+				pegawaiName: tablePegawai.nama,
+				pegawaiNik: tablePegawai.nik,
+				kelasId: u.kelasId,
 			kelasName: tableKelas.nama
 		})
 		.from(u)
@@ -52,7 +53,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		users: users.map((user) => ({
 			id: user.id,
 			username: user.username,
-			fullName: user.pegawaiName || user.username,
+			fullName: user.pegawaiName || user.pegawaiNik || user.username,
 			role: user.type,
 			roleLabel: roleLabel[user.type] ?? user.type,
 			kelasName: user.kelasName ?? null
