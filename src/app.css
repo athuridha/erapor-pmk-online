@@ -236,3 +236,143 @@ aside.drawer-side-pmk,
 .sidebar-menu-scroll::-webkit-scrollbar-track {
 	background: transparent;
 }
+
+/* ============================================================
+   Modern UI — glass cards, emerald accents, consistent hover
+   Applied globally to DaisyUI components across all pages.
+   ============================================================ */
+
+.card {
+	border-radius: 1.5rem !important;
+	border: 1px solid rgba(16, 185, 129, 0.12) !important;
+	background: color-mix(in srgb, var(--color-base-100, #ffffff) 82%, transparent) !important;
+	backdrop-filter: blur(14px);
+	box-shadow: 0 8px 32px -16px rgba(16, 185, 129, 0.18);
+}
+[data-theme='dark'] .card {
+	background: rgba(15, 23, 42, 0.72) !important;
+	border-color: rgba(16, 185, 129, 0.16) !important;
+}
+
+.stats {
+	border-radius: 1.5rem !important;
+	border: 1px solid rgba(16, 185, 129, 0.12) !important;
+	background: color-mix(in srgb, var(--color-base-100, #ffffff) 82%, transparent) !important;
+	backdrop-filter: blur(14px);
+	box-shadow: 0 8px 32px -16px rgba(16, 185, 129, 0.18);
+}
+[data-theme='dark'] .stats {
+	background: rgba(15, 23, 42, 0.72) !important;
+	border-color: rgba(16, 185, 129, 0.16) !important;
+}
+.stat-title {
+	color: color-mix(in srgb, var(--color-base-content, #0f172a) 55%, transparent);
+	font-size: 0.8rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+.stat-value {
+	font-weight: 800 !important;
+	letter-spacing: -0.02em;
+}
+.stat-figure > span {
+	display: inline-grid;
+	place-items: center;
+	width: 3rem;
+	height: 3rem;
+	border-radius: 1rem;
+	background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.progress {
+	height: 0.75rem !important;
+	border-radius: 9999px !important;
+	background: color-mix(in srgb, var(--color-base-content, #0f172a) 6%, transparent) !important;
+}
+.progress::-webkit-progress-value {
+	border-radius: 9999px !important;
+}
+
+.badge {
+	border-radius: 9999px !important;
+	border-width: 1px !important;
+	font-weight: 600 !important;
+}
+
+.btn {
+	border-radius: 1rem !important;
+	font-weight: 600 !important;
+}
+.btn-outline {
+	border-color: rgba(16, 185, 129, 0.35) !important;
+	color: var(--color-base-content);
+}
+.btn-outline:hover {
+	border-color: #059669 !important;
+	background-color: rgba(16, 185, 129, 0.08) !important;
+	color: #059669 !important;
+}
+.btn-primary {
+	background: linear-gradient(90deg, #059669, #34d399) !important;
+	border: none !important;
+}
+.btn-primary:hover {
+	background: linear-gradient(90deg, #047857, #059669) !important;
+	box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.35) !important;
+}
+
+.modal-box {
+	border-radius: 1.5rem !important;
+	border: 1px solid rgba(16, 185, 129, 0.15) !important;
+	background: color-mix(in srgb, var(--color-base-100, #ffffff) 88%, transparent) !important;
+	backdrop-filter: blur(18px);
+	box-shadow: 0 20px 60px -24px rgba(16, 185, 129, 0.28);
+}
+[data-theme='dark'] .modal-box {
+	background: rgba(15, 23, 42, 0.78) !important;
+	border-color: rgba(16, 185, 129, 0.18) !important;
+}
+
+.alert {
+	border-radius: 1.1rem !important;
+	border: 1px solid rgba(16, 185, 129, 0.15) !important;
+	backdrop-filter: blur(10px);
+}
+
+.table {
+	border-radius: 1rem !important;
+	overflow: hidden;
+}
+.table > thead > tr > th {
+	font-size: 0.8rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: color-mix(in srgb, var(--color-base-content, #0f172a) 60%, transparent);
+}
+
+.input {
+	border-radius: 1rem !important;
+	border-color: rgba(16, 185, 129, 0.2) !important;
+	background: color-mix(in srgb, var(--color-base-100, #ffffff) 0.85, transparent) !important;
+}
+.input:focus {
+	border-color: #059669 !important;
+	box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+[data-theme='dark'] .input {
+	background: rgba(30, 41, 59, 0.85) !important;
+	border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+.drawer-side .menu summary:hover,
+.drawer-side .menu a:hover {
+	background-color: #065f46 !important;
+	color: #d1fae5 !important;
+}
+
+:focus-visible {
+	outline: 2px solid #059669 !important;
+	outline-offset: 2px !important;
+}

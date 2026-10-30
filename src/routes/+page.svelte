@@ -327,8 +327,29 @@ showModal({
 	});
 </script>
 
+<BellStatus {bellActive} {hariIni} {nextEventMessage} class="dg-alert alert alert-info alert-soft mb-4" />
+
+{#if presensiWarningVisible}
+	<div class="dg-alert alert alert-warning alert-soft mb-4 flex items-center gap-3">
+		<Icon name="warning" class="h-5 w-5 shrink-0" />
+		<span>
+			Bapak/Ibu belum melakukan presensi guru hari ini. Silakan lakukan presensi melalui tombol
+			berikut:
+		</span>
+		<button
+			class="btn btn-primary btn-sm ml-auto shrink-0 shadow-none"
+			type="button"
+			title="Presensi Sekarang"
+			onclick={openPresensiGuruModal}
+		>
+			<Icon name="pen" />
+			<span class="hidden sm:inline">Presensi Sekarang</span>
+		</button>
+	</div>
+{/if}
+
 <!-- Kontainer Utama Grid -->
-<div class="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
+<div class="dashboard-grid grid w-full grid-cols-1 gap-4 md:grid-cols-2">
 	<!-- Kolom 1: Data Utama & Statistik -->
 	<div class="flex flex-col gap-4">
 		<SekolahOverviewCard {sekolah} />
@@ -349,3 +370,102 @@ showModal({
 		<QuickActionsCard />
 	</div>
 </div>
+
+<style>
+	/* Dashboard styling — sama dengan halaman login: glass card,
+	   rounded besar, border emerald halus, statis (tanpa animasi). */
+
+	/* Kartu utama */
+	.dashboard-grid :global(.card) {
+		border-radius: 1.5rem;
+		border: 1px solid rgba(16, 185, 129, 0.15);
+		background: color-mix(in srgb, var(--color-base-100, #fff) 85%, transparent);
+		backdrop-filter: blur(16px);
+		box-shadow: 0 10px 40px -18px rgba(16, 185, 129, 0.25);
+	}
+
+	/* Judul kartu: ikon jadi chip emerald */
+	.dashboard-grid :global(.card-title) {
+		font-weight: 700;
+		letter-spacing: -0.01em;
+		gap: 0.75rem;
+	}
+	.dashboard-grid :global(.card-title > span) {
+		display: inline-grid;
+		place-items: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 0.8rem;
+		background: rgba(16, 185, 129, 0.14);
+		color: #059669;
+	}
+
+	/* Statistik: ikon jadi medali tint, angka tebal */
+	.dashboard-grid :global(.stat-figure) {
+		margin-bottom: 0.25rem;
+	}
+	.dashboard-grid :global(.stat-figure > span) {
+		display: inline-grid;
+		place-items: center;
+		width: 3.5rem;
+		height: 3.5rem;
+		border-radius: 1.1rem;
+		background: color-mix(in srgb, currentColor 13%, transparent);
+	}
+	.dashboard-grid :global(.stat-value) {
+		font-weight: 800;
+		letter-spacing: -0.03em;
+	}
+	.dashboard-grid :global(.stat-title) {
+		font-size: 0.85rem;
+		letter-spacing: 0.02em;
+		color: color-mix(in srgb, var(--color-base-content, #0f172a) 60%, transparent);
+	}
+
+	/* Progress bar: pill + gradient emerald */
+	.dashboard-grid :global(.progress) {
+		height: 0.75rem;
+		border-radius: 9999px;
+		background: color-mix(in srgb, var(--color-base-content, #0f172a) 7%, transparent);
+	}
+	.dashboard-grid :global(.progress-primary::-webkit-progress-value),
+	.dashboard-grid :global(.progress-success::-webkit-progress-value) {
+		background-image: linear-gradient(90deg, #059669, #34d399);
+		border-radius: 9999px;
+	}
+	.dashboard-grid :global(.progress-warning::-webkit-progress-value) {
+		background-image: linear-gradient(90deg, #d97706, #fbbf24);
+		border-radius: 9999px;
+	}
+	.dashboard-grid :global(.progress-error::-webkit-progress-value) {
+		background-image: linear-gradient(90deg, #dc2626, #f87171);
+		border-radius: 9999px;
+	}
+
+	/* Tombol aksi: rounded, outline emerald */
+	.dashboard-grid :global(.btn) {
+		border-radius: 0.9rem;
+		font-weight: 600;
+	}
+	.dashboard-grid :global(.btn-outline) {
+		border-color: rgba(16, 185, 129, 0.35);
+	}
+	.dashboard-grid :global(.btn-outline:not(:disabled):hover) {
+		border-color: rgba(5, 150, 105, 0.6);
+		background-color: rgba(16, 185, 129, 0.08);
+	}
+
+	/* Badge fase: pill */
+	.dashboard-grid :global(.badge) {
+		border-radius: 9999px;
+		font-weight: 600;
+	}
+
+	/* Banner atas (jam bel / presensi): ikut bahasa kartu */
+	.dg-alert {
+		border-radius: 1.1rem;
+		border: 1px solid rgba(16, 185, 129, 0.15);
+		box-shadow: 0 10px 40px -20px rgba(16, 185, 129, 0.25);
+		backdrop-filter: blur(10px);
+	}
+</style>
