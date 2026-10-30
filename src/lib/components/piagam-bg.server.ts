@@ -107,9 +107,19 @@ export async function handlePost({
 	}
 
 	const buffer = Buffer.from(await file.arrayBuffer());
+
+	// Validate PNG magic bytes — MIME type from browser is spoofable
+	const PNG_SIGNATURE = '\x89PNG\r\n\x1a\n';
+	if (buffer.length < 8 || buffer.subarray(0, 8).toString('latin1') !== PNG_SIGNATURE) {
+		return new Response('File bukan PNG yang valid.', { status: 400 });
+	}
+
 	const dir = await ensureUploadsDir();
-	const filePath = path.join(dir, filenameFor(sekolahId, resolved));
-	await fs.writeFile(filePath, buffer, { mode: 0o644 });
+	const resolvedPath = path.resolve(dir, filenameFor(sekolahId, resolved));
+	if (!resolvedPath.startsWith(path.resolve(dir) + path.sep)) {
+		return new Response('Path tidak valid.', { status: 403 });
+	}
+	await fs.writeFile(resolvedPath, buffer, { mode: 0o644 });
 
 	return new Response('OK');
 }

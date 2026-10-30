@@ -6,11 +6,11 @@ import { isAdminUser } from '../../../../pengguna/permissions';
 export async function POST({ request, locals }) {
 	// Admin-only: reloading the DB client is an operational action that should
 	// not be reachable by any authenticated user, even when the secret is unset.
-	if (isAdminUser(locals.user)) {
+	if (!isAdminUser(locals.user)) {
 		throw error(403, 'Forbidden');
 	}
 
-	// If an internal secret is configured, require it. Otherwise allow local requests.
+	// If an internal secret is configured, require it. Otherwise allow admin requests.
 	const secret = env.INTERNAL_RELOAD_SECRET;
 	const header = request.headers.get('x-internal-reload');
 	if (secret && header !== secret) {

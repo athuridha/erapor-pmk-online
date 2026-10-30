@@ -4,7 +4,7 @@ import { error } from '@sveltejs/kit';
 import db from '$lib/server/db/index.js';
 import { tableMurid } from '$lib/server/db/schema.js';
 import { uploadsDir } from '$lib/server/data-dirs';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 function contentTypeFor(filename: string) {
 	if (filename.endsWith('.png')) return 'image/png';
@@ -45,18 +45,30 @@ async function generateUniqueFilename(
 	return filename;
 }
 
-export async function GET({ params }: { params: Record<string, string> }) {
+export async function GET({
+	params,
+	locals
+}: {
+	params: Record<string, string>;
+	locals: App.Locals;
+}) {
 	const id = +params.id;
 	if (!id) throw error(400, 'Invalid id');
 
+	const sekolahId = locals.sekolah?.id;
+	if (!sekolahId) throw error(401, 'Unauthorized');
+
 	const murid = await db.query.tableMurid.findFirst({
-		where: eq(tableMurid.id, id),
+		where: and(eq(tableMurid.id, id), eq(tableMurid.sekolahId, sekolahId)),
 		columns: { foto: true }
 	});
 	if (!murid || !murid.foto) throw error(404, 'Not found');
 
-	const dir = uploadsDir();
-	const filePath = path.join(dir, murid.foto);
+	const dir = path.resolve(uploadsDir());
+	const filePath = path.resolve(dir, murid.foto);
+	// Containment check: prevent path traversal if murid.foto contains '../'
+	if (!filePath.startsWith(dir + path.sep)) throw error(403, 'Invalid path');
+
 	try {
 		const data = await fs.readFile(filePath);
 		return new Response(Buffer.from(data), {
@@ -91,7 +103,11 @@ export async function DELETE({
 	const dir = uploadsDir();
 	if (murid.foto) {
 		try {
-			await fs.unlink(path.join(dir, murid.foto));
+			const resolvedPath = path.resolve(dir, murid.foto);
+			if (!resolvedPath.startsWith(path.resolve(dir) + path.sep)) {
+				return new Response(JSON.stringify({ message: 'Invalid path' }), { status: 403 });
+			}
+			await fs.unlink(resolvedPath);
 		} catch {
 			// ignore
 		}
@@ -160,7 +176,11 @@ export async function POST({
 		// Remove old file if exists and different
 		if (murid.foto && murid.foto !== filename) {
 			try {
-				await fs.unlink(path.join(dir, murid.foto));
+				const resolvedPath = path.resolve(dir, murid.foto);
+				if (!resolvedPath.startsWith(path.resolve(dir) + path.sep)) {
+					return new Response(JSON.stringify({ message: 'Invalid path' }), { status: 403 });
+				}
+				await fs.unlink(resolvedPath);
 			} catch {
 				// ignore
 			}

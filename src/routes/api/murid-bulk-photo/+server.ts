@@ -214,20 +214,27 @@ export async function POST({
 				const photo = photos[0];
 
 				// Use NISN as filename (guaranteed unique per murid)
-				const filename = `${murid.nisn}${photo.ext}`;
-				const filePath = path.join(uploadsPath, filename);
+				const safeNisn = (murid.nisn || '').replace(/[^a-zA-Z0-9._-]/g, '_');
+				const filename = `${safeNisn}${photo.ext}`;
+				const resolvedPath = path.resolve(uploadsPath, filename);
+				if (!resolvedPath.startsWith(path.resolve(uploadsPath) + path.sep)) {
+					throw new Error(`Path traversal attempt detected for NISN: ${murid.nisn}`);
+				}
 
 				// Remove old file if exists and has different name
 				if (murid.foto && murid.foto !== filename) {
 					try {
-						await fs.unlink(path.join(uploadsPath, murid.foto));
+						const oldPath = path.resolve(uploadsPath, murid.foto);
+						if (oldPath.startsWith(path.resolve(uploadsPath) + path.sep)) {
+							await fs.unlink(oldPath);
+						}
 					} catch {
 						// ignore if file doesn't exist
 					}
 				}
 
 				// Write file (will replace if exists)
-				await fs.writeFile(filePath, photo.buffer, { mode: 0o644 });
+				await fs.writeFile(resolvedPath, photo.buffer, { mode: 0o644 });
 
 				// Update database
 				await db.update(tableMurid).set({ foto: filename }).where(eq(tableMurid.id, murid.id));

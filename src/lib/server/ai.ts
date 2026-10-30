@@ -1,6 +1,7 @@
 import db from '$lib/server/db';
 import { tableAiSettings, tableAuthUser } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import { isIP } from 'node:net';
 
 export type AiSettings = {
 	apiKey: string;
@@ -394,5 +395,30 @@ function resolveBaseUrl(baseUrl: string | null): string {
 	const url = (baseUrl ?? '').trim();
 	if (!url)
 		throw new Error('Base URL API belum dikonfigurasi. Silakan atur di halaman Pengaturan.');
+
+	// Validate scheme — only https allowed (http only for localhost in dev)
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		throw new Error('Base URL tidak valid.');
+	}
+
+	const hostname = parsed.hostname;
+	// Block raw IP addresses (prevents SSRF to internal IPs like 127.0.0.1, 169.254.169.254)
+	if (isIP(hostname) !== 0) {
+		throw new Error('Base URL tidak boleh menggunakan alamat IP — gunakan nama host.');
+	}
+
+	// Block localhost in production
+	if (hostname === 'localhost' || hostname === '127.0.0.1') {
+		throw new Error('Base URL localhost tidak diizinkan.');
+	}
+
+	// Require HTTPS
+	if (parsed.protocol !== 'https:') {
+		throw new Error('Base URL harus menggunakan protokol HTTPS.');
+	}
+
 	return url.replace(/\/+$/, '');
 }

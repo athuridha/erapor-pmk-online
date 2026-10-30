@@ -4,29 +4,39 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listDirectories, listRootDrives, type BrowseResponse } from '$lib/server/storage-browse';
 import { isFullAdmin } from '../../../pengguna/permissions';
+import { dataRoot } from '$lib/server/data-dirs';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
 	if (!isFullAdmin(locals.user)) {
 		error(403, 'Hanya admin yang dapat menjelajah folder.');
 	}
 
+	const allowedRoot = path.resolve(dataRoot());
 	const requested = url.searchParams.get('path')?.trim() ?? '';
 	const subName = url.searchParams.get('name')?.trim() ?? '';
 
-	// No path -> filesystem root (drives on Windows).
+	// No path -> data root (drives on Windows for initial navigation hint).
 	if (!requested) {
-		if (process.platform === 'win32') {
-			const drives = await listRootDrives();
-			return json({ current: '', parent: null, entries: [], drives } satisfies BrowseResponse);
+		const root = allowedRoot;
+		let entries: string[] = [];
+		try {
+			entries = await listDirectories(root);
+		} catch {
+			error(400, 'Folder data tidak dapat dibaca.');
 		}
-		const root = path.parse(path.resolve('/')).root;
-		const entries = await listDirectories(root);
-		return json({ current: root, parent: null, entries, drives: [] } satisfies BrowseResponse);
+		const drives = process.platform === 'win32' ? await listRootDrives() : [];
+		return json({ current: root, parent: null, entries, drives } satisfies BrowseResponse);
 	}
 
 	// Resolve server-side so sub-folder names join with the correct separator.
 	const dir = subName ? path.resolve(requested, subName) : path.resolve(requested);
 	const current = dir;
+
+	// Containment check: restrict browsing to dataRoot only
+	if (!dir.startsWith(allowedRoot + path.sep) && dir !== allowedRoot) {
+		error(403, 'Akses ke direktori di luar folder data ditolak.');
+	}
+
 	let parent: string | null;
 	let drives: string[] = [];
 
@@ -42,11 +52,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 	const root = path.parse(dir).root;
 	if (process.platform === 'win32' && path.dirname(dir) === dir) {
-		// at a drive root, e.g. C:\ -> show all drives so users can switch
 		parent = null;
 		drives = await listRootDrives();
 	} else {
-		parent = dir === root ? null : path.dirname(dir);
+		parent = dir === allowedRoot ? null : path.dirname(dir);
 	}
 
 	let entries: string[] = [];

@@ -259,15 +259,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 			event.url.pathname === '/sekolah/form' ||
 			// Modal sync Dapodik dirender di atas /sekolah/form (init) — ikut diizinkan.
 			event.url.pathname === '/sekolah/form/sync-dapodik' ||
-			event.url.pathname === '/logout' ||
-			// The folder picker on /pengaturan ("Pilih Folder Root Data") uses
-			// this API — without it, the fetch gets redirected to the HTML page
-			// and fails to parse JSON.
-			event.url.pathname === '/api/storage/browse' ||
-			// The "Import DB" button on /sekolah/form?init uses a fetch() with
-			// `redirect: 'error'` — a redirect here surfaces as a misleading
-			// "Failed to fetch" instead of a proper error.
-			event.url.pathname === '/api/database/import';
+			event.url.pathname === '/logout';
 		if (!allowed) {
 			throw redirect(303, '/pengaturan?force=1');
 		}
@@ -409,15 +401,24 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// oleh mesin auto update sebelum installer dijalankan otomatis.
 	markActivity();
 	const bodySizeLimit = parseAsBytes(process.env.BODY_SIZE_LIMIT, '512K');
-	// Expose the parsed limit on `locals` so other server-side code can
-	// inspect it if needed. We avoid passing it to `resolve` because
-	// SvelteKit's ResolveOptions type doesn't allow custom keys.
-	// Note: this does not change how SvelteKit parses the raw request body
-	// (that happens earlier), but makes the configured limit available.
 	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-ignore -- allow adding a custom property to locals
 	event.locals.bodySizeLimit = bodySizeLimit;
-	return _composed({ event, resolve });
+	const response = await _composed({ event, resolve });
+
+	// Security headers
+	response.headers.set(
+		'Content-Security-Policy',
+		"default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+	);
+	response.headers.set('X-Frame-Options', 'DENY');
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	if (event.url.protocol === 'https:') {
+		response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+	}
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+	return response;
 };
 
 const sqliteErrors = {
