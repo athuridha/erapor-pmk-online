@@ -2,6 +2,7 @@
 	import Icon from '$lib/components/icon.svelte';
 	import { onDestroy } from 'svelte';
 	import { searchQueryMarker } from '$lib/utils';
+	import { buildPageNumbers } from '$lib/utils/pagination';
 	import PreviewFooter from './PreviewFooter.svelte';
 
 	type DocumentType =
@@ -187,8 +188,7 @@
 	const showPiagamTable = $derived(isPiagamSelected && hasPiagamRankingOptions);
 	const currentItems = $derived(showPiagamTable ? filteredPiagamOptions : filteredMurid);
 	const totalPages = $derived(Math.max(1, Math.ceil(currentItems.length / PER_PAGE)));
-
-	const pages = $derived(Array.from({ length: totalPages }, (_, i) => i + 1));
+	const nomorHalaman = $derived(buildPageNumbers(currentPage, totalPages));
 
 	const paginatedMurid = $derived(
 		!showPiagamTable
@@ -576,17 +576,39 @@
 			</div>
 			{#if totalPages > 1}
 				<div class="join mt-2 self-center sm:mx-auto">
-					{#each pages as pageNumber (pageNumber)}
-						<button
-							type="button"
-							class="join-item btn btn-sm"
-							class:btn-active={pageNumber === currentPage}
-							onclick={() => handlePageClick(pageNumber)}
-							aria-current={pageNumber === currentPage ? 'page' : undefined}
-						>
-							{pageNumber}
-						</button>
+					<button
+						type="button"
+						class="join-item btn btn-sm"
+						disabled={currentPage <= 1}
+						onclick={() => handlePageClick(currentPage - 1)}
+						aria-label="Halaman sebelumnya"
+					>
+						«
+					</button>
+					{#each nomorHalaman as nomor, index (index)}
+						{#if nomor === '…'}
+							<button type="button" class="join-item btn btn-sm" disabled>…</button>
+						{:else}
+							<button
+								type="button"
+								class="join-item btn btn-sm"
+								class:btn-active={nomor === currentPage}
+								onclick={() => handlePageClick(nomor)}
+								aria-current={nomor === currentPage ? 'page' : undefined}
+							>
+								{nomor}
+							</button>
+						{/if}
 					{/each}
+					<button
+						type="button"
+						class="join-item btn btn-sm"
+						disabled={currentPage >= totalPages}
+						onclick={() => handlePageClick(currentPage + 1)}
+						aria-label="Halaman berikutnya"
+					>
+						»
+					</button>
 				</div>
 			{/if}
 		{/if}

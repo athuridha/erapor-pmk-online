@@ -8,12 +8,12 @@
 	import ProgressCard from '$lib/components/dashboard/progress-card.svelte';
 	import QuickActionsCard from '$lib/components/dashboard/quick-actions-card.svelte';
 	import FavoriteMenusCard from '$lib/components/dashboard/favorite-menus-card.svelte';
+	import RingkasanKelasCard from '$lib/components/dashboard/ringkasan-kelas-card.svelte';
 	import { computeNextEventMessage } from '$lib/utils/next-event-message';
 	import BellStatus from '$lib/components/jadwal-bell/bell-status.svelte';
 	import Icon from '$lib/components/icon.svelte';
 	import { showModal } from '$lib/components/global-modal.svelte';
 	import PresensiGuruModal from '$lib/components/presensi-guru/presensi-guru-modal.svelte';
-	import RingkasanKelasCard from '$lib/components/dashboard/ringkasan-kelas-card.svelte';
 	import { getHariSekolahList, isSchoolDay } from '$lib/hari-sekolah';
 
 	let { data } = $props();
@@ -24,7 +24,6 @@
 			rombel: { total: 0, perFase: [] },
 			murid: { total: 0 },
 			mapel: { total: 0, wajib: 0, mulok: 0, kokurikuler: 0, lainnya: 0 },
-			ekstrakurikuler: { total: 0 },
 			progress: {
 				akademik: { percentage: 0, completed: 0, total: 0 },
 				ekstrakurikuler: { percentage: 0, completed: 0, total: 0 },
@@ -73,7 +72,7 @@
 	const daftarKodeMapel = $derived((data.daftarKodeMapel as string[]) ?? []);
 	const daftarKelas = $derived((data.daftarKelas as Array<{ id: number; nama: string }>) ?? []);
 
-	const hariList = $derived(getHariSekolahList(hariSekolah, hariSekolahCustom));
+	const hariList = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
 	const hariNamaList = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
@@ -306,7 +305,7 @@
 			// fall through with unknown jam window
 		}
 		presensiWarningVisible = false;
-		showModal({
+showModal({
 			title: 'Presensi Guru',
 			body: PresensiGuruModal,
 			bodyProps: {
@@ -323,30 +322,10 @@
 		// Re-check whenever a dialog closes (catches the teacher force-closing the modal).
 		const onDialogClose = () => checkPresensiFallback();
 		document.addEventListener('close', onDialogClose, true);
+		document.addEventListener('close', onDialogClose, true);
 		return () => document.removeEventListener('close', onDialogClose, true);
 	});
 </script>
-
-<BellStatus {bellActive} {hariIni} {nextEventMessage} class="alert alert-info alert-soft mb-4" />
-
-{#if presensiWarningVisible}
-	<div class="alert alert-warning alert-soft mb-4 flex items-center gap-3">
-		<Icon name="warning" class="h-5 w-5 shrink-0" />
-		<span>
-			Bapak/Ibu belum melakukan presensi guru hari ini. Silakan lakukan presensi melalui tombol
-			berikut:
-		</span>
-		<button
-			class="btn btn-primary btn-sm ml-auto shrink-0 shadow-none"
-			type="button"
-			title="Presensi Sekarang"
-			onclick={openPresensiGuruModal}
-		>
-			<Icon name="pen" />
-			<span class="hidden sm:inline">Presensi Sekarang</span>
-		</button>
-	</div>
-{/if}
 
 <!-- Kontainer Utama Grid -->
 <div class="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
@@ -365,7 +344,7 @@
 	</div>
 
 	<!-- Kolom 2: Progress & Aksi -->
-	<div class="flex flex-col gap-4">
+	<div class="flex flex-col gap-5">
 		<ProgressCard progress={progressStats} />
 		<QuickActionsCard />
 	</div>
