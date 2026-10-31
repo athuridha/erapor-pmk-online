@@ -33,7 +33,7 @@
 	}
 </script>
 
-<div class="stats stats-vertical lg:stats-horizontal rounded-box bg-base-100 w-full shadow-md">
+<div class="stats stats-vertical lg:stats-horizontal rounded-3xl border border-emerald-200/60 dark:border-emerald-200/40 bg-base-100/80 backdrop-blur-md w-full shadow-sm">
 	<div class="stat">
 		<div class="stat-figure text-primary">
 			<span class="text-3xl">

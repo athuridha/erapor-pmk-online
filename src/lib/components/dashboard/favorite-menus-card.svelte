@@ -32,7 +32,7 @@
 	}
 </script>
 
-<div class="card bg-base-100 rounded-box shadow-md dark:border-none">
+<div class="card bg-base-100/80 backdrop-blur-md rounded-3xl border border-emerald-200/60 dark:border-emerald-200/40 shadow-sm dark:border-none">
 	<div class="card-body">
 		<div class="flex items-center justify-between">
 			<h2 class="card-title">Menu Favorit</h2>

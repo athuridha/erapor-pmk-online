@@ -18,6 +18,13 @@
 	}: {
 		data: {
 			kelasId: number | null;
+			mapelKokurikuler: Array<{
+				id: number;
+				nama: string | null;
+				kode: string | null;
+				jenis: string;
+				pengampu: string | null;
+			}>;
 			kokurikuler: Array<Kokurikuler & { dimensi: DimensiProfilLulusanKey[] }>;
 			dimensiPilihan: typeof profilPelajarPancasilaDimensions;
 			tableReady: boolean;
@@ -245,7 +252,7 @@
 				<p class="text-base-content/70 text-sm">Kelas aktif: {kelasAktifLabel}</p>
 			{:else}
 				<p class="text-base-content/60 text-sm">
-					Pilih kelas di navbar untuk melihat mata pelajaran intrakurikuler.
+					Pilih kelas di navbar untuk melihat kegiatan kokurikuler.
 				</p>
 			{/if}
 		</div>
@@ -382,6 +389,47 @@
 			</span>
 		</div>
 	{/if}
+
+	{#if data.mapelKokurikuler.length > 0}
+		<div class="mt-6">
+			<div class="flex flex-row items-center justify-between">
+				<h3 class="text-lg font-bold">Mata Pelajaran Kokurikuler</h3>
+				<a class="link link-secondary text-sm" href="/master-data/mata_pelajaran">
+					<Icon name="edit" /> Kelola via Master Data
+				</a>
+			</div>
+			<p class="text-base-content/60 text-sm mt-1">
+				Mapel berkategori kokurikuler tidak tampil pada modul Intrakurikuler dan penilaian
+				numerik. Ubah kembali lewat Master Data → Mata Pelajaran bila perlu.
+			</p>
+			<div class="bg-base-100 dark:bg-base-200 mt-3 overflow-x-auto rounded-md shadow-md dark:shadow-none">
+				<table class="border-base-200 table min-w-[600px] border dark:border-none">
+					<thead>
+						<tr class="bg-base-200 dark:bg-base-300 text-left font-bold">
+							<th style="width: 60px;">No</th>
+							<th style="width: 100px; min-width: 80px;">Kode</th>
+							<th style="min-width: 200px;">Nama Mata Pelajaran</th>
+							<th style="min-width: 150px;">Jenis</th>
+							<th style="min-width: 150px;">Pengampu</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.mapelKokurikuler as item, index (item.id)}
+							<tr>
+								<td class="align-top">{index + 1}</td>
+								<td class="align-top font-mono text-sm">{item.kode ?? '—'}</td>
+								<td class="align-top">{item.nama}</td>
+								<td class="align-top">{item.jenis}</td>
+								<td class="align-top">{item.pengampu ?? '—'}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	{/if}
+
+	<h3 class="text-lg font-bold mt-8 mb-4">Kegiatan Kokurikuler (8 DPL)</h3>
 
 	<div
 		class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"

@@ -1,6 +1,6 @@
 import db from '$lib/server/db';
 import { isWaliOfKelas, isWaliKelasAccount, ownedKelasIdSet } from '$lib/server/kelas-akses';
-import { tableKelas, tableKokurikuler } from '$lib/server/db/schema';
+import { tableKelas, tableKokurikuler, tableMataPelajaran, tablePegawai } from '$lib/server/db/schema';
 import { profilPelajarPancasilaDimensions, type DimensiProfilLulusanKey } from '$lib/statics';
 import { fail } from '@sveltejs/kit';
 import { and, asc, eq, inArray } from 'drizzle-orm';
@@ -56,9 +56,39 @@ export async function load({ depends, parent }) {
 		}
 	}
 
+	// Mapel berkategori kokurikuler (master data) tampil sebagai section terpisah.
+	let mapelKokurikuler: Array<{
+		id: number;
+		nama: string | null;
+		kode: string | null;
+		jenis: string;
+		pengampu: string | null;
+	}> = [];
+	if (kelasId) {
+		const rows = await db
+			.select({
+				id: tableMataPelajaran.id,
+				nama: tableMataPelajaran.nama,
+				kode: tableMataPelajaran.kode,
+				jenis: tableMataPelajaran.jenis,
+				pengampu: tablePegawai.nama
+			})
+			.from(tableMataPelajaran)
+			.leftJoin(tablePegawai, eq(tableMataPelajaran.pengampuId, tablePegawai.id))
+			.where(
+				and(
+					eq(tableMataPelajaran.kelasId, kelasId),
+					eq(tableMataPelajaran.kategori, 'kokurikuler')
+				)
+			)
+			.orderBy(asc(tableMataPelajaran.nama));
+		mapelKokurikuler = rows;
+	}
+
 	return {
 		kelasId,
 		tableReady,
+		mapelKokurikuler,
 		kokurikuler: kokurikulerRaw.map((item) => ({
 			...item,
 			dimensi: Array.isArray(item.dimensi)

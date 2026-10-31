@@ -160,7 +160,10 @@ export async function computeNilaiAkhirRekap({
 
 	const rawMapelRecords = await db.query.tableMataPelajaran.findMany({
 		columns: { id: true, nama: true },
-		where: eq(tableMataPelajaran.kelasId, kelasId)
+		where: and(
+			eq(tableMataPelajaran.kelasId, kelasId),
+			eq(tableMataPelajaran.kategori, 'intrakurikuler')
+		)
 	});
 
 	await ensureAsesmenSumatifSchema();

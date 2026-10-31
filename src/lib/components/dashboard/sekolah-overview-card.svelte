@@ -6,7 +6,7 @@
 	const sekolahNpsn = $derived(sekolah?.npsn ?? '-');
 </script>
 
-<div class="card bg-base-100 rounded-box shadow-md dark:border-none">
+<div class="card bg-base-100/80 backdrop-blur-md rounded-3xl border border-emerald-200/60 dark:border-emerald-200/40 shadow-sm dark:border-none">
 	<div class="card-body">
 		{#if sekolah}
 			<div class="flex items-center gap-4">

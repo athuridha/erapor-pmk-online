@@ -34,6 +34,7 @@ import { ensurePermissionMigration } from './ensure-permission-migration';
 import { ensurePresensiSettingsSchema } from './ensure-presensi-settings';
 import { ensureEkspansiModulSchema } from './ensure-ekspansi-modul';
 import { ensureTeknikPenilaianSchema } from './ensure-teknik-penilaian';
+import { ensureMataPelajaranKategoriSchema } from './ensure-mata-pelajaran-kategori';
 import { resetEnsuredSchemas } from './ensure-helper';
 
 let startupEnsuresDone = false;
@@ -55,6 +56,7 @@ export async function runStartupEnsures() {
 	await ensurePresensiSettingsSchema();
 	await ensureEkspansiModulSchema();
 	await ensureTeknikPenilaianSchema();
+	await ensureMataPelajaranKategoriSchema();
 	await ensureLoginAttemptsSchema();
 	await ensureBukuTamuSettingsSchema();
 	await ensureAiSettingsSchema();

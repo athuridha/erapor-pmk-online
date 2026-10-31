@@ -122,7 +122,10 @@ export async function load(event) {
 	if (kelasAktifId) {
 		const mataPelajaranRows = await db.query.tableMataPelajaran.findMany({
 			columns: { id: true, nama: true, jenis: true },
-			where: eq(tableMataPelajaran.kelasId, kelasAktifId)
+			where: and(
+				eq(tableMataPelajaran.kelasId, kelasAktifId),
+				eq(tableMataPelajaran.kategori, 'intrakurikuler')
+			)
 		});
 
 		const uniqueSubjects = new Map<string, SubjectBucket>();

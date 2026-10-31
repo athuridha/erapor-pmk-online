@@ -76,7 +76,7 @@
 	};
 </script>
 
-<div class="card bg-base-100 rounded-box shadow-md">
+<div class="card bg-base-100/80 backdrop-blur-md rounded-3xl border border-emerald-200/60 dark:border-emerald-200/40 shadow-sm">
 	<div class="card-body">
 		<h2 class="card-title mb-4">
 			<span class="text-xl">

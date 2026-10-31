@@ -33,7 +33,7 @@
 	const perluPerhatian = $derived(daftarKelas.filter((kelas) => kelas.perluPerhatian));
 </script>
 
-<section class="card bg-base-100 rounded-box shadow-md">
+<section class="card bg-base-100/80 backdrop-blur-md rounded-3xl border border-emerald-200/60 dark:border-emerald-200/40 shadow-sm">
 	<div class="card-body gap-4 p-4">
 		<header class="flex flex-wrap items-start justify-between gap-2">
 			<div>

@@ -328,6 +328,9 @@ export async function getRaporPreviewPayload({ locals, url }: RaporContext) {
 
 			const mapel = item.mataPelajaran;
 
+			// Mapel berkategori kokurikuler dikelola terpisah, tidak muncul di rapor intrakurikuler.
+			if (mapel.kategori === 'kokurikuler') return false;
+
 			// Filter agama subject to only show the one matching murid's agama
 			if (isAgamaSubject(mapel.nama)) {
 				// Only include agama subject that matches murid's expected agama mapel

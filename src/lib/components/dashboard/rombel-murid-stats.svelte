@@ -11,7 +11,7 @@
 	const rombelBadges = $derived.by(() => rombel.perFase);
 </script>
 
-<div class="stats stats-vertical lg:stats-horizontal bg-base-100 rounded-box w-full shadow-md">
+<div class="stats stats-vertical lg:stats-horizontal bg-base-100/80 backdrop-blur-md rounded-3xl border border-emerald-200/60 dark:border-emerald-200/40 w-full shadow-sm">
 	<div class="stat justify-center">
 		<div class="stat-figure">
 			<span class="text-accent text-3xl">

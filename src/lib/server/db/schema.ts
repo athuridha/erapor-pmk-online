@@ -586,6 +586,11 @@ export const tableMataPelajaran = sqliteTable(
 		jenis: text({
 			enum: ['belum_dipetakan', 'wajib', 'pilihan', 'mulok', 'kejuruan', 'pemberdayaan']
 		}).notNull(),
+		// Kategori mapel: intrakurikuler (kurikulum inti) atau kokurikuler
+		// (kegiatan pengembangan diri, mis. Uji Fisika, Uji Matematika).
+		kategori: text({ enum: ['intrakurikuler', 'kokurikuler'] })
+			.notNull()
+			.default('intrakurikuler'),
 		// Guru pengampu (hasil sinkronisasi pembelajaran Dapodik)
 		pengampuId: int().references(() => tablePegawai.id, { onDelete: 'set null' }),
 		// Nomor urut tampil mapel (tabel intrakurikuler & cetak rapor). NULL = belum diatur → tampil terakhir.

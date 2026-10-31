@@ -192,6 +192,7 @@ async function muatSemuaBaris(
 					id: sql<number>`min(${tableMataPelajaran.id})`,
 					nama: tableMataPelajaran.nama,
 					jenis: sql<string>`max(${tableMataPelajaran.jenis})`,
+					kategori: sql<string>`max(${tableMataPelajaran.kategori})`,
 					kode: sql<string | null>`max(${tableMataPelajaran.kode})`,
 					kkm: sql<number>`max(${tableMataPelajaran.kkm})`,
 					urutan: sql<number | null>`min(${tableMataPelajaran.urutan})`,
@@ -545,6 +546,8 @@ export async function simpanMasterData(
 			const pengampuId = Number(teks(formData, 'pengampu_id')) || null;
 			const jenis = (teks(formData, 'jenis') || 'wajib') as
 				'belum_dipetakan' | 'wajib' | 'pilihan' | 'mulok' | 'kejuruan' | 'pemberdayaan';
+			const kategori = (teks(formData, 'kategori') || 'intrakurikuler') as
+				'intrakurikuler' | 'kokurikuler';
 			const kode = teks(formData, 'kode') || null;
 			const kkm = angkaAtau(formData, 'kkm', 0) ?? 0;
 			const urutan = angkaAtau(formData, 'urutan', null);
@@ -588,13 +591,14 @@ export async function simpanMasterData(
 				if (existing) {
 					await db
 						.update(tableMataPelajaran)
-						.set({ jenis, kode, kkm, urutan, pengampuId, updatedAt: now })
+						.set({ jenis, kategori, kode, kkm, urutan, pengampuId, updatedAt: now })
 						.where(eq(tableMataPelajaran.id, existing.id));
 				} else {
 					await db.insert(tableMataPelajaran).values({
 						kelasId: kId,
 						nama,
 						jenis,
+						kategori,
 						kode,
 						kkm,
 						urutan,

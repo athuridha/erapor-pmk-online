@@ -176,6 +176,17 @@ export const MASTER_DATA: MasterData[] = [
 					{ label: 'Belum Dipetakan', value: 'belum_dipetakan' }
 				]
 			},
+			{
+				key: 'kategori',
+				label: 'Kategori',
+				tipe: 'pilihan',
+				wajib: true,
+				default: 'intrakurikuler',
+				opsi: [
+					{ label: 'Intrakurikuler', value: 'intrakurikuler' },
+					{ label: 'Kokurikuler', value: 'kokurikuler' }
+				]
+			},
 			{ key: 'kode', label: 'Kode', tipe: 'teks', placeholder: 'MTK' },
 			{ key: 'kkm', label: 'KKM', tipe: 'angka', default: 0 },
 			{ key: 'urutan', label: 'Urutan Tampil', tipe: 'angka' },
@@ -184,6 +195,7 @@ export const MASTER_DATA: MasterData[] = [
 		kolom: [
 			{ key: 'nama', label: 'Mata Pelajaran' },
 			{ key: 'kode', label: 'Kode' },
+			{ key: 'kategori', label: 'Kategori' },
 			{ key: 'jenis', label: 'Jenis' },
 			{ key: 'kkm', label: 'KKM' },
 			{ key: 'kelas', label: 'Kelas / Rombel' },

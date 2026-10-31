@@ -106,7 +106,10 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 
 	const rawMapelRecords = await db.query.tableMataPelajaran.findMany({
 		columns: { id: true, nama: true, urutan: true },
-		where: eq(tableMataPelajaran.kelasId, kelasAktif.id)
+		where: and(
+			eq(tableMataPelajaran.kelasId, kelasAktif.id),
+			eq(tableMataPelajaran.kategori, 'intrakurikuler')
+		)
 	});
 
 	// Guru mapel can see all subjects on this page (read-only view)

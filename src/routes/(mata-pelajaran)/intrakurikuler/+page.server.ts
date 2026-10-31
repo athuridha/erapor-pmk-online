@@ -105,7 +105,10 @@ export async function load({ depends, url, parent }) {
 
 	let mapel = kelasId
 		? await db.query.tableMataPelajaran.findMany({
-				where: eq(tableMataPelajaran.kelasId, kelasId)
+				where: and(
+					eq(tableMataPelajaran.kelasId, kelasId),
+					eq(tableMataPelajaran.kategori, 'intrakurikuler')
+				)
 			})
 		: [];
 
@@ -616,9 +619,12 @@ export const actions = {
 			return fail(400, { fail: 'Pilih kelas aktif terlebih dahulu.' });
 		}
 
-		// fetch mapel and their tujuan
+		// fetch mapel and their tujuan (hanya intrakurikuler; kokurikuler dikelola terpisah)
 		const mapelRows = await db.query.tableMataPelajaran.findMany({
-			where: eq(tableMataPelajaran.kelasId, kelasId),
+			where: and(
+				eq(tableMataPelajaran.kelasId, kelasId),
+				eq(tableMataPelajaran.kategori, 'intrakurikuler')
+			),
 			orderBy: [asc(tableMataPelajaran.jenis), asc(tableMataPelajaran.nama)]
 		});
 
