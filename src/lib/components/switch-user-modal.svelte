@@ -11,9 +11,14 @@
 		kelasName: string | null;
 	}
 
-	let { open = $bindable(false), currentUserId = 0 } = $props<{
+	let {
+		open = $bindable(false),
+		currentUserId = 0,
+		impersonator = null
+	} = $props<{
 		open: boolean;
 		currentUserId?: number;
+		impersonator?: { id: number; username: string; type: string } | null;
 	}>();
 
 	let searchQuery = $state('');
@@ -53,9 +58,30 @@
 		}, 300);
 	}
 
+	async function handleStopSwitch() {
+		try {
+			const res = await fetch('/api/auth/switch-user/stop', { method: 'POST' });
+			const json = await res.json();
+			if (res.ok && json.success) {
+				toast(json.message || 'Kembali ke akun Admin.', 'success');
+				open = false;
+				window.location.href = json.redirect || '/';
+			} else {
+				toast(json.message || 'Gagal kembali ke admin.', 'error');
+			}
+		} catch {
+			toast('Terjadi kesalahan saat kembali ke admin.', 'error');
+		}
+	}
+
 	async function handleSwitch(userId: number) {
 		if (userId === currentUserId) {
 			toast('Anda sudah menggunakan akun ini.', 'info');
+			return;
+		}
+
+		if (impersonator && userId === impersonator.id) {
+			await handleStopSwitch();
 			return;
 		}
 
@@ -70,7 +96,7 @@
 			if (res.ok && json.success) {
 				toast(json.message || 'Berhasil beralih akun.', 'success');
 				open = false;
-				window.location.href = '/';
+				window.location.href = json.redirect || '/';
 			} else {
 				toast(json.message || 'Gagal beralih akun.', 'error');
 			}
@@ -110,6 +136,27 @@
 				</button>
 			</div>
 
+			{#if impersonator}
+				<div
+					class="mt-3 p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-950 dark:text-amber-200 flex items-center justify-between gap-2 text-xs"
+				>
+					<div class="flex items-center gap-2 overflow-hidden">
+						<Icon name="warning" class="w-4 h-4 text-amber-600 shrink-0" />
+						<span class="truncate">
+							Sesi asal: <strong>@{impersonator.username}</strong>
+						</span>
+					</div>
+					<button
+						type="button"
+						class="btn btn-xs bg-amber-950 text-white hover:bg-black border-none rounded-lg shrink-0 font-semibold"
+						onclick={handleStopSwitch}
+					>
+						<Icon name="repeat" class="w-3 h-3" />
+						<span>Kembali ke Admin</span>
+					</button>
+				</div>
+			{/if}
+
 			<!-- Search -->
 			<div class="mt-4">
 				<label class="input input-sm bg-base-200 w-full rounded-xl flex items-center gap-2">
@@ -137,8 +184,10 @@
 					</div>
 				{:else}
 					{#each users as u (u.id)}
+						{@const isImpersonatorOrigin = impersonator && u.id === impersonator.id}
 						<div
 							class="flex items-center justify-between p-3 rounded-xl border border-base-200 bg-base-100 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors gap-3"
+							class:border-amber-400={isImpersonatorOrigin}
 						>
 							<div class="flex items-center gap-3 overflow-hidden">
 								<div
@@ -161,13 +210,20 @@
 												>({u.kelasName})</span
 											>
 										{/if}
+										{#if isImpersonatorOrigin}
+											<span class="badge badge-xs font-semibold badge-soft badge-warning">
+												Akun Asal Anda
+											</span>
+										{/if}
 									</div>
 								</div>
 							</div>
 
 							<button
 								type="button"
-								class="btn btn-xs btn-primary rounded-lg shadow-none shrink-0 font-semibold"
+								class="btn btn-xs rounded-lg shadow-none shrink-0 font-semibold {isImpersonatorOrigin
+									? 'btn-warning'
+									: 'btn-primary'}"
 								disabled={isSwitching !== null || u.id === currentUserId}
 								onclick={() => handleSwitch(u.id)}
 							>
@@ -175,6 +231,9 @@
 									<span class="loading loading-spinner loading-xs"></span>
 								{:else if u.id === currentUserId}
 									<span>Aktif</span>
+								{:else if isImpersonatorOrigin}
+									<Icon name="repeat" class="w-3 h-3" />
+									<span>Kembali</span>
 								{:else}
 									<Icon name="repeat" class="w-3 h-3" />
 									<span>Pilih</span>

@@ -11,12 +11,10 @@
 	import BukuTamuPasskeyCard from '$lib/components/settings/buku-tamu-passkey-card.svelte';
 	import AiKeyCard from '$lib/components/settings/ai-key-card.svelte';
 	import type { PageData } from './$types';
-	import { isAdminUser, isFullAdmin } from '../pengguna/permissions';
 
 	const { data } = $props<{ data: PageData }>();
 
 	let user = $derived(page.data.user);
-	const isAdmin = $derived(isAdminUser(user));
 	const isGuru = $derived(
 		user?.type === 'user' || user?.type === 'wali_kelas' || user?.type === 'wali_asuh'
 	);
@@ -40,7 +38,7 @@
 	currentVersion={data.appVersion ?? '0.0.0'}
 	addresses={data.appAddresses ?? []}
 	protocol={data.protocol ?? 'http:'}
-	{isAdmin}
+	isAdmin={data.canManageUsers ?? false}
 />
 
 {#if wasForcePasswordChange}
@@ -65,19 +63,19 @@
 	<ChangePasswordCard onsuccess={handlePasswordSuccess} />
 </div>
 
-{#if isFullAdmin(user) && data.storage}
+{#if (data.canViewStorage ?? false) && data.storage}
 	<div class="mt-4">
 		<StorageLocationCard storage={data.storage} />
 	</div>
 {/if}
 
-{#if isAdmin}
+{#if data.canManageBukuTamu}
 	<div class="mt-4">
 		<BukuTamuPasskeyCard passkeySet={data.bukuTamuPasskeySet} />
 	</div>
 {/if}
 
-{#if isAdmin}
+{#if data.canManageAi}
 	<div class="mt-4">
 		<AiKeyCard
 			variant="sekolah"
@@ -103,7 +101,7 @@
 
 <!-- Hidden during forced password change: the auth guard redirects the database
 	API calls in that state, so the buttons would silently fail. -->
-{#if isAdmin && !wasForcePasswordChange}
+{#if data.canManageDatabase && !wasForcePasswordChange}
 	<div class="mt-4">
 		<DatabaseCard />
 	</div>

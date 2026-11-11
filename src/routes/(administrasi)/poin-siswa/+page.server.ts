@@ -1,13 +1,8 @@
 import db from '$lib/server/db';
-import {
-	tableKelas,
-	tableMurid,
-	tablePegawai,
-	tablePoinPelanggaran,
-	tablePoinSiswa
-} from '$lib/server/db/schema';
+import { tableKelas, tableMurid, tablePegawai, tablePoinPelanggaran, tablePoinSiswa } from '$lib/server/db/schema';
+import { queryInChunks } from '$lib/server/db/chunk';
 import { fail, redirect } from '@sveltejs/kit';
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { isAuthorizedUser } from '../../pengguna/permissions';
 
 const REQUIRED_PERMISSION = 'administrasi_poin_siswa';
@@ -308,6 +303,93 @@ export const actions = {
 		});
 
 		return { message: 'Poin berhasil diberikan' };
+	},
+
+	/** Beri satu pelanggaran yang sama untuk banyak murid sekaligus (multi-pilih). */
+	beriPoinMassal: async ({ request, locals }) => {
+		const sekolahId = locals.sekolah?.id;
+		if (!sekolahId) {
+			return fail(401, { fail: 'Sekolah tidak ditemukan' });
+		}
+		if (!isAuthorizedUser([REQUIRED_PERMISSION], locals.user)) {
+			return fail(403, { fail: 'Anda tidak memiliki izin mengelola poin siswa.' });
+		}
+
+		const formData = await request.formData();
+		const pelanggaranId = Number(formData.get('pelanggaranId'));
+		const tanggalRaw = formData.get('tanggal')?.toString().trim() ?? '';
+		const catatan = formData.get('catatan')?.toString().trim() ?? '';
+
+		let muridIds: number[] = [];
+		try {
+			const parsed = JSON.parse(String(formData.get('muridIds') ?? '[]'));
+			if (Array.isArray(parsed)) {
+				muridIds = [
+					...new Set(
+						parsed.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0)
+					)
+				];
+			}
+		} catch {
+			return fail(400, { fail: 'Daftar murid tidak valid.' });
+		}
+		if (!muridIds.length) {
+			return fail(400, { fail: 'Pilih minimal satu murid.' });
+		}
+		if (muridIds.length > 300) {
+			return fail(400, { fail: 'Maksimal 300 murid per sekali simpan.' });
+		}
+
+		if (!Number.isInteger(pelanggaranId) || pelanggaranId <= 0) {
+			return fail(400, { fail: 'Pilih pelanggaran terlebih dahulu' });
+		}
+
+		const pelanggaran = await db.query.tablePoinPelanggaran.findFirst({
+			columns: { id: true, poin: true, nama: true },
+			where: and(
+				eq(tablePoinPelanggaran.id, pelanggaranId),
+				eq(tablePoinPelanggaran.sekolahId, sekolahId)
+			)
+		});
+		if (!pelanggaran) {
+			return fail(404, { fail: 'Pelanggaran tidak ditemukan' });
+		}
+
+		// D1 menolak inArray >100 parameter — validasi murid per potongan.
+		const validMuridIds = await queryInChunks(muridIds, async (ids) => {
+			const rows = await db
+				.select({ id: tableMurid.id })
+				.from(tableMurid)
+				.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, ids)));
+			return rows;
+		});
+		const validSet = new Set(validMuridIds.map((row) => row.id));
+		const targetIds = muridIds.filter((id) => validSet.has(id));
+		if (!targetIds.length) {
+			return fail(404, { fail: 'Tidak ada murid valid pada pilihan ini.' });
+		}
+
+		const tanggal = tanggalRaw || new Date().toISOString().slice(0, 10);
+		const pelaporPegawaiId =
+			(locals.user as { pegawaiId?: number | null } | null)?.pegawaiId ?? null;
+
+		await db.insert(tablePoinSiswa).values(
+			targetIds.map((muridId) => ({
+				sekolahId,
+				muridId,
+				pelanggaranId,
+				tanggal,
+				pelaporPegawaiId: pelaporPegawaiId ? Number(pelaporPegawaiId) : null,
+				catatan: catatan || null
+			}))
+		);
+
+		const dilewati = muridIds.length - targetIds.length;
+		return {
+			message: `${targetIds.length} murid mendapat "${pelanggaran.nama}" (${pelanggaran.poin} poin)${
+				dilewati ? `, ${dilewati} dilewati` : ''
+			}.`
+		};
 	},
 
 	hapusPoin: async ({ request, locals }) => {

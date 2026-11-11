@@ -114,6 +114,9 @@ function resolveEffectiveSemesterId(
 }
 
 export async function load({ params, locals }) {
+	if (!locals.user || !isAdminUser(locals.user)) {
+		throw error(403, 'Hanya admin dan kepala sekolah yang dapat mengelola kelas.');
+	}
 	authority('informasi_umum_kelas');
 
 	const meta: PageMeta = { title: 'Form Kelas' };
@@ -406,15 +409,25 @@ export const actions = {
 
 			// Find-or-create pegawai berdasarkan nama (hindari duplikat person).
 			const existing = await tx.query.tablePegawai.findFirst({
-				columns: { id: true },
+				columns: { id: true, sekolahId: true },
 				where: sql`LOWER(trim(${tablePegawai.nama})) = ${namaGuru.toLowerCase()}`
 			});
 			if (existing) {
 				newWaliPegawaiId = existing.id;
+				// Pegawai lama tanpa sekolah_id (insert lama) — isi sekarang agar
+				// muncul di dropdown Guru Pengampu.
+				if (!existing.sekolahId) {
+					await tx.update(tablePegawai).set({ sekolahId }).where(eq(tablePegawai.id, existing.id));
+				}
 			} else {
 				const [pegawai] = await tx
 					.insert(tablePegawai)
-					.values({ nama: namaGuru, nip: '', updatedAt: new Date().toISOString() })
+					.values({
+						nama: namaGuru,
+						nip: '',
+						sekolahId,
+						updatedAt: new Date().toISOString()
+					})
 					.returning({ id: tablePegawai.id });
 				newWaliPegawaiId = pegawai?.id ?? null;
 			}

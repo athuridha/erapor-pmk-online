@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import Icon from '$lib/components/icon.svelte';
 	import { faseBadgeClass } from '$lib/components/kelas/fase';
 	import type { PageData } from './$types';
@@ -7,7 +8,6 @@
 	let { data } = $props<{ data: PageData }>();
 
 	let cariKelas = $state('');
-	let filterFase = $state('semua');
 
 	interface RingkasanKelas {
 		id: number;
@@ -33,23 +33,34 @@
 		perluPerhatian: boolean;
 	}
 
+	/**
+	 * Samakan variasi penulisan fase dari data lama ("F", "Fase F", "fase f")
+	 * menjadi satu label kanonik "Fase F". Nilai kanonik baru dari database
+	 * juga "Fase E"/"Fase F", jadi opsi filter tidak lagi dobel.
+	 */
+	function normFase(value: string | null | undefined): string {
+		const teks = (value ?? '').trim();
+		if (!teks) return '';
+		const tanpaPrefiks = teks.replace(/^fase\s+/i, '');
+		return `Fase ${tanpaPrefiks.toUpperCase()}`;
+	}
+
 	const daftarKelas = $derived((data.daftarKelas ?? []) as RingkasanKelas[]);
 	const ringkasan = $derived(data.ringkasan ?? null);
 	const semesterOptions = $derived(data.semesterOptions ?? []);
 	const semesterTerpilih = $derived(data.semesterTerpilih ?? null);
-	const semesterAktifId = $derived(data.semesterAktifId ?? null);
-	const bolehPindah = $derived(
-		semesterAktifId != null && semesterTerpilih != null && semesterTerpilih.id === semesterAktifId
-	);
 
+	const filterFase = $derived(normFase(page.url.searchParams.get('filterFase')));
 	const faseOptions = $derived(
-		[...new Set(daftarKelas.map((kelas) => kelas.fase ?? '').filter(Boolean))].sort()
+		[...new Set(daftarKelas.map((kelas) => normFase(kelas.fase)).filter(Boolean))].sort((a, b) =>
+			a.localeCompare(b, 'id')
+		)
 	);
 
 	const kelasTersaring = $derived.by(() => {
 		const query = cariKelas.trim().toLowerCase();
 		return daftarKelas.filter((kelas) => {
-			if (filterFase !== 'semua' && (kelas.fase ?? '') !== filterFase) return false;
+			if (filterFase && normFase(kelas.fase) !== filterFase) return false;
 			if (!query) return true;
 			return (
 				kelas.nama.toLowerCase().includes(query) ||
@@ -63,6 +74,14 @@
 		if (persen >= 90) return { label: 'Lengkap', badge: 'badge-success' };
 		if (persen >= 70) return { label: 'Baik', badge: 'badge-warning' };
 		return { label: 'Perlu dilengkapi', badge: 'badge-error' };
+	}
+
+	function gantiFilterFase(value: string) {
+		const params = new URLSearchParams(page.url.search);
+		if (value && value !== 'semua') params.set('filterFase', value);
+		else params.delete('filterFase');
+		const query = params.toString();
+		goto(`/semua-kelas${query ? `?${query}` : ''}`, { invalidateAll: true });
 	}
 </script>
 
@@ -79,7 +98,9 @@
 		<div class="login-card rounded-3xl p-8 shadow-2xl">
 			<!-- Header -->
 			<div class="mb-6 flex flex-col items-center gap-3 text-center">
-				<div class="flex h-20 w-20 items-center justify-center rounded-2xl border border-emerald-200/60 bg-white p-2 shadow-lg">
+				<div
+					class="flex h-20 w-20 items-center justify-center rounded-2xl border border-emerald-200/60 bg-white p-2 shadow-lg"
+				>
 					<img src="/logo.png" alt="Logo SMK Pratama Mulya" class="h-full w-full object-contain" />
 				</div>
 				<div>
@@ -98,104 +119,30 @@
 					<div class="alert alert-warning">
 						<Icon name="warning" />
 						<span>
-							Belum ada semester yang bisa ditampilkan. Setel tahun ajaran dan semester terlebih dahulu di menu Akademik.
+							Belum ada semester yang bisa ditampilkan. Setel tahun ajaran dan semester terlebih
+							dahulu di menu Akademik.
 						</span>
 					</div>
 				{/if}
 
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 					<!-- Ringkasan kelas -->
-					<div>
-						<div class="rounded-3xl bg-base-100/80 backdrop-blur-md border border-emerald-200/60 dark:border-emerald-200/40 p-6 shadow-sm">
-							<h2 class="text-lg font-bold text-emerald-950 dark:text-emerald-200 mb-2">
-								Ringkasan Kelas
-							</h2>
-							<div class="grid grid-cols-2 gap-2 text-sm">
-								<div>
-									<div class="text-base-content/60 text-xs">Kelas aktif</div>
-									<div class="font-bold">{ringkasan?.totalKelas ?? 0}</div>
-								</div>
-								<div>
-									<div class="text-base-content/60 text-xs">Murid</div>
-									<div class="font-bold">{ringkasan?.totalMurid ?? 0}</div>
-								</div>
-							</div>
-							<div class="grid grid-cols-2 gap-2">
-								<div>
-									<div class="text-base-content/60 text-xs">Guru</div>
-									<div class="font-bold">{ringkasan?.totalGuru ?? 0}</div>
-								</div>
-								<div>
-									<div class="text-base-content/60 text-xs">Mapel</div>
-									<div class="font-bold">{ringkasan?.jumlahMapel ?? 0}</div>
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<!-- Filter & Cari -->
-					<div class="rounded-3xl bg-base-100/80 backdrop-blur-md border border-emerald-200/60 dark:border-emerald-200/40 p-4">
-						<div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+					<div
+						class="rounded-3xl border border-emerald-200/60 bg-base-100/80 p-6 shadow-sm backdrop-blur-md dark:border-emerald-200/40"
+					>
+						<h2 class="mb-2 text-lg font-bold text-emerald-950 dark:text-emerald-200">
+							Ringkasan Kelas
+						</h2>
+						<div class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
 							<div>
-								<label class="text-base-content/60 text-sm">Semester</label>
-								<select
-									class="select select-bordered w-full min-w-56"
-									value={semesterTerpilih?.id ?? ''}
-									onchange={(e) =>
-										goto(e.target.value ? `/semua-kelas?semester=${e.target.value}` : '/semua-kelas', { invalidateAll: true })}
-								>
-									<option value="">-- Pilih Semester --</option>
-									{#each semesterOptions as semester (semester.id)}
-										<option value={semester.id}>{semester.nama} — {semester.tahunAjaran}</option>
-									{/each}
-								</select>
+								<div class="text-base-content/60 text-xs">Kelas</div>
+								<div class="font-bold">{ringkasan?.totalKelas ?? 0}</div>
 							</div>
 							<div>
-								<label class="text-base-content/60 text-sm">Fase</label>
-								<select
-									class="select select-bordered w-full min-w-40"
-									value={filterFase}
-									onchange={(e) =>
-										goto(
-											filterFase === e.target.value
-												? '/semua-kelas'
-												: `/semua-kelas?filterFase=${e.target.value}`
-										)}
-								>
-									<option value="semua">Semua fase</option>
-									{#each faseOptions as fase (fase)}
-										<option value={fase}>{fase}</option>
-									{/each}
-								</select>
-							</div>
-							<div>
-								<label class="text-base-content/60 text-sm">Cari</label>
-								<div class="relative">
-									<Icon name="search" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
-									<input
-										type="search"
-										placeholder="Nama kelas, wali kelas, atau guru…"
-										class="select-input select-input-sm w-full bg-transparent border-0 pr-8 pl-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
-										bind:value={cariKelas}
-									/>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				{#if kelasTersaring.length > 0 || ringkasan}
-					<div class="rounded-3xl bg-base-100/80 backdrop-blur-md border border-emerald-200/60 dark:border-emerald-200/40 p-6 shadow-sm">
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<!-- Statistik kelas -->
-							<div>
-								<div class="flex items-baseline mb-2">
-									<div class="text-base-content/60 text-xs">Kelas aktif</div>
-									<div class="font-bold">{ringkasan?.totalKelas ?? 0}</div>
-								</div>
-								<div>
-									<div class="text-base-content/60 text-xs">Murid</div>
-									<div class="font-bold">{ringkasan?.totalMurid ?? 0}</div>
+								<div class="text-base-content/60 text-xs">Murid</div>
+								<div class="font-bold">{ringkasan?.totalMurid ?? 0}</div>
+								<div class="text-base-content/60 text-xs">
+									{ringkasan?.totalLakiLaki ?? 0} L · {ringkasan?.totalPerempuan ?? 0} P
 								</div>
 							</div>
 							<div>
@@ -204,30 +151,88 @@
 							</div>
 							<div>
 								<div class="text-base-content/60 text-xs">Mapel</div>
-								<div class="font-bold">{ringkasan?.jumlahMapel ?? 0}</div>
+								<div class="font-bold">{ringkasan?.totalMapel ?? 0}</div>
+								<div class="text-base-content/60 text-xs">baris mapel × kelas</div>
 							</div>
-						</div>
-
-						<!-- Statistik lanjutan -->
-						<div class="mt-4 grid grid-cols-2 gap-2 text-sm">
 							<div>
 								<div class="text-base-content/60 text-xs">Sakit</div>
 								<div class="font-bold">{ringkasan?.sakit ?? 0}</div>
 							</div>
 							<div>
-								<div class="text-base-content/60 text-xs">Izin</div>
-								<div class="font-bold">{ringkasan?.izin ?? 0}</div>
-							</div>
-							<div>
-								<div class="text-base-content/60 text-xs">Alfa</div>
-								<div class="font-bold">{ringkasan?.alfa ?? 0}</div>
+								<div class="text-base-content/60 text-xs">Izin / Alfa</div>
+								<div class="font-bold">
+									{ringkasan?.izin ?? 0} / {ringkasan?.alfa ?? 0}
+								</div>
 							</div>
 						</div>
 					</div>
-				{/if}
+
+					<!-- Filter & Cari -->
+					<div
+						class="rounded-3xl border border-emerald-200/60 bg-base-100/80 p-4 backdrop-blur-md dark:border-emerald-200/40"
+					>
+						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+							<div class="min-w-0">
+								<label for="filter-semester" class="text-base-content/60 text-sm">Semester</label>
+								<select
+									id="filter-semester"
+									class="select select-bordered w-full"
+									value={semesterTerpilih?.id ?? ''}
+									onchange={(e) => {
+										const val = (e.currentTarget as HTMLSelectElement).value;
+										goto(val ? `/semua-kelas?semester=${val}` : '/semua-kelas', {
+											invalidateAll: true
+										});
+									}}
+								>
+									<option value="">-- Pilih Semester --</option>
+									{#each semesterOptions as semester (semester.id)}
+										<option value={semester.id}>{semester.nama} — {semester.tahunAjaran}</option>
+									{/each}
+								</select>
+							</div>
+							<div class="min-w-0">
+								<label for="filter-fase" class="text-base-content/60 text-sm">Fase</label>
+								<select
+									id="filter-fase"
+									class="select select-bordered w-full"
+									value={filterFase || 'semua'}
+									onchange={(e) => gantiFilterFase((e.currentTarget as HTMLSelectElement).value)}
+								>
+									<option value="semua">Semua fase</option>
+									{#each faseOptions as fase (fase)}
+										<option value={fase}>{fase}</option>
+									{/each}
+								</select>
+							</div>
+							<div class="min-w-0">
+								<label for="filter-cari" class="text-base-content/60 text-sm">Cari</label>
+								<div class="relative">
+									<Icon
+										name="search"
+										class="text-base-content/40 pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+									/>
+									<input
+										id="filter-cari"
+										type="search"
+										placeholder="Nama kelas, wali kelas, atau guru…"
+										class="select-input select-input-sm w-full border-0 bg-transparent pr-8 pl-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40 focus:outline-none"
+										bind:value={cariKelas}
+									/>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
 
 				{#if kelasTersaring.length > 0 || !semesterTerpilih}
 					<div class="mt-6">
+						{#if kelasTersaring.length === 0}
+							<div class="alert alert-info mb-3">
+								<Icon name="info" />
+								<span>Tidak ada kelas yang cocok dengan filter Fase/pencarian.</span>
+							</div>
+						{/if}
 						<div class="overflow-x-auto">
 							<table class="table table-sm">
 								<thead>
@@ -240,20 +245,20 @@
 										<th class="min-w-44">Kelengkapan Nilai</th>
 										<th class="text-right">Rata-rata</th>
 										<th class="text-right">Sakit/Izin/Alfa</th>
-										<th></th>
 									</tr>
 								</thead>
 								<tbody>
 									{#each kelasTersaring as kelas (kelas.id)}
 										{@const status = statusNilai(kelas.persenNilai)}
+										{@const faseLabel = normFase(kelas.fase)}
 										<tr class="hover:bg-emerald-50/30 transition-colors">
 											<td>
 												<a class="link link-hover font-semibold" href="/semua-kelas/{kelas.id}">
 													{kelas.nama}
 												</a>
-												{#if kelas.fase}
-													<span class={`badge badge-soft badge-sm ${faseBadgeClass(kelas.fase)}`}>
-														{kelas.fase}
+												{#if faseLabel}
+													<span class={`badge badge-soft badge-sm ${faseBadgeClass(faseLabel)}`}>
+														{faseLabel}
 													</span>
 												{/if}
 											</td>
@@ -314,20 +319,6 @@
 												<div class="text-base-content/60 text-xs">
 													{kelas.muridDenganPresensi} murid punya data
 												</div>
-											</td>
-											<td>
-												<form method="POST" action="?/pilihKelas">
-													<input type="hidden" name="kelasId" value={kelas.id} />
-													<button
-														class="btn btn-soft btn-info btn-xs shadow-none"
-														type="submit"
-														disabled={!bolehPindah}
-														title={bolehPindah ? 'Jadikan kelas ini kelas aktif' : 'Kelas aktif mengikuti semester aktif'}
-													>
-														<Icon name="right" />
-														Pindah
-													</button>
-												</form>
 											</td>
 										</tr>
 									{/each}

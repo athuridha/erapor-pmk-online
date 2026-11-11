@@ -14,8 +14,10 @@
 		operatorLevel?: string | null;
 		username: string;
 		bisaHapus: boolean;
+		nik: string | null;
 		nik_username: string;
-		kelas: string | null;
+		kelasDiampu: string | null;
+		waliKelas: string | null;
 		mapel: string | null;
 		izin: number;
 		dibuat: string | null;
@@ -58,9 +60,27 @@
 	const daftarMapel = $derived(
 		(data.daftarMapel ?? []) as Array<{ id: number; nama: string; kelasId: number }>
 	);
-	const mapelSesuaiKelas = $derived(
-		kelasBaru ? daftarMapel.filter((m) => String(m.kelasId) === String(kelasBaru)) : daftarMapel
-	);
+	/**
+	 * Opsi Mata Pelajaran untuk dialog Tambah Akun.
+	 *
+	 * Tabel mata_pelajaran menyimpan satu baris per kelas, sehingga daftar
+	 * mentah menampilkan mapel yang sama sampai 20× tanpa keterangan kelas.
+	 * Di sini mapel dikelompokkan per nama:
+	 * - bila Kelas sudah dipilih → hanya mapel kelas itu (id spesifik kelas),
+	 * - bila belum → satu opsi per nama + jumlah kelas, id baris pertama.
+	 */
+	const mapelOpsi = $derived.by(() => {
+		const sumber = kelasBaru
+			? daftarMapel.filter((m) => String(m.kelasId) === String(kelasBaru))
+			: daftarMapel;
+		const perNama = new Map<string, { value: number; nama: string; jumlahKelas: number }>();
+		for (const mapel of sumber) {
+			const ada = perNama.get(mapel.nama);
+			if (ada) ada.jumlahKelas += 1;
+			else perNama.set(mapel.nama, { value: mapel.id, nama: mapel.nama, jumlahKelas: 1 });
+		}
+		return [...perNama.values()].sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+	});
 	const total = $derived(data.total ?? 0);
 	const totalHalaman = $derived(data.totalHalaman ?? 1);
 	const perHalaman = $derived(data.perHalaman ?? 50);
@@ -120,6 +140,20 @@
 		});
 	}
 
+	/** Penolakan hapus akun (masih berelasi) harus tampil sebagai pesan, bukan diam (B5). */
+	function handleGagalHapus({ data: hasil }: { data?: Record<string, unknown> }) {
+		toast({
+			message:
+				typeof hasil?.fail === 'string'
+					? hasil.fail
+					: typeof hasil?.message === 'string'
+						? hasil.message
+						: 'Akun gagal dihapus.',
+			type: 'warning',
+			persist: true
+		});
+	}
+
 	function tutupImpor() {
 		sandiImport = 'username';
 		sandiTetap = '';
@@ -133,14 +167,35 @@
 <div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
 	<div class="mb-4 flex flex-wrap items-start justify-between gap-3">
 		<div class="min-w-0 flex-1">
-			<h2 class="text-xl font-bold">Data Pengguna — {data.kelompok.judul}</h2>
+			<div class="flex flex-wrap items-center gap-3">
+				<h2 class="text-xl font-bold">Data Pengguna — {data.kelompok.judul}</h2>
+				<div class="tabs tabs-box inline-flex">
+					<a
+						href="/master-data/pengguna/guru"
+						class="tab tab-sm font-semibold {kelompokKey === 'guru' ? 'tab-active' : ''}"
+					>
+						Guru
+					</a>
+					<a
+						href="/master-data/pengguna/operator"
+						class="tab tab-sm font-semibold {kelompokKey === 'operator' ? 'tab-active' : ''}"
+					>
+						Operator
+					</a>
+				</div>
+			</div>
 			<p class="text-base-content/80 mt-1 block max-w-2xl text-sm">
 				{data.kelompok.deskripsi}
 			</p>
 		</div>
 		<div class="flex shrink-0 flex-wrap items-center gap-2">
 			{#if terpilih.length}
-				<FormEnhance action="?/hapusMassal" showToast={false} onsuccess={handleSimpan}>
+				<FormEnhance
+					action="?/hapusMassal"
+					showToast={false}
+					onsuccess={handleSimpan}
+					onfailure={handleGagalHapus}
+				>
 					{#snippet children({ submitting })}
 						<input type="hidden" name="ids" value={JSON.stringify(terpilih)} />
 						<button type="submit" class="btn btn-error btn-soft shadow-none" disabled={submitting}>
@@ -225,10 +280,11 @@
 								))}
 						/>
 					</th>
-					<th style="min-width: 140px;">NIK / Username</th>
+					<th style="min-width: 150px;">NIK / Username</th>
 					<th style="min-width: 200px;">Nama</th>
 					<th style="min-width: 110px;">Role</th>
-					<th style="min-width: 110px;">Kelas</th>
+					<th style="min-width: 120px;">Wali Kelas</th>
+					<th style="min-width: 120px;">Kelas Diampu</th>
 					<th style="min-width: 130px;">Mata Pelajaran</th>
 					<th class="text-center hidden xl:table-cell" style="width: 100px;">Hak Akses</th>
 					<th class="hidden xl:table-cell" style="min-width: 110px;">Dibuat</th>
@@ -252,7 +308,15 @@
 									))}
 							/>
 						</td>
-						<td class="whitespace-nowrap">{row.nik_username}</td>
+						<td class="whitespace-nowrap">
+							{#if row.nik}
+								<div class="font-mono text-sm">{row.nik}</div>
+								<div class="text-base-content/60 text-xs">@{row.username}</div>
+							{:else}
+								<div class="text-base-content/60 text-xs italic">NIK belum diisi</div>
+								<div class="text-sm">@{row.username}</div>
+							{/if}
+						</td>
 						<td>
 							<span class="font-medium">{row.nama}</span>
 						</td>
@@ -266,7 +330,20 @@
 								{/if}
 							</div>
 						</td>
-						<td>{row.kelas ?? '—'}</td>
+						<td>
+							{#if row.waliKelas}
+								<span class="badge badge-sm badge-soft badge-info">{row.waliKelas}</span>
+							{:else}
+								<span class="text-base-content/50 text-xs">—</span>
+							{/if}
+						</td>
+						<td>
+							{#if row.kelasDiampu}
+								{row.kelasDiampu}
+							{:else}
+								<span class="text-base-content/50 text-xs">—</span>
+							{/if}
+						</td>
 						<td>{row.mapel ?? '—'}</td>
 						<td class="text-center hidden xl:table-cell">{row.izin}</td>
 						<td class="hidden xl:table-cell whitespace-nowrap">
@@ -275,7 +352,12 @@
 						<td>
 							<div class="flex items-center justify-center gap-1">
 								{#if hapusId === row.id}
-									<FormEnhance action="?/hapus" showToast={false} onsuccess={handleSimpan}>
+									<FormEnhance
+										action="?/hapus"
+										showToast={false}
+										onsuccess={handleSimpan}
+										onfailure={handleGagalHapus}
+									>
 										{#snippet children({ submitting })}
 											<input type="hidden" name="id" value={row.id} />
 											<div class="flex items-center justify-center gap-1">
@@ -326,7 +408,7 @@
 					</tr>
 				{:else}
 					<tr>
-						<td class="p-6 text-center" colspan="9">
+						<td class="p-6 text-center" colspan="10">
 							<em class="opacity-60">Belum ada akun {data.kelompok.judul.toLowerCase()}.</em>
 						</td>
 					</tr>
@@ -633,12 +715,17 @@
 									onchange={(event) => (mapelBaru = event.currentTarget.value)}
 								>
 									<option value="">—</option>
-									{#each mapelSesuaiKelas as mapel (mapel.id)}
-										<option value={mapel.id} selected={mapelBaru === String(mapel.id)}>
-											{mapel.nama}
+									{#each mapelOpsi as mapel (mapel.nama)}
+										<option value={mapel.value} selected={mapelBaru === String(mapel.value)}>
+											{kelasBaru ? mapel.nama : `${mapel.nama} (${mapel.jumlahKelas} kelas)`}
 										</option>
 									{/each}
 								</select>
+								<span class="label-text-alt text-base-content/60 mt-1 text-xs">
+									{kelasBaru
+										? 'Mapel dari kelas yang dipilih.'
+										: 'Pilih kelas dulu untuk daftar mapel spesifik kelas; tanpa kelas, nama mapel digabung dari semua kelas.'}
+								</span>
 							</label>
 							<label class="form-control sm:col-span-2">
 								<span class="label-text mb-1 text-sm">Level Operator (opsional)</span>

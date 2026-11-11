@@ -132,8 +132,8 @@
 				<div class="flex flex-col gap-1">
 					<p class="font-semibold">Tarik data dan kirim nilai ke Dapodik</p>
 					<p class="text-base-content/70 text-sm">
-						Aplikasi ini sudah bisa menarik data dan mengirim matev beserta nilainya langsung ke
-						Dapodik.
+						Aplikasi ini sudah bisa menarik data dan mengirim mata evaluasi (matev) beserta nilainya
+						langsung ke Dapodik.
 					</p>
 				</div>
 			</div>

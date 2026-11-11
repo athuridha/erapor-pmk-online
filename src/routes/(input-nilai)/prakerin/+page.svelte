@@ -41,7 +41,7 @@
 		deskripsi: string;
 	};
 
-	type MuridLite = { id: number; nama: string; kelasId: number };
+	type MuridLite = { id: number; nama: string; kelasId: number; nisn: string | null };
 	type PegawaiLite = { id: number; nama: string };
 	type KelasLite = { id: number; nama: string; fase: string | null };
 
@@ -64,6 +64,7 @@
 	/* ===== modal states ===== */
 	let anggotaModalKelompok = $state<Kelompok | null>(null);
 	let memberToggle = $state<Record<number, boolean>>({});
+	let anggotaSearch = $state('');
 	let kelompokModalOpen = $state(false);
 	let perusahaanModalOpen = $state(false);
 	let confirmDelete = $state<{
@@ -91,11 +92,13 @@
 	function bukaAnggotaModal(item: Kelompok) {
 		anggotaModalKelompok = item;
 		memberToggle = {};
+		anggotaSearch = '';
 	}
 
 	function tutupAnggotaModal() {
 		anggotaModalKelompok = null;
 		memberToggle = {};
+		anggotaSearch = '';
 	}
 
 	function toggleAnggota(muridId: number) {
@@ -105,6 +108,43 @@
 
 	function isAnggotaChecked(muridId: number) {
 		return memberToggle[muridId] ?? anggotaInitial.has(muridId);
+	}
+
+	/** Murid kelas kelompok yang tampil (difilter pencarian nama/NISN). */
+	const anggotaFiltered = $derived.by(() => {
+		const q = anggotaSearch.trim().toLowerCase();
+		if (!q) return anggotaCandidates;
+		return anggotaCandidates.filter(
+			(murid) =>
+				murid.nama.toLowerCase().includes(q) || (murid.nisn ?? '').toLowerCase().includes(q)
+		);
+	});
+
+	const anggotaTerpilih = $derived(anggotaCandidates.filter((m) => isAnggotaChecked(m.id)).length);
+	const anggotaAkanDitambah = $derived(
+		Object.entries(memberToggle).filter(
+			([muridId, checked]) => checked && !anggotaInitial.has(Number(muridId))
+		).length
+	);
+	const anggotaAkanDihapus = $derived(
+		Object.entries(memberToggle).filter(
+			([muridId, checked]) => !checked && anggotaInitial.has(Number(muridId))
+		).length
+	);
+	const semuaAnggotaTampilTercentang = $derived(
+		anggotaFiltered.length > 0 && anggotaFiltered.every((m) => isAnggotaChecked(m.id))
+	);
+
+	/** Centang / lepas semua murid yang sedang tampil sekaligus. */
+	function togolSemuaAnggotaTampil() {
+		const target = !semuaAnggotaTampilTercentang;
+		const next = { ...memberToggle };
+		for (const murid of anggotaFiltered) {
+			const wasMember = anggotaInitial.has(murid.id);
+			if (wasMember === target) delete next[murid.id];
+			else next[murid.id] = target;
+		}
+		memberToggle = next;
 	}
 
 	function bukaConfirm(title: string, message: string, action: string, id: number) {
@@ -463,8 +503,40 @@
 						<span>Belum ada murid di kelas ini.</span>
 					</div>
 				{:else}
-					<div class="mt-4 max-h-72 space-y-1 overflow-y-auto pr-1">
-						{#each anggotaCandidates as murid (murid.id)}
+					<div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+						<label
+							class="input input-sm bg-base-200 dark:bg-base-300 flex grow items-center gap-2 dark:border-none"
+						>
+							<Icon name="search" />
+							<input
+								type="search"
+								class="grow text-xs"
+								placeholder="Cari nama atau NISN murid..."
+								bind:value={anggotaSearch}
+								autocomplete="off"
+							/>
+						</label>
+						<button
+							type="button"
+							class="btn btn-soft btn-sm shadow-none"
+							onclick={togolSemuaAnggotaTampil}
+						>
+							<Icon name="check-square" />
+							{semuaAnggotaTampilTercentang ? 'Lepas Semua' : 'Centang Semua'}
+						</button>
+					</div>
+
+					<div class="text-base-content/70 mt-2 text-xs">
+						Terpilih <strong>{anggotaTerpilih}</strong> dari {anggotaCandidates.length} murid kelas ini{#if anggotaAkanDitambah || anggotaAkanDihapus}
+							· <span class="text-success">+{anggotaAkanDitambah} ditambah</span>
+							{#if anggotaAkanDihapus}
+								· <span class="text-error">−{anggotaAkanDihapus} dihapus</span>
+							{/if}
+						{/if}
+					</div>
+
+					<div class="mt-2 max-h-72 space-y-1 overflow-y-auto pr-1">
+						{#each anggotaFiltered as murid (murid.id)}
 							<label
 								class="flex cursor-pointer items-center gap-3 rounded px-2 py-1 hover:bg-base-200/60"
 							>
@@ -474,13 +546,20 @@
 									checked={isAnggotaChecked(murid.id)}
 									onchange={() => toggleAnggota(murid.id)}
 								/>
-								<span class="text-sm">
+								<span class="min-w-0 grow text-sm">
 									<span class="font-medium">{murid.nama}</span>
+									{#if murid.nisn}
+										<span class="text-base-content/60 block text-xs">NISN {murid.nisn}</span>
+									{/if}
 								</span>
 								{#if anggotaInitial.has(murid.id)}
 									<span class="badge badge-success badge-soft badge-sm">Anggota</span>
 								{/if}
 							</label>
+						{:else}
+							<p class="text-base-content/60 px-2 py-4 text-center text-sm italic">
+								Tidak ada murid yang cocok dengan pencarian.
+							</p>
 						{/each}
 					</div>
 

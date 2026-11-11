@@ -35,9 +35,42 @@
 		});
 	};
 
+	/**
+	 * Gabungkan komponen alamat tanpa menggandakan bagian yang sudah tercakup
+	 * di komponen lain. Kasus nyata: `alamat.jalan` sudah berisi
+	 * "Kutapohaci, Kec. Ciampel, Karawang, Jawa Barat 41363" padahal
+	 * desa/kecamatan/kabupaten/provinsi/kode pos juga terisi terpisah.
+	 */
 	function plainAlamat(alamat?: Alamat | null) {
 		if (!alamat) return '-';
-		return `${alamat.jalan || '-'}, ${alamat.desa || '-'}, ${alamat.kecamatan || '-'}, ${alamat.kabupaten || '-'}, ${alamat.provinsi || '-'}, ${alamat.kodePos || '-'}`;
+		const bagian = [
+			alamat.jalan,
+			alamat.desa,
+			alamat.kecamatan,
+			alamat.kabupaten,
+			alamat.provinsi,
+			alamat.kodePos
+		]
+			.map((nilai) => (nilai ?? '').toString().trim())
+			.filter((nilai) => nilai && nilai !== '-');
+		const normal = (teks: string) =>
+			teks.toLowerCase().replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
+		const hasil: string[] = [];
+		for (const nilai of bagian) {
+			const n = normal(nilai);
+			let tercakup = false;
+			for (let i = 0; i < hasil.length; i += 1) {
+				const ada = normal(hasil[i]);
+				if (ada.includes(n) || n.includes(ada)) {
+					// Simpan versi terpanjang supaya informasi tidak hilang.
+					if (n.length > ada.length) hasil[i] = nilai;
+					tercakup = true;
+					break;
+				}
+			}
+			if (!tercakup) hasil.push(nilai);
+		}
+		return hasil.length ? hasil.join(', ') : '-';
 	}
 
 	function getJenjangLabel(key?: Sekolah['jenjangPendidikan'] | null) {

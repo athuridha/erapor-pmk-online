@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '$lib/components/icon.svelte';
@@ -8,6 +8,8 @@
 	import PindahMuridModal from '$lib/components/murid/pindah-murid-modal.svelte';
 	import AnggotaEkstrakurikulerModal from '$lib/components/ekstrakurikuler/anggota-modal.svelte';
 	import { selectAll, semuaTerpilih, toggleId } from '$lib/utils/bulk-select';
+	import { jenjangPendidikanSederajat } from '$lib/statics';
+	import type { FieldMaster } from '$lib/admin/master-data';
 
 	let { data } = $props();
 
@@ -21,8 +23,11 @@
 	let barisEdit = $state<Record<string, string | number | null> | null>(null);
 	let hapusId = $state<number | null>(null);
 	let terpilih = $state<number[]>([]);
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
 	const entitas = $derived(data.entitas ?? null);
+	/** Entitas dengan halaman editor khusus: tampilkan ringkasan baca-saja. */
+	const ringkas = $derived(Boolean(entitas?.readOnly));
 	const baris = $derived(data.baris ?? []);
 	const relasi = $derived(data.relasi ?? {});
 	const total = $derived(data.total ?? 0);
@@ -37,15 +42,77 @@
 		// Mode tambah: form kosong. Isi field dari baris yang sedang diubah.
 		if (!barisEdit) return '';
 		const nilai = barisEdit[key];
-		return nilai == null ? '' : String(nilai);
+		if (nilai == null) return '';
+		// Nilai lama bisa "F" / "Fase F" — samakan ke opsi dropdown yang ada.
+		if (key === 'fase') return normalisasiFase(String(nilai));
+		return String(nilai);
+	}
+
+	/** Samakan nilai fase lama ("F", "fase f") ke bentuk baku "Fase F". */
+	function normalisasiFase(nilai: string | null | undefined): string {
+		const teks = (nilai ?? '').trim();
+		if (!teks) return '';
+		return `Fase ${teks.replace(/^fase\s+/i, '').toUpperCase()}`;
+	}
+
+	/** Label lengkap varian jenjang (mis. "smk" → "Sekolah Menengah Kejuruan (SMK)"). */
+	function labelVarianJenjang(key: string | null | undefined): string | null {
+		if (!key) return null;
+		for (const grup of Object.values(jenjangPendidikanSederajat)) {
+			const ketemu = grup.find((varian) => varian.key === key);
+			if (ketemu) return ketemu.label;
+		}
+		return key.toUpperCase();
+	}
+
+	/** Nilai field untuk ringkasan baca-saja (label pilihan, bukan nilai mentah). */
+	function formatField(field: FieldMaster, nilai: string | number | null | undefined): string {
+		if (nilai == null || nilai === '') return '—';
+		if (field.key === 'jenjang_pendidikan') {
+			// Data menyimpan base "sma" + varian "smk" → tampilkan label varian.
+			const varian = labelVarianJenjang(String(baris[0]?.jenjang_variant ?? ''));
+			return varian ?? String(nilai).toUpperCase();
+		}
+		if (field.tipe === 'pilihan') {
+			const opsi = field.opsi?.find((item) => item.value === String(nilai));
+			return opsi?.label ?? String(nilai);
+		}
+		if (field.key === 'jenjang_variant') return labelVarianJenjang(String(nilai)) ?? String(nilai);
+		if (field.key === 'fase') return normalisasiFase(String(nilai));
+		return String(nilai);
+	}
+
+	/** Nilai kolom tabel generik (kolom bisa bukan field, mis. nama/gabungan). */
+	function formatNilai(kolomKey: string, nilai: string | number | null | undefined): string {
+		if (nilai == null || nilai === '') return '—';
+		if (kolomKey === 'fase') return normalisasiFase(String(nilai));
+		if (kolomKey === 'jk')
+			return nilai === 'L' ? 'Laki-laki' : nilai === 'P' ? 'Perempuan' : String(nilai);
+		const field = entitas?.fields.find((item) => item.key === kolomKey);
+		if (field) return formatField(field, nilai);
+		return String(nilai);
 	}
 
 	let mapelKelasTerpilih = $state<number[]>([]);
+
+	/**
+	 * FormEnhance menyimpan status validitas internal dan hanya memperbaruinya
+	 * saat ada event input/change. Aksi tombol (Pilih Semua/Kosongkan) dan
+	 * pembukaan dialog mengubah nilai tanpa memicu event, sehingga tombol
+	 * Simpan bisa tetap nonaktif padahal data valid. Picu ulang pemeriksaan.
+	 */
+	function sinkronValiditasForm() {
+		queueMicrotask(() => {
+			const form = document.querySelector<HTMLFormElement>('dialog[open] form');
+			form?.dispatchEvent(new Event('change', { bubbles: true }));
+		});
+	}
 
 	function bukaTambah() {
 		barisEdit = null;
 		mapelKelasTerpilih = (relasi.kelas ?? []).map((k) => Number(k.value));
 		formTerbuka = true;
+		sinkronValiditasForm();
 	}
 
 	function bukaUbah(row: Record<string, string | number | null>) {
@@ -63,6 +130,7 @@
 			}
 		}
 		formTerbuka = true;
+		sinkronValiditasForm();
 	}
 
 	function tutupForm() {
@@ -77,6 +145,20 @@
 		params.delete('page');
 		const query = params.toString();
 		await goto(`${page.url.pathname}${query ? `?${query}` : ''}`, { keepFocus: true });
+	}
+
+	/** Filter saat mengetik (debounce) — Enter tetap bisa memaksa pencarian. */
+	function onSearchInput(value: string) {
+		searchTerm = value;
+		if (searchTimer) clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => applySearch(value), 350);
+	}
+
+	function onSearchKeydown(event: KeyboardEvent) {
+		if (event.key !== 'Enter') return;
+		event.preventDefault();
+		if (searchTimer) clearTimeout(searchTimer);
+		applySearch(searchTerm);
 	}
 
 	async function gotoPage(pageNumber: number) {
@@ -117,6 +199,34 @@
 			type: 'success'
 		});
 	}
+
+	/** Penolakan hapus (masih berelasi) harus tampil sebagai pesan, bukan diam (B5/B6). */
+	function handleGagalHapus({ data: hasil }: { data?: Record<string, unknown> }) {
+		toast({
+			message:
+				typeof hasil?.fail === 'string'
+					? hasil.fail
+					: typeof hasil?.message === 'string'
+						? hasil.message
+						: 'Data gagal dihapus.',
+			type: 'warning',
+			persist: true
+		});
+	}
+
+	/** Penolakan simpan (mis. semester duplikat / relasi belum dilepas) harus tampil (B3/B10). */
+	function handleGagalSimpan({ data: hasil }: { data?: Record<string, unknown> }) {
+		toast({
+			message:
+				typeof hasil?.fail === 'string'
+					? hasil.fail
+					: typeof hasil?.message === 'string'
+						? hasil.message
+						: 'Data gagal disimpan.',
+			type: 'warning',
+			persist: true
+		});
+	}
 </script>
 
 <div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
@@ -129,254 +239,318 @@
 		</div>
 		{#if entitas}
 			<div class="flex flex-wrap items-center gap-2 max-sm:w-full">
-				{#if terpilih.length}
-					<FormEnhance action="?/hapusMassal" showToast={false} onsuccess={handleHapus}>
-						{#snippet children({ submitting })}
-							<input type="hidden" name="ids" value={JSON.stringify(terpilih)} />
-							<button
-								type="submit"
-								class="btn btn-error btn-soft shadow-none"
-								disabled={submitting}
-							>
-								<Icon name="del" />
-								Hapus {terpilih.length} Terpilih
-							</button>
-						{/snippet}
-					</FormEnhance>
-				{/if}
-				{#if entitas.formPengguna}
-					<a
-						class="btn btn-primary btn-soft shadow-none max-sm:w-full"
-						href={entitas.tambahPath ?? '/pengguna/form'}
-					>
-						<Icon name="plus" />
-						Tambah Akun
+				{#if ringkas && entitas.editorPath}
+					<a class="btn btn-primary btn-soft shadow-none max-sm:w-full" href={entitas.editorPath}>
+						<Icon name="edit" />
+						Ubah di {entitas.editorPath}
 					</a>
 				{:else}
-					<button
-						type="button"
-						class="btn btn-primary btn-soft shadow-none max-sm:w-full"
-						onclick={bukaTambah}
-					>
-						<Icon name="plus" />
-						Tambah
-					</button>
-				{/if}
-				{#if entitas.key === 'mata_pelajaran'}
-					<button
-						type="button"
-						class="btn btn-soft shadow-none max-sm:w-full"
-						onclick={() => {
-							kelasTerpilihMassal = [];
-							bulkTerbuka = true;
-						}}
-					>
-						<Icon name="layers" />
-						Tambah Massal
-					</button>
-				{/if}
-				{#if entitas.key === 'kelas'}
-					<button
-						type="button"
-						class="btn btn-soft shadow-none max-sm:w-full"
-						onclick={() => (pindahMuridTerbuka = true)}
-					>
-						<Icon name="move" />
-						Pindah Murid
-					</button>
+					{#if terpilih.length}
+						<FormEnhance
+							action="?/hapusMassal"
+							showToast={false}
+							onsuccess={handleHapus}
+							onfailure={handleGagalHapus}
+						>
+							{#snippet children({ submitting })}
+								<input type="hidden" name="ids" value={JSON.stringify(terpilih)} />
+								<button
+									type="submit"
+									class="btn btn-error btn-soft shadow-none"
+									disabled={submitting}
+								>
+									<Icon name="del" />
+									Hapus {terpilih.length} Terpilih
+								</button>
+							{/snippet}
+						</FormEnhance>
+					{/if}
+					{#if entitas.formPengguna}
+						<a
+							class="btn btn-primary btn-soft shadow-none max-sm:w-full"
+							href={entitas.tambahPath ?? '/pengguna/form'}
+						>
+							<Icon name="plus" />
+							Tambah Akun
+						</a>
+					{:else}
+						<button
+							type="button"
+							class="btn btn-primary btn-soft shadow-none max-sm:w-full"
+							onclick={bukaTambah}
+						>
+							<Icon name="plus" />
+							Tambah
+						</button>
+					{/if}
+					{#if entitas.key === 'mata_pelajaran'}
+						<button
+							type="button"
+							class="btn btn-soft shadow-none max-sm:w-full"
+							onclick={() => {
+								kelasTerpilihMassal = [];
+								bulkTerbuka = true;
+							}}
+						>
+							<Icon name="layers" />
+							Tambah Massal
+						</button>
+					{/if}
+					{#if entitas.key === 'kelas'}
+						<button
+							type="button"
+							class="btn btn-soft shadow-none max-sm:w-full"
+							onclick={() => (pindahMuridTerbuka = true)}
+						>
+							<Icon name="move" />
+							Pindah Murid
+						</button>
+					{/if}
 				{/if}
 			</div>
 		{/if}
 	</div>
 
-	<form
-		class="mb-4 flex flex-col gap-2 sm:flex-row"
-		data-sveltekit-keepfocus
-		data-sveltekit-replacestate
-		onsubmit={(event) => event.preventDefault()}
-	>
-		<div class="join w-full">
-			<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
-				<Icon name="search" />
-				<input
-					type="search"
-					name="q"
-					bind:value={searchTerm}
-					spellcheck="false"
-					placeholder={`Cari ${entitas?.judul.toLowerCase() ?? 'data'}...`}
-					autocomplete="off"
-					onchange={(event) => applySearch((event.currentTarget as HTMLInputElement).value)}
-				/>
-			</label>
-			<select
-				class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink dark:border-none"
-				value={perHalaman}
-				title="Baris per halaman"
-				onchange={(event) =>
-					gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
-			>
-				{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
-					<option value={jumlah}>{jumlah} / hal</option>
-				{/each}
-			</select>
-		</div>
-	</form>
-
-	<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
-		<table class="border-base-200 table border dark:border-none">
-			<thead>
-				<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-					<th style="width: 50px; min-width: 40px;" class="text-center">
-						<input
-							type="checkbox"
-							class="checkbox checkbox-sm"
-							checked={semuaTerpilih(idsHalaman, terpilih)}
-							onchange={(event) =>
-								(terpilih = selectAll(
-									idsHalaman,
-									(event.currentTarget as HTMLInputElement).checked
-								))}
-						/>
-					</th>
-					{#each entitas?.kolom ?? [] as kolom (kolom.key)}
-						<th style="min-width: 140px;">{kolom.label}</th>
-					{/each}
-					<th class="text-center" style="width: 150px;">Aksi</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each baris as row (row.id)}
-					<tr class={terpilih.includes(Number(row.id)) ? 'bg-base-200/40' : undefined}>
-						<td class="text-center">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-sm"
-								checked={terpilih.includes(Number(row.id))}
-								onchange={(event) =>
-									(terpilih = toggleId(
-										terpilih,
-										Number(row.id),
-										(event.currentTarget as HTMLInputElement).checked
-									))}
-							/>
-						</td>
-						{#each entitas?.kolom ?? [] as kolom (kolom.key)}
-							<td>{row[kolom.key] ?? '—'}</td>
-						{/each}
-						<td>
-							<div class="flex items-center justify-center gap-1">
-								{#if hapusId === row.id}
-									<FormEnhance action="?/hapus" showToast={false} onsuccess={handleHapus}>
-										{#snippet children({ submitting })}
-											<input type="hidden" name="id" value={row.id} />
-											<div class="flex items-center justify-center gap-1">
-												<button
-													type="submit"
-													class="btn btn-error btn-soft btn-sm shadow-none"
-													disabled={submitting}
-												>
-													Ya
-												</button>
-												<button
-													type="button"
-													class="btn btn-soft btn-sm shadow-none"
-													onclick={() => (hapusId = null)}
-												>
-													Batal
-												</button>
-											</div>
-										{/snippet}
-									</FormEnhance>
-								{:else}
-									{#if entitas?.key === 'ekstrakurikuler'}
-										<button
-											type="button"
-											class="btn btn-soft btn-sm shadow-none"
-											title="Kelola anggota ekstrakurikuler"
-											onclick={() =>
-												(anggotaEkstra = { id: Number(row.id), nama: String(row.nama ?? '') })}
-										>
-											<Icon name="users" />
-											Anggota
-										</button>
-									{/if}
-									{#if entitas?.formPengguna}
-										<a class="btn btn-soft btn-sm shadow-none" href={`/pengguna/form/${row.id}`}>
-											<Icon name="edit" />
-											Ubah
-										</a>
-									{:else}
-										<button
-											type="button"
-											class="btn btn-soft btn-sm shadow-none"
-											onclick={() => bukaUbah(row)}
-										>
-											<Icon name="edit" />
-											Ubah
-										</button>
-									{/if}
-									<button
-										type="button"
-										class="btn btn-soft btn-error btn-sm shadow-none"
-										onclick={() => (hapusId = row.id)}
-									>
-										<Icon name="del" />
-									</button>
-								{/if}
-							</div>
-						</td>
-					</tr>
-				{:else}
-					<tr>
-						<td class="p-6 text-center" colspan={(entitas?.kolom.length ?? 0) + 2}>
-							<em class="opacity-60">Belum ada data untuk ditampilkan.</em>
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
-
-	{#if totalHalaman > 1}
-		<div class="mt-4 flex justify-center">
-			<div class="join">
-				<button
-					type="button"
-					class="join-item btn"
-					disabled={halamanSekarang <= 1}
-					onclick={() => gotoPage(halamanSekarang - 1)}
-				>
-					«
-				</button>
-				{#each nomorHalaman as nomor, index (index)}
-					{#if nomor === '…'}
-						<button type="button" class="join-item btn" disabled>…</button>
-					{:else}
-						<button
-							type="button"
-							class="join-item btn"
-							class:btn-active={nomor === halamanSekarang}
-							onclick={() => gotoPage(nomor)}
-						>
-							{nomor}
-						</button>
-					{/if}
-				{/each}
-				<button
-					type="button"
-					class="join-item btn"
-					disabled={halamanSekarang >= totalHalaman}
-					onclick={() => gotoPage(halamanSekarang + 1)}
-				>
-					»
-				</button>
-			</div>
+	{#if ringkas && entitas?.editorPath}
+		<div class="alert alert-info alert-soft mb-4 text-sm">
+			<Icon name="info" />
+			<span>
+				Halaman ini hanya <strong>ringkasan baca-saja</strong> agar tidak ada dua editor untuk data
+				yang sama. Semua penambahan, perubahan, dan penghapusan dilakukan di
+				<a class="link font-semibold" href={entitas.editorPath}>{entitas.editorPath}</a>.
+			</span>
 		</div>
 	{/if}
 
-	<p class="mt-3 text-center text-sm opacity-70">
-		Menampilkan {barisTampil} dari {total} data
-	</p>
+	{#if ringkas && entitas?.key === 'sekolah' && baris[0]}
+		<div class="border-base-300 bg-base-100 rounded-md border p-4">
+			<dl class="grid gap-4 sm:grid-cols-2">
+				{#each entitas.fields.filter((field) => field.key !== 'jenjang_variant') as field (field.key)}
+					<div>
+						<dt class="text-base-content/60 text-xs font-semibold">{field.label}</dt>
+						<dd class="text-sm font-medium">{formatField(field, baris[0][field.key])}</dd>
+					</div>
+				{/each}
+			</dl>
+		</div>
+	{:else}
+		<form
+			class="mb-4 flex flex-col gap-2 sm:flex-row"
+			data-sveltekit-keepfocus
+			data-sveltekit-replacestate
+			onsubmit={(event) => event.preventDefault()}
+		>
+			<div class="join w-full">
+				<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
+					<Icon name="search" />
+					<input
+						type="search"
+						name="q"
+						bind:value={searchTerm}
+						spellcheck="false"
+						placeholder={`Cari ${entitas?.judul.toLowerCase() ?? 'data'}... (Enter untuk mencari)`}
+						autocomplete="off"
+						oninput={(event) => onSearchInput((event.currentTarget as HTMLInputElement).value)}
+						onkeydown={onSearchKeydown}
+					/>
+				</label>
+				<select
+					class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink dark:border-none"
+					value={perHalaman}
+					title="Baris per halaman"
+					onchange={(event) =>
+						gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
+				>
+					{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
+						<option value={jumlah}>{jumlah} / hal</option>
+					{/each}
+				</select>
+			</div>
+		</form>
+
+		<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
+			<table class="border-base-200 table border dark:border-none">
+				<thead>
+					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
+						{#if !ringkas}
+							<th style="width: 50px; min-width: 40px;" class="text-center">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-sm"
+									checked={semuaTerpilih(idsHalaman, terpilih)}
+									onchange={(event) =>
+										(terpilih = selectAll(
+											idsHalaman,
+											(event.currentTarget as HTMLInputElement).checked
+										))}
+								/>
+							</th>
+						{/if}
+						{#each entitas?.kolom ?? [] as kolom (kolom.key)}
+							<th style="min-width: 140px;">{kolom.label}</th>
+						{/each}
+						{#if !ringkas}
+							<th class="text-center" style="width: 150px;">Aksi</th>
+						{/if}
+					</tr>
+				</thead>
+				<tbody>
+					{#each baris as row (row.id)}
+						<tr class={terpilih.includes(Number(row.id)) ? 'bg-base-200/40' : undefined}>
+							{#if !ringkas}
+								<td class="text-center">
+									<input
+										type="checkbox"
+										class="checkbox checkbox-sm"
+										checked={terpilih.includes(Number(row.id))}
+										onchange={(event) =>
+											(terpilih = toggleId(
+												terpilih,
+												Number(row.id),
+												(event.currentTarget as HTMLInputElement).checked
+											))}
+									/>
+								</td>
+							{/if}
+							{#each entitas?.kolom ?? [] as kolom (kolom.key)}
+								<td>{formatNilai(kolom.key, row[kolom.key])}</td>
+							{/each}
+							{#if !ringkas}
+								<td>
+									<div class="flex items-center justify-center gap-1">
+										{#if hapusId === row.id}
+											<FormEnhance
+												action="?/hapus"
+												showToast={false}
+												onsuccess={handleHapus}
+												onfailure={handleGagalHapus}
+											>
+												{#snippet children({ submitting })}
+													<input type="hidden" name="id" value={row.id} />
+													<div class="flex items-center justify-center gap-1">
+														<button
+															type="submit"
+															class="btn btn-error btn-soft btn-sm shadow-none"
+															disabled={submitting}
+														>
+															Ya
+														</button>
+														<button
+															type="button"
+															class="btn btn-soft btn-sm shadow-none"
+															onclick={() => (hapusId = null)}
+														>
+															Batal
+														</button>
+													</div>
+												{/snippet}
+											</FormEnhance>
+										{:else}
+											{#if entitas?.key === 'ekstrakurikuler'}
+												<button
+													type="button"
+													class="btn btn-soft btn-sm shadow-none"
+													title="Kelola anggota ekstrakurikuler"
+													onclick={() =>
+														(anggotaEkstra = { id: Number(row.id), nama: String(row.nama ?? '') })}
+												>
+													<Icon name="users" />
+													Anggota
+												</button>
+												<a
+													class="btn btn-soft btn-sm shadow-none"
+													title="Atur Tujuan Pembelajaran ekstrakurikuler"
+													href={`/ekstrakurikuler/tp-ekstra?ekstrakurikulerId=${row.id}`}
+												>
+													<Icon name="book" />
+													Edit TP
+												</a>
+											{/if}
+											{#if entitas?.formPengguna}
+												<a
+													class="btn btn-soft btn-sm shadow-none"
+													href={`/pengguna/form/${row.id}`}
+												>
+													<Icon name="edit" />
+													Ubah
+												</a>
+											{:else}
+												<button
+													type="button"
+													class="btn btn-soft btn-sm shadow-none"
+													onclick={() => bukaUbah(row)}
+												>
+													<Icon name="edit" />
+													Ubah
+												</button>
+											{/if}
+											<button
+												type="button"
+												class="btn btn-soft btn-error btn-sm shadow-none"
+												onclick={() => (hapusId = row.id)}
+											>
+												<Icon name="del" />
+											</button>
+										{/if}
+									</div>
+								</td>
+							{/if}
+						</tr>
+					{:else}
+						<tr>
+							<td
+								class="p-6 text-center"
+								colspan={(entitas?.kolom.length ?? 0) + (ringkas ? 0 : 2)}
+							>
+								<em class="opacity-60">Belum ada data untuk ditampilkan.</em>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+
+		{#if totalHalaman > 1}
+			<div class="mt-4 flex justify-center">
+				<div class="join">
+					<button
+						type="button"
+						class="join-item btn"
+						disabled={halamanSekarang <= 1}
+						onclick={() => gotoPage(halamanSekarang - 1)}
+					>
+						«
+					</button>
+					{#each nomorHalaman as nomor, index (index)}
+						{#if nomor === '…'}
+							<button type="button" class="join-item btn" disabled>…</button>
+						{:else}
+							<button
+								type="button"
+								class="join-item btn"
+								class:btn-active={nomor === halamanSekarang}
+								onclick={() => gotoPage(nomor)}
+							>
+								{nomor}
+							</button>
+						{/if}
+					{/each}
+					<button
+						type="button"
+						class="join-item btn"
+						disabled={halamanSekarang >= totalHalaman}
+						onclick={() => gotoPage(halamanSekarang + 1)}
+					>
+						»
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		<p class="mt-3 text-center text-sm opacity-70">
+			Menampilkan {barisTampil} dari {total} data
+		</p>
+	{/if}
 </div>
 
 {#if entitas && formTerbuka}
@@ -387,7 +561,12 @@
 				{entitas.judul}
 			</h3>
 
-			<FormEnhance action="?/simpan" showToast={false} onsuccess={handleSimpan}>
+			<FormEnhance
+				action="?/simpan"
+				showToast={false}
+				onsuccess={handleSimpan}
+				onfailure={handleGagalSimpan}
+			>
 				{#snippet children({ submitting, invalid })}
 					{#if barisEdit}
 						<input type="hidden" name="id" value={barisEdit.id} />
@@ -455,8 +634,10 @@
 													<button
 														type="button"
 														class="btn btn-ghost btn-xs text-primary text-xs"
-														onclick={() =>
-															(mapelKelasTerpilih = semuaOpsiKelas.map((k) => Number(k.value)))}
+														onclick={() => {
+															mapelKelasTerpilih = semuaOpsiKelas.map((k) => Number(k.value));
+															sinkronValiditasForm();
+														}}
 													>
 														Pilih Semua
 													</button>
@@ -464,7 +645,10 @@
 													<button
 														type="button"
 														class="btn btn-ghost btn-xs text-xs text-error"
-														onclick={() => (mapelKelasTerpilih = [])}
+														onclick={() => {
+															mapelKelasTerpilih = [];
+															sinkronValiditasForm();
+														}}
 													>
 														Kosongkan
 													</button>
@@ -510,11 +694,24 @@
 														>Semua Kelas Terpilih</span
 													>
 												{:else if mapelKelasTerpilih.length === 0}
-													<span class="badge badge-error badge-xs font-semibold"
-														>Wajib pilih minimal 1 kelas</span
-													>
+													{#if barisEdit}
+														<span class="badge badge-warning badge-xs font-semibold"
+															>Tanpa kelas — simpan untuk melepas mapel dari semua kelas</span
+														>
+													{:else}
+														<span class="badge badge-warning badge-xs font-semibold"
+															>Pilih minimal 1 kelas tujuan</span
+														>
+													{/if}
 												{/if}
 											</div>
+											{#if barisEdit}
+												<p class="text-base-content/60 text-xs">
+													Menghapus centang semua kelas lalu menekan Simpan akan melepas mapel ini
+													dari seluruh kelas. Baris mapel dihapus; bila kelas tersebut sudah punya
+													nilai/relasi, penyimpanan dibatalkan dengan rincian alasannya.
+												</p>
+											{/if}
 										</div>
 									{:else}
 										<select
@@ -615,7 +812,12 @@
 				dengan nama sama otomatis dilewati.
 			</p>
 
-			<FormEnhance action="?/simpanMassal" showToast={false} onsuccess={handleSimpan}>
+			<FormEnhance
+				action="?/simpanMassal"
+				showToast={false}
+				onsuccess={handleSimpan}
+				onfailure={handleGagalSimpan}
+			>
 				{#snippet children({ submitting, invalid })}
 					<div class="grid gap-3 sm:grid-cols-2">
 						<label class="form-control">

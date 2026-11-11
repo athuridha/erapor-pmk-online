@@ -27,6 +27,7 @@ import { ensureAiSettingsSchema } from './ensure-ai-settings';
 import { ensureUserAiSettingsSchema } from './ensure-user-ai-settings';
 import { ensureBukuTamuSettingsSchema } from './ensure-buku-tamu-settings';
 import { ensureCoreSchema } from './ensure-core-schema';
+import { ensureDataCleanup } from './ensure-data-cleanup';
 import { ensureDapodikSchema } from './ensure-dapodik';
 import { ensureJadwalBellSchema } from './ensure-jadwal-bell';
 import { ensureLoginAttemptsSchema } from './ensure-login-attempts';
@@ -86,6 +87,10 @@ export async function runStartupEnsures() {
 	await ensurePermissionMigration();
 	await ensureKepalaSekolahAccounts();
 	await ensureSmkPratamaMulya();
+	// Pembersihan data uji + normalisasi (fase, NIP placeholder, alamat sekolah
+	// ganda, index unik NIK/NIP). Dijalankan SETELAH seed agar nilai bawaan
+	// ensureSmkPratamaMulya tidak menimpa hasil normalisasi.
+	await ensureDataCleanup();
 	// Dedup pegawai + pembuatan/promosi akun wali kelas. Dahulu dipicu dari load
 	// halaman /pengguna (efek samping GET); kini cukup sekali per proses di sini.
 	await ensurePegawaiConsolidation();

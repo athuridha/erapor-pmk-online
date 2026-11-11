@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import SvelteURLSearchParams from '$lib/svelte-helpers/url-search-params';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -200,7 +200,7 @@
 		</div>
 
 		<div class="stat">
-			<div class="stat-title">Estrakurikuler</div>
+			<div class="stat-title">Ekstrakurikuler</div>
 			<div class="stat-value text-lg">{summary.totalEkstrakurikuler}</div>
 			<div class="stat-desc text-wrap">Jumlah kegiatan ekstrakurikuler</div>
 		</div>

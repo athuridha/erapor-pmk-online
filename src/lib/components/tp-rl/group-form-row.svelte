@@ -13,6 +13,7 @@
 		onSubmitSuccess: () => void;
 		onFormRegistered: (formId: string) => void;
 		onSubmittingChange: (submitting: boolean) => void;
+		kelasDiampuLain?: Array<{ mapelId: number; kelasNama: string }>;
 	}
 
 	let {
@@ -23,7 +24,8 @@
 		onOpenDeleteEntry,
 		onSubmitSuccess,
 		onFormRegistered,
-		onSubmittingChange
+		onSubmittingChange,
+		kelasDiampuLain = []
 	}: Props = $props();
 
 	function createFormId() {
@@ -127,6 +129,31 @@
 				{/if}
 			{/each}
 		</div>
+		{#if kelasDiampuLain && kelasDiampuLain.length > 0}
+			<div
+				class="mt-2 rounded-xl bg-base-100/80 p-2.5 border border-base-200 dark:border-base-300 shadow-2xs"
+			>
+				<label class="label cursor-pointer justify-start gap-2 py-0">
+					<input
+						type="checkbox"
+						class="checkbox checkbox-xs checkbox-primary"
+						form={formId}
+						name="terapkanSemuaKelas"
+						value="1"
+						checked
+					/>
+					<span class="label-text text-xs font-semibold text-base-content">
+						Terapkan juga ke <strong>{kelasDiampuLain.length} kelas lain</strong> yang Anda ampu
+						<span class="opacity-70 font-normal"
+							>(
+							{kelasDiampuLain.map((k) => k.kelasNama).join(', ')}
+							)</span
+						>
+					</span>
+				</label>
+			</div>
+		{/if}
+
 		<FormEnhance
 			id={formId}
 			action="?/save"

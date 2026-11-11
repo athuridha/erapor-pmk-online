@@ -201,6 +201,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 						id: original.user.id,
 						username: original.user.username,
 						type: original.user.type,
+						operatorLevel: original.user.operatorLevel ?? null,
 						pegawaiId: original.user.pegawaiId
 					};
 				} else {
@@ -253,16 +254,28 @@ const authGuard: Handle = async ({ event, resolve }) => {
 	// the default Admin/Admin123 account on first login). Only /pengaturan,
 	// /sekolah/form (needed on a fresh install before any sekolah exists), and
 	// /logout are reachable until the password is replaced.
-	if (event.locals.user?.mustChangePassword) {
-		const allowed =
-			event.url.pathname === '/pengaturan' ||
-			event.url.pathname === '/sekolah/form' ||
+	// Mode impersonasi (switch akun) dikecualikan agar admin tidak terkunci saat meninjau akun guru.
+	if (event.locals.user?.mustChangePassword && !event.locals.impersonator) {
+		// API endpoints always blocked until password is changed.
+		if (event.url.pathname.startsWith('/api/')) {
+			throw error(403, 'Silakan perbarui kata sandi terlebih dahulu.');
+		}
+		// Allow access to explicit force pages (change-password) and switch-user API.
+		const allowedPaths = [
+			'/pengaturan',
+			'/sekolah/form',
 			// Modal sync Dapodik dirender di atas /sekolah/form (init) — ikut diizinkan.
-			event.url.pathname === '/sekolah/form/sync-dapodik' ||
-			event.url.pathname === '/logout';
-		if (!allowed) {
+			'/sekolah/form/sync-dapodik',
+			'/logout',
+			'/api/auth/switch-user'
+		];
+		const isAllowed = allowedPaths.some(
+			(p) => event.url.pathname === p || event.url.pathname.startsWith(p + '/')
+		);
+		if (!isAllowed && event.request.method !== 'GET') {
 			throw redirect(303, '/pengaturan?force=1');
 		}
+		// GET requests (pages) are allowed and will show the forced-password-change modal.
 	}
 
 	if (event.locals.user && isLoginPath) {

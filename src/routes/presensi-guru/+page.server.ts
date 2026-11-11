@@ -9,9 +9,11 @@ import {
 import { buildLiburDates } from '$lib/server/absen/libur';
 import { dateStr, isValidDate, todayDateString } from '$lib/server/absen/utils';
 import { isSchoolDay } from '$lib/hari-sekolah';
-import { isAdminUser } from '../pengguna/permissions';
+import { isAuthorizedUser } from '../pengguna/permissions';
 
 const PER_PAGE = 20;
+/** Single source of truth for who may open this page (menu uses the same key). */
+const REQUIRED_PERMISSION = 'administrasi_presensi_guru';
 
 type PageState = {
 	search: string | null;
@@ -27,8 +29,8 @@ export async function load({ locals, url, depends }) {
 
 	if (!locals.user) throw redirect(303, '/login');
 
-	if (!isAdminUser(locals.user)) {
-		throw redirect(303, '/forbidden?required=admin');
+	if (!isAuthorizedUser([REQUIRED_PERMISSION], locals.user)) {
+		throw redirect(303, `/forbidden?required=${REQUIRED_PERMISSION}`);
 	}
 
 	await ensurePresensiGuruSchema();

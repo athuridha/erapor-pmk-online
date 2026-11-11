@@ -32,6 +32,7 @@ declare global {
 				id: number;
 				username: string;
 				type: string;
+				operatorLevel?: string | null;
 				pegawaiId?: number | null;
 			};
 			session?: (Pick<AuthSession, 'id' | 'expiresAt'> & { tokenHash?: string }) | undefined;

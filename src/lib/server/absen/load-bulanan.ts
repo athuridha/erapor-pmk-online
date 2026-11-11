@@ -1,4 +1,4 @@
-﻿import db from '$lib/server/db';
+import db from '$lib/server/db';
 import {
 	tableMurid,
 	tableKetidakhadiranHarian,
@@ -281,10 +281,10 @@ export async function loadBulanan(params: {
 					if (nullKh === 'sakit') return 'S';
 					if (nullKh === 'izin') return 'I';
 					if (nullKh === 'alfa') return 'TK';
-					return 'TK';
 				}
 				if (nullAbsensiSet.has(nullKey)) return 'H';
-				return 'TK';
+				// Hari belum diisi: kosong, bukan ketidakhadiran.
+				return '';
 			}
 			const mpId = firstMp.mpId;
 			const khKey = `${muridId}:${tgl}:${mpId}`;
@@ -301,11 +301,11 @@ export async function loadBulanan(params: {
 				if (keterangan === 'sakit') return 'S';
 				if (keterangan === 'izin') return 'I';
 				if (keterangan === 'alfa') return 'TK';
-				return 'TK';
 			}
 			if (absensiSet.has(`${muridId}:${tgl}`) || nullAbsensiSet.has(`${muridId}:${tgl}`))
 				return 'H';
-			return 'TK';
+			// Hari belum diisi: kosong, bukan ketidakhadiran.
+			return '';
 		}
 		const keterangan = khMap.get(`${muridId}:${tgl}`);
 		if (keterangan !== undefined) {
@@ -313,10 +313,10 @@ export async function loadBulanan(params: {
 			if (keterangan === 'sakit') return 'S';
 			if (keterangan === 'izin') return 'I';
 			if (keterangan === 'alfa') return 'TK';
-			return 'TK';
 		}
 		if (!isWaliKelasMasukPulang && absensiSet.has(`${muridId}:${tgl}`)) return 'H';
-		return 'TK';
+		// Hari belum diisi: kosong, bukan ketidakhadiran.
+		return '';
 	}
 
 	const bulananRows: BulananRow[] = semuaMurid.map((murid, index) => {

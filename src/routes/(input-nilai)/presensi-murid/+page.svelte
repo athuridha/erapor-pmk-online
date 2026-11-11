@@ -2,6 +2,7 @@
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '$lib/components/icon.svelte';
+	import FormEnhance from '$lib/components/form-enhance.svelte';
 	import { showModal } from '$lib/components/global-modal.svelte';
 	import IsiSekaligusModal from '$lib/components/absen/isi-sekaligus-modal.svelte';
 	import DownloadRekapModal from '$lib/components/absen/download-rekap-modal.svelte';
@@ -197,6 +198,42 @@
 	});
 	let raporEditingSubmitting = $state(false);
 
+	// Multi-select massal (khusus mode Harian): centang beberapa murid lalu
+	// terapkan satu status MASUK/PULANG sekaligus lewat aksi `?/simpanMassal`.
+	let selectedMuridIds = $state<number[]>([]);
+	let bulkMasuk = $state('');
+	let bulkPulang = $state('');
+	let bulkSubmitting = $state(false);
+	const bulkFormId = 'bulk-presensi-massal-form';
+
+	const showBulkPulang = $derived(data.tipePresensi === 'masuk_pulang');
+	const canBulkSelect = $derived(data.mode === 'harian' && canEdit);
+	const bulkCount = $derived(selectedMuridIds.length);
+	const muridIdsPayload = $derived(JSON.stringify(selectedMuridIds));
+
+	function toggleSelectMurid(muridId: number, checked: boolean) {
+		if (checked) {
+			if (!selectedMuridIds.includes(muridId)) {
+				selectedMuridIds = [...selectedMuridIds, muridId];
+			}
+		} else {
+			selectedMuridIds = selectedMuridIds.filter((id) => id !== muridId);
+		}
+	}
+
+	function toggleSelectAll(checked: boolean) {
+		selectedMuridIds = checked ? data.daftarMurid.map((murid) => murid.id) : [];
+	}
+
+	function clearSelection() {
+		selectedMuridIds = [];
+	}
+
+	async function handleBulkSuccess() {
+		selectedMuridIds = [];
+		await invalidate('app:absen');
+	}
+
 	$effect(() => {
 		if (searchTimer) return;
 		const latestSearchTerm = data.page.search ?? '';
@@ -215,6 +252,20 @@
 		if (raporEditingRowId == null) {
 			raporEditingValues = { sakit: 0, izin: 0, alfa: 0 };
 		}
+	});
+
+	// Keluar dari mode edit & kosongkan pilihan massal saat konteks tabel
+	// berganti (tanggal/mode/bulan/halaman/pencarian).
+	$effect(() => {
+		void data.tanggal;
+		void data.mode;
+		void data.bulan;
+		void data.tahun;
+		void data.page.currentPage;
+		void data.page.search;
+		editingRowId = null;
+		raporEditingRowId = null;
+		selectedMuridIds = [];
 	});
 
 	import SvelteURLSearchParams from '$lib/svelte-helpers/url-search-params';
@@ -338,8 +389,6 @@
 	const hasMurid = $derived.by(() => data.muridCount > 0);
 	const hasFilteredMurid = $derived.by(() => data.totalMurid > 0);
 
-	let selectedTanggal = $derived(data.tanggal);
-
 	const isToday = $derived.by(() => {
 		const y = serverTime.now.getFullYear();
 		const m = String(serverTime.now.getMonth() + 1).padStart(2, '0');
@@ -347,17 +396,42 @@
 		return data.tanggal === `${y}-${m}-${day}`;
 	});
 
-	let selectedMode = $derived(data.mode);
-	let selectedBulan = $derived(
+	type PresensiMode = PageData['mode'];
+
+	// Pemilih mode/tanggal disimpan sebagai state writable (bukan `$derived`)
+	// supaya binding <select>/<input> selalu mengikuti pilihan pengguna; effect
+	// menyinkronkan ulang saat server mengembalikan mode/tanggal baru.
+	// svelte-ignore state_referenced_locally
+	let selectedMode = $state<PresensiMode>(data.mode);
+	// svelte-ignore state_referenced_locally
+	let selectedTanggal = $state(data.tanggal);
+	// svelte-ignore state_referenced_locally
+	let selectedBulan = $state<number>(
 		data.mode === 'bulanan' || data.mode === 'persentase_bulanan'
 			? data.bulan
 			: serverTime.now.getMonth() + 1
 	);
-	let selectedTahun = $derived(
+	// svelte-ignore state_referenced_locally
+	let selectedTahun = $state<number>(
 		data.mode === 'bulanan' || data.mode === 'persentase_bulanan'
 			? data.tahun
 			: serverTime.now.getFullYear()
 	);
+
+	$effect(() => {
+		selectedMode = data.mode;
+	});
+
+	$effect(() => {
+		selectedTanggal = data.tanggal;
+	});
+
+	$effect(() => {
+		if (data.mode === 'bulanan' || data.mode === 'persentase_bulanan') {
+			selectedBulan = data.bulan;
+			selectedTahun = data.tahun;
+		}
+	});
 
 	let simulasiHari = $state(page.url.searchParams.get('simHari') ?? 'Senin');
 	let simulasiJam = $state(page.url.searchParams.get('simJam') ?? '07:00');
@@ -383,29 +457,30 @@
 		showSimulasi = false;
 	}
 
-	function handleModeChange() {
+	function handleModeChange(mode: PresensiMode = selectedMode) {
+		selectedMode = mode;
 		void applyNavigation((params) => {
-			if (selectedMode === 'bulanan') {
+			if (mode === 'bulanan') {
 				params.set('mode', 'bulanan');
 				params.set('bulan', String(selectedBulan));
 				params.set('tahun', String(selectedTahun));
 				params.delete('tanggal');
-			} else if (selectedMode === 'persentase_bulanan') {
+			} else if (mode === 'persentase_bulanan') {
 				params.set('mode', 'persentase_bulanan');
 				params.set('bulan', String(selectedBulan));
 				params.set('tahun', String(selectedTahun));
 				params.delete('tanggal');
-			} else if (selectedMode === 'persentase_semester') {
+			} else if (mode === 'persentase_semester') {
 				params.set('mode', 'persentase_semester');
 				params.delete('bulan');
 				params.delete('tahun');
 				params.delete('tanggal');
-			} else if (selectedMode === 'rapor') {
+			} else if (mode === 'rapor') {
 				params.set('mode', 'rapor');
 				params.delete('bulan');
 				params.delete('tahun');
 				params.delete('tanggal');
-			} else if (selectedMode === 'persentase_harian') {
+			} else if (mode === 'persentase_harian') {
 				params.set('mode', 'persentase_harian');
 				params.delete('bulan');
 				params.delete('tahun');
@@ -425,38 +500,32 @@
 	}
 
 	function viewDate() {
-		if (data.mode === 'bulanan' || data.mode === 'persentase_bulanan') {
-			void applyNavigation((params) => {
-				params.set('mode', data.mode);
+		// Terapkan mode yang sedang dipilih di dropdown + tanggal/bulan yang
+		// diisi, sehingga perubahan mode tetap berlaku saat tombol "Lihat
+		// presensi" diklik (tidak hanya mengandalkan onchange).
+		void applyNavigation((params) => {
+			params.set('mode', selectedMode);
+			params.delete('page');
+			if (selectedMode === 'bulanan' || selectedMode === 'persentase_bulanan') {
 				params.set('bulan', String(selectedBulan));
 				params.set('tahun', String(selectedTahun));
-				params.delete('page');
 				params.delete('tanggal');
-				if (searchTerm.trim()) {
-					params.set('q', searchTerm.trim());
-				} else {
-					params.delete('q');
-				}
-			});
-		} else if (data.mode === 'rapor' || data.mode === 'persentase_semester') {
-			// No date navigation for rapor/persentase_semester mode
-			return;
-		} else if (data.mode === 'persentase_harian') {
-			void applyNavigation((params) => {
-				params.set('mode', 'persentase_harian');
-				params.set('tanggal', selectedTanggal);
-				params.delete('page');
-				params.delete('q');
+			} else if (selectedMode === 'rapor' || selectedMode === 'persentase_semester') {
 				params.delete('bulan');
 				params.delete('tahun');
-			});
-		} else {
-			void applyNavigation((params) => {
+				params.delete('tanggal');
+			} else {
 				params.set('tanggal', selectedTanggal);
-				params.delete('page');
+				params.delete('bulan');
+				params.delete('tahun');
+			}
+			const cleaned = searchTerm.trim();
+			if (cleaned) {
+				params.set('q', cleaned);
+			} else {
 				params.delete('q');
-			});
-		}
+			}
+		});
 	}
 
 	function resetToToday() {
@@ -889,18 +958,10 @@
 			</label>
 			<select
 				class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink truncate dark:border-none"
-				value={selectedMode}
+				bind:value={selectedMode}
 				title="Pilih mode presensi"
-				onchange={(e) => {
-					selectedMode = (e.currentTarget as HTMLSelectElement).value as
-						| 'harian'
-						| 'bulanan'
-						| 'rapor'
-						| 'persentase_harian'
-						| 'persentase_bulanan'
-						| 'persentase_semester';
-					handleModeChange();
-				}}
+				onchange={(event) =>
+					handleModeChange((event.currentTarget as HTMLSelectElement).value as PresensiMode)}
 			>
 				<option value="harian">Harian</option>
 				<option value="bulanan">Bulanan</option>
@@ -913,6 +974,81 @@
 			</select>
 		</div>
 	</form>
+
+	{#if canBulkSelect && bulkCount > 0}
+		<div
+			class="border-base-300 bg-base-200/70 mt-4 flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center"
+		>
+			<span class="text-sm font-semibold">{bulkCount} murid dipilih</span>
+			<label class="flex items-center gap-2 text-sm">
+				<span>Masuk</span>
+				<select
+					class="select select-sm bg-base-100 w-28 dark:border-none"
+					bind:value={bulkMasuk}
+					disabled={bulkSubmitting}
+					title="Status masuk untuk murid terpilih"
+				>
+					<option value="">Hadir</option>
+					<option value="sakit">Sakit</option>
+					<option value="izin">Izin</option>
+					<option value="alfa">TK</option>
+				</select>
+			</label>
+			{#if showBulkPulang}
+				<label class="flex items-center gap-2 text-sm">
+					<span>Pulang</span>
+					<select
+						class="select select-sm bg-base-100 w-28 dark:border-none"
+						bind:value={bulkPulang}
+						disabled={bulkSubmitting}
+						title="Status pulang untuk murid terpilih"
+					>
+						<option value="">Hadir</option>
+						<option value="sakit">Sakit</option>
+						<option value="izin">Izin</option>
+						<option value="alfa">TK</option>
+					</select>
+				</label>
+			{/if}
+			<div class="flex gap-2 sm:ml-auto">
+				<button
+					type="button"
+					class="btn btn-soft btn-sm shadow-none"
+					onclick={clearSelection}
+					disabled={bulkSubmitting}
+				>
+					Batal pilihan
+				</button>
+				<FormEnhance
+					id={bulkFormId}
+					action="?/simpanMassal"
+					submitStateChange={(value) => (bulkSubmitting = value)}
+					onsuccess={handleBulkSuccess}
+					showToast
+				>
+					{#snippet children({ submitting })}
+						<input type="hidden" name="tanggal" value={data.tanggal} />
+						<input type="hidden" name="kelasId" value={kelasAktif?.id ?? ''} />
+						<input type="hidden" name="mataPelajaranId" value={data.harianMapelId ?? ''} />
+						<input type="hidden" name="muridIds" value={muridIdsPayload} />
+						<input type="hidden" name="masuk" value={bulkMasuk} />
+						<input type="hidden" name="pulang" value={showBulkPulang ? bulkPulang : ''} />
+					{/snippet}
+				</FormEnhance>
+				<button
+					type="submit"
+					form={bulkFormId}
+					class="btn btn-primary btn-sm shadow-none"
+					disabled={bulkSubmitting}
+				>
+					{#if bulkSubmitting}
+						<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+					{/if}
+					Simpan Massal
+				</button>
+			</div>
+		</div>
+	{/if}
 
 	{#if !hasMurid}
 		<div class="alert alert-soft alert-warning mt-6">
@@ -1025,7 +1161,17 @@
 			jenisPresensi={data.jenisPresensi}
 			tipePresensi={data.tipePresensi}
 			harianMapelId={data.harianMapelId}
+			selectable={canBulkSelect}
+			selectedIds={selectedMuridIds}
+			onToggleSelect={toggleSelectMurid}
+			onToggleAll={toggleSelectAll}
 		/>
 		<AbsenPagination {pages} {currentPage} onPageClick={handlePageClick} />
 	{/if}
 </div>
+
+<style>
+	:global(form#bulk-presensi-massal-form) {
+		display: contents;
+	}
+</style>

@@ -1,10 +1,13 @@
-﻿import db from '$lib/server/db';
+import db from '$lib/server/db';
 import {
 	tableAlamat,
+	tableAsesmenFormatif,
 	tableAsesmenSumatif,
 	tableAuthUser,
 	tableEkstrakurikuler,
+	tableJurnalMengajar,
 	tableKelas,
+	tableKunciNilai,
 	tableMataPelajaran,
 	tableMurid,
 	tableMuridEkstrakurikuler,
@@ -12,6 +15,7 @@ import {
 	tableSekolah,
 	tableSemester,
 	tableTahunAjaran,
+	tableTujuanPembelajaran,
 	tableWaliMurid
 } from '$lib/server/db/schema';
 import { and, asc, count, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
@@ -60,7 +64,7 @@ export async function loadOpsiRelasi(sekolahId: number): Promise<PetaRelasi> {
 		db
 			.select({ id: tablePegawai.id, nama: tablePegawai.nama })
 			.from(tablePegawai)
-			.where(eq(tablePegawai.sekolahId, sekolahId))
+			.where(and(eq(tablePegawai.sekolahId, sekolahId), ne(tablePegawai.nama, '-')))
 			.orderBy(asc(tablePegawai.nama))
 	]);
 
@@ -218,6 +222,39 @@ async function muatSemuaBaris(
 				.groupBy(tableMataPelajaran.nama)
 				.orderBy(
 					sql`coalesce(min(${tableMataPelajaran.urutan}), 999)`,
+					asc(tableMataPelajaran.nama)
+				);
+
+			return rows.map((r) => ({
+				...r,
+				kode: r.kode ?? '—',
+				pengampu: r.pengampu || '—',
+				kelas: r.kelas || '—'
+			}));
+		}
+		case 'pengampu': {
+			const rows = await db
+				.select({
+					id: tableMataPelajaran.id,
+					nama: tableMataPelajaran.nama,
+					kode: tableMataPelajaran.kode,
+					kelas: tableKelas.nama,
+					pengampu: tablePegawai.nama
+				})
+				.from(tableMataPelajaran)
+				.innerJoin(tableKelas, eq(tableMataPelajaran.kelasId, tableKelas.id))
+				.leftJoin(tablePegawai, eq(tableMataPelajaran.pengampuId, tablePegawai.id))
+				.where(
+					q
+						? and(
+								eq(tableKelas.sekolahId, sekolahId),
+								sql`(${tableMataPelajaran.nama} like ${like} or ${tableKelas.nama} like ${like} or ${tablePegawai.nama} like ${like})`
+							)
+						: eq(tableKelas.sekolahId, sekolahId)
+				)
+				.orderBy(
+					asc(tableKelas.nama),
+					sql`coalesce(${tableMataPelajaran.urutan}, 999)`,
 					asc(tableMataPelajaran.nama)
 				);
 
@@ -418,6 +455,20 @@ function teks(formData: FormData, key: string) {
 	return typeof nilai === 'string' ? nilai.trim() : '';
 }
 
+/** D1/SQLite melempar UNIQUE constraint sebagai error mentah; deteksi untuk pesan ramah. */
+function isUniqueConstraintError(error: unknown): boolean {
+	const message = error instanceof Error ? error.message : String(error ?? '');
+	return /unique constraint failed/i.test(message);
+}
+
+/** Rangkai daftar relasi yang menghalangi penghapusan. */
+function rincianRelasi(daftar: Array<[jumlah: number, label: string]>): string {
+	return daftar
+		.filter(([jumlah]) => jumlah > 0)
+		.map(([jumlah, label]) => `${jumlah} ${label}`)
+		.join(', ');
+}
+
 function angkaAtau(formData: FormData, key: string, fallback: number | null) {
 	const mentah = teks(formData, key);
 	if (mentah === '') return fallback;
@@ -462,30 +513,77 @@ export async function simpanMasterData(
 				isAktif: formData.get('is_aktif') === 'on' || formData.get('is_aktif') === 'true',
 				updatedAt: now
 			};
-			if (id) {
-				await db
-					.update(tableTahunAjaran)
-					.set(values)
-					.where(and(eq(tableTahunAjaran.id, id), eq(tableTahunAjaran.sekolahId, sekolahId)));
-				return { message: 'Tahun ajaran diperbarui.' };
+			// Nama tahun ajaran unik per sekolah; tampilkan pesan jelas, bukan 500.
+			const bentrok = await db
+				.select({ id: tableTahunAjaran.id })
+				.from(tableTahunAjaran)
+				.where(
+					and(
+						eq(tableTahunAjaran.sekolahId, sekolahId),
+						eq(tableTahunAjaran.nama, values.nama),
+						id ? ne(tableTahunAjaran.id, id) : undefined
+					)
+				)
+				.limit(1);
+			if (bentrok.length) {
+				return { fail: `Tahun ajaran "${values.nama}" sudah ada.` };
 			}
-			await db.insert(tableTahunAjaran).values({ ...values, sekolahId, createdAt: now });
-			return { message: 'Tahun ajaran ditambahkan.' };
+			try {
+				if (id) {
+					await db
+						.update(tableTahunAjaran)
+						.set(values)
+						.where(and(eq(tableTahunAjaran.id, id), eq(tableTahunAjaran.sekolahId, sekolahId)));
+					return { message: 'Tahun ajaran diperbarui.' };
+				}
+				await db.insert(tableTahunAjaran).values({ ...values, sekolahId, createdAt: now });
+				return { message: 'Tahun ajaran ditambahkan.' };
+			} catch (error) {
+				if (isUniqueConstraintError(error)) {
+					return { fail: `Tahun ajaran "${values.nama}" sudah ada.` };
+				}
+				return { fail: error instanceof Error ? error.message : 'Gagal menyimpan tahun ajaran.' };
+			}
 		}
 		case 'semester': {
 			const tahunAjaranId = Number(teks(formData, 'tahun_ajaran_id'));
 			if (!tahunAjaranId) return { fail: 'Tahun ajaran wajib dipilih.' };
 			const [tahunAjaran] = await db
-				.select({ id: tableTahunAjaran.id })
+				.select({ id: tableTahunAjaran.id, nama: tableTahunAjaran.nama })
 				.from(tableTahunAjaran)
 				.where(
 					and(eq(tableTahunAjaran.id, tahunAjaranId), eq(tableTahunAjaran.sekolahId, sekolahId))
 				);
 			if (!tahunAjaran) return { fail: 'Tahun ajaran tidak valid.' };
+
+			const tipe = (teks(formData, 'tipe') || 'ganjil') as 'ganjil' | 'genap';
+			const nama = teks(formData, 'nama');
+			if (!nama) return { fail: 'Nama semester wajib diisi.' };
+
+			// One (tahun ajaran, tipe) pair can only exist once. Tamatkan dengan
+			// pesan jelas, bukan error UNIQUE constraint mentah (B3).
+			const bentrok = await db
+				.select({ id: tableSemester.id, nama: tableSemester.nama })
+				.from(tableSemester)
+				.where(
+					and(
+						eq(tableSemester.tahunAjaranId, tahunAjaranId),
+						eq(tableSemester.tipe, tipe),
+						id ? ne(tableSemester.id, id) : undefined
+					)
+				)
+				.limit(1);
+			if (bentrok.length) {
+				const tipeLabel = tipe === 'ganjil' ? 'Ganjil' : 'Genap';
+				return {
+					fail: `Semester ${tipeLabel} untuk tahun ajaran ${tahunAjaran.nama} sudah ada ("${bentrok[0].nama}"). Pilih tipe lain, ubah semester yang sudah ada, atau buat tahun ajaran baru.`
+				};
+			}
+
 			const values = {
 				tahunAjaranId,
-				tipe: (teks(formData, 'tipe') || 'ganjil') as 'ganjil' | 'genap',
-				nama: teks(formData, 'nama'),
+				tipe,
+				nama,
 				tanggalMulai: teks(formData, 'tanggal_mulai') || null,
 				tanggalSelesai: teks(formData, 'tanggal_selesai') || null,
 				tanggalBagiRapor: teks(formData, 'tanggal_bagi_raport') || null,
@@ -493,24 +591,35 @@ export async function simpanMasterData(
 				isAktif: formData.get('is_aktif') === 'on' || formData.get('is_aktif') === 'true',
 				updatedAt: now
 			};
-			if (id) {
-				const tahunAjaranIds = (
+			try {
+				if (id) {
+					const tahunAjaranIds = (
+						await db
+							.select({ id: tableTahunAjaran.id })
+							.from(tableTahunAjaran)
+							.where(eq(tableTahunAjaran.sekolahId, sekolahId))
+					).map((row) => row.id);
+					if (!tahunAjaranIds.length) return { fail: 'Data tidak ditemukan di sekolah ini.' };
 					await db
-						.select({ id: tableTahunAjaran.id })
-						.from(tableTahunAjaran)
-						.where(eq(tableTahunAjaran.sekolahId, sekolahId))
-				).map((row) => row.id);
-				if (!tahunAjaranIds.length) return { fail: 'Data tidak ditemukan di sekolah ini.' };
-				await db
-					.update(tableSemester)
-					.set(values)
-					.where(
-						and(eq(tableSemester.id, id), inArray(tableSemester.tahunAjaranId, tahunAjaranIds))
-					);
-				return { message: 'Semester diperbarui.' };
+						.update(tableSemester)
+						.set(values)
+						.where(
+							and(eq(tableSemester.id, id), inArray(tableSemester.tahunAjaranId, tahunAjaranIds))
+						);
+					return { message: 'Semester diperbarui.' };
+				}
+				await db.insert(tableSemester).values({ ...values, createdAt: now });
+				return { message: 'Semester ditambahkan.' };
+			} catch (error) {
+				if (isUniqueConstraintError(error)) {
+					return {
+						fail: 'Semester dengan tipe itu sudah ada pada tahun ajaran yang dipilih.'
+					};
+				}
+				return {
+					fail: error instanceof Error ? error.message : 'Gagal menyimpan semester.'
+				};
 			}
-			await db.insert(tableSemester).values({ ...values, createdAt: now });
-			return { message: 'Semester ditambahkan.' };
 		}
 		case 'kelas': {
 			const tahunAjaranId = Number(teks(formData, 'tahun_ajaran_id'));
@@ -519,14 +628,15 @@ export async function simpanMasterData(
 				return { fail: 'Tahun ajaran dan semester wajib dipilih.' };
 			}
 			const waliKelasId = Number(teks(formData, 'wali_kelas_id')) || null;
-			const waliAsuhId = Number(teks(formData, 'wali_asuh_id')) || null;
 			const values = {
 				nama: teks(formData, 'nama'),
 				tahunAjaranId,
 				semesterId,
 				fase: teks(formData, 'fase') || null,
 				waliKelasId,
-				waliAsuhId,
+				...(formData.has('wali_asuh_id')
+					? { waliAsuhId: Number(teks(formData, 'wali_asuh_id')) || null }
+					: {}),
 				updatedAt: now
 			};
 			if (id) {
@@ -543,7 +653,8 @@ export async function simpanMasterData(
 			const nama = teks(formData, 'nama');
 			if (!nama) return { fail: 'Nama mata pelajaran wajib diisi.' };
 
-			const pengampuId = Number(teks(formData, 'pengampu_id')) || null;
+			const hasPengampu = formData.has('pengampu_id');
+			const pengampuId = hasPengampu ? Number(teks(formData, 'pengampu_id')) || null : undefined;
 			const jenis = (teks(formData, 'jenis') || 'wajib') as
 				'belum_dipetakan' | 'wajib' | 'pilihan' | 'mulok' | 'kejuruan' | 'pemberdayaan';
 			const kategori = (teks(formData, 'kategori') || 'intrakurikuler') as
@@ -561,27 +672,47 @@ export async function simpanMasterData(
 
 			if (!allSchoolKelasIds.length) return { fail: 'Belum ada kelas terdaftar di sekolah ini.' };
 
+			// Form mengirim checkbox `semua_kelas` + daftar `kelas_ids`; field `kelas_id`
+			// tidak pernah ada, jadi jangan jadikan ketiadaannya tanda "semua kelas".
 			const semuaKelas =
-				formData.get('semua_kelas') === '1' ||
-				formData.get('semua_kelas') === 'on' ||
-				teks(formData, 'kelas_id') === 'semua' ||
-				teks(formData, 'kelas_id') === '';
+				formData.get('semua_kelas') === '1' || formData.get('semua_kelas') === 'on';
 
 			const rawSelectedIds = formData.getAll('kelas_ids');
 			let targetKelasIds: number[] = [];
 
 			if (semuaKelas) {
 				targetKelasIds = allSchoolKelasIds;
-			} else if (rawSelectedIds.length > 0) {
+			} else {
 				targetKelasIds = rawSelectedIds
 					.map((kId) => Number(kId))
 					.filter((kId) => Number.isInteger(kId) && allSchoolKelasIds.includes(kId));
-			} else if (Number(teks(formData, 'kelas_id'))) {
-				targetKelasIds = [Number(teks(formData, 'kelas_id'))];
 			}
 
 			if (!targetKelasIds.length) {
-				return { fail: 'Pilih minimal satu kelas tujuan untuk mata pelajaran ini.' };
+				if (!id) {
+					return { fail: 'Pilih minimal satu kelas tujuan untuk mata pelajaran ini.' };
+				}
+				// Mode ubah dengan 0 kelas terpilih = lepaskan mapel dari semua kelas
+				// (B10). Penghapusan memakai pengaman relasi yang sama dengan tombol hapus.
+				const [existing] = await db
+					.select({ id: tableMataPelajaran.id })
+					.from(tableMataPelajaran)
+					.where(
+						and(
+							eq(tableMataPelajaran.nama, nama),
+							inArray(tableMataPelajaran.kelasId, allSchoolKelasIds)
+						)
+					)
+					.limit(1);
+				if (!existing) {
+					return { fail: `Mata pelajaran "${nama}" tidak ditemukan di kelas sekolah ini.` };
+				}
+				const hasilHapus = await hapusMasterData(sekolahId, 'mata_pelajaran', existing.id);
+				if (hasilHapus.fail) return { fail: hasilHapus.fail };
+				return {
+					message:
+						`Mata pelajaran "${nama}" dilepas dari semua kelas. ${hasilHapus.message ?? ''}`.trim()
+				};
 			}
 
 			for (const kId of targetKelasIds) {
@@ -591,7 +722,15 @@ export async function simpanMasterData(
 				if (existing) {
 					await db
 						.update(tableMataPelajaran)
-						.set({ jenis, kategori, kode, kkm, urutan, pengampuId, updatedAt: now })
+						.set({
+							jenis,
+							kategori,
+							kode,
+							kkm,
+							urutan,
+							...(hasPengampu ? { pengampuId } : {}),
+							updatedAt: now
+						})
 						.where(eq(tableMataPelajaran.id, existing.id));
 				} else {
 					await db.insert(tableMataPelajaran).values({
@@ -602,7 +741,7 @@ export async function simpanMasterData(
 						kode,
 						kkm,
 						urutan,
-						pengampuId,
+						pengampuId: hasPengampu && pengampuId ? pengampuId : null,
 						createdAt: now
 					});
 				}
@@ -1085,6 +1224,7 @@ export async function hapusMasterData(
 					.from(tableKelas)
 					.where(eq(tableKelas.sekolahId, sekolahId))
 			).map((r) => r.id);
+			if (!kelasIds.length) return { fail: 'Belum ada kelas di sekolah ini.' };
 
 			const matchingMapels = await db
 				.select({ id: tableMataPelajaran.id })
@@ -1096,25 +1236,76 @@ export async function hapusMasterData(
 					)
 				);
 			const matchingIds = matchingMapels.map((m) => m.id);
+			if (!matchingIds.length) return { fail: 'Mata pelajaran tidak ditemukan di sekolah ini.' };
 
-			let n = 0;
+			// Samakan perilaku dengan hapus Kelas: tolak dengan rincian relasi,
+			// jangan biarkan FK constraint gagal diam-diam (B5/B6).
+			let nilaiSumatif = 0;
+			let nilaiFormatif = 0;
+			let jumlahTp = 0;
+			let jumlahJurnal = 0;
+			let jumlahAkun = 0;
+			let jumlahKunci = 0;
 			await runInChunks(matchingIds, async (ids) => {
-				const [row] = await db
-					.select({ n: count() })
-					.from(tableAsesmenSumatif)
-					.where(inArray(tableAsesmenSumatif.mataPelajaranId, ids));
-				n += row?.n ?? 0;
+				const [[sumatif], [formatif], [tp], [jurnal], [akun], [kunci]] = await Promise.all([
+					db
+						.select({ n: count() })
+						.from(tableAsesmenSumatif)
+						.where(inArray(tableAsesmenSumatif.mataPelajaranId, ids)),
+					db
+						.select({ n: count() })
+						.from(tableAsesmenFormatif)
+						.where(inArray(tableAsesmenFormatif.mataPelajaranId, ids)),
+					db
+						.select({ n: count() })
+						.from(tableTujuanPembelajaran)
+						.where(inArray(tableTujuanPembelajaran.mataPelajaranId, ids)),
+					db
+						.select({ n: count() })
+						.from(tableJurnalMengajar)
+						.where(inArray(tableJurnalMengajar.mataPelajaranId, ids)),
+					db
+						.select({ n: count() })
+						.from(tableAuthUser)
+						.where(inArray(tableAuthUser.mataPelajaranId, ids)),
+					db
+						.select({ n: count() })
+						.from(tableKunciNilai)
+						.where(inArray(tableKunciNilai.mataPelajaranId, ids))
+				]);
+				nilaiSumatif += sumatif?.n ?? 0;
+				nilaiFormatif += formatif?.n ?? 0;
+				jumlahTp += tp?.n ?? 0;
+				jumlahJurnal += jurnal?.n ?? 0;
+				jumlahAkun += akun?.n ?? 0;
+				jumlahKunci += kunci?.n ?? 0;
 			});
 
-			if (n > 0) {
+			const rincian = rincianRelasi([
+				[nilaiSumatif, 'nilai sumatif'],
+				[nilaiFormatif, 'nilai formatif'],
+				[jumlahTp, 'tujuan pembelajaran'],
+				[jumlahJurnal, 'jurnal mengajar'],
+				[jumlahAkun, 'akun guru'],
+				[jumlahKunci, 'kunci nilai']
+			]);
+			if (rincian) {
 				return {
-					fail: `Mata pelajaran "${target.nama}" sudah memiliki ${n} data nilai. Hapus nilainya lebih dulu.`
+					fail: `Mata pelajaran "${target.nama}" masih dipakai: ${rincian}. Lepaskan relasinya lebih dulu, lalu hapus lagi.`
 				};
 			}
 
-			await runInChunks(matchingIds, (ids) =>
-				db.delete(tableMataPelajaran).where(inArray(tableMataPelajaran.id, ids))
-			);
+			try {
+				await runInChunks(matchingIds, (ids) =>
+					db.delete(tableMataPelajaran).where(inArray(tableMataPelajaran.id, ids))
+				);
+			} catch (error) {
+				return {
+					fail: `Mata pelajaran "${target.nama}" gagal dihapus: ${
+						error instanceof Error ? error.message : 'masih berelasi'
+					}.`
+				};
+			}
 			return { message: `Mata pelajaran "${target.nama}" berhasil dihapus.` };
 		}
 		case 'ekstrakurikuler': {
@@ -1158,8 +1349,44 @@ export async function hapusMasterData(
 						fail: 'Akun masih menjadi wali kelas. Ganti wali kelasnya lebih dulu.'
 					};
 				}
+				const waliAsuh = await db
+					.select({ id: tableKelas.id })
+					.from(tableKelas)
+					.where(eq(tableKelas.waliAsuhId, akun.pegawaiId))
+					.limit(1);
+				if (waliAsuh.length) {
+					return { fail: 'Akun masih menjadi wali asuh. Ganti wali asuhnya lebih dulu.' };
+				}
+				const [{ n: nPengampu } = { n: 0 }] = await db
+					.select({ n: count() })
+					.from(tableMataPelajaran)
+					.where(eq(tableMataPelajaran.pengampuId, akun.pegawaiId));
+				if (nPengampu > 0) {
+					return {
+						fail: `Akun masih mengampu ${nPengampu} mata pelajaran. Ganti pengampunya lebih dulu.`
+					};
+				}
 			}
-			await db.delete(tableAuthUser).where(eq(tableAuthUser.id, id));
+
+			const [{ n: nKunci } = { n: 0 }] = await db
+				.select({ n: count() })
+				.from(tableKunciNilai)
+				.where(eq(tableKunciNilai.dikunciOleh, id));
+			if (nKunci > 0) {
+				return {
+					fail: `Akun ini masih mengunci ${nKunci} mata pelajaran. Buka kuncinya lebih dulu.`
+				};
+			}
+
+			try {
+				await db.delete(tableAuthUser).where(eq(tableAuthUser.id, id));
+			} catch (error) {
+				return {
+					fail: `Akun ${akun.username} gagal dihapus: ${
+						error instanceof Error ? error.message : 'masih berelasi'
+					}.`
+				};
+			}
 			return { message: `Akun ${akun.username} dihapus.` };
 		}
 		case 'pegawai': {

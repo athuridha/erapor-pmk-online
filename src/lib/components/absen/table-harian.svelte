@@ -30,7 +30,11 @@
 		onSubmitStateChange,
 		jenisPresensi = 'wali_kelas_saja',
 		tipePresensi = 'masuk_pulang',
-		harianMapelId = null
+		harianMapelId = null,
+		selectable = false,
+		selectedIds = [],
+		onToggleSelect,
+		onToggleAll
 	}: {
 		rows: KehadiranRow[];
 		search: string | null;
@@ -49,9 +53,26 @@
 		jenisPresensi?: string;
 		tipePresensi?: string;
 		harianMapelId?: number | null;
+		/** Tampilkan checkbox pemilihan massal (mode Harian). */
+		selectable?: boolean;
+		selectedIds?: number[];
+		onToggleSelect?: (muridId: number, checked: boolean) => void;
+		onToggleAll?: (checked: boolean) => void;
 	} = $props();
 
 	let editingSaveDisabled = $derived(editingRowId == null || editingSubmitting);
+
+	let headerCheckbox = $state<HTMLInputElement | null>(null);
+	const allSelected = $derived(
+		rows.length > 0 && rows.every((row) => selectedIds.includes(row.id))
+	);
+	const someSelected = $derived(rows.some((row) => selectedIds.includes(row.id)));
+
+	$effect(() => {
+		if (headerCheckbox) {
+			headerCheckbox.indeterminate = someSelected && !allSelected;
+		}
+	});
 
 	const isWaliKelasMasukSaja = $derived(
 		jenisPresensi === 'wali_kelas_saja' && tipePresensi === 'masuk_saja'
@@ -93,6 +114,19 @@
 	<table class="border-base-200 table border dark:border-none">
 		<thead>
 			<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
+				{#if selectable}
+					<th class="text-center" style="width: 36px; min-width: 32px;">
+						<input
+							bind:this={headerCheckbox}
+							type="checkbox"
+							class="checkbox checkbox-sm"
+							aria-label="Pilih semua murid di halaman ini"
+							checked={allSelected}
+							disabled={!tableReady || rows.length === 0}
+							onchange={(event) => onToggleAll?.((event.currentTarget as HTMLInputElement).checked)}
+						/>
+					</th>
+				{/if}
 				<th style="width: 50px; min-width: 40px;">No</th>
 				<th class="w-full" style="min-width: 160px;">Nama</th>
 				{#if isWaliKelasMasukPulang}
@@ -112,6 +146,19 @@
 				{@const isEditing = editingRowId === murid.id}
 				{@const formId = `kehadiran-form-${murid.id}`}
 				<tr class={isEditing ? 'bg-base-200/40' : undefined}>
+					{#if selectable}
+						<td class="text-center">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								aria-label={`Pilih ${murid.nama}`}
+								checked={selectedIds.includes(murid.id)}
+								disabled={!tableReady || isEditing}
+								onchange={(event) =>
+									onToggleSelect?.(murid.id, (event.currentTarget as HTMLInputElement).checked)}
+							/>
+						</td>
+					{/if}
 					<td>{murid.no}</td>
 					<td>{@html searchQueryMarker(search, murid.nama)}</td>
 

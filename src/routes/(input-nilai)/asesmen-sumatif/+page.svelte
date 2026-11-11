@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '$lib/components/icon.svelte';
+	import FormEnhance from '$lib/components/form-enhance.svelte';
 	import KelasKontenPicker from '$lib/components/kelas-konten-picker.svelte';
 	import { autoSubmit, searchQueryMarker } from '$lib/utils';
 	import { onDestroy } from 'svelte';
@@ -23,6 +24,8 @@
 		no: number;
 		nama: string;
 		agamaLabel?: string | null;
+		/** mapelId efektif baris ini (varian agama/PKS sudah di-resolve server). */
+		mapelId: number | null;
 		nilaiAkhir: number | null;
 		nilaiAkhirRts: number | null;
 		naLingkup: number | null;
@@ -505,6 +508,54 @@
 		return value.toFixed(2);
 	}
 
+	// ── Isi massal: centang beberapa murid lalu isi satu komponen sekaligus ──
+	let terpilihMurid = $state<number[]>([]);
+	let massalTerbuka = $state(false);
+	let massalKomponen = $state<'lingkup' | 'sts' | 'sas'>('lingkup');
+	let massalNilai = $state('');
+
+	const KOMPONEN_LABEL: Record<'lingkup' | 'sts' | 'sas', string> = {
+		lingkup: 'Lingkup Materi',
+		sts: 'STS',
+		sas: 'SAS'
+	};
+
+	// Hanya baris dengan mapelId efektif & boleh dinilai yang bisa dicentang.
+	const muridBisaDipilih = $derived(
+		data.daftarMurid.filter((murid) => murid.mapelId != null && murid.canNilai)
+	);
+	const muridTerpilih = $derived(
+		muridBisaDipilih.filter((murid) => terpilihMurid.includes(murid.id))
+	);
+	const semuaTerpilih = $derived(
+		muridBisaDipilih.length > 0 && muridTerpilih.length === muridBisaDipilih.length
+	);
+	const itemsMassal = $derived(
+		JSON.stringify(muridTerpilih.map((murid) => ({ muridId: murid.id, mapelId: murid.mapelId })))
+	);
+
+	function togglePilihMurid(id: number, checked: boolean) {
+		terpilihMurid = checked
+			? [...new Set([...terpilihMurid, id])]
+			: terpilihMurid.filter((value) => value !== id);
+	}
+
+	function togglePilihSemua(checked: boolean) {
+		terpilihMurid = checked ? muridBisaDipilih.map((murid) => murid.id) : [];
+	}
+
+	function bukaMassal() {
+		if (!muridTerpilih.length) return;
+		massalKomponen = 'lingkup';
+		massalNilai = '';
+		massalTerbuka = true;
+	}
+
+	function selesaiMassal() {
+		massalTerbuka = false;
+		terpilihMurid = [];
+	}
+
 	function buildSearchUrl(rawValue: string) {
 		const params = new SvelteURLSearchParams(page.url.search);
 		const cleaned = rawValue.trim();
@@ -609,13 +660,10 @@
 				</p>
 			{/if}
 		</div>
-		<div class="flex items-center gap-2 max-sm:w-full">
-			<KelasKontenPicker
-				currentId={((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id ?? null}
-			/>
+		<div>
 			<button
 				type="button"
-				class="btn btn-soft shadow-none max-sm:flex-1"
+				class="btn btn-soft shadow-none max-sm:w-full"
 				onclick={openBobotModal}
 				disabled={!canEdit}
 				title={!canEdit ? 'Anda tidak memiliki izin untuk mengatur bobot' : ''}
@@ -627,29 +675,34 @@
 	</div>
 
 	<div class="flex flex-col justify-between gap-2 sm:flex-row sm:flex-wrap">
-		<form class="w-full sm:max-w-80 md:max-w-80" method="get" use:autoSubmit>
-			<select
-				class="select bg-base-200 w-full truncate dark:border-none"
-				title="Pilih mata pelajaran"
-				name="mapel_id"
-				bind:value={selectedMapelValue}
-				disabled={!hasMapel}
-			>
-				{#if !hasMapel}
-					<option value="">Belum ada mata pelajaran</option>
-				{:else}
-					<option value="" disabled selected={selectedMapelValue === ''}>
-						Pilih Mata Pelajaran
-					</option>
-					{#each data.mapelList as mapel (mapel.value)}
-						<option value={mapel.value}>{mapel.nama}</option>
-					{/each}
+		<div class="flex flex-col items-center gap-2 sm:flex-row">
+			<KelasKontenPicker
+				currentId={((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id ?? null}
+			/>
+			<form class="w-full sm:w-64 md:w-72" method="get" use:autoSubmit>
+				<select
+					class="select bg-base-200 w-full truncate dark:border-none"
+					title="Pilih mata pelajaran"
+					name="mapel_id"
+					bind:value={selectedMapelValue}
+					disabled={!hasMapel}
+				>
+					{#if !hasMapel}
+						<option value="">Belum ada mata pelajaran</option>
+					{:else}
+						<option value="" disabled selected={selectedMapelValue === ''}>
+							Pilih Mata Pelajaran
+						</option>
+						{#each data.mapelList as mapel (mapel.value)}
+							<option value={mapel.value}>{mapel.nama}</option>
+						{/each}
+					{/if}
+				</select>
+				{#if searchTerm.trim().length}
+					<input type="hidden" name="q" value={searchTerm.trim()} />
 				{/if}
-			</select>
-			{#if searchTerm.trim().length}
-				<input type="hidden" name="q" value={searchTerm.trim()} />
-			{/if}
-		</form>
+			</form>
+		</div>
 		<div class="flex flex-col gap-2 sm:flex-row">
 			<button
 				class="btn btn-soft shadow-none"
@@ -692,6 +745,38 @@
 		</label>
 	</form>
 
+	{#if hasResults}
+		<div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+			<p class="text-base-content/70 text-sm">
+				Centang murid pada tabel untuk mengisi satu komponen nilai sekaligus.
+			</p>
+			<div class="flex items-center gap-2">
+				{#if muridTerpilih.length}
+					<button
+						type="button"
+						class="btn btn-ghost btn-sm"
+						onclick={() => togglePilihSemua(false)}
+					>
+						Kosongkan
+					</button>
+				{/if}
+				<button
+					type="button"
+					class="btn btn-primary btn-soft btn-sm shadow-none"
+					onclick={bukaMassal}
+					disabled={!canEdit || !muridTerpilih.length}
+					aria-disabled={!canEdit || !muridTerpilih.length}
+					title={!canEdit
+						? 'Anda tidak memiliki izin untuk menilai'
+						: 'Isi nilai untuk murid yang dicentang'}
+				>
+					<Icon name="edit" />
+					Isi Sekaligus ({muridTerpilih.length})
+				</button>
+			</div>
+		</div>
+	{/if}
+
 	{#if !hasMapel}
 		<div class="alert alert-soft alert-info mt-6">
 			<Icon name="info" />
@@ -724,6 +809,17 @@
 			<table class="border-base-200 table min-w-140 border dark:border-none">
 				<thead>
 					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
+						<th class="text-center" style="width: 40px;">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								checked={semuaTerpilih}
+								disabled={!canEdit || !muridBisaDipilih.length}
+								onchange={(event) => togglePilihSemua(event.currentTarget.checked)}
+								title="Pilih semua murid yang bisa dinilai"
+								aria-label="Pilih semua murid yang bisa dinilai"
+							/>
+						</th>
 						<th style="width: 50px; min-width: 40px;">No</th>
 						<th class="min-w-48">Nama</th>
 						<th class="min-w-40">Nilai Tengah Semester</th>
@@ -733,7 +829,21 @@
 				</thead>
 				<tbody>
 					{#each data.daftarMurid as murid (murid.id)}
+						{@const bisaDipilih = murid.mapelId != null && murid.canNilai && canEdit}
 						<tr>
+							<td class="text-center">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-sm"
+									checked={terpilihMurid.includes(murid.id)}
+									disabled={!bisaDipilih}
+									onchange={(event) => togglePilihMurid(murid.id, event.currentTarget.checked)}
+									title={bisaDipilih
+										? `Pilih ${murid.nama}`
+										: 'Murid ini belum bisa dinilai pada mata pelajaran terpilih'}
+									aria-label="Pilih {murid.nama}"
+								/>
+							</td>
 							<td>{murid.no}</td>
 							<td>
 								{@html searchQueryMarker(data.page.search, murid.nama)}
@@ -825,6 +935,92 @@
 		</div>
 	{/if}
 </div>
+
+{#if massalTerbuka && muridTerpilih.length}
+	<dialog class="modal" open onclose={() => (massalTerbuka = false)}>
+		<div class="modal-box max-w-lg p-4">
+			<h3 class="mb-1 text-lg font-bold">Isi Nilai Sekaligus</h3>
+			<p class="text-base-content/70 mb-2 text-sm">
+				{muridTerpilih.length} murid terpilih
+				{#if selectedMapelLabel}
+					· {selectedMapelLabel}
+				{/if}
+				· nilai yang sama diberikan ke semua murid terpilih.
+			</p>
+			<ul
+				class="border-base-300 bg-base-200/60 mb-3 max-h-24 overflow-y-auto rounded-md border p-2 text-sm"
+			>
+				{#each muridTerpilih as murid (murid.id)}
+					<li class="flex items-center gap-1.5">
+						<Icon name="check" />
+						<span class="truncate">{murid.nama}</span>
+					</li>
+				{/each}
+			</ul>
+			<FormEnhance
+				id="form-nilai-massal-sumatif"
+				action="?/simpanMassal"
+				onsuccess={() => selesaiMassal()}
+			>
+				{#snippet children({ submitting })}
+					<input type="hidden" name="items" value={itemsMassal} />
+					<fieldset class="fieldset">
+						<legend class="fieldset-legend font-semibold">Komponen nilai</legend>
+						<select
+							name="komponen"
+							class="select bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							bind:value={massalKomponen}
+							required
+							disabled={submitting}
+						>
+							{#each Object.entries(KOMPONEN_LABEL) as [value, label] (value)}
+								<option {value}>{label}</option>
+							{/each}
+						</select>
+					</fieldset>
+					<fieldset class="fieldset">
+						<legend class="fieldset-legend font-semibold">Nilai (0-100)</legend>
+						<input
+							type="number"
+							name="nilai"
+							min="0"
+							max="100"
+							step="0.01"
+							class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							placeholder="Contoh: 85"
+							bind:value={massalNilai}
+							required
+							disabled={submitting}
+						/>
+						<p class="label text-base-content/60 text-xs">
+							Komponen lain (mis. STS/SAS) tidak diubah.
+						</p>
+					</fieldset>
+					<div class="modal-action">
+						<button
+							type="button"
+							class="btn btn-ghost"
+							onclick={() => (massalTerbuka = false)}
+							disabled={submitting}
+						>
+							Batal
+						</button>
+						<button type="submit" class="btn btn-primary" disabled={submitting}>
+							<Icon name="save" />
+							Simpan ({muridTerpilih.length})
+						</button>
+					</div>
+				{/snippet}
+			</FormEnhance>
+		</div>
+		<button
+			type="button"
+			aria-label="Tutup"
+			class="modal-backdrop"
+			onclick={() => (massalTerbuka = false)}
+		></button>
+	</dialog>
+{/if}
 
 <!-- Sumatif bobot modal moved outside the card to avoid card focus styles -->
 <SumatifBobotModal

@@ -1,4 +1,11 @@
-import { type Client, type InStatement, type ResultSet, type Row, type Value } from '@libsql/client';
+import {
+	type Client,
+	type InStatement,
+	type ResultSet,
+	type Row,
+	type Transaction,
+	type Value
+} from '@libsql/client';
 
 export interface D1HttpConfig {
 	url: string;
@@ -139,6 +146,45 @@ function aliasDuplicateSelectColumns(sql: string): string {
 	return sql.slice(0, listStart) + prefix + rewritten.join(',') + sql.slice(fromIdx);
 }
 
+interface D1CacheItem {
+	rawResults: Record<string, unknown>[];
+	columns: string[];
+	meta: { changes?: number; last_row_id?: number };
+	expiresAt: number;
+}
+
+const d1SelectCache = new Map<string, D1CacheItem>();
+const CACHE_TTL_MS = 5000;
+
+function buildResultSetFromCache(
+	columns: string[],
+	rawResults: Record<string, unknown>[],
+	meta: { changes?: number; last_row_id?: number }
+): ResultSet {
+	const rows: Row[] = rawResults.map((r: Record<string, unknown>) => {
+		const rowArr: unknown[] = columns.map((col) => r[col]);
+		columns.forEach((col) => {
+			(rowArr as unknown as Record<string, unknown>)[col] = r[col];
+		});
+		return rowArr as unknown as Row;
+	});
+
+	return {
+		columns,
+		columnTypes: columns.map(() => 'text'),
+		rows,
+		rowsAffected: meta.changes ?? 0,
+		lastInsertRowid: meta.last_row_id !== undefined ? BigInt(meta.last_row_id) : undefined,
+		toJSON: () => ({
+			columns,
+			columnTypes: columns.map(() => 'text'),
+			rows,
+			rowsAffected: meta.changes ?? 0,
+			lastInsertRowid: meta.last_row_id !== undefined ? Number(meta.last_row_id) : undefined
+		})
+	};
+}
+
 /**
  * LibSQL-compatible Client implementation that dispatches SQL to Cloudflare D1 HTTP endpoint.
  */
@@ -180,14 +226,43 @@ export function createD1HttpClient(config: D1HttpConfig): Client {
 			};
 		}
 
+		// Invalidate cache on mutations
+		if (
+			trimmedSql.startsWith('INSERT') ||
+			trimmedSql.startsWith('UPDATE') ||
+			trimmedSql.startsWith('DELETE') ||
+			trimmedSql.startsWith('REPLACE') ||
+			trimmedSql.startsWith('DROP') ||
+			trimmedSql.startsWith('CREATE') ||
+			trimmedSql.startsWith('ALTER')
+		) {
+			d1SelectCache.clear();
+		}
+
 		// Normalize args: D1 expects blobs as number arrays or standard primitives
 		const params = args.map((v) => {
 			if (v === null || v === undefined) return null;
-			if (Buffer.isBuffer(v) || v instanceof Uint8Array || (typeof v === 'object' && 'type' in v && (v as { type: string }).type === 'Buffer')) {
-				return Array.from(new Uint8Array((v as { data?: ArrayLike<number> }).data || (v as ArrayLike<number>)));
+			if (
+				Buffer.isBuffer(v) ||
+				v instanceof Uint8Array ||
+				(typeof v === 'object' && 'type' in v && (v as { type: string }).type === 'Buffer')
+			) {
+				return Array.from(
+					new Uint8Array((v as { data?: ArrayLike<number> }).data || (v as ArrayLike<number>))
+				);
 			}
 			return v;
 		});
+
+		const isSelect = trimmedSql.startsWith('SELECT');
+		let cacheKey = '';
+		if (isSelect) {
+			cacheKey = sql + '::' + JSON.stringify(params);
+			const cached = d1SelectCache.get(cacheKey);
+			if (cached && cached.expiresAt > Date.now()) {
+				return buildResultSetFromCache(cached.columns, cached.rawResults, cached.meta);
+			}
+		}
 
 		const res = await fetch(config.url, {
 			method: 'POST',
@@ -213,6 +288,23 @@ export function createD1HttpClient(config: D1HttpConfig): Client {
 		const meta = data.result?.meta ?? data.result?.[0]?.meta ?? {};
 
 		const columns = rawResults.length > 0 ? Object.keys(rawResults[0]) : [];
+
+		if (isSelect && cacheKey) {
+			if (d1SelectCache.size > 200) {
+				const now = Date.now();
+				for (const [k, v] of d1SelectCache) {
+					if (v.expiresAt <= now) d1SelectCache.delete(k);
+				}
+				if (d1SelectCache.size > 200) d1SelectCache.clear();
+			}
+			d1SelectCache.set(cacheKey, {
+				rawResults,
+				columns,
+				meta,
+				expiresAt: Date.now() + CACHE_TTL_MS
+			});
+		}
+
 		const rows: Row[] = rawResults.map((r: Record<string, unknown>) => {
 			// In @libsql/client, Row is an Array of values with named properties attached!
 			const rowArr: unknown[] = columns.map((col) => r[col]);
@@ -240,14 +332,14 @@ export function createD1HttpClient(config: D1HttpConfig): Client {
 
 	const client: Partial<Client> = {
 		execute: executeQuery,
-		batch: async (stmts: InStatement[], mode?: 'write' | 'read' | 'deferred') => {
+		batch: async (stmts: InStatement[], _mode?: 'write' | 'read' | 'deferred') => {
 			const results: ResultSet[] = [];
 			for (const stmt of stmts) {
 				results.push(await executeQuery(stmt));
 			}
 			return results;
 		},
-		transaction: async (mode?: 'write' | 'read' | 'deferred') => {
+		transaction: async (_mode?: 'write' | 'read' | 'deferred') => {
 			return {
 				execute: executeQuery,
 				batch: async (stmts: InStatement[]) => {
@@ -260,7 +352,7 @@ export function createD1HttpClient(config: D1HttpConfig): Client {
 				commit: async () => {},
 				rollback: async () => {},
 				close: () => {}
-			} as any;
+			} as unknown as Transaction;
 		},
 		close: () => {}
 	};

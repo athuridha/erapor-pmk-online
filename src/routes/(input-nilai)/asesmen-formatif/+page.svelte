@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '$lib/components/icon.svelte';
+	import FormEnhance from '$lib/components/form-enhance.svelte';
 	import KelasKontenPicker from '$lib/components/kelas-konten-picker.svelte';
 	import { autoSubmit, searchQueryMarker } from '$lib/utils';
 	import { onDestroy } from 'svelte';
@@ -25,6 +26,8 @@
 			nama: string;
 			agamaLabel?: string | null;
 			no: number;
+			/** mapelId efektif baris ini (varian agama/PKS sudah di-resolve server). */
+			mapelId?: number | null;
 			progressText: string | null;
 			progressSummaryParts: Array<{
 				kategori: ProgressCategory;
@@ -34,10 +37,13 @@
 				totalTujuan: number;
 			}>;
 			hasPenilaian: boolean;
+			hasTujuan?: boolean;
 			nilaiHref: string | null;
 			canNilai?: boolean;
 		}>;
 		jumlahTujuan: number;
+		/** Daftar lingkup materi untuk pengisian massal (semua varian mapel relevan). */
+		bulkLingkupList?: string[];
 		selectedMapel?: { id: number | null; nama: string } | null;
 		search: string | null;
 		page: PaginationState;
@@ -192,6 +198,50 @@
 		html += source.slice(cursor);
 		return html;
 	}
+
+	// ── Isi massal: centang beberapa murid lalu ceklis penguasaan satu lingkup ──
+	let terpilihMurid = $state<number[]>([]);
+	let massalTerbuka = $state(false);
+	let massalLingkup = $state('');
+	let massalStatus = $state<'ya' | 'tidak'>('ya');
+
+	const bulkLingkupList = $derived(data.bulkLingkupList ?? []);
+
+	// Hanya baris dengan mapelId efektif & boleh dinilai yang bisa dicentang.
+	const muridBisaDipilih = $derived(
+		data.daftarMurid.filter((murid) => murid.mapelId != null && murid.canNilai)
+	);
+	const muridTerpilih = $derived(
+		muridBisaDipilih.filter((murid) => terpilihMurid.includes(murid.id))
+	);
+	const semuaTerpilih = $derived(
+		muridBisaDipilih.length > 0 && muridTerpilih.length === muridBisaDipilih.length
+	);
+	const itemsMassal = $derived(
+		JSON.stringify(muridTerpilih.map((murid) => ({ muridId: murid.id, mapelId: murid.mapelId })))
+	);
+
+	function togglePilihMurid(id: number, checked: boolean) {
+		terpilihMurid = checked
+			? [...new Set([...terpilihMurid, id])]
+			: terpilihMurid.filter((value) => value !== id);
+	}
+
+	function togglePilihSemua(checked: boolean) {
+		terpilihMurid = checked ? muridBisaDipilih.map((murid) => murid.id) : [];
+	}
+
+	function bukaMassal() {
+		if (!muridTerpilih.length) return;
+		massalLingkup = bulkLingkupList[0] ?? '';
+		massalStatus = 'ya';
+		massalTerbuka = true;
+	}
+
+	function selesaiMassal() {
+		massalTerbuka = false;
+		terpilihMurid = [];
+	}
 </script>
 
 <div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
@@ -211,18 +261,17 @@
 				</p>
 			{/if}
 		</div>
-		<KelasKontenPicker currentId={data.kelasKontenAktif?.id ?? null} />
 	</div>
 
 	<div class="flex flex-col items-center gap-2 sm:flex-row">
-		<form class="w-full md:max-w-80" method="get" use:autoSubmit>
+		<KelasKontenPicker currentId={data.kelasKontenAktif?.id ?? null} />
+		<form class="w-full sm:w-64 md:w-72" method="get" use:autoSubmit>
 			<select
 				class="select bg-base-200 w-full truncate dark:border-none"
 				title="Pilih mata pelajaran"
 				name="mapel_id"
 				bind:value={selectedMapelValue}
-				disabled={data.mapelList.length === 0 ||
-					(page.data.user?.type === 'user' && page.data.user?.mataPelajaranId != null)}
+				disabled={data.mapelList.length === 0}
 			>
 				{#if data.mapelList.length === 0}
 					<option value="">Belum ada mata pelajaran</option>
@@ -237,7 +286,7 @@
 			</select>
 		</form>
 		<form
-			class="w-full"
+			class="w-full flex-1"
 			data-sveltekit-keepfocus
 			data-sveltekit-replacestate
 			autocomplete="off"
@@ -258,6 +307,40 @@
 			</label>
 		</form>
 	</div>
+
+	{#if data.daftarMurid.length > 0}
+		<div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+			<p class="text-base-content/70 text-sm">
+				Centang murid pada tabel untuk menilai satu lingkup materi sekaligus.
+			</p>
+			<div class="flex items-center gap-2">
+				{#if muridTerpilih.length}
+					<button
+						type="button"
+						class="btn btn-ghost btn-sm"
+						onclick={() => togglePilihSemua(false)}
+					>
+						Kosongkan
+					</button>
+				{/if}
+				<button
+					type="button"
+					class="btn btn-primary btn-soft btn-sm shadow-none"
+					onclick={bukaMassal}
+					disabled={!canEdit || !muridTerpilih.length || !bulkLingkupList.length}
+					aria-disabled={!canEdit || !muridTerpilih.length || !bulkLingkupList.length}
+					title={!canEdit
+						? 'Anda tidak memiliki izin untuk menilai'
+						: !bulkLingkupList.length
+							? 'Belum ada lingkup materi pada mata pelajaran ini'
+							: 'Isi penguasaan untuk murid yang dicentang'}
+				>
+					<Icon name="edit" />
+					Isi Sekaligus ({muridTerpilih.length})
+				</button>
+			</div>
+		</div>
+	{/if}
 
 	{#if data.mapelList.length === 0}
 		<div class="alert alert-soft alert-info mt-6">
@@ -281,6 +364,17 @@
 			<table class="border-base-200 table min-w-150 border dark:border-none">
 				<thead>
 					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
+						<th class="text-center" style="width: 40px;">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								checked={semuaTerpilih}
+								disabled={!canEdit || !muridBisaDipilih.length}
+								onchange={(event) => togglePilihSemua(event.currentTarget.checked)}
+								title="Pilih semua murid yang bisa dinilai"
+								aria-label="Pilih semua murid yang bisa dinilai"
+							/>
+						</th>
 						<th style="width: 50px; min-width: 40px;">No</th>
 						<th class="min-w-40">Nama</th>
 						<th>Aksi</th>
@@ -289,7 +383,21 @@
 				</thead>
 				<tbody>
 					{#each data.daftarMurid as murid (murid.id)}
+						{@const bisaDipilih = murid.mapelId != null && murid.canNilai && canEdit}
 						<tr>
+							<td class="align-top">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-sm"
+									checked={terpilihMurid.includes(murid.id)}
+									disabled={!bisaDipilih}
+									onchange={(event) => togglePilihMurid(murid.id, event.currentTarget.checked)}
+									title={bisaDipilih
+										? `Pilih ${murid.nama}`
+										: 'Murid ini belum bisa dinilai pada mata pelajaran terpilih'}
+									aria-label="Pilih {murid.nama}"
+								/>
+							</td>
 							<td class="align-top">{murid.no}</td>
 							<td class="align-top">
 								{@html searchQueryMarker(data.search, murid.nama)}
@@ -298,7 +406,7 @@
 								{/if}
 							</td>
 							<td class="align-top">
-								{#if murid.nilaiHref && canEdit}
+								{#if murid.nilaiHref && canEdit && murid.hasTujuan}
 									<a class="btn btn-sm btn-soft shadow-none" href={murid.nilaiHref}>
 										<Icon name="edit" />
 										Nilai
@@ -306,13 +414,16 @@
 								{:else}
 									<button
 										type="button"
-										class="btn btn-sm btn-disabled"
+										class="btn btn-sm btn-disabled shadow-none"
 										disabled
+										aria-disabled="true"
 										title={!canEdit
 											? 'Anda tidak memiliki izin untuk menilai'
-											: data.allowedAgamaForUser
-												? `Hanya untuk murid beragama ${data.allowedAgamaForUser.join(' / ')}`
-												: 'Pilih mata pelajaran'}
+											: murid.hasTujuan === false
+												? 'Belum ada tujuan pembelajaran untuk mata pelajaran ini — tambahkan dulu di Intrakurikuler'
+												: data.allowedAgamaForUser
+													? `Hanya untuk murid beragama ${data.allowedAgamaForUser.join(' / ')}`
+													: 'Pilih mata pelajaran'}
 									>
 										<Icon name="edit" />
 										Nilai
@@ -354,3 +465,105 @@
 		</div>
 	{/if}
 </div>
+
+{#if massalTerbuka && muridTerpilih.length}
+	<dialog class="modal" open onclose={() => (massalTerbuka = false)}>
+		<div class="modal-box max-w-lg p-4">
+			<h3 class="mb-1 text-lg font-bold">Isi Penguasaan Sekaligus</h3>
+			<p class="text-base-content/70 mb-2 text-sm">
+				{muridTerpilih.length} murid terpilih
+				{#if data.selectedMapel}
+					· {data.selectedMapel.nama}
+				{/if}
+				· semua TP pada lingkup materi terpilih akan dicentang sama.
+			</p>
+			<ul
+				class="border-base-300 bg-base-200/60 mb-3 max-h-24 overflow-y-auto rounded-md border p-2 text-sm"
+			>
+				{#each muridTerpilih as murid (murid.id)}
+					<li class="flex items-center gap-1.5">
+						<Icon name="check" />
+						<span class="truncate">{murid.nama}</span>
+					</li>
+				{/each}
+			</ul>
+			<FormEnhance
+				id="form-nilai-massal-formatif"
+				action="?/simpanMassal"
+				onsuccess={() => selesaiMassal()}
+			>
+				{#snippet children({ submitting })}
+					<input type="hidden" name="items" value={itemsMassal} />
+					<fieldset class="fieldset">
+						<legend class="fieldset-legend font-semibold">Lingkup materi</legend>
+						<select
+							name="lingkupMateri"
+							class="select bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							bind:value={massalLingkup}
+							required
+							disabled={submitting}
+						>
+							{#if !bulkLingkupList.length}
+								<option value="">Belum ada lingkup materi</option>
+							{:else}
+								{#each bulkLingkupList as lingkup (lingkup)}
+									<option value={lingkup}>{lingkup}</option>
+								{/each}
+							{/if}
+						</select>
+					</fieldset>
+					<fieldset class="fieldset">
+						<legend class="fieldset-legend font-semibold">Penguasaan</legend>
+						<div class="flex flex-wrap gap-4">
+							<label class="label cursor-pointer gap-2">
+								<input
+									type="radio"
+									name="status"
+									class="radio radio-sm radio-success"
+									value="ya"
+									bind:group={massalStatus}
+									disabled={submitting}
+								/>
+								<span>Tuntas (YA)</span>
+							</label>
+							<label class="label cursor-pointer gap-2">
+								<input
+									type="radio"
+									name="status"
+									class="radio radio-sm radio-error"
+									value="tidak"
+									bind:group={massalStatus}
+									disabled={submitting}
+								/>
+								<span>Belum tuntas (TIDAK)</span>
+							</label>
+						</div>
+						<p class="label text-base-content/60 text-xs">
+							Mengubah penguasaan seluruh TP pada lingkup materi ini.
+						</p>
+					</fieldset>
+					<div class="modal-action">
+						<button
+							type="button"
+							class="btn btn-ghost"
+							onclick={() => (massalTerbuka = false)}
+							disabled={submitting}
+						>
+							Batal
+						</button>
+						<button type="submit" class="btn btn-primary" disabled={submitting}>
+							<Icon name="save" />
+							Simpan ({muridTerpilih.length})
+						</button>
+					</div>
+				{/snippet}
+			</FormEnhance>
+		</div>
+		<button
+			type="button"
+			aria-label="Tutup"
+			class="modal-backdrop"
+			onclick={() => (massalTerbuka = false)}
+		></button>
+	</dialog>
+{/if}

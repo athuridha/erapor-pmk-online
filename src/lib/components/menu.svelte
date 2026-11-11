@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
-	import { searchQueryMarker } from '$lib/utils';
+	import { cookieNames, searchQueryMarker } from '$lib/utils';
 	import Icon from './icon.svelte';
-	import { appMenuItems } from './menu';
+	import { appMenuItems, menuModulGuru, menuModulWaliKelas } from './menu';
 	import {
 		isAdminUser,
 		isAuthorizedUser,
@@ -43,11 +44,73 @@
 		(page.data as { kelasAktif?: { id: number } | null } | null)?.kelasAktif ?? null
 	);
 
+	const serverActiveModul = $derived(
+		(page.data as { activeModul?: 'admin' | 'wali_kelas' | 'guru' } | null)?.activeModul ?? 'guru'
+	);
+	const canAccessAdmin = $derived(
+		(page.data as { canAccessAdmin?: boolean } | null)?.canAccessAdmin ?? false
+	);
+	const canAccessWaliKelas = $derived(
+		(page.data as { canAccessWaliKelas?: boolean } | null)?.canAccessWaliKelas ?? false
+	);
+	const activeSemesterNama = $derived(
+		(page.data as { activeSemesterNama?: string | null } | null)?.activeSemesterNama ?? null
+	);
+
+	let currentModul = $derived(serverActiveModul);
+	let selectedModul = $state<'admin' | 'wali_kelas' | 'guru' | null>(null);
+	let isSwitchingModul = $state(false);
+	const activeDisplayModul = $derived(selectedModul ?? currentModul);
+
+	async function switchModul(modul: 'admin' | 'wali_kelas' | 'guru') {
+		if (isSwitchingModul) return;
+		isSwitchingModul = true;
+		selectedModul = modul;
+		try {
+			document.cookie = `${cookieNames.ACTIVE_MODUL}=${modul}; path=/; max-age=31536000; SameSite=Lax`;
+			if (modul === 'admin') {
+				document.cookie = `${cookieNames.ACTIVE_KELAS_ID}=semua; path=/; max-age=31536000; SameSite=Lax`;
+			} else {
+				// Hapus active-kelas-id lama agar server otomatis memilih kelas yang tepat untuk modul baru
+				document.cookie = `${cookieNames.ACTIVE_KELAS_ID}=; path=/; max-age=0; SameSite=Lax`;
+			}
+
+			// Bila user sedang berada di halaman yang khusus untuk modul tertentu,
+			// arahkan ke Beranda (/) agar tidak memuat ulang halaman lama yang tidak relevan / lambat
+			const pathname = window.location.pathname;
+			const isWaliOnly = ['/murid', '/catatan-wali-kelas', '/keputusan', '/cetak/rapor'].some((p) =>
+				pathname.startsWith(p)
+			);
+			const isAdminOnly = ['/master-data', '/semua-kelas', '/pengaturan', '/pengguna'].some((p) =>
+				pathname.startsWith(p)
+			);
+
+			if (
+				(modul === 'guru' && (isWaliOnly || isAdminOnly)) ||
+				(modul === 'wali_kelas' && isAdminOnly)
+			) {
+				await goto('/', { invalidateAll: true });
+			} else {
+				await invalidateAll();
+			}
+		} finally {
+			isSwitchingModul = false;
+			selectedModul = null;
+		}
+	}
+
 	function isHiddenForUser(path?: string): boolean {
 		// Menu items without a path (parent groups) are filtered recursively via subMenu
 		if (!path) return false;
 		const kelasOperis = isAdminUser(user ?? undefined);
-		if (path === '/presensi-guru' && !presensiGuruEnabled) return true;
+		// Presensi Guru hanya untuk pemegang izin `administrasi_presensi_guru`
+		// (sama dengan guard halaman, B8) dan bila fiturnya diaktifkan sekolah.
+		if (path === '/presensi-guru') {
+			if (!presensiGuruEnabled) return true;
+			if (!kelasOperis && !(user?.permissions ?? []).includes('administrasi_presensi_guru')) {
+				return true;
+			}
+		}
 		// /dinas-luar is the permohonan feature for non-admin roles; admin & kepala
 		// sekolah manage perjalanan dinas via the full /sppd page instead.
 		if (path === '/dinas-luar' && user && kelasOperis) {
@@ -159,11 +222,17 @@
 			.filter((item) => item !== null);
 	}
 
+	const baseMenuItems = $derived.by(() => {
+		if (currentModul === 'guru') return menuModulGuru;
+		if (currentModul === 'wali_kelas') return menuModulWaliKelas;
+		return appMenuItems;
+	});
+
 	let menuItems = $derived(
 		filterMenuByUserType(
 			search
-				? filterMenu(appMenuItems, search)
-				: filterMenuByCondition(appMenuItems, activeSemesterTipe)
+				? filterMenu(baseMenuItems, search)
+				: filterMenuByCondition(baseMenuItems, activeSemesterTipe)
 		)
 	);
 
@@ -241,6 +310,43 @@
 {/snippet}
 
 <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+	<!-- Selector Modul Guru / Modul Wali-Kelas / Mode Admin -->
+	<div class="mb-3 flex shrink-0 flex-col gap-1.5">
+		<div class="relative flex items-center">
+			<select
+				class="select select-sm w-full rounded-xl bg-[#053d2e] border border-[#065f46] text-white font-bold text-xs focus:border-emerald-400 focus:outline-none pr-8 {isSwitchingModul
+					? 'opacity-70 cursor-wait'
+					: ''}"
+				value={activeDisplayModul}
+				disabled={isSwitchingModul}
+				onchange={(e) => switchModul(e.currentTarget.value as 'admin' | 'wali_kelas' | 'guru')}
+			>
+				{#if canAccessAdmin}
+					<option value="admin">Mode Admin / Operator</option>
+				{/if}
+				{#if canAccessWaliKelas}
+					<option value="wali_kelas">Modul Wali-Kelas</option>
+				{/if}
+				<option value="guru">Modul Guru</option>
+			</select>
+			{#if isSwitchingModul}
+				<div class="absolute right-2.5 pointer-events-none flex items-center">
+					<span class="loading loading-spinner loading-xs text-emerald-300"></span>
+				</div>
+			{/if}
+		</div>
+
+		{#if activeSemesterNama}
+			<div
+				class="px-2.5 py-1 text-[11px] font-medium text-emerald-200/90 bg-[#042f23] rounded-lg border border-[#065f46]/60 truncate flex items-center gap-1.5"
+				title={activeSemesterNama}
+			>
+				<Icon name="calendar" />
+				<span class="truncate">{activeSemesterNama}</span>
+			</div>
+		{/if}
+	</div>
+
 	<div class="mb-3 flex shrink-0 gap-1">
 		<label
 			class="input bg-[#053d2e] border border-[#065f46] text-white rounded-xl flex items-center gap-2 grow px-3 py-1.5 focus-within:border-emerald-400"

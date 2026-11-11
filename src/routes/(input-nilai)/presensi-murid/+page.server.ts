@@ -13,7 +13,8 @@ import {
 	handleIsiSekaligus,
 	handleDeletePresensi,
 	handleUpdateRapor,
-	handleResetRapor
+	handleResetRapor,
+	handleSimpanMassal
 } from '$lib/server/absen/actions';
 import { ensurePresensiSettingsSchema } from '$lib/server/db/ensure-presensi-settings';
 import { ensureAbsensiSchema } from '$lib/server/db/ensure-absensi';
@@ -22,6 +23,38 @@ import { ensureKetidakhadiranRaporSchema } from '$lib/server/db/ensure-ketidakha
 import db from '$lib/server/db';
 import { tableKelas, tableAuthUserMataPelajaran } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+
+const MODE_BY_KEY: Record<string, PresensiMode> = {
+	harian: 'harian',
+	persentase_harian: 'persentase_harian',
+	bulanan: 'bulanan',
+	persentase_bulanan: 'persentase_bulanan',
+	persentase_semester: 'persentase_semester',
+	rapor: 'rapor'
+};
+
+type PresensiMode =
+	| 'harian'
+	| 'persentase_harian'
+	| 'bulanan'
+	| 'persentase_bulanan'
+	| 'persentase_semester'
+	| 'rapor';
+
+/**
+ * Normalisasi nama mode dari URL. Tautan lama / ketikan manual bisa memakai
+ * strip atau spasi (mis. `persentase-semester`), sementara nilai kanonik
+ * internal memakai garis bawah. Nilai tak dikenal dikembalikan `null` agar
+ * pemanggil memakai mode default.
+ */
+function normalisasiMode(raw: string | null): PresensiMode | null {
+	if (!raw) return null;
+	const key = raw
+		.trim()
+		.toLowerCase()
+		.replace(/[\s-]+/g, '_');
+	return MODE_BY_KEY[key] ?? null;
+}
 
 export const load: PageServerLoad = async ({ parent, locals, url, depends }) => {
 	depends('app:absen');
@@ -59,7 +92,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 	const simHari = url.searchParams.get('simHari')?.toLowerCase() ?? null;
 	const simJam = url.searchParams.get('simJam') ?? null;
 
-	const explicitMode = url.searchParams.get('mode');
+	const explicitMode = normalisasiMode(url.searchParams.get('mode'));
 	const isGuruMapelForDefault =
 		locals.user?.type === 'user' &&
 		(!!locals.user.mataPelajaranId ||
@@ -429,6 +462,7 @@ function defaultEmpty(
 
 export const actions = {
 	update: (event: RequestEvent) => handleUpdate(event),
+	simpanMassal: (event: RequestEvent) => handleSimpanMassal(event),
 	isiSekaligus: (event: RequestEvent) => handleIsiSekaligus(event),
 	deletePresensi: (event: RequestEvent) => handleDeletePresensi(event),
 	updateRapor: (event: RequestEvent) => handleUpdateRapor(event),

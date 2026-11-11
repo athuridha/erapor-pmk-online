@@ -32,6 +32,7 @@ export const helpMaps: HelpMapEntry[] = [
 	{ matcher: '/nilai-ekstrakurikuler', file: 'nilai-ekstra' },
 	{ matcher: '/catatan-wali-kelas', file: 'catatan-wali' },
 	{ matcher: '/pengaturan', file: 'pengaturan' },
+	{ matcher: /^\/master-data\/pengguna/, file: 'pengguna' },
 	{ matcher: '/pengguna', file: 'pengguna' },
 	{ matcher: '/pengguna/form', file: 'pengguna-form' },
 	{ matcher: /^\/pengguna\/form\/\d+$/, file: 'pengguna-form' },

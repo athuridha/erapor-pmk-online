@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import Icon from './icon.svelte';
 
 	type KelasPilihan = { id: number; nama: string; fase: string | null };
 
@@ -14,7 +13,7 @@
 	const pilihan = $derived(
 		((page.data as { kelasKontenPilihan?: KelasPilihan[] | null }).kelasKontenPilihan ?? []).slice()
 	);
-	const tampil = $derived(pilihan.length > 1);
+	const tampil = $derived(pilihan.length > 0);
 
 	async function pilihKelas(event: Event) {
 		const selector = event.currentTarget as HTMLSelectElement;
@@ -23,6 +22,7 @@
 		if (value) params.set('kelas', value);
 		else params.delete('kelas');
 		params.delete('page');
+		params.delete('mapel_id');
 		const query = params.toString();
 		await goto(`${page.url.pathname}${query ? `?${query}` : ''}`, {
 			keepFocus: true,
@@ -32,18 +32,15 @@
 </script>
 
 {#if tampil}
-	<label
-		class="input bg-base-200 border-base-300 dark:border-none h-9 flex w-auto cursor-pointer items-center gap-2 rounded-lg text-sm"
-	>
-		<Icon name="school" class="opacity-60" />
+	<div class="w-full sm:w-56 md:w-64">
 		<select
-			class="grow appearance-none focus:outline-none"
-			title="Pilih kelas yang diampu untuk halaman ini"
+			class="select bg-base-200 w-full truncate font-semibold dark:border-none"
+			title="Pilih kelas"
 			onchange={pilihKelas}
 			value={String(currentId ?? '')}
 		>
 			{#if currentId == null}
-				<option value="" disabled selected>Pilih kelas…</option>
+				<option value="" disabled selected>Pilih Kelas…</option>
 			{/if}
 			{#each pilihan as kelas (kelas.id)}
 				<option value={String(kelas.id)}>
@@ -51,5 +48,5 @@
 				</option>
 			{/each}
 		</select>
-	</label>
+	</div>
 {/if}

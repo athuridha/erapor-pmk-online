@@ -212,7 +212,7 @@
 </script>
 
 <div class="card bg-base-100 rounded-box border border-none p-4 shadow-md">
-	<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 		<div>
 			<h2 class="text-xl font-bold">Daftar Mata Pelajaran Intrakurikuler</h2>
 			{#if kelasAktifLabel}
@@ -223,6 +223,30 @@
 				</p>
 			{/if}
 		</div>
+		{#if ((page.data as { daftarKelas?: Array<{ id: number; nama: string; fase?: string | null }> }).daftarKelas ?? []).length > 1}
+			{@const listKelas =
+				(page.data as { daftarKelas?: Array<{ id: number; nama: string; fase?: string | null }> })
+					.daftarKelas ?? []}
+			<div class="w-full sm:w-64">
+				<select
+					class="select select-sm bg-base-200 border-base-300 w-full truncate font-semibold rounded-xl"
+					title="Ganti Kelas"
+					value={String(page.data.kelasAktif?.id ?? '')}
+					onchange={(e) => {
+						const val = (e.currentTarget as HTMLSelectElement).value;
+						if (val) {
+							const p = new URLSearchParams(page.url.search);
+							p.set('kelas_id', val);
+							window.location.search = p.toString();
+						}
+					}}
+				>
+					{#each listKelas as k (k.id)}
+						<option value={String(k.id)}>{k.nama}{k.fase ? ` - ${k.fase}` : ''}</option>
+					{/each}
+				</select>
+			</div>
+		{/if}
 	</div>
 
 	<div

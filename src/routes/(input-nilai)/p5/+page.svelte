@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidate } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import FormEnhance from '$lib/components/form-enhance.svelte';
 	import Icon from '$lib/components/icon.svelte';
@@ -41,6 +41,11 @@
 		if (!kelasAktif) return null;
 		return kelasAktif.fase ? `${kelasAktif.nama} - ${kelasAktif.fase}` : kelasAktif.nama;
 	});
+
+	/** Pilihan kelas lokal halaman ini (?kelas_id=); tidak mengubah halaman lain. */
+	function pilihKelas(kelasId: number) {
+		goto(`/p5?kelas_id=${kelasId}`, { invalidateAll: true });
+	}
 
 	type UserLite = { type?: string; operatorLevel?: string | null; ownKelasIds?: number[] | null };
 	const user = $derived((page.data.user as UserLite | null | undefined) ?? null);
@@ -175,16 +180,38 @@
 </script>
 
 <div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-		<div>
+	<div
+		class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3"
+	>
+		<div class="min-w-0">
 			<h2 class="text-xl font-bold">P5 (Projek Pancasila)</h2>
 			{#if kelasAktifLabel}
-				<p class="text-base-content/70 text-sm">Kelas aktif: {kelasAktifLabel}</p>
+				<p class="text-base-content/70 text-sm">Kelas: {kelasAktifLabel}</p>
 			{:else}
 				<p class="text-base-content/60 text-sm">
-					Pilih kelas di navbar untuk melihat projek P5 kelas tertentu, atau tambah projek lalu
-					pilih kelasnya pada modal.
+					Pilih kelas pada dropdown di bawah untuk melihat projek P5 kelas tertentu, atau tambah
+					projek lalu pilih kelasnya pada modal.
 				</p>
+			{/if}
+			{#if data.daftarKelas.length > 0}
+				<label class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+					<span class="text-base-content/70 font-medium">Kelas</span>
+					<select
+						class="select select-sm bg-base-200 dark:bg-base-300 w-full dark:border-none sm:w-64"
+						value={data.kelasAktifId ?? ''}
+						onchange={(event) => {
+							const nilai = Number((event.currentTarget as HTMLSelectElement).value);
+							if (Number.isInteger(nilai) && nilai > 0) pilihKelas(nilai);
+						}}
+					>
+						<option value="">— pilih kelas —</option>
+						{#each data.daftarKelas as kelas (kelas.id)}
+							<option value={kelas.id}>
+								{kelas.fase ? `${kelas.nama} - ${kelas.fase}` : kelas.nama}
+							</option>
+						{/each}
+					</select>
+				</label>
 			{/if}
 		</div>
 		<div class="flex flex-row max-sm:w-full">

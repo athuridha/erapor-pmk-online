@@ -32,7 +32,9 @@
 		isFormSubmitting,
 		isEditingBobot,
 		hasGroups,
-		toggleBobotEditing
+		toggleBobotEditing,
+		kelasDiampuLain = [],
+		onOpenSyncModal
 	} = $props();
 
 	let agamaEl = $state<HTMLSelectElement | null>(null);
@@ -140,6 +142,18 @@
 		>
 			<Icon name="sparkles" />
 			Generate
+		</button>
+	{/if}
+
+	{#if onOpenSyncModal && kelasDiampuLain && kelasDiampuLain.length > 0}
+		<button
+			class="btn btn-soft btn-primary w-full shadow-none sm:w-auto"
+			type="button"
+			onclick={() => onOpenSyncModal && onOpenSyncModal()}
+			title="Sinkronkan TP dari kelas ini ke {kelasDiampuLain.length} kelas lain yang diampu"
+		>
+			<Icon name="repeat" />
+			<span>Sinkronkan ke Kelas Lain ({kelasDiampuLain.length})</span>
 		</button>
 	{/if}
 

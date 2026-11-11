@@ -6,7 +6,7 @@
 	import { showModal } from '$lib/components/global-modal.svelte';
 	import ImportDatabaseModal from '$lib/components/modals/import-database-modal.svelte';
 	import SekolahModals from '$lib/components/sekolah/modals.svelte';
-	import { nauganOptions } from '$lib/statics';
+	import { jenjangPendidikanSederajat, nauganOptions } from '$lib/statics';
 	import { modalRoute } from '$lib/utils';
 
 	let { data } = $props();
@@ -14,6 +14,8 @@
 	const isNew = data.isNew as boolean;
 	// svelte-ignore state_referenced_locally
 	const initialSekolah = (isNew ? undefined : data.sekolah) as Sekolah | undefined;
+	/** Varian jenjang yang bisa dipilih (grup SMA/SMK/MA/MAK/SRMA). */
+	const varianJenjang = jenjangPendidikanSederajat.sma as { key: string; label: string }[];
 
 	// Combobox "Nama Kepala Sekolah" — aktif hanya bila data pendidik & tenaga
 	// pendidik sudah ada di DB (hasil Sinkron Dapodik), logika sama dengan
@@ -166,9 +168,17 @@
 								if (hidden) hidden.value = variant;
 							}}
 						>
-							<option value="sma" data-variant="smk" selected
-								>Sekolah Menengah Kejuruan (SMK)</option
-							>
+							{#each varianJenjang as varian (varian.key)}
+								<option
+									value="sma"
+									data-variant={varian.key}
+									selected={initialSekolah
+										? initialSekolah.jenjangVariant === varian.key
+										: varian.key === 'smk'}
+								>
+									{varian.label}
+								</option>
+							{/each}
 						</select>
 						<input hidden name="jenjangVariant" value={initialSekolah?.jenjangVariant ?? 'smk'} />
 					</div>
@@ -451,6 +461,39 @@
 							PLT (Pelaksana Tugas)
 						</option>
 					</select>
+				</div>
+
+				<!-- Ambang kriteria rapor (dulu hanya bisa diubah di Master Data > Profil Sekolah) -->
+				<div class="fieldset">
+					<legend class="fieldset-legend">Ambang Kriteria Cukup</legend>
+					<input
+						type="number"
+						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						name="raporKriteriaCukup"
+						min="0"
+						max="100"
+						required
+						value={initialSekolah?.raporKriteriaCukup ?? 85}
+					/>
+					<span class="label text-wrap text-base-content/60">
+						Batas bawah predikat "Cukup" pada rapor. Standar: 85.
+					</span>
+				</div>
+
+				<div class="fieldset">
+					<legend class="fieldset-legend">Ambang Kriteria Baik</legend>
+					<input
+						type="number"
+						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						name="raporKriteriaBaik"
+						min="0"
+						max="100"
+						required
+						value={initialSekolah?.raporKriteriaBaik ?? 95}
+					/>
+					<span class="label text-wrap text-base-content/60">
+						Batas bawah predikat "Baik" pada rapor. Standar: 95.
+					</span>
 				</div>
 			</div>
 

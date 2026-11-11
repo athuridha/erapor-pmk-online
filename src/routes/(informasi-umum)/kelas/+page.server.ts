@@ -16,11 +16,16 @@ import {
 	tableWaliMurid
 } from '$lib/server/db/schema.js';
 import { tableAuthUser } from '$lib/server/db/schema.js';
-import { fail } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { isAdminUser } from '../../pengguna/permissions.js';
 
 export async function load({ depends, locals }) {
 	depends('app:kelas');
+	const user = locals.user;
+	if (!user || !isAdminUser(user)) {
+		throw error(403, 'Hanya admin dan kepala sekolah yang dapat mengelola kelas.');
+	}
 	const sekolahId = locals.sekolah?.id ?? null;
 
 	let academicContext = null;
@@ -126,6 +131,9 @@ export async function load({ depends, locals }) {
 
 export const actions = {
 	async delete({ request, locals }) {
+		if (!locals.user || !isAdminUser(locals.user)) {
+			return fail(403, { fail: 'Hanya admin dan kepala sekolah yang dapat menghapus kelas.' });
+		}
 		const formData = await request.formData();
 		const kelasId = formData.get('id')?.toString();
 		if (!kelasId) {

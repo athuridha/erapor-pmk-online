@@ -142,6 +142,13 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		appAddresses: addresses,
 		protocol,
 		appVersion: getAppVersion(),
+		// Server-side role flags: admin-only cards below must never render for a
+		// non-admin account even if client state is stale (B7).
+		canManageUsers: isAdminOrKepalaSekolah,
+		canManageDatabase: isAdminOrKepalaSekolah,
+		canManageBukuTamu: isAdminOrKepalaSekolah,
+		canManageAi: isAdminOrKepalaSekolah,
+		canViewStorage: isAdmin,
 		canCheckUpdate: isAuthorizedUser(['app_check_update'], locals.user),
 		canManageUpdate: isAdminUser(locals.user),
 		storage,

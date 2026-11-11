@@ -115,7 +115,7 @@
 	</div>
 	<div class="mt-4 flex flex-col justify-end gap-2 sm:flex-row">
 		{#if isAdmin}
-			<a class="btn btn-soft btn-info shadow-none" href="/pengguna">
+			<a class="btn btn-soft btn-info shadow-none" href="/master-data/pengguna/guru">
 				<Icon name="users" />
 				Manajemen Pengguna
 			</a>

@@ -55,6 +55,8 @@ export async function load(event) {
 		},
 		mapel: {
 			total: 0,
+			/** Jumlah baris mapel kelas aktif (termasuk varian agama). */
+			baris: 0,
 			wajib: 0,
 			mulok: 0,
 			kokurikuler: 0,
@@ -129,7 +131,6 @@ export async function load(event) {
 		});
 
 		const uniqueSubjects = new Map<string, SubjectBucket>();
-		const mapelIdToKey = new Map<number, string>();
 
 		for (const mapel of mataPelajaranRows) {
 			const trimmedName = mapel.nama?.trim() ?? '';
@@ -147,11 +148,13 @@ export async function load(event) {
 				}
 				bucket.mapelIds.add(mapel.id);
 			}
-			mapelIdToKey.set(mapel.id, key);
 		}
 
 		const uniqueSubjectValues = Array.from(uniqueSubjects.values());
 		statistikDashboard.mapel.total = uniqueSubjectValues.length;
+		// Jumlah baris mapel (tanpa menggabungkan varian agama) — angka yang sama
+		// dengan tabel "Mapel" per kelas di /semua-kelas dan /semua-kelas/[id].
+		statistikDashboard.mapel.baris = mataPelajaranRows.length;
 		statistikDashboard.mapel.wajib = uniqueSubjectValues.filter(
 			(item) => item.jenis === 'wajib'
 		).length;
@@ -199,11 +202,11 @@ export async function load(event) {
 		});
 		const muridIds = muridRows.map((murid) => murid.id);
 		const totalStudents = muridIds.length;
-		const uniqueSubjectCount = uniqueSubjects.size;
-		const mapelIdList = Array.from(mapelIdToKey.keys());
+		const totalMapelBaris = mataPelajaranRows.length;
+		const mapelIdList = mataPelajaranRows.map((mapel) => mapel.id);
 
 		let akademikCompleted = 0;
-		if (totalStudents > 0 && uniqueSubjectCount > 0 && mapelIdList.length > 0) {
+		if (totalStudents > 0 && totalMapelBaris > 0) {
 			const sumatifRows = await db
 				.select({
 					muridId: tableAsesmenSumatif.muridId,
@@ -219,13 +222,14 @@ export async function load(event) {
 
 			const completedPairs = new Set<string>();
 			for (const row of sumatifRows) {
-				const key = mapelIdToKey.get(row.mataPelajaranId);
-				if (!key) continue;
-				completedPairs.add(`${row.muridId}:${key}`);
+				completedPairs.add(`${row.muridId}:${row.mataPelajaranId}`);
 			}
 			akademikCompleted = completedPairs.size;
 		}
-		const expectedAcademic = totalStudents * uniqueSubjectCount;
+		// Denominator mengikuti jumlah baris mapel (sama dengan /semua-kelas/[id]:
+		// murid × baris mapel), bukan jumlah mapel unik hasil penggabungan varian
+		// agama — supaya persentase tidak bertentangan dengan kartu/daftar mapel.
+		const expectedAcademic = totalStudents * totalMapelBaris;
 
 		let absensiCompleted = 0;
 		if (totalStudents > 0) {
@@ -282,6 +286,52 @@ export async function load(event) {
 				percentage: calculatePercentage(kokurCompleted, totalStudents)
 			}
 		};
+	} else if (sekolahId) {
+		// Mode "Semua Kelas" (admin/kepala sekolah di luar kelas): statistik mapel
+		// dihitung lintas rombel semester aktif agar kartu tidak lagi menulis 0
+		// padahal tabel per kelas berisi mapel.
+		const kelasIds = daftarKelas.map((kelas) => kelas.id);
+		if (kelasIds.length > 0) {
+			const semuaMapelRows = await db.query.tableMataPelajaran.findMany({
+				columns: { id: true, nama: true, jenis: true },
+				where: and(
+					inArray(tableMataPelajaran.kelasId, kelasIds),
+					eq(tableMataPelajaran.kategori, 'intrakurikuler')
+				)
+			});
+			const namaUnik = new Map<string, MataPelajaranJenis>();
+			for (const mapel of semuaMapelRows) {
+				const trimmedName = mapel.nama?.trim() ?? '';
+				const key = isAgamaSubject(mapel.nama)
+					? AGAMA_BASE_SUBJECT
+					: trimmedName || `Mata Pelajaran ${mapel.id}`;
+				const jenis = (mapel.jenis ?? 'wajib') as MataPelajaranJenis;
+				const ada = namaUnik.get(key);
+				if (!ada) namaUnik.set(key, jenis);
+				else if (ada !== 'mulok' && jenis === 'mulok') namaUnik.set(key, 'mulok');
+			}
+			const jenisUnik = [...namaUnik.values()];
+			statistikDashboard.mapel.total = namaUnik.size;
+			statistikDashboard.mapel.baris = semuaMapelRows.length;
+			statistikDashboard.mapel.wajib = jenisUnik.filter((jenis) => jenis === 'wajib').length;
+			statistikDashboard.mapel.mulok = jenisUnik.filter((jenis) => jenis === 'mulok').length;
+			statistikDashboard.mapel.lainnya = jenisUnik.filter((jenis) => jenis === 'pilihan').length;
+		}
+
+		const [ekstraRows, kokurRows] = await Promise.all([
+			db.query.tableEkstrakurikuler.findMany({
+				columns: { id: true },
+				where: eq(tableEkstrakurikuler.semuaKelas, 1)
+			}),
+			kelasIds.length
+				? db.query.tableKokurikuler.findMany({
+						columns: { id: true },
+						where: inArray(tableKokurikuler.kelasId, kelasIds)
+					})
+				: Promise.resolve([])
+		]);
+		statistikDashboard.ekstrakurikuler.total = ekstraRows.length;
+		statistikDashboard.mapel.kokurikuler = kokurRows.length;
 	}
 
 	const [bellRow, presensiRow, kegiatanCustom, jadwalPelajaran] = await Promise.all([
@@ -368,6 +418,22 @@ export async function load(event) {
 	if (canSeeRingkasanKelas && sekolahId) {
 		const hasil = await getRingkasanKelas(sekolahId, activeSemesterId);
 		ringkasanKelas = { ringkasan: hasil.ringkasan, daftarKelas: hasil.daftarKelas };
+		// Satu sumber hitungan: progress nilai akademik memakai angka yang sama
+		// dengan kartu "Ringkasan Semua Kelas" / halaman /semua-kelas, supaya
+		// dashboard tidak menampilkan persentase yang berbeda untuk data yang sama.
+		const nilaiTerisi = ringkasanKelas.daftarKelas.reduce(
+			(total, kelas) => total + kelas.nilaiTerisi,
+			0
+		);
+		const nilaiDiharapkan = ringkasanKelas.daftarKelas.reduce(
+			(total, kelas) => total + kelas.nilaiDiharapkan,
+			0
+		);
+		statistikDashboard.progress.akademik = {
+			completed: nilaiTerisi,
+			total: nilaiDiharapkan,
+			percentage: calculatePercentage(nilaiTerisi, nilaiDiharapkan)
+		};
 	}
 
 	return {

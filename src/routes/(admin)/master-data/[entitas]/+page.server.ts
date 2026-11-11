@@ -1,4 +1,4 @@
-﻿import { MASTER_DATA, cariMasterData } from '$lib/admin/master-data';
+import { MASTER_DATA, cariMasterData } from '$lib/admin/master-data';
 import {
 	hapusMasterData,
 	loadAnggotaEkstrakurikuler,
@@ -136,6 +136,9 @@ export const actions = {
 			const hasil = await hapusMasterData(sekolahId, params.entitas ?? '', id);
 			if (hasil.fail) gagal.push(hasil.fail);
 			else terhapus += 1;
+		}
+		if (terhapus === 0 && gagal.length) {
+			return fail(400, { fail: `Tidak ada data yang terhapus. ${gagal[0]}` });
 		}
 		return {
 			message: `${terhapus} data dihapus${gagal.length ? `, ${gagal.length} gagal: ${gagal[0]}` : ''}.`

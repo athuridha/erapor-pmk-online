@@ -118,7 +118,12 @@ export async function load({ parent, locals, depends }) {
 		}),
 		// Candidate murid for the member modal (all scoped kelas in sekolah).
 		db
-			.select({ id: tableMurid.id, nama: tableMurid.nama, kelasId: tableMurid.kelasId })
+			.select({
+				id: tableMurid.id,
+				nama: tableMurid.nama,
+				kelasId: tableMurid.kelasId,
+				nisn: tableMurid.nisn
+			})
 			.from(tableMurid)
 			.where(eq(tableMurid.sekolahId, sekolahId))
 			.orderBy(asc(tableMurid.nama)),
@@ -331,6 +336,10 @@ export const actions = {
 		}
 
 		try {
+			let ditambah = 0;
+			let dihapus = 0;
+			const ditolak: number[] = [];
+
 			if (addIds.length) {
 				const validMurid = await queryInChunks(addIds, (ids) =>
 					db
@@ -340,18 +349,21 @@ export const actions = {
 				);
 				const validIds = new Set(validMurid.map((m) => m.id));
 				const toInsert = addIds.filter((id) => validIds.has(id));
+				ditolak.push(...addIds.filter((id) => !validIds.has(id)));
 				for (const muridChunk of chunk(toInsert, 30)) {
-					await db
+					const inserted = await db
 						.insert(tablePklMurid)
 						.values(muridChunk.map((muridId) => ({ sekolahId, kelompokId, muridId })))
 						// Unique (kelompokId, muridId) — silently skip already-member duplicates.
-						.onConflictDoNothing();
+						.onConflictDoNothing()
+						.returning({ id: tablePklMurid.id });
+					ditambah += inserted.length;
 				}
 			}
 
 			if (removeIds.length) {
-				await runInChunks(removeIds, (ids) =>
-					db
+				await runInChunks(removeIds, async (ids) => {
+					const removed = await db
 						.delete(tablePklMurid)
 						.where(
 							and(
@@ -360,8 +372,22 @@ export const actions = {
 								inArray(tablePklMurid.muridId, ids)
 							)
 						)
-				);
+						.returning({ id: tablePklMurid.id });
+					dihapus += removed.length;
+				});
 			}
+
+			const bagian = [
+				ditambah ? `${ditambah} anggota ditambahkan` : '',
+				dihapus ? `${dihapus} anggota dihapus` : '',
+				ditolak.length ? `${ditolak.length} murid tidak valid dilewati` : ''
+			].filter(Boolean);
+
+			return {
+				message: bagian.length
+					? `Anggota kelompok diperbarui (${bagian.join(', ')}).`
+					: 'Tidak ada perubahan anggota (semua pilihan sudah sesuai).'
+			};
 		} catch (error) {
 			if (isTableMissingError(error)) {
 				return fail(500, { fail: 'Tabel PKL belum tersedia. Jalankan pnpm db:push.' });

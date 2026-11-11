@@ -225,6 +225,14 @@ export const actions: Actions = {
 				} catch (err) {
 					console.warn('[login action] failed to set sekolah for mata pelajaran user', err);
 				}
+			} else if (authUser.type === 'admin' || authUser.type === 'kepala_sekolah') {
+				// Admin / Operator selalu default ke Semua Kelas saat login
+				cookies.set(cookieNames.ACTIVE_KELAS_ID, 'semua', {
+					path: '/',
+					maxAge: 31536000,
+					sameSite: 'lax',
+					secure
+				});
 			} else {
 				// ensure we don't leave a stale kelas cookie for other user types
 				cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure });
@@ -234,12 +242,9 @@ export const actions: Actions = {
 			console.warn('[login action] failed to set active kelas cookie', err);
 		}
 
-		// Accounts flagged with mustChangePassword (e.g. the default Admin) are
-		// sent straight to the password-change screen before anything else.
-		if (user.mustChangePassword) {
-			logLoginEvent('Forcing password change', { username, userId: user.id });
-			throw redirect(303, '/pengaturan?force=1');
-		}
+		// Accounts flagged with mustChangePassword (e.g. the default Admin) will
+		// see a modal in the layout after login, and can change password anywhere.
+		// No redirect here.
 
 		const target = resolveRedirectTarget(url.searchParams.get('redirect')) ?? '/';
 		logLoginEvent('Redirecting after success', { username, target });

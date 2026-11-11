@@ -46,11 +46,6 @@
 	let targetMuridNama = $state('');
 	let targetMuridId = $state<number | null>(null);
 
-	// Shared delete form: value is set right before requestSubmit() from the
-	// confirmation modal.
-	let hapusPelanggaranId = $state<number | null>(null);
-	let hapusPoinId = $state<number | null>(null);
-
 	let formBeriTanggal = $state('');
 	let formBeriPelanggaranId = $state('');
 	let formBeriCatatan = $state('');
@@ -74,9 +69,18 @@
 		targetMuridNama = '';
 	}
 
+	// Shared delete form: set the hidden input value directly (state updates are
+	// flushed asynchronously, so submitting right after assigning state used to
+	// send an empty id and fail silently — B4).
+	function submitHapus(formId: string, id: number) {
+		const form = document.getElementById(formId) as HTMLFormElement | null;
+		if (!form) return;
+		const input = form.elements.namedItem('id') as HTMLInputElement | null;
+		if (input) input.value = String(id);
+		form.requestSubmit();
+	}
+
 	function konfirmasiHapusPelanggaran(pelanggaran: Pelanggaran) {
-		hapusPelanggaranId = null;
-		hapusPoinId = null;
 		showModal({
 			title: 'Hapus Pelanggaran',
 			body: `Hapus pelanggaran <strong>${pelanggaran.nama}</strong> (${
@@ -87,10 +91,8 @@
 				label: 'Hapus',
 				class: 'btn-error',
 				action: async ({ close }) => {
-					hapusPelanggaranId = pelanggaran.id;
 					close();
-					const form = document.getElementById('form-hapus-pelanggaran') as HTMLFormElement | null;
-					form?.requestSubmit();
+					submitHapus('form-hapus-pelanggaran', pelanggaran.id);
 				}
 			},
 			onNegative: { label: 'Batal' }
@@ -98,8 +100,6 @@
 	}
 
 	function konfirmasiHapusPoin(riwayat: Riwayat) {
-		hapusPelanggaranId = null;
-		hapusPoinId = null;
 		showModal({
 			title: 'Hapus Riwayat Poin',
 			body: `Hapus riwayat <strong>${riwayat.pelanggaranNama}</strong> atas <strong>${riwayat.muridNama}</strong>?`,
@@ -108,10 +108,8 @@
 				label: 'Hapus',
 				class: 'btn-error',
 				action: async ({ close }) => {
-					hapusPoinId = riwayat.id;
 					close();
-					const form = document.getElementById('form-hapus-poin') as HTMLFormElement | null;
-					form?.requestSubmit();
+					submitHapus('form-hapus-poin', riwayat.id);
 				}
 			},
 			onNegative: { label: 'Batal' }
@@ -162,6 +160,57 @@
 		}
 		return [...map.entries()].map(([kelasNama, murid]) => ({ kelasNama, murid }));
 	});
+
+	// Multi-pilih murid: beri satu pelanggaran yang sama untuk banyak murid
+	// sekaligus dalam satu kali simpan.
+	let terpilihMurid = $state<number[]>([]);
+	let bulkBeriTerbuka = $state(false);
+	let bulkPelanggaranId = $state('');
+	let bulkTanggal = $state('');
+	let bulkCatatan = $state('');
+
+	const idMuridTampil = $derived(rekapGrup.flatMap((grup) => grup.murid.map((m) => m.id)));
+	const semuaMuridTerpilih = $derived(
+		idMuridTampil.length > 0 && terpilihMurid.length === idMuridTampil.length
+	);
+
+	function toggleMurid(id: number, checked: boolean) {
+		terpilihMurid = checked
+			? [...new Set([...terpilihMurid, id])]
+			: terpilihMurid.filter((value) => value !== id);
+	}
+
+	function pilihSemuaMurid(checked: boolean) {
+		terpilihMurid = checked ? [...idMuridTampil] : [];
+	}
+
+	function semuaGrupTerpilih(murid: MuridRekap[]) {
+		return murid.length > 0 && murid.every((item) => terpilihMurid.includes(item.id));
+	}
+
+	function pilihGrup(murid: MuridRekap[], checked: boolean) {
+		const ids = murid.map((item) => item.id);
+		terpilihMurid = checked
+			? [...new Set([...terpilihMurid, ...ids])]
+			: terpilihMurid.filter((id) => !ids.includes(id));
+	}
+
+	const muridTerpilih = $derived(
+		rekapGrup.flatMap((grup) => grup.murid).filter((murid) => terpilihMurid.includes(murid.id))
+	);
+
+	function bukaBulkBeriPoin() {
+		if (!terpilihMurid.length) return;
+		bulkPelanggaranId = '';
+		bulkTanggal = new Date().toISOString().slice(0, 10);
+		bulkCatatan = '';
+		bulkBeriTerbuka = true;
+	}
+
+	function selesaiBulkBeriPoin() {
+		bulkBeriTerbuka = false;
+		terpilihMurid = [];
+	}
 </script>
 
 <div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
@@ -172,10 +221,17 @@
 				{adaKelasAktif ? `Kelas ${data.kelasAktif!.nama}` : 'Semua Kelas'} · Rekap poin tata tertib
 			</p>
 		</div>
-		<a href="/poin-siswa/rekap" class="btn btn-soft btn-sm">
-			<Icon name="users" />
-			Rekap Poin
-		</a>
+		<!-- Satu pintu Poin Siswa dengan dua tab; halaman rekap detail tetap ada. -->
+		<div class="tabs tabs-box">
+			<a class="tab tab-active font-semibold" href="/poin-siswa" aria-current="page">
+				<Icon name="plus" />
+				Beri Poin
+			</a>
+			<a class="tab font-semibold" href="/poin-siswa/rekap">
+				<Icon name="users" />
+				Rekap
+			</a>
+		</div>
 	</div>
 
 	<div class="grid gap-4 lg:grid-cols-2">
@@ -279,6 +335,33 @@
 								bind:value={searchNama}
 							/>
 						</label>
+
+						{#if data.rekap.length}
+							<label
+								class="label cursor-pointer gap-1.5 text-xs font-medium whitespace-nowrap"
+								title="Centang semua murid yang tampil"
+							>
+								<input
+									type="checkbox"
+									class="checkbox checkbox-xs"
+									checked={semuaMuridTerpilih}
+									onchange={(event) => pilihSemuaMurid(event.currentTarget.checked)}
+								/>
+								Pilih semua
+							</label>
+						{/if}
+
+						{#if terpilihMurid.length}
+							<button
+								type="button"
+								class="btn btn-primary btn-soft btn-xs"
+								onclick={bukaBulkBeriPoin}
+								title="Beri poin untuk murid yang dicentang"
+							>
+								<Icon name="plus" />
+								Beri Poin ({terpilihMurid.length})
+							</button>
+						{/if}
 					</div>
 				</div>
 
@@ -300,6 +383,16 @@
 							<table class="table table-sm">
 								<thead>
 									<tr class="text-base-content text-left font-bold">
+										<th class="text-center" style="width: 36px;">
+											<input
+												type="checkbox"
+												class="checkbox checkbox-sm"
+												checked={semuaGrupTerpilih(grup.murid)}
+												onchange={(event) => pilihGrup(grup.murid, event.currentTarget.checked)}
+												title="Pilih semua murid pada daftar ini"
+												aria-label="Pilih semua murid pada daftar ini"
+											/>
+										</th>
 										<th style="min-width: 140px;">Nama</th>
 										<th style="min-width: 60px;">Total</th>
 										<th class="text-center" style="min-width: 110px;">Status</th>
@@ -310,6 +403,16 @@
 									{#each grup.murid as murid (murid.id)}
 										{@const badge = badgePoin(murid.totalPoin)}
 										<tr>
+											<td class="text-center">
+												<input
+													type="checkbox"
+													class="checkbox checkbox-sm"
+													checked={terpilihMurid.includes(murid.id)}
+													onchange={(event) => toggleMurid(murid.id, event.currentTarget.checked)}
+													title="Pilih {murid.nama}"
+													aria-label="Pilih {murid.nama}"
+												/>
+											</td>
 											<td>
 												<span class="font-medium">{murid.nama}</span>
 												{#if murid.jumlahRiwayat > 0}
@@ -536,10 +639,107 @@
 	</dialog>
 {/if}
 
+{#if bulkBeriTerbuka && terpilihMurid.length}
+	<dialog class="modal" open onclose={() => (bulkBeriTerbuka = false)}>
+		<div class="modal-box max-w-lg p-4">
+			<h3 class="mb-1 text-lg font-bold">Beri Poin Massal</h3>
+			<p class="text-base-content/70 mb-2 text-sm">
+				{terpilihMurid.length} murid terpilih. Satu pelanggaran yang sama akan diberikan ke semuanya.
+			</p>
+			<ul
+				class="border-base-300 bg-base-200/60 mb-3 max-h-24 overflow-y-auto rounded-md border p-2 text-sm"
+			>
+				{#each muridTerpilih as murid (murid.id)}
+					<li class="flex items-center gap-1.5">
+						<Icon name="check" />
+						<span class="truncate">{murid.nama}</span>
+						{#if murid.kelasNama}
+							<span class="text-base-content/60 text-xs">· {murid.kelasNama}</span>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+			<FormEnhance
+				id="form-beri-poin-massal"
+				action="?/beriPoinMassal"
+				onsuccess={() => selesaiBulkBeriPoin()}
+			>
+				{#snippet children({ submitting })}
+					<input type="hidden" name="muridIds" value={JSON.stringify(terpilihMurid)} />
+					<fieldset class="fieldset">
+						<legend class="fieldset-legend font-semibold">Pelanggaran</legend>
+						<select
+							name="pelanggaranId"
+							class="select bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							required
+							disabled={submitting}
+							onchange={(event) => (bulkPelanggaranId = event.currentTarget.value)}
+						>
+							<option value="" disabled selected={!bulkPelanggaranId}>Pilih pelanggaran</option>
+							{#each data.daftarPelanggaran as pelanggaran (pelanggaran.id)}
+								<option
+									value={pelanggaran.id}
+									selected={bulkPelanggaranId === String(pelanggaran.id)}
+								>
+									{pelanggaran.nama} ({pelanggaran.poin} poin)
+								</option>
+							{/each}
+						</select>
+					</fieldset>
+					<fieldset class="fieldset">
+						<legend class="fieldset-legend font-semibold">Tanggal</legend>
+						<input
+							type="date"
+							name="tanggal"
+							max={today}
+							value={bulkTanggal}
+							onchange={(event) => (bulkTanggal = event.currentTarget.value)}
+							class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							required
+							disabled={submitting}
+						/>
+					</fieldset>
+					<fieldset class="fieldset">
+						<legend class="fieldset-legend font-semibold">Catatan (opsional)</legend>
+						<textarea
+							name="catatan"
+							class="textarea bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							rows="2"
+							placeholder="Keterangan tambahan"
+							disabled={submitting}
+							oninput={(event) => (bulkCatatan = event.currentTarget.value)}>{bulkCatatan}</textarea
+						>
+					</fieldset>
+					<div class="modal-action">
+						<button
+							type="button"
+							class="btn btn-ghost"
+							onclick={() => (bulkBeriTerbuka = false)}
+							disabled={submitting}
+						>
+							Batal
+						</button>
+						<button type="submit" class="btn btn-primary" disabled={submitting}>
+							<Icon name="check" />
+							Simpan ({terpilihMurid.length})
+						</button>
+					</div>
+				{/snippet}
+			</FormEnhance>
+		</div>
+		<button
+			type="button"
+			aria-label="Tutup"
+			class="modal-backdrop"
+			onclick={() => (bulkBeriTerbuka = false)}
+		></button>
+	</dialog>
+{/if}
+
 <FormEnhance id="form-hapus-pelanggaran" action="?/hapusPelanggaran" class="hidden">
-	<input type="hidden" name="id" value={hapusPelanggaranId ?? ''} />
+	<input type="hidden" name="id" value="" />
 </FormEnhance>
 
 <FormEnhance id="form-hapus-poin" action="?/hapusPoin" class="hidden">
-	<input type="hidden" name="id" value={hapusPoinId ?? ''} />
+	<input type="hidden" name="id" value="" />
 </FormEnhance>

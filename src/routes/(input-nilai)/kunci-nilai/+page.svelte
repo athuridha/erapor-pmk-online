@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import FormEnhance from '$lib/components/form-enhance.svelte';
 	import Icon from '$lib/components/icon.svelte';
 	import { toast } from '$lib/components/toast.svelte';
@@ -22,6 +23,10 @@
 	let alasan = $state('');
 
 	const mapel = $derived((data.mapel ?? []) as Mapel[]);
+	const daftarKelas = $derived(
+		(page.data.daftarKelas ?? []) as Array<{ id: number; nama: string; fase: string | null }>
+	);
+	const jumlahTerkunci = $derived(mapel.filter((row) => row.terkunci).length);
 	const daftarTersaring = $derived.by(() => {
 		const keyword = cari.trim().toLowerCase();
 		if (!keyword) return mapel;
@@ -30,7 +35,11 @@
 				row.nama.toLowerCase().includes(keyword) || row.pengampu.toLowerCase().includes(keyword)
 		);
 	});
-	const jumlahTerkunci = $derived(mapel.filter((row) => row.terkunci).length);
+
+	/** Pilihan kelas lokal halaman ini (tidak mengubah konteks halaman lain). */
+	function pilihKelas(kelasId: number) {
+		goto(`/kunci-nilai?kelas_id=${kelasId}`, { invalidateAll: true });
+	}
 
 	function formatWaktu(value: string | null): string {
 		if (!value) return '—';
@@ -99,10 +108,34 @@
 		{/if}
 	</div>
 
+	{#if daftarKelas.length > 0}
+		<div class="mb-4 flex flex-wrap items-center gap-2">
+			<label for="pilih-kelas-kunci" class="text-base-content/70 text-sm font-medium">
+				Kelas
+			</label>
+			<select
+				id="pilih-kelas-kunci"
+				class="select select-sm bg-base-200 dark:bg-base-300 w-full dark:border-none sm:w-64"
+				value={data.kelasId ?? ''}
+				onchange={(event) => {
+					const nilai = Number((event.currentTarget as HTMLSelectElement).value);
+					if (Number.isInteger(nilai) && nilai > 0) pilihKelas(nilai);
+				}}
+			>
+				<option value="">— pilih kelas —</option>
+				{#each daftarKelas as kelas (kelas.id)}
+					<option value={kelas.id}>
+						{kelas.fase ? `${kelas.nama} - ${kelas.fase}` : kelas.nama}
+					</option>
+				{/each}
+			</select>
+		</div>
+	{/if}
+
 	{#if !data.kelasId}
 		<div class="alert alert-warning mb-4 text-sm">
 			<Icon name="info" />
-			<span>Pilih kelas aktif di navbar dulu untuk mengelola kunci nilai.</span>
+			<span>Pilih kelas pada dropdown di atas untuk mengelola kunci nilai.</span>
 		</div>
 	{:else}
 		<div class="mb-4 flex flex-col gap-2 sm:flex-row">
@@ -122,8 +155,13 @@
 			</p>
 		</div>
 
-		<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
-			<table class="border-base-200 table border dark:border-none">
+		<p class="text-base-content/60 mb-2 text-xs lg:hidden">
+			Geser tabel ke kiri/kanan untuk melihat kolom lain.
+		</p>
+		<div
+			class="bg-base-100 dark:bg-base-200 w-full max-w-full overflow-x-auto rounded-md shadow-md dark:shadow-none"
+		>
+			<table class="border-base-200 table min-w-max border dark:border-none">
 				<thead>
 					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
 						<th style="min-width: 200px;">Mata Pelajaran</th>

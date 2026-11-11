@@ -10,6 +10,7 @@ import {
 import { fail, redirect } from '@sveltejs/kit';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { buildKelasContext } from '$lib/server/route-utils';
+import { queryInChunks } from '$lib/server/db/chunk';
 import { agamaMapelNames } from '$lib/statics';
 import { getAksesMapelUser } from '$lib/server/mapel-access';
 import { isWaliOfKelas } from '$lib/server/kelas-akses';
@@ -146,8 +147,12 @@ export async function load({ locals, url, depends, parent }) {
 				.map((kode) => kodeToMpMap.get(kode))
 				.filter((mp): mp is { id: number; nama: string } => !!mp)
 				.map((mp) => ({ ...mp, kode: null }));
-			mapelIds = mataPelajaranList.map((mp) => mp.id);
 		}
+
+		// Jadwal bisa kosong (mis. belum diisi untuk hari ini). Tanpa fallback,
+		// dropdown mapel/lingkup materi di form Tambah Jurnal tidak punya opsi.
+		if (!mataPelajaranList.length) mataPelajaranList = allMapelForClass;
+		mapelIds = mataPelajaranList.map((mp) => mp.id);
 	} else if (userType === 'user') {
 		const akses = await getAksesMapelUser(
 			{ id: user?.id ?? 0, mataPelajaranId: user?.mataPelajaranId },
@@ -161,7 +166,8 @@ export async function load({ locals, url, depends, parent }) {
 						.select({
 							id: tableMataPelajaran.id,
 							nama: tableMataPelajaran.nama,
-							kode: tableMataPelajaran.kode
+							kode: tableMataPelajaran.kode,
+							kelasId: tableMataPelajaran.kelasId
 						})
 						.from(tableMataPelajaran)
 						.where(inArray(tableMataPelajaran.id, userMpIds))
@@ -247,33 +253,55 @@ export async function load({ locals, url, depends, parent }) {
 					seen.add(mp.id);
 					return true;
 				});
-				mapelIds = mataPelajaranList.map((mp) => mp.id);
 			}
+
+			// Fallback: guru tetap bisa menulis jurnal meski jadwal hari ini kosong;
+			// pilihannya dibatasi ke mapel yang diampu guru DAN milik kelas aktif.
+			if (!mataPelajaranList.length) {
+				mataPelajaranList = userMapels.filter((mp) => effectiveKelasIds.includes(mp.kelasId));
+			}
+			mapelIds = mataPelajaranList.map((mp) => mp.id);
 		}
 	}
 
+	// Daftar mapel final (hasil jadwal atau fallback) menentukan apakah form bisa
+	// dibuka; guru yang tidak mengampu mapel di kelas aktif tetap melihat pesan.
+	hasAnyMapel = mataPelajaranList.length > 0;
+
 	// Get mapelId from URL param or default to first
 	const mapelIdParam = url.searchParams.get('mapel_id');
-	const mapelId =
+	const paramMapelId =
 		mapelIdParam && mapelIds.some((id) => id === Number(mapelIdParam))
 			? Number(mapelIdParam)
-			: mapelIds.length > 0
-				? mapelIds[0]
-				: null;
+			: null;
 
-	// Load Tujuan Pembelajaran for lingkupMateri + TP dropdowns
+	// Load Tujuan Pembelajaran for lingkupMateri + TP dropdowns.
+	// Satu kelas bisa berisi puluhan mapel, dan mode "Semua Kelas" menggabung
+	// seluruh mapel sekolah — D1 menolak statement dengan >100 parameter, jadi
+	// daftar mapel dipecah dulu lalu hasilnya digabung dan diurutkan ulang.
 	const tujuanPembelajaranList = mapelIds.length
-		? await db
-				.select({
-					id: tableTujuanPembelajaran.id,
-					deskripsi: tableTujuanPembelajaran.deskripsi,
-					lingkupMateri: tableTujuanPembelajaran.lingkupMateri,
-					mataPelajaranId: tableTujuanPembelajaran.mataPelajaranId
-				})
-				.from(tableTujuanPembelajaran)
-				.where(inArray(tableTujuanPembelajaran.mataPelajaranId, mapelIds))
-				.orderBy(asc(tableTujuanPembelajaran.lingkupMateri))
+		? (
+				await queryInChunks(mapelIds, (ids) =>
+					db
+						.select({
+							id: tableTujuanPembelajaran.id,
+							deskripsi: tableTujuanPembelajaran.deskripsi,
+							lingkupMateri: tableTujuanPembelajaran.lingkupMateri,
+							mataPelajaranId: tableTujuanPembelajaran.mataPelajaranId
+						})
+						.from(tableTujuanPembelajaran)
+						.where(inArray(tableTujuanPembelajaran.mataPelajaranId, ids))
+						.orderBy(asc(tableTujuanPembelajaran.lingkupMateri))
+				)
+			).sort((a, b) => (a.lingkupMateri ?? '').localeCompare(b.lingkupMateri ?? '', 'id'))
 		: [];
+
+	// Default mapel: pakai pilihan URL, atau mapel pertama yang punya TP/lingkup
+	// materi supaya dropdown Lingkup Materi langsung terisi saat modal dibuka.
+	const mapelId =
+		paramMapelId ??
+		tujuanPembelajaranList[0]?.mataPelajaranId ??
+		(mapelIds.length > 0 ? mapelIds[0] : null);
 
 	const lingkupMateriSet = new Set<string>();
 	for (const tp of tujuanPembelajaranList) {
@@ -473,24 +501,29 @@ export const actions = {
 			const hari = dayNames[dateObj.getDay()];
 
 			const mpRow = await db.query.tableMataPelajaran.findFirst({
-				columns: { kode: true, nama: true },
+				columns: { kode: true, nama: true, kelasId: true },
 				where: eq(tableMataPelajaran.id, mataPelajaranId)
 			});
-
-			if (!mpRow?.kode) {
-				return fail(400, { fail: 'Mata pelajaran tidak memiliki kode jadwal' });
+			if (!mpRow) {
+				return fail(400, { fail: 'Mata pelajaran tidak valid' });
+			}
+			if (mpRow.kelasId !== kelasId) {
+				return fail(400, { fail: 'Mata pelajaran ini bukan milik kelas yang dipilih' });
 			}
 
-			let jadwalEntries = await db.query.tableJadwalPelajaran.findMany({
-				columns: { jamKe: true },
-				where: and(
-					eq(tableJadwalPelajaran.sekolahId, sekolahId),
-					eq(tableJadwalPelajaran.kelasId, kelasId),
-					eq(tableJadwalPelajaran.hari, hari),
-					eq(tableJadwalPelajaran.kodeKegiatan, mpRow.kode)
-				),
-				orderBy: [asc(tableJadwalPelajaran.jamKe)]
-			});
+			let jadwalEntries: Array<{ jamKe: number }> = [];
+			if (mpRow.kode) {
+				jadwalEntries = await db.query.tableJadwalPelajaran.findMany({
+					columns: { jamKe: true },
+					where: and(
+						eq(tableJadwalPelajaran.sekolahId, sekolahId),
+						eq(tableJadwalPelajaran.kelasId, kelasId),
+						eq(tableJadwalPelajaran.hari, hari),
+						eq(tableJadwalPelajaran.kodeKegiatan, mpRow.kode)
+					),
+					orderBy: [asc(tableJadwalPelajaran.jamKe)]
+				});
+			}
 
 			if (jadwalEntries.length === 0) {
 				if (mpRow.nama && agamaMapelNames.includes(mpRow.nama)) {
@@ -507,14 +540,14 @@ export const actions = {
 				}
 			}
 
-			if (jadwalEntries.length === 0) {
-				return fail(400, { fail: 'Tidak ada jadwal untuk mata pelajaran ini hari ini' });
-			}
-
+			// Jurnal tetap boleh dibuat walau jadwal mapel belum diisi; jam pelajaran
+			// disimpan sebagai '-' bila tidak bisa diturunkan dari jadwal.
 			const jamPelajaran =
-				jadwalEntries.length === 1
-					? String(jadwalEntries[0].jamKe)
-					: `${Math.min(...jadwalEntries.map((j) => j.jamKe))}-${Math.max(...jadwalEntries.map((j) => j.jamKe))}`;
+				jadwalEntries.length === 0
+					? '-'
+					: jadwalEntries.length === 1
+						? String(jadwalEntries[0].jamKe)
+						: `${Math.min(...jadwalEntries.map((j) => j.jamKe))}-${Math.max(...jadwalEntries.map((j) => j.jamKe))}`;
 
 			await db.insert(tableJurnalMengajar).values({
 				authUserId: user.id,

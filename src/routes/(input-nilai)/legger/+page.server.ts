@@ -4,6 +4,7 @@ import { resolveKelasKonten } from '$lib/server/kelas-akses';
 import { isKeluargaAgama, isKeluargaPks, namaVarianUntukMurid } from '$lib/server/mapel-picker';
 import { agamaParentName, pksParentName } from '$lib/statics';
 import { ensureAsesmenSumatifSchema } from '$lib/server/db/ensure-asesmen-sumatif';
+import { chunk } from '$lib/server/db/chunk';
 import {
 	hitungNilaiAkhirSumatif,
 	loadKonfigurasiNilai,
@@ -47,6 +48,43 @@ type MuridRow = {
 	nisn: string;
 	agama: string | null;
 };
+
+type SumatifRow = {
+	muridId: number;
+	mataPelajaranId: number;
+	naLingkup: number | null;
+	sts: number | null;
+	sas: number | null;
+	nilaiAkhir: number | null;
+};
+
+/** D1 parameter limit is 100 per statement; both id lists are chunked to fit. */
+const SUMATIF_CHUNK = 45;
+
+async function muatSumatifKelas(muridIds: number[], mapelIds: number[]): Promise<SumatifRow[]> {
+	const rows: SumatifRow[] = [];
+	for (const muridPart of chunk(muridIds, SUMATIF_CHUNK)) {
+		for (const mapelPart of chunk(mapelIds, SUMATIF_CHUNK)) {
+			rows.push(
+				...(await db.query.tableAsesmenSumatif.findMany({
+					columns: {
+						muridId: true,
+						mataPelajaranId: true,
+						naLingkup: true,
+						sts: true,
+						sas: true,
+						nilaiAkhir: true
+					},
+					where: and(
+						inArray(tableAsesmenSumatif.muridId, muridPart),
+						inArray(tableAsesmenSumatif.mataPelajaranId, mapelPart)
+					)
+				}))
+			);
+		}
+	}
+	return rows;
+}
 
 const normText = (v: string | null | undefined) => (v ?? '').trim().toLowerCase();
 
@@ -235,29 +273,26 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 		mapelPerKelas.set(mapel.kelasId, list);
 	}
 
-	const muridIds = muridRows.map((m) => m.id);
-	const mapelIds = mapelRows.map((m) => m.id);
-	const sumatifRows =
-		muridIds.length && mapelIds.length
-			? await db.query.tableAsesmenSumatif.findMany({
-					columns: {
-						muridId: true,
-						mataPelajaranId: true,
-						naLingkup: true,
-						sts: true,
-						sas: true,
-						nilaiAkhir: true
-					},
-					where: and(
-						inArray(tableAsesmenSumatif.muridId, muridIds),
-						inArray(tableAsesmenSumatif.mataPelajaranId, mapelIds)
-					)
-				})
-			: [];
-
 	// Copied & adjusted from nilai-akhir/rekap-keseluruhan: recompute the final
 	// grade from lingkup/STS/SAS with school weights, falling back to the stored
 	// nilaiAkhir when components are empty.
+	//
+	// D1 rejects statements with more than 100 bound parameters, and the whole
+	// school has ~700 murid x ~460 mapel rows — far too many for one `inArray`
+	// pair. Sumatif rows are per (murid, mapel) inside one class, so fetch them
+	// class by class with small id lists and merge.
+	const sumatifRows: SumatifRow[] = [];
+	if (muridRows.length && mapelRows.length) {
+		const perKelas = await Promise.all(
+			semuaKelas.map((kelas) => {
+				const muridKelasIds = (muridPerKelas.get(kelas.id) ?? []).map((m) => m.id);
+				const mapelKelasIds = (mapelPerKelas.get(kelas.id) ?? []).map((m) => m.id);
+				return muatSumatifKelas(muridKelasIds, mapelKelasIds);
+			})
+		);
+		for (const rows of perKelas) sumatifRows.push(...rows);
+	}
+
 	const nilaiSel = new Map<string, number | null>();
 	for (const row of sumatifRows) {
 		const nilai =

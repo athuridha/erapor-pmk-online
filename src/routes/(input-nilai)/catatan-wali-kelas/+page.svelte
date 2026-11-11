@@ -148,6 +148,23 @@
 		});
 	}
 
+	// Filter kelas lokal halaman ini memakai `?kelas=` (tanpa mengubah kelas
+	// aktif global), agar daftar bisa dipersempit ke satu rombel.
+	async function setKelasFilter(value: string) {
+		const params = new SvelteURLSearchParams(page.url.search);
+		if (value) {
+			params.set('kelas', value);
+		} else {
+			params.delete('kelas');
+		}
+		params.delete('page');
+		const nextQuery = params.toString();
+		const nextUrl = `${page.url.pathname}${nextQuery ? `?${nextQuery}` : ''}`;
+		const currentUrl = `${page.url.pathname}${page.url.search}`;
+		if (nextUrl === currentUrl) return;
+		await goto(nextUrl, { replaceState: true, keepFocus: true });
+	}
+
 	function handlePageClick(pageNumber: number) {
 		if (pageNumber === currentPage) return;
 		void gotoPage(pageNumber);
@@ -305,6 +322,19 @@
 					oninput={handleSearchInput}
 				/>
 			</label>
+			<select
+				class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink truncate dark:border-none"
+				title="Filter kelas"
+				aria-label="Filter kelas"
+				onchange={(event) => setKelasFilter((event.currentTarget as HTMLSelectElement).value)}
+			>
+				<option value="" selected={(data.page.kelasId ?? '') === ''}>Semua kelas</option>
+				{#each data.daftarKelas ?? [] as kelas (kelas.id)}
+					<option value={kelas.id} selected={String(kelas.id) === (data.page.kelasId ?? '')}
+						>{kelas.nama}{kelas.fase ? ` - ${kelas.fase}` : ''}</option
+					>
+				{/each}
+			</select>
 			<select
 				class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink dark:border-none"
 				value={data.page.perPage}

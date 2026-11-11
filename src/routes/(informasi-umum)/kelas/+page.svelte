@@ -1,12 +1,10 @@
 <script lang="ts">
 	import Icon from '$lib/components/icon.svelte';
-	import DeleteKelasModal from '$lib/components/kelas/delete-kelas-modal.svelte';
 	import { faseBadgeClass } from '$lib/components/kelas/fase';
-	import type { DeleteKelasModalHandle, KelasCard } from '$lib/components/kelas/types';
+	import type { KelasCard } from '$lib/components/kelas/types';
 
 	let { data } = $props();
 	const daftarKelas = $derived((data.daftarKelas ?? []) as KelasCard[]);
-	let deleteModalRef: DeleteKelasModalHandle | null = null;
 	const academicContext = $derived(data.academicContext ?? null);
 	const activeSemester = $derived.by(() => {
 		const context = academicContext;
@@ -83,28 +81,26 @@
 					</div>
 				</div>
 				<div class="mt-6 flex items-center justify-between gap-2">
-					<button
-						class="btn btn-error btn-soft shadow-none"
-						type="button"
-						onclick={() => (canKelasManage ? deleteModalRef?.open(kelas) : undefined)}
-						disabled={!canKelasManage}
-						aria-disabled={!canKelasManage}
-						title={!canKelasManage ? 'Anda tidak memiliki izin untuk menghapus kelas' : ''}
-					>
-						<Icon name="del" />
-						Hapus
-					</button>
-					<a
-						href={`/kelas/form/${kelas.id}`}
-						class="btn btn-soft shadow-none {!canKelasManage
-							? 'pointer-events-none opacity-50'
-							: ''}"
-						aria-disabled={!canKelasManage}
-						title={!canKelasManage ? 'Anda tidak memiliki izin untuk mengedit kelas' : ''}
-					>
-						<Icon name="edit" />
-						Edit
-					</a>
+					<p class="text-base-content/60 text-xs">
+						Tampilan baca-saja. CRUD kelas ada di Master Data.
+					</p>
+					<div class="flex items-center gap-2">
+						<a class="btn btn-soft shadow-none" href="/master-data/kelas">
+							<Icon name="layers" />
+							Master Data
+						</a>
+						<a
+							href={`/kelas/form/${kelas.id}`}
+							class="btn btn-soft shadow-none {!canKelasManage
+								? 'pointer-events-none opacity-50'
+								: ''}"
+							aria-disabled={!canKelasManage}
+							title={!canKelasManage ? 'Anda tidak memiliki izin untuk mengedit kelas' : ''}
+						>
+							<Icon name="edit" />
+							Edit
+						</a>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -121,27 +117,4 @@
 			</div>
 		</div>
 	{/each}
-	<a
-		href="/kelas/form"
-		class="card bg-base-100 rounded-box border-base-300 hover:bg-base-200 flex min-h-40 border-2 border-dashed transition-colors duration-300 {!canKelasManage
-			? 'pointer-events-none opacity-50'
-			: ''}"
-		aria-disabled={!canKelasManage}
-		title={!canKelasManage ? 'Anda tidak memiliki izin untuk menambah kelas baru' : ''}
-	>
-		<div class="my-auto items-center justify-center text-center">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="text-base-content/30 mx-auto h-12 w-12"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-				stroke-width="1"
-			>
-				<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-			</svg>
-			<p class="text-base-content/50 mt-2">Tambah Kelas Baru</p>
-		</div>
-	</a>
 </div>
-<DeleteKelasModal bind:this={deleteModalRef} />

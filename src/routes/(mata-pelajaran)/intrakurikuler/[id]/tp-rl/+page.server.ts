@@ -14,6 +14,7 @@ import { fail } from '@sveltejs/kit';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { readBufferToAoA } from '$lib/utils/excel.js';
 import { redirect } from '@sveltejs/kit';
+import { getKelasDiampuLainForMapel, syncTujuanPembelajaran } from '$lib/server/mapel-tp';
 import { authority } from '../../../../pengguna/utils.server';
 
 const MAX_IMPORT_FILE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -54,6 +55,8 @@ export async function load({ depends, params, parent, locals }) {
 	}
 
 	depends('app:mapel_tp-rl');
+	const kelasDiampuLain = await getKelasDiampuLainForMapel(+params.id, user, sekolahId);
+
 	// pull mapel and user from parent so we can adapt behaviour for assigned agama teachers
 	const { mapel } = await parent();
 
@@ -299,6 +302,7 @@ export async function load({ depends, params, parent, locals }) {
 					})()
 				),
 				lockedAgamaSelectionId: assignedLocalMapelId ?? assignedGlobalId,
+				kelasDiampuLain,
 				meta: { title: `Tujuan Pembelajaran - ${assignedLocal.name}` }
 			};
 		}
@@ -343,11 +347,54 @@ export async function load({ depends, params, parent, locals }) {
 		agamaSelectDisabled: agamaSelectDisabledValue,
 		lockedAgamaSelectionId: assignedLocalMapelId ?? assignedGlobalId,
 		userHasMultiAgama,
+		kelasDiampuLain,
 		meta: { title: `Tujuan Pembelajaran - ${mapel.nama}` }
 	};
 }
 
 export const actions = {
+	async sync_all({ params, request, locals }) {
+		const userType = (locals.user as { type?: string } | null)?.type;
+		if (
+			userType !== 'admin' &&
+			userType !== 'kepala_sekolah' &&
+			userType !== 'user' &&
+			userType !== 'wali_kelas' &&
+			userType !== 'wali_asuh'
+		) {
+			authority('mata_pelajaran_intrakurikuler');
+		}
+
+		const mataPelajaranId = Number(params.id);
+		if (!Number.isFinite(mataPelajaranId)) {
+			return fail(400, { fail: 'Mata pelajaran tidak valid.' });
+		}
+
+		const formData = await request.formData();
+		const rawTargetIds = formData.getAll('targetMapelIds');
+		const targetMapelIds = rawTargetIds
+			.map((v) => Number(v))
+			.filter((n) => Number.isFinite(n) && n > 0 && n !== mataPelajaranId);
+
+		const mode = formData.get('mode') === 'merge' ? 'merge' : 'replace';
+
+		if (targetMapelIds.length === 0) {
+			return fail(400, { fail: 'Pilih minimal satu kelas tujuan untuk disinkronkan.' });
+		}
+
+		const result = await syncTujuanPembelajaran({
+			sourceMapelId: mataPelajaranId,
+			targetMapelIds,
+			mode
+		});
+
+		if (!result.success) {
+			return fail(400, { fail: result.message });
+		}
+
+		return { message: result.message };
+	},
+
 	async save({ params, request, locals }) {
 		// Allow admin, kepala_sekolah, user, wali_kelas, wali_asuh; others need permission
 		const userType = (locals.user as { type?: string } | null)?.type;
@@ -425,6 +472,53 @@ export const actions = {
 					mataPelajaranId
 				}))
 			);
+
+			const terapkanSemuaKelas =
+				formData.get('terapkanSemuaKelas') === '1' ||
+				(payload as unknown as { terapkanSemuaKelas?: string })?.terapkanSemuaKelas === '1';
+
+			if (terapkanSemuaKelas) {
+				try {
+					const otherClasses = await getKelasDiampuLainForMapel(
+						mataPelajaranId,
+						locals.user,
+						locals.sekolah?.id
+					);
+					if (otherClasses.length > 0 && toInsert.length > 0) {
+						await db.transaction(async (tx) => {
+							for (const target of otherClasses) {
+								const existingTarget = await tx.query.tableTujuanPembelajaran.findMany({
+									columns: { lingkupMateri: true, deskripsi: true },
+									where: eq(tableTujuanPembelajaran.mataPelajaranId, target.mapelId)
+								});
+								const existingSet = new Set(
+									existingTarget.map(
+										(e) =>
+											`${e.lingkupMateri.trim().toLowerCase()}::${e.deskripsi.trim().toLowerCase()}`
+									)
+								);
+								const targetInserts = toInsert
+									.filter(
+										(e) =>
+											!existingSet.has(
+												`${lingkupMateri.trim().toLowerCase()}::${e.deskripsi.trim().toLowerCase()}`
+											)
+									)
+									.map((e) => ({
+										lingkupMateri,
+										deskripsi: e.deskripsi,
+										mataPelajaranId: target.mapelId
+									}));
+								if (targetInserts.length > 0) {
+									await tx.insert(tableTujuanPembelajaran).values(targetInserts);
+								}
+							}
+						});
+					}
+				} catch (err) {
+					console.warn('[tp-rl] Gagal menerapkan ke kelas lain', err);
+				}
+			}
 
 			return { message: `Tujuan pembelajaran berhasil ditambahkan` };
 		}
@@ -567,6 +661,49 @@ export const actions = {
 		}
 
 		await db.insert(tableTujuanPembelajaran).values(toInsert);
+
+		if (formData.get('terapkanSemuaKelas') === '1') {
+			try {
+				const otherClasses = await getKelasDiampuLainForMapel(
+					mataPelajaranId,
+					locals.user,
+					locals.sekolah?.id
+				);
+				if (otherClasses.length > 0 && toInsert.length > 0) {
+					await db.transaction(async (tx) => {
+						for (const target of otherClasses) {
+							const existingTarget = await tx.query.tableTujuanPembelajaran.findMany({
+								columns: { lingkupMateri: true, deskripsi: true },
+								where: eq(tableTujuanPembelajaran.mataPelajaranId, target.mapelId)
+							});
+							const existingSet = new Set(
+								existingTarget.map(
+									(e) =>
+										`${e.lingkupMateri.trim().toLowerCase()}::${e.deskripsi.trim().toLowerCase()}`
+								)
+							);
+							const targetInserts = toInsert
+								.filter(
+									(e) =>
+										!existingSet.has(
+											`${e.lingkupMateri.trim().toLowerCase()}::${e.deskripsi.trim().toLowerCase()}`
+										)
+								)
+								.map((e) => ({
+									lingkupMateri: e.lingkupMateri,
+									deskripsi: e.deskripsi,
+									mataPelajaranId: target.mapelId
+								}));
+							if (targetInserts.length > 0) {
+								await tx.insert(tableTujuanPembelajaran).values(targetInserts);
+							}
+						}
+					});
+				}
+			} catch (err) {
+				console.warn('[tp-rl] Gagal menerapkan aigenerate ke kelas lain', err);
+			}
+		}
 
 		const parts = [`Berhasil menambahkan ${toInsert.length} tujuan pembelajaran.`];
 		if (duplicateCount > 0) {
@@ -850,6 +987,49 @@ export const actions = {
 		}
 
 		await db.insert(tableTujuanPembelajaran).values(toInsert);
+
+		if (formData.get('terapkanSemuaKelas') === '1') {
+			try {
+				const otherClasses = await getKelasDiampuLainForMapel(
+					mataPelajaranId,
+					locals.user,
+					locals.sekolah?.id
+				);
+				if (otherClasses.length > 0 && toInsert.length > 0) {
+					await db.transaction(async (tx) => {
+						for (const target of otherClasses) {
+							const existingTarget = await tx.query.tableTujuanPembelajaran.findMany({
+								columns: { lingkupMateri: true, deskripsi: true },
+								where: eq(tableTujuanPembelajaran.mataPelajaranId, target.mapelId)
+							});
+							const existingSet = new Set(
+								existingTarget.map(
+									(e) =>
+										`${e.lingkupMateri.trim().toLowerCase()}::${e.deskripsi.trim().toLowerCase()}`
+								)
+							);
+							const targetInserts = toInsert
+								.filter(
+									(e) =>
+										!existingSet.has(
+											`${e.lingkupMateri.trim().toLowerCase()}::${e.deskripsi.trim().toLowerCase()}`
+										)
+								)
+								.map((e) => ({
+									lingkupMateri: e.lingkupMateri,
+									deskripsi: e.deskripsi,
+									mataPelajaranId: target.mapelId
+								}));
+							if (targetInserts.length > 0) {
+								await tx.insert(tableTujuanPembelajaran).values(targetInserts);
+							}
+						}
+					});
+				}
+			} catch (err) {
+				console.warn('[tp-rl] Gagal menerapkan import ke kelas lain', err);
+			}
+		}
 
 		const parts = [`Berhasil mengimpor ${toInsert.length} tujuan pembelajaran.`];
 		if (duplicateCount > 0) {

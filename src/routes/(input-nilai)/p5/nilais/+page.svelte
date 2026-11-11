@@ -38,7 +38,7 @@
 	}
 </script>
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
+<div class="card bg-base-100 min-w-0 rounded-lg border border-none p-4 shadow-md">
 	<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
 		<div class="min-w-0">
 			<div class="flex items-center gap-2">
@@ -114,8 +114,11 @@
 			{#snippet children({ submitting: busy, invalid })}
 				<input name="projekId" value={data.projekId} hidden />
 
-				<div class="overflow-x-auto">
-					<table class="table">
+				<p class="text-base-content/60 mb-2 text-xs lg:hidden">
+					Geser tabel ke kiri/kanan untuk melihat seluruh dimensi.
+				</p>
+				<div class="w-full max-w-full overflow-x-auto">
+					<table class="table min-w-max">
 						<thead>
 							<tr>
 								<th>NO</th>

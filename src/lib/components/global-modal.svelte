@@ -83,6 +83,57 @@
 	export function setLoading(state: boolean) {
 		isLoading = state;
 	}
+
+	/**
+	 * Elemen daftar pilihan yang sedang terbuka di dalam modal (combobox
+	 * kustom, listbox, atau dropdown DaisyUI). Dipakai untuk memutuskan apakah
+	 * Escape harus menutup dropdown dulu, bukan seluruh dialog (B19).
+	 */
+	function dropdownTerbuka(): HTMLElement | null {
+		return (
+			modal?.querySelector<HTMLElement>(
+				'[aria-expanded="true"], [role="listbox"], .dropdown-open'
+			) ?? null
+		);
+	}
+
+	function tutupDropdownTerbuka(): boolean {
+		const target = dropdownTerbuka();
+		if (!target) return false;
+		const fokus = document.activeElement as HTMLElement | null;
+		if (fokus && fokus !== document.body && modal?.contains(fokus)) {
+			// Combobox kustom menutup daftarnya lewat onblur.
+			fokus.blur();
+		}
+		return true;
+	}
+
+	/**
+	 * Escape di dalam dialog:
+	 * - modal wajib (dismissible: false, mis. Presensi Guru) → jangan tutup;
+	 * - ada dropdown/combobox terbuka → tutup dropdown itu saja, form tetap.
+	 * `preventDefault` di fase capture mencegah aksi bawaan <dialog> menutup diri.
+	 */
+	function handleDialogKeydown(event: KeyboardEvent) {
+		if (event.key !== 'Escape' || !modal) return;
+		if (modalProps.dismissible === false) {
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+		if (tutupDropdownTerbuka()) {
+			event.preventDefault();
+			event.stopPropagation();
+		}
+	}
+
+	function handleDialogCancel(event: Event) {
+		if (modalProps.dismissible === false || tutupDropdownTerbuka()) {
+			event.preventDefault();
+			return;
+		}
+		clearModal();
+	}
 </script>
 
 <script lang="ts">
@@ -90,7 +141,13 @@
 </script>
 
 {#if modalShown}
-	<dialog bind:this={modal} class="modal" oncancel={clearModal} onclose={clearModal}>
+	<dialog
+		bind:this={modal}
+		class="modal"
+		onkeydowncapture={handleDialogKeydown}
+		oncancel={handleDialogCancel}
+		onclose={clearModal}
+	>
 		<div class="modal-box flex max-h-[85vh] flex-col sm:w-full sm:max-w-2xl">
 			{#if modalProps.title}
 				<h3 class="shrink-0 text-lg font-bold">{modalProps.title}</h3>

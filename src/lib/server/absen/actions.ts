@@ -1,6 +1,7 @@
 import db from '$lib/server/db';
 import {
 	tableMurid,
+	tableKelas,
 	tableKetidakhadiranHarian,
 	tableKetidakhadiranRapor,
 	tableAbsensi,
@@ -150,6 +151,172 @@ export async function handleUpdate({
 	}
 
 	return { message: 'Ketidakhadiran berhasil diperbarui' };
+}
+
+/**
+ * Simpan massal dari multi-select grid Harian: satu status MASUK dan/atau
+ * PULANG diterapkan ke banyak murid sekaligus. Efek tulis sama dengan
+ * `handleUpdate` per baris (upsert `ketidakhadiran_harian`), termasuk mode
+ * simulasi.
+ */
+export async function handleSimpanMassal({
+	request,
+	locals,
+	url
+}: {
+	request: Request;
+	locals: App.Locals;
+	url: URL;
+}) {
+	const sekolahId = locals.sekolah?.id ?? null;
+	if (!sekolahId) {
+		return fail(401, { fail: 'Sekolah tidak ditemukan' });
+	}
+	if (!locals.user) {
+		return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah data kehadiran' });
+	}
+
+	const formData = await request.formData();
+
+	const tanggalRaw = formData.get('tanggal')?.toString() ?? '';
+	if (!isValidDate(tanggalRaw)) {
+		return fail(400, { fail: 'Tanggal presensi tidak valid' });
+	}
+	const tanggal = tanggalRaw;
+
+	const kelasId = Number(formData.get('kelasId')?.toString() ?? '');
+	if (!Number.isInteger(kelasId) || kelasId <= 0) {
+		return fail(400, { fail: 'Kelas tidak ditemukan' });
+	}
+
+	const mataPelajaranIdRaw = formData.get('mataPelajaranId')?.toString() ?? '';
+	const mataPelajaranId = mataPelajaranIdRaw ? Number(mataPelajaranIdRaw) : null;
+	if (mataPelajaranId != null && !Number.isInteger(mataPelajaranId)) {
+		return fail(400, { fail: 'Mata pelajaran tidak valid' });
+	}
+
+	const normalisasiKeterangan = (raw: string): string | null =>
+		['sakit', 'izin', 'alfa'].includes(raw) ? raw : null;
+	const masukRaw = formData.get('masuk')?.toString().trim() ?? '';
+	const pulangRaw = formData.get('pulang')?.toString().trim() ?? '';
+	const keterangan = normalisasiKeterangan(masukRaw);
+	// `''` = hadir (konvensi yang sama dengan simpan per baris).
+	const keteranganPulang = pulangRaw === '' ? '' : normalisasiKeterangan(pulangRaw);
+
+	let muridIds: number[] = [];
+	try {
+		const parsed: unknown = JSON.parse(formData.get('muridIds')?.toString() ?? '[]');
+		if (Array.isArray(parsed)) {
+			muridIds = [
+				...new Set(
+					parsed
+						.map((value) => Number(value))
+						.filter((value) => Number.isInteger(value) && value > 0)
+				)
+			];
+		}
+	} catch {
+		return fail(400, { fail: 'Daftar murid tidak valid' });
+	}
+	if (!muridIds.length) {
+		return fail(400, { fail: 'Pilih minimal satu murid' });
+	}
+
+	if (!(await canUserEditAbsen(locals.user, sekolahId, kelasId))) {
+		return fail(403, { fail: 'Anda tidak memiliki izin untuk mengubah data kehadiran' });
+	}
+
+	const kelasRecord = await db.query.tableKelas.findFirst({
+		columns: { id: true },
+		where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
+	});
+	if (!kelasRecord) {
+		return fail(404, { fail: 'Kelas tidak ditemukan di sekolah ini' });
+	}
+
+	const muridRecords = await db.query.tableMurid.findMany({
+		columns: { id: true },
+		where: and(
+			inArray(tableMurid.id, muridIds),
+			eq(tableMurid.sekolahId, sekolahId),
+			eq(tableMurid.kelasId, kelasId)
+		)
+	});
+	if (muridRecords.length !== muridIds.length) {
+		return fail(400, { fail: 'Sebagian murid bukan anggota kelas ini' });
+	}
+
+	if (mataPelajaranId != null) {
+		const mapelRecord = await db.query.tableMataPelajaran.findFirst({
+			columns: { id: true, kelasId: true },
+			where: eq(tableMataPelajaran.id, mataPelajaranId)
+		});
+		if (!mapelRecord || mapelRecord.kelasId !== kelasId) {
+			return fail(400, { fail: 'Mata pelajaran tidak ditemukan untuk kelas ini' });
+		}
+	}
+
+	const simHari = url.searchParams.get('simHari');
+	const simJam = url.searchParams.get('simJam');
+	if (simHari) {
+		for (const muridId of muridIds) {
+			simWriteKetidakhadiran(
+				sekolahId,
+				kelasId,
+				tanggal,
+				muridId,
+				keterangan,
+				mataPelajaranId,
+				simHari,
+				simJam,
+				keteranganPulang
+			);
+		}
+		return { message: `Presensi ${muridIds.length} murid disimpan (simulasi)` };
+	}
+
+	try {
+		await db.transaction(async (tx) => {
+			// SQLite menganggap NULL berbeda pada UNIQUE index, jadi hapus dulu
+			// baris tanpa mata pelajaran agar tetap satu baris per murid/tanggal.
+			if (mataPelajaranId == null) {
+				await tx
+					.delete(tableKetidakhadiranHarian)
+					.where(
+						and(
+							inArray(tableKetidakhadiranHarian.muridId, muridIds),
+							eq(tableKetidakhadiranHarian.tanggal, tanggal),
+							sql`${tableKetidakhadiranHarian.mataPelajaranId} IS NULL`
+						)
+					);
+			}
+			for (const muridId of muridIds) {
+				await tx
+					.insert(tableKetidakhadiranHarian)
+					.values({ muridId, tanggal, keterangan, keteranganPulang, mataPelajaranId })
+					.onConflictDoUpdate({
+						target: [
+							tableKetidakhadiranHarian.muridId,
+							tableKetidakhadiranHarian.tanggal,
+							tableKetidakhadiranHarian.mataPelajaranId
+						],
+						set: {
+							keterangan,
+							keteranganPulang,
+							mataPelajaranId,
+							updatedAt: new Date().toISOString()
+						}
+					});
+			}
+		});
+	} catch (error) {
+		if (isTableMissingError(error)) {
+			return fail(500, { fail: TABLE_MISSING_MESSAGE });
+		}
+		throw error;
+	}
+
+	return { message: `Presensi ${muridIds.length} murid berhasil disimpan` };
 }
 
 export async function handleIsiSekaligus({

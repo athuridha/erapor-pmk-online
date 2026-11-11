@@ -28,8 +28,16 @@
 		return u?.type !== 'wali_asuh' && u?.type !== 'user';
 	});
 
-	// svelte-ignore state_referenced_locally
-	let kelas = `${data.murid.kelas?.nama || '-'} Fase ${data.murid.kelas?.fase || '-'}`;
+	/** Label kelas + fase tanpa kata "Fase" ganda ("Fase Fase F"). */
+	function labelKelasFase(
+		kelas: { nama?: string | null; fase?: string | null } | null | undefined
+	): string {
+		const nama = kelas?.nama || '-';
+		const fase = (kelas?.fase ?? '').trim().replace(/^fase\s+/i, '');
+		return fase ? `${nama} Fase ${fase}` : nama;
+	}
+
+	let kelas = $derived(labelKelasFase(data.murid.kelas));
 	let deletingFoto = $state(false);
 	let isUploadModalOpen = $state(false);
 

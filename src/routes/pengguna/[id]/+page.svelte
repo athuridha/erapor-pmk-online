@@ -121,7 +121,7 @@
 
 	<section class="mt-6 flex items-center justify-between gap-3">
 		<Authority permissions={['user_set_permissions']}>
-			<a href="/pengguna" class="btn btn-soft shadow-none">
+			<a href="/master-data/pengguna/guru" class="btn btn-soft shadow-none">
 				<Icon name="left" />
 				Kembali
 			</a>

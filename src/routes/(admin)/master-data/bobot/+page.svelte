@@ -245,19 +245,25 @@
 	<div class="alert alert-info alert-soft text-xs">
 		<Icon name="info" />
 		<div class="space-y-1">
-			<p class="font-bold">Informasi Rumus Perhitungan Nilai Akhir:</p>
+			<p class="font-bold">Cara perhitungan nilai akhir:</p>
 			<ul class="list-disc pl-4 space-y-0.5">
 				<li>
 					<strong>Rapor Akhir Semester (RAS):</strong>
-					<code>(Lingkup × BobotLingkup + STS × BobotSTS + SAS × BobotSAS) / 100</code>
-				</li>
-				<li>
-					Jika suatu mata pelajaran tidak mengadakan STS, bobot dialihkan otomatis menjadi Lingkup
-					70% dan SAS 30%.
+					<code
+						>(Lingkup × bobotLingkup + STS × bobotSTS + SAS × bobotSAS) / total bobot komponen yang
+						terisi</code
+					>
 				</li>
 				<li>
 					<strong>Rapor Tengah Semester (RTS):</strong>
-					<code>(Lingkup × BobotLingkupRTS + STS × BobotSTSRTS) / 100</code>
+					<code
+						>(Lingkup × bobotLingkupRTS + STS × bobotSTS RTS) / total bobot komponen yang terisi</code
+					>
+				</li>
+				<li>
+					Komponen yang belum diisi (mis. STS belum diadakan) diabaikan, lalu bobot komponen yang
+					terisi dinormalisasi agar totalnya tetap 100%. Mapel tanpa STS dihitung Lingkup 70% dan
+					SAS 30% — komposisi inilah yang tampil pada kartu Nilai Rapor di halaman Asesmen Sumatif.
 				</li>
 			</ul>
 		</div>

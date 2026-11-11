@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { dev } from '$app/environment';
-	import { invalidate, onNavigate } from '$app/navigation';
-	import GlobalModal, { showModal } from '$lib/components/global-modal.svelte';
+	import { invalidate, invalidateAll, onNavigate } from '$app/navigation';
+	import GlobalModal, { showModal, hideModal } from '$lib/components/global-modal.svelte';
 	import Icon from '$lib/components/icon.svelte';
+	import ForcedPasswordChangeBody from '$lib/components/settings/forced-password-change-body.svelte';
 	import Menu from '$lib/components/menu.svelte';
 	import Navbar from '$lib/components/navbar.svelte';
+	import KelasPickerLokal from '$lib/components/kelas-picker-lokal.svelte';
 	import Task from '$lib/components/tasks.svelte';
 	import FavoriteMenusSidebar from '$lib/components/dashboard/favorite-menus-sidebar.svelte';
 	import KodeKegiatan from '$lib/components/jadwal-bell/kode-kegiatan.svelte';
@@ -24,20 +26,20 @@
 	let { data, children } = $props();
 
 	const appName = 'e-Rapor SMK Pratama Mulya';
-	let stoppingServer = $state(false);
 	let loggingOut = $state(false);
+	let isStoppingImpersonation = $state(false);
 
-	let isOnline = $state(true);
+	let _isOnline = $state(true);
 
 	$effect(() => {
 		if (typeof window === 'undefined') return;
-		isOnline = navigator.onLine;
+		_isOnline = navigator.onLine;
 
 		const handleOnline = () => {
-			isOnline = true;
+			_isOnline = true;
 		};
 		const handleOffline = () => {
-			isOnline = false;
+			_isOnline = false;
 		};
 
 		window.addEventListener('online', handleOnline);
@@ -144,6 +146,30 @@
 		)
 	);
 
+	// Pengguna yang memakai kata sandi bawaan (mustChangePassword) harus
+	// menggantinya sebelum menggunakan aplikasi. Modal ini tidak bisa
+	// ditutup (dismissible: false) dan terpasang di layout, jadi berlaku
+	// untuk semua halaman (kecuali mode beralih akun).
+	let forcedPasswordModalDismissed = $state(false);
+	const forcedPasswordModalShown = $derived(
+		!!data.user && !data.impersonator && data.user.mustChangePassword === true
+	);
+	$effect(() => {
+		if (!forcedPasswordModalShown || forcedPasswordModalDismissed) return;
+		forcedPasswordModalDismissed = true;
+		showModal({
+			title: 'Ganti Kata Sandi',
+			body: ForcedPasswordChangeBody,
+			bodyProps: {
+				onPasswordChanged: async () => {
+					await invalidateAll();
+					hideModal();
+				}
+			},
+			dismissible: false
+		});
+	});
+
 	// Beberapa halaman (mis. Kustomisasi Cetak) butuh ruang penuh: panel
 	// "Daftar tugas" dan "Menu Favorit" disembunyikan.
 	const hideTaskRail = $derived(page.data.meta?.hideTaskRail === true);
@@ -205,38 +231,6 @@
 		return data.kelasAktif?.id != null && ownIds.includes(data.kelasAktif.id);
 	});
 	const disableInteraction = $derived(!isAdminUser(data.user) && !isOwnClass && isReadonlyPage);
-
-	async function stopServer() {
-		if (stoppingServer) return;
-		stoppingServer = true;
-
-		const showSuccess = () =>
-			toast({
-				message:
-					'Server dihentikan. Tutup jendela aplikasi ini lalu jalankan ulang bila diperlukan.',
-				type: 'info',
-				persist: true
-			});
-
-		try {
-			const response = await fetch('/api/runtime/stop', { method: 'POST', keepalive: true });
-			if (response.ok) {
-				showSuccess();
-			} else {
-				const details = await response.text().catch(() => '');
-				console.error('Gagal menghentikan server', response.status, details);
-				toast({ message: 'Gagal menghentikan server. Coba lagi.', type: 'error' });
-			}
-		} catch (error) {
-			console.warn(
-				'Permintaan stop server berakhir sebelum respons diterima. Diasumsikan berhasil.',
-				error
-			);
-			showSuccess();
-		} finally {
-			stoppingServer = false;
-		}
-	}
 
 	async function logout() {
 		if (loggingOut) return;
@@ -318,11 +312,11 @@
 	<main class="drawer lg:drawer-open">
 		<input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
 		<div class="drawer-content flex min-h-screen flex-col">
-			<Navbar {stopServer} {stoppingServer} {logout} {loggingOut} />
+			<Navbar {logout} {loggingOut} />
 
 			{#if data.impersonator}
 				<div
-					class="bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-between text-xs font-bold shadow-sm border-b border-amber-600/30"
+					class="bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-between text-xs font-bold shadow-sm border-b border-amber-600/30 relative z-20"
 				>
 					<div class="flex items-center gap-2">
 						<Icon name="warning" class="w-4 h-4 text-amber-900" />
@@ -334,27 +328,30 @@
 							(Sesi Asli: @{data.impersonator.username}).
 						</span>
 					</div>
-					<button
-						type="button"
-						class="btn btn-xs bg-amber-950 text-white hover:bg-black border-none rounded-lg font-bold shadow-none"
-						onclick={async () => {
+					<form
+						method="POST"
+						action="/api/auth/switch-user/stop"
+						onsubmit={async (e) => {
+							e.preventDefault();
+							if (isStoppingImpersonation) return;
+							isStoppingImpersonation = true;
 							try {
 								const res = await fetch('/api/auth/switch-user/stop', { method: 'POST' });
-								const json = await res.json();
-								if (res.ok && json.success) {
-									toast(json.message || 'Kembali ke akun Admin.', 'success');
-									window.location.href = '/';
-								} else {
-									toast(json.message || 'Gagal kembali.', 'error');
-								}
+								window.location.href = '/';
 							} catch {
-								toast('Terjadi kesalahan.', 'error');
+								window.location.href = '/';
 							}
 						}}
 					>
-						<Icon name="repeat" class="w-3 h-3" />
-						<span>Kembali ke Admin</span>
-					</button>
+						<button
+							type="submit"
+							disabled={isStoppingImpersonation}
+							class="btn btn-xs bg-amber-950 text-white hover:bg-black border-none rounded-lg font-bold shadow-none cursor-pointer gap-1.5"
+						>
+							<Icon name="repeat" class="w-3 h-3 {isStoppingImpersonation ? 'animate-spin' : ''}" />
+							<span>{isStoppingImpersonation ? 'Kembali…' : 'Kembali ke Admin'}</span>
+						</button>
+					</form>
 				</div>
 			{/if}
 
@@ -368,6 +365,7 @@
 						<div class="w-full max-w-7xl min-w-0 flex-1">
 							<ScrollToTop />
 							<FavoriteMenusFab />
+							<KelasPickerLokal />
 							<div class={disableInteraction ? 'is-readonly' : ''}>
 								{@render children()}
 							</div>

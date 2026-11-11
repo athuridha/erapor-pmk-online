@@ -260,6 +260,72 @@ export async function ensureCoreSchema() {
 		// dapodik_settings belum ada — abaikan
 	}
 
+	// Backfill sekolah_id utk pegawai yang sudah punya jejak sekolah lewat
+	// akun pengguna / wali kelas / pengampu mapel, tapi barisnya dibuat oleh
+	// form lama yang tidak mengisi kolom ini. Tanpa ini Guru Pengampu di
+	// /master-data/mata_pelajaran tidak menampilkan akun guru tersebut.
+	try {
+		await db.$client.execute(
+			`UPDATE pegawai SET sekolah_id = (
+				SELECT u.sekolah_id FROM auth_user u
+				WHERE u.pegawai_id = pegawai.id AND u.sekolah_id IS NOT NULL
+				ORDER BY u.id LIMIT 1
+			)
+			WHERE pegawai.sekolah_id IS NULL
+			  AND EXISTS (
+				SELECT 1 FROM auth_user u
+				WHERE u.pegawai_id = pegawai.id AND u.sekolah_id IS NOT NULL
+			  )`
+		);
+	} catch {
+		// auth_user belum ada — abaikan
+	}
+	try {
+		await db.$client.execute(
+			`UPDATE pegawai SET sekolah_id = (
+				SELECT k.sekolah_id FROM kelas k
+				WHERE k.wali_kelas_id = pegawai.id AND k.sekolah_id IS NOT NULL
+				ORDER BY k.id LIMIT 1
+			)
+			WHERE pegawai.sekolah_id IS NULL
+			  AND EXISTS (
+				SELECT 1 FROM kelas k
+				WHERE k.wali_kelas_id = pegawai.id AND k.sekolah_id IS NOT NULL
+			  )`
+		);
+	} catch {
+		// kelas belum ada — abaikan
+	}
+	try {
+		await db.$client.execute(
+			`UPDATE pegawai SET sekolah_id = (
+				SELECT k.sekolah_id FROM mata_pelajaran mp
+				JOIN kelas k ON k.id = mp.kelas_id
+				WHERE mp.pengampu_id = pegawai.id AND k.sekolah_id IS NOT NULL
+				ORDER BY k.id LIMIT 1
+			)
+			WHERE pegawai.sekolah_id IS NULL
+			  AND EXISTS (
+				SELECT 1 FROM mata_pelajaran mp
+				JOIN kelas k ON k.id = mp.kelas_id
+				WHERE mp.pengampu_id = pegawai.id AND k.sekolah_id IS NOT NULL
+			  )`
+		);
+	} catch {
+		// mata_pelajaran/kelas belum ada — abaikan
+	}
+	// Instalasi satu sekolah (paling lazim): semua pegawai sisa ikut sekolah
+	// itu. Aman karena multi-sekolah tidak memenuhi syarat.
+	try {
+		await db.$client.execute(
+			`UPDATE pegawai SET sekolah_id = (SELECT id FROM sekolah ORDER BY id LIMIT 1)
+			WHERE pegawai.sekolah_id IS NULL
+			  AND (SELECT COUNT(*) FROM sekolah) = 1`
+		);
+	} catch {
+		// sekolah belum ada — abaikan
+	}
+
 	// Profile columns on auth_user (migration for existing databases)
 	const profileColumns = [
 		['nama_lengkap', 'TEXT'],

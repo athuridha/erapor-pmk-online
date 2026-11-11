@@ -204,7 +204,14 @@ export const load = async ({ params, locals, url }) => {
 			roles: tableAuthUser.roles,
 			pegawaiNama: tablePegawai.nama,
 			nik: tablePegawai.nik,
-			kelas: sql<string | null>`(select k.nama from kelas k where k.id = auth_user.kelas_id)`,
+			// Kelas ampu = kolom legacy auth_user.kelas_id (kelas pada akun).
+			kelasDiampu: sql<string | null>`(select k.nama from kelas k where k.id = auth_user.kelas_id)`,
+			// Wali kelas = relasi wali_kelas_id pada tabel kelas (sumber kebenaran
+			// yang sama dengan halaman /kelas). Dipisah dari kelas ampu agar dua
+			// peran ini tidak lagi tampil tercampur di satu kolom "Kelas".
+			waliKelas: sql<
+				string | null
+			>`(select group_concat(k2.nama, ', ') from kelas k2 where k2.wali_kelas_id = auth_user.pegawai_id)`,
 			mapel: sql<
 				string | null
 			>`(select mp.nama from mata_pelajaran mp where mp.id = auth_user.mata_pelajaran_id)`,
@@ -233,8 +240,10 @@ export const load = async ({ params, locals, url }) => {
 			operatorLevel: row.operatorLevel,
 			username: row.username,
 			bisaHapus: row.id !== 1 && row.username.trim().toLowerCase() !== 'admin',
+			nik: row.nik,
 			nik_username: row.nik || row.username,
-			kelas: row.kelas,
+			kelasDiampu: row.kelasDiampu,
+			waliKelas: row.waliKelas,
 			mapel: row.mapel,
 			izin: row.izin,
 			dibuat: row.dibuat
@@ -372,10 +381,15 @@ export const actions = {
 
 			// Orang yang sama sudah punya akun (mis. kepala sekolah) dilewati.
 			const [orang] = await db
-				.select({ id: tablePegawai.id })
+				.select({ id: tablePegawai.id, sekolahId: tablePegawai.sekolahId })
 				.from(tablePegawai)
 				.where(eq(tablePegawai.nama, nama))
 				.limit(1);
+			// Baris pegawai lama bisa tanpa sekolah_id (dibuat sebelum kolom ini
+			// diisi) — isi sekarang supaya muncul di dropdown Guru Pengampu.
+			if (orang && !orang.sekolahId) {
+				await db.update(tablePegawai).set({ sekolahId }).where(eq(tablePegawai.id, orang.id));
+			}
 			if (orang) {
 				const [terpakai] = await db
 					.select({ id: tableAuthUser.id })
@@ -396,7 +410,7 @@ export const actions = {
 			if (!pegawaiId) {
 				const [pegawai] = await db
 					.insert(tablePegawai)
-					.values({ nama, nip: username })
+					.values({ nama, nip: username, sekolahId })
 					.returning({ id: tablePegawai.id });
 				pegawaiId = pegawai?.id ?? null;
 			}
@@ -489,7 +503,7 @@ export const actions = {
 
 			const [pegawai] = await db
 				.insert(tablePegawai)
-				.values({ nama, nip: '', nik: nik || null })
+				.values({ nama, nip: '', nik: nik || null, sekolahId })
 				.returning({ id: tablePegawai.id });
 
 			await db.insert(tableAuthUser).values({

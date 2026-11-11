@@ -1,16 +1,18 @@
 import db from '$lib/server/db';
 import {
 	tableAsesmenFormatif,
+	tableKelas,
 	tableMataPelajaran,
 	tableMurid,
 	tableTujuanPembelajaran
 } from '$lib/server/db/schema';
 import { ensureAsesmenFormatifSchema } from '$lib/server/db/ensure-asesmen-formatif';
-import { getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
+import { queryInChunks, chunk } from '$lib/server/db/chunk';
+import { bolehAksesMapel, getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
 import { ownedKelasIdSet } from '$lib/server/kelas-akses';
 import { labelVarianUntukMurid, muridAgamaKey } from '$lib/server/mapel-picker';
-import { asc, and, eq, inArray } from 'drizzle-orm';
-import { redirect } from '@sveltejs/kit';
+import { asc, and, eq, inArray, sql } from 'drizzle-orm';
+import { fail, redirect } from '@sveltejs/kit';
 import { agamaMapelOptions, pksMapelOptions } from '$lib/statics';
 
 const CATEGORY_LABEL: Record<ProgressCategory, string> = {
@@ -114,6 +116,7 @@ export async function load({ parent, url, depends }) {
 			selectedMapel: null,
 			tujuanGroups: [] as Array<{ lingkupMateri: string; totalTujuan: number }>,
 			jumlahTujuan: 0,
+			bulkLingkupList: [] as string[],
 			daftarMurid: [],
 			search: null,
 			page: {
@@ -475,13 +478,16 @@ export async function load({ parent, url, depends }) {
 			selectedMapel: null,
 			tujuanGroups: [] as Array<{ lingkupMateri: string; totalTujuan: number }>,
 			jumlahTujuan: 0,
+			bulkLingkupList: [] as string[],
 			daftarMurid: paginatedMuridRecords.map((murid, index) => ({
 				id: murid.id,
 				nama: murid.nama,
 				no: offset + index + 1,
+				mapelId: null,
 				progressText: null,
 				progressSummaryParts: [] as ProgressSummaryPart[],
 				hasPenilaian: false,
+				hasTujuan: false,
 				nilaiHref: null,
 				canNilai: true
 			})),
@@ -551,6 +557,14 @@ export async function load({ parent, url, depends }) {
 
 	const tujuanIds = tujuanRecords.map((record) => record.id);
 	const muridIds = filteredMuridRecords.map((murid) => murid.id);
+
+	// Opsi "Lingkup Materi" untuk pengisian massal (gabungan semua varian mapel
+	// yang relevan), supaya bulk juga bisa dipakai pada mapel agama/PKS.
+	const bulkLingkupSet = new Set<string>();
+	for (const tujuan of tujuanRecords) {
+		bulkLingkupSet.add(tujuan.lingkupMateri?.trim() || DEFAULT_LINGKUP);
+	}
+	const bulkLingkupList = Array.from(bulkLingkupSet).sort((a, b) => a.localeCompare(b, 'id'));
 
 	const asesmenRecords =
 		relevantMapelIds.length && tujuanIds.length && muridIds.length
@@ -641,9 +655,11 @@ export async function load({ parent, url, depends }) {
 				nama: murid.nama,
 				agamaLabel,
 				no: offset + index + 1,
+				mapelId: targetMapelId,
 				progressText: 'Data diisi oleh user lain.',
 				progressSummaryParts: [] as ProgressSummaryPart[],
 				hasPenilaian: false,
+				hasTujuan: false,
 				nilaiHref: null,
 				canNilai: false
 			};
@@ -695,9 +711,14 @@ export async function load({ parent, url, depends }) {
 			nama: murid.nama,
 			agamaLabel,
 			no: offset + index + 1,
+			mapelId: targetMapelId,
 			progressText,
 			progressSummaryParts,
 			hasPenilaian,
+			// Mapel tanpa tujuan pembelajaran: tombol "Nilai" tidak bisa
+			// membuka form yang isinya kosong — beri status agar UI menonaktifkan
+			// tombol + memberi tooltip penjelas.
+			hasTujuan: tujuanList.length > 0,
 			nilaiHref:
 				targetMapelId && canAccess
 					? `/asesmen-formatif/formulir-asesmen?kelas=${kelasKontenAktif.id}&murid_id=${murid.id}&mapel_id=${targetMapelId}`
@@ -730,6 +751,7 @@ export async function load({ parent, url, depends }) {
 		selectedMapel,
 		tujuanGroups,
 		jumlahTujuan,
+		bulkLingkupList,
 		daftarMurid,
 		allowedAgamaForUser,
 		search: searchTerm,
@@ -742,3 +764,194 @@ export async function load({ parent, url, depends }) {
 		}
 	};
 }
+
+type BulkFormatifItem = { muridId: number; mapelId: number };
+
+function parseBulkFormatifItems(raw: FormDataEntryValue | null): BulkFormatifItem[] {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(String(raw ?? '[]'));
+	} catch {
+		return [];
+	}
+	if (!Array.isArray(parsed)) return [];
+	const seen = new Set<string>();
+	const items: BulkFormatifItem[] = [];
+	for (const entry of parsed) {
+		const record = entry as { muridId?: unknown; mapelId?: unknown } | null;
+		const muridId = Number(record?.muridId);
+		const mapelId = Number(record?.mapelId);
+		if (!Number.isInteger(muridId) || muridId <= 0) continue;
+		if (!Number.isInteger(mapelId) || mapelId <= 0) continue;
+		const key = `${muridId}|${mapelId}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		items.push({ muridId, mapelId });
+	}
+	return items;
+}
+
+export const actions = {
+	/**
+	 * Ceklis penguasaan (Tuntas / Belum tuntas) satu Lingkup Materi untuk
+	 * banyak murid sekaligus ("Isi Sekaligus"). Pasangan murid+mapel dikirim
+	 * dari halaman (sudah di-resolve per murid, termasuk varian agama/PKS).
+	 */
+	simpanMassal: async ({ request, locals }) => {
+		const sekolahId = locals.sekolah?.id ?? null;
+		if (!sekolahId) return fail(401, { fail: 'Sekolah aktif tidak ditemukan.' });
+
+		const formData = await request.formData();
+		const items = parseBulkFormatifItems(formData.get('items'));
+		if (!items.length) return fail(400, { fail: 'Pilih minimal satu murid.' });
+		if (items.length > 300) {
+			return fail(400, { fail: 'Maksimal 300 murid per sekali simpan.' });
+		}
+
+		const lingkupMateri = String(formData.get('lingkupMateri') ?? '').trim();
+		if (!lingkupMateri) return fail(400, { fail: 'Pilih lingkup materi terlebih dahulu.' });
+		const statusRaw = String(formData.get('status') ?? '');
+		if (statusRaw !== 'ya' && statusRaw !== 'tidak') {
+			return fail(400, { fail: 'Status penguasaan tidak valid.' });
+		}
+		const tuntas = statusRaw === 'ya';
+
+		const muridIds = [...new Set(items.map((item) => item.muridId))];
+		const mapelIds = [...new Set(items.map((item) => item.mapelId))];
+
+		const muridRows = await queryInChunks(muridIds, (ids) =>
+			db
+				.select({ id: tableMurid.id, kelasId: tableMurid.kelasId })
+				.from(tableMurid)
+				.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, ids)))
+		);
+		const muridKelas = new Map(muridRows.map((row) => [row.id, row.kelasId]));
+
+		const mapelRows = await queryInChunks(mapelIds, (ids) =>
+			db
+				.select({
+					id: tableMataPelajaran.id,
+					nama: tableMataPelajaran.nama,
+					kelasId: tableMataPelajaran.kelasId
+				})
+				.from(tableMataPelajaran)
+				.where(inArray(tableMataPelajaran.id, ids))
+		);
+		const mapelById = new Map(mapelRows.map((row) => [row.id, row]));
+
+		const valid = items.filter((item) => {
+			const kelasId = muridKelas.get(item.muridId);
+			const mapel = mapelById.get(item.mapelId);
+			return kelasId != null && mapel != null && mapel.kelasId === kelasId;
+		});
+		if (!valid.length) {
+			return fail(400, { fail: 'Tidak ada pasangan murid dan mata pelajaran yang valid.' });
+		}
+
+		// Izin: guru mapel hanya mapel yang diampu; wali kelas boleh kelas
+		// binaannya, selain itu tetap dicek per mapel (paritas formulir).
+		const user = locals.user as {
+			id?: number;
+			type?: string;
+			mataPelajaranId?: number | null;
+			pegawaiId?: number | null;
+		} | null;
+		const uniqueMapelIds = [...new Set(valid.map((item) => item.mapelId))];
+		if (user?.id && user.type !== 'admin' && user.type !== 'kepala_sekolah') {
+			for (const mapelId of uniqueMapelIds) {
+				const mapel = mapelById.get(mapelId);
+				if (!mapel) continue;
+				if (user.type === 'wali_kelas' && user.pegawaiId) {
+					const ownKelas = await db.query.tableKelas.findFirst({
+						columns: { id: true },
+						where: and(eq(tableKelas.id, mapel.kelasId), eq(tableKelas.waliKelasId, user.pegawaiId))
+					});
+					if (ownKelas) continue;
+				}
+				const allowed = await bolehAksesMapel(
+					{ id: user.id, mataPelajaranId: user.mataPelajaranId ?? null },
+					{ id: mapel.id, nama: mapel.nama }
+				);
+				if (!allowed) {
+					return fail(403, { fail: `Anda tidak memiliki akses ke mata pelajaran ${mapel.nama}.` });
+				}
+			}
+		}
+
+		await ensureAsesmenFormatifSchema();
+
+		// TP per mapel+lingkup (nilai lingkup kosong diperlakukan sama dengan
+		// form per murid: "Tanpa lingkup materi").
+		const normalLingkup = (value: string | null | undefined) => {
+			const trimmed = value?.trim();
+			return trimmed && trimmed.length > 0 ? trimmed : DEFAULT_LINGKUP;
+		};
+		const targetLingkup = normalLingkup(lingkupMateri);
+
+		const tujuanRows = await queryInChunks(uniqueMapelIds, (ids) =>
+			db
+				.select({
+					id: tableTujuanPembelajaran.id,
+					mataPelajaranId: tableTujuanPembelajaran.mataPelajaranId,
+					lingkupMateri: tableTujuanPembelajaran.lingkupMateri
+				})
+				.from(tableTujuanPembelajaran)
+				.where(inArray(tableTujuanPembelajaran.mataPelajaranId, ids))
+		);
+		const tujuanPerMapelLingkup = new Map<string, number[]>();
+		for (const tujuan of tujuanRows) {
+			if (normalLingkup(tujuan.lingkupMateri) !== targetLingkup) continue;
+			const key = `${tujuan.mataPelajaranId}|${targetLingkup}`;
+			const list = tujuanPerMapelLingkup.get(key) ?? [];
+			list.push(tujuan.id);
+			tujuanPerMapelLingkup.set(key, list);
+		}
+
+		const now = new Date().toISOString();
+		const values: Array<{
+			muridId: number;
+			mataPelajaranId: number;
+			tujuanPembelajaranId: number;
+			tuntas: boolean;
+			updatedAt: string;
+		}> = [];
+		for (const item of valid) {
+			const tujuanIds = tujuanPerMapelLingkup.get(`${item.mapelId}|${targetLingkup}`) ?? [];
+			for (const tujuanPembelajaranId of tujuanIds) {
+				values.push({
+					muridId: item.muridId,
+					mataPelajaranId: item.mapelId,
+					tujuanPembelajaranId,
+					tuntas,
+					updatedAt: now
+				});
+			}
+		}
+		if (!values.length) {
+			return fail(400, {
+				fail: `Tidak ada tujuan pembelajaran pada lingkup "${targetLingkup}" untuk mata pelajaran yang dipilih.`
+			});
+		}
+
+		// Satu statement upsert per potongan kecil (D1 maks 100 parameter).
+		for (const part of chunk(values, 15)) {
+			await db
+				.insert(tableAsesmenFormatif)
+				.values(part)
+				.onConflictDoUpdate({
+					target: [tableAsesmenFormatif.muridId, tableAsesmenFormatif.tujuanPembelajaranId],
+					set: {
+						mataPelajaranId: sql`excluded.mata_pelajaran_id`,
+						tuntas: sql`excluded.tuntas`,
+						updatedAt: now
+					}
+				});
+		}
+
+		return {
+			message: `${valid.length} murid diperbarui: "${targetLingkup}" ${
+				tuntas ? 'Tuntas' : 'Belum tuntas'
+			} (${values.length} TP).`
+		};
+	}
+};

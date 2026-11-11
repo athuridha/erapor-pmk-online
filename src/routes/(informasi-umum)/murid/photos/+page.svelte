@@ -3,6 +3,12 @@
 
 	let { data } = $props();
 
+	const kelasFaseLabel = $derived.by(() => {
+		const nama = data.kelas.nama;
+		const fase = (data.kelas.fase ?? '').trim().replace(/^fase\s+/i, '');
+		return fase ? `${nama} - Fase ${fase}` : nama;
+	});
+
 	const getPhotoSrc = (murid: { id: number; foto: string | null }) => {
 		if (!murid.foto) return null;
 		if (typeof murid.foto === 'string') {
@@ -24,7 +30,7 @@
 		<div>
 			<h2 class="text-xl font-bold">Foto Murid</h2>
 			<p class="text-base-content/80 block text-sm">
-				{data.kelas.nama} - Fase {data.kelas.fase ?? '-'}
+				{kelasFaseLabel}
 			</p>
 		</div>
 		<form action="/murid" method="get">

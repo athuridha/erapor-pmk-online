@@ -66,3 +66,6 @@ openclaw.json
 
 # tooling scratch (dipakai proses eksternal, tidak ikut rilis)
 .adcode/
+
+# artefak sementara (snapshot backup, skrip uji lokal)
+.tmp-*

@@ -45,6 +45,14 @@ export interface MasterData {
 	formPengguna?: boolean;
 	/** Halaman form tambah/ubah khusus. */
 	tambahPath?: string;
+	/**
+	 * Halaman ini hanya ringkasan baca-saja; CRUD dilakukan di `editorPath`.
+	 * Dipakai untuk entitas yang punya halaman khusus lebih lengkap supaya
+	 * tidak ada dua editor untuk data yang sama.
+	 */
+	readOnly?: boolean;
+	/** Halaman editor tunggal untuk entitas readOnly. */
+	editorPath?: string;
 }
 
 export const MASTER_DATA: MasterData[] = [
@@ -134,9 +142,17 @@ export const MASTER_DATA: MasterData[] = [
 				wajib: true
 			},
 			{ key: 'semester_id', label: 'Semester', tipe: 'relasi', relasi: 'semester', wajib: true },
-			{ key: 'fase', label: 'Fase', tipe: 'teks', placeholder: 'E / F' },
-			{ key: 'wali_kelas_id', label: 'Wali Kelas', tipe: 'relasi', relasi: 'pegawai' },
-			{ key: 'wali_asuh_id', label: 'Wali Asuh', tipe: 'relasi', relasi: 'pegawai' }
+			{
+				key: 'fase',
+				label: 'Fase',
+				tipe: 'pilihan',
+				opsi: [
+					{ label: 'Fase E (Kelas X)', value: 'Fase E' },
+					{ label: 'Fase F (Kelas XI & XII)', value: 'Fase F' }
+				],
+				placeholder: 'Pilih fase'
+			},
+			{ key: 'wali_kelas_id', label: 'Wali Kelas', tipe: 'relasi', relasi: 'pegawai' }
 		],
 		kolom: [
 			{ key: 'nama', label: 'Kelas' },
@@ -149,7 +165,7 @@ export const MASTER_DATA: MasterData[] = [
 	{
 		key: 'mata_pelajaran',
 		judul: 'Mata Pelajaran',
-		deskripsi: 'Mapel intrakurikuler, KKM, urutan, dan guru pengampu.',
+		deskripsi: 'Mapel intrakurikuler, KKM, urutan, dan jenis.',
 		ikon: 'book',
 		tabel: 'mata_pelajaran',
 		fields: [
@@ -189,8 +205,7 @@ export const MASTER_DATA: MasterData[] = [
 			},
 			{ key: 'kode', label: 'Kode', tipe: 'teks', placeholder: 'MTK' },
 			{ key: 'kkm', label: 'KKM', tipe: 'angka', default: 0 },
-			{ key: 'urutan', label: 'Urutan Tampil', tipe: 'angka' },
-			{ key: 'pengampu_id', label: 'Guru Pengampu', tipe: 'relasi', relasi: 'pegawai' }
+			{ key: 'urutan', label: 'Urutan Tampil', tipe: 'angka' }
 		],
 		kolom: [
 			{ key: 'nama', label: 'Mata Pelajaran' },
@@ -201,6 +216,16 @@ export const MASTER_DATA: MasterData[] = [
 			{ key: 'kelas', label: 'Kelas / Rombel' },
 			{ key: 'pengampu', label: 'Guru Pengampu' }
 		]
+	},
+	{
+		key: 'pengampu',
+		judul: 'Guru Pengampu',
+		deskripsi: 'Pembagian tugas mengajar guru per mata pelajaran dan kelas/rombel.',
+		ikon: 'users',
+		tabel: 'mata_pelajaran',
+		path: '/master-data/pengampu',
+		fields: [],
+		kolom: []
 	},
 	{
 		key: 'ekstrakurikuler',
@@ -262,6 +287,9 @@ export const MASTER_DATA: MasterData[] = [
 			'Data induk murid: identitas, kelas, alamat, dan orang tua/wali. Bergabung dengan rapor & portal.',
 		ikon: 'user',
 		tabel: 'murid',
+		/** Satu halaman Murid lengkap (identitas + aksi) ada di /murid. */
+		readOnly: true,
+		editorPath: '/murid',
 		fields: [
 			{ key: 'nis', label: 'NIS', tipe: 'teks', wajib: true },
 			{ key: 'nisn', label: 'NISN', tipe: 'teks', wajib: true },
@@ -344,6 +372,9 @@ export const MASTER_DATA: MasterData[] = [
 		deskripsi: 'Identitas sekolah, jenjang pendidikan, dan kriteria penilaian rapor.',
 		ikon: 'school',
 		tabel: 'sekolah',
+		/** Editor resmi identitas sekolah: /sekolah/form. */
+		readOnly: true,
+		editorPath: '/sekolah/form',
 		fields: [
 			{ key: 'nama', label: 'Nama Sekolah', tipe: 'teks', wajib: true },
 			{ key: 'npsn', label: 'NPSN', tipe: 'teks', wajib: true },

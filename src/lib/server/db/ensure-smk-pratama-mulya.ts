@@ -37,7 +37,9 @@ export async function ensureSmkPratamaMulya() {
 		const [createdAlamat] = await db
 			.insert(tableAlamat)
 			.values({
-				jalan: 'Kutapohaci, Kec. Ciampel, Karawang, Jawa Barat 41363',
+				// Street only: composeAlamat() already joins desa/kecamatan/kabupaten/
+				// provinsi, so repeating them here prints the address twice.
+				jalan: '',
 				desa: 'Kutapohaci',
 				kecamatan: 'Ciampel',
 				kabupaten: 'Kabupaten Karawang',
@@ -55,7 +57,7 @@ export async function ensureSmkPratamaMulya() {
 		await db
 			.update(tableAlamat)
 			.set({
-				jalan: 'Kutapohaci, Kec. Ciampel, Karawang, Jawa Barat 41363',
+				jalan: '',
 				desa: 'Kutapohaci',
 				kecamatan: 'Ciampel',
 				kabupaten: 'Kabupaten Karawang',
@@ -76,19 +78,12 @@ export async function ensureSmkPratamaMulya() {
 			.insert(tablePegawai)
 			.values({
 				nama: 'Dwi Yuni Nugrahayu, S.Pd, M.M',
-				nip: '12345678',
+				// Empty until the real NIP is known; never a fake placeholder.
+				nip: '',
 				createdAt: nowIso
 			})
 			.returning();
 		kepalaSekolah = createdKepala;
-	} else if (kepalaSekolah.nip !== '12345678') {
-		await db
-			.update(tablePegawai)
-			.set({
-				nip: '12345678',
-				updatedAt: nowIso
-			})
-			.where(eq(tablePegawai.id, kepalaSekolah.id));
 	}
 
 	// 3. Sekolah SMK Pratama Mulya Karawang
@@ -199,7 +194,7 @@ export async function ensureSmkPratamaMulya() {
 			.insert(tablePegawai)
 			.values({
 				nama: 'Amara Thuridha, S.Kom',
-				nip: '12345678',
+				nip: '',
 				sekolahId: sekolah.id,
 				createdAt: nowIso
 			})

@@ -3,11 +3,9 @@ import { and, eq, sql } from 'drizzle-orm';
 import {
 	tablePresensiSettings,
 	tableKetidakhadiranHarian,
-	tableAbsensi,
 	tableKetidakhadiranRapor
 } from '$lib/server/db/schema';
 import { isSchoolDay } from '$lib/hari-sekolah';
-import { waktuToLocalDate } from '$lib/server/absen/utils';
 
 function dateStr(year: number, month: number, day: number) {
 	return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -126,25 +124,6 @@ export async function computeRaporAttendance(
 		khMap.set(kh.tanggal, kh.keterangan);
 	}
 
-	// Local-midnight bounds so records stored as previous-day UTC instants
-	// (legacy backdated fills, early-morning entries in UTC+X zones) are included.
-	const rangeStartISO = new Date(tanggalMulaiRapor + 'T00:00:00').toISOString();
-	const rangeEndISO = new Date(tanggalAkhirRapor + 'T23:59:59.999').toISOString();
-
-	const allAbsensi = await db.query.tableAbsensi.findMany({
-		columns: { waktu: true },
-		where: and(
-			eq(tableAbsensi.muridId, muridId),
-			sql`${tableAbsensi.waktu} >= ${rangeStartISO}`,
-			sql`${tableAbsensi.waktu} <= ${rangeEndISO}`
-		)
-	});
-
-	const absensiSet = new Set<string>();
-	for (const a of allAbsensi) {
-		absensiSet.add(waktuToLocalDate(a.waktu));
-	}
-
 	const override = await db.query.tableKetidakhadiranRapor.findFirst({
 		columns: { sakit: true, izin: true, alfa: true },
 		where: and(
@@ -159,17 +138,17 @@ export async function computeRaporAttendance(
 	for (const tgl of allDates) {
 		if (redDaySet.has(tgl)) continue;
 		const keterangan = khMap.get(tgl);
-		if (keterangan !== undefined) {
-			if (keterangan === null) {
-				/* hadir */
-			} else if (keterangan === 'sakit') sakit++;
-			else if (keterangan === 'izin') izin++;
-			else alfa++;
-		} else if (absensiSet.has(tgl)) {
-			/* hadir */
-		} else {
-			alfa++;
+		if (keterangan === undefined) {
+			// Hari yang belum diisi presensinya BUKAN ketidakhadiran: hanya
+			// sakit/izin/alfa eksplisit yang dihitung. Presensi kehadiran
+			// (absensi) tidak menambah apa pun karena ketidakhadiran = 0.
+			continue;
 		}
+		if (keterangan === null) {
+			/* hadir */
+		} else if (keterangan === 'sakit') sakit++;
+		else if (keterangan === 'izin') izin++;
+		else if (keterangan === 'alfa') alfa++;
 	}
 
 	return {

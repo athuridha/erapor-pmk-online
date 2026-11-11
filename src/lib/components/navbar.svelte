@@ -7,13 +7,11 @@
 	import { toast } from '$lib/components/toast.svelte';
 	import { showModal } from '$lib/components/global-modal.svelte';
 	import { favoritesStore } from '$lib/stores/favorites.svelte';
-	import { isAdminUser, isFullAdmin } from '../../routes/pengguna/permissions';
+	import { isAdminUser } from '../../routes/pengguna/permissions';
 	import { onMount } from 'svelte';
 	import type { Component } from 'svelte';
 
 	type NavbarProps = {
-		stopServer?: () => void;
-		stoppingServer?: boolean;
 		logout?: () => void;
 		loggingOut?: boolean;
 	};
@@ -30,17 +28,12 @@
 		ownKelasIds?: number[] | null;
 	};
 
-	let {
-		stopServer = () => {},
-		stoppingServer = false,
-		logout = () => {},
-		loggingOut = false
-	}: NavbarProps = $props();
+	let { logout = () => {}, loggingOut = false }: NavbarProps = $props();
 
 	let tasksModalRef: { open: () => void } | null = null;
 	let showSwitchModal = $state(false);
+	let profileDropdownOpen = $state(false);
 
-	const daftarKelas = $derived(page.data.daftarKelas ?? []);
 	const kelasAktif = $derived(page.data.kelasAktif ?? null);
 	const user = $derived(page.data.user ?? null);
 	const impersonator = $derived(page.data.impersonator ?? null);
@@ -61,84 +54,20 @@
 
 	// Human-readable display name for current user (prefer pegawaiName if available)
 	const displayUserName = $derived.by(() => {
-		if (!user) return null;
-		// use runtime field `pegawaiName` if the server provided it, otherwise fall back to username
-		return (user as UserLike)?.pegawaiName ?? (user as UserLike)?.username ?? null;
+		if (!user) return 'Pengguna';
+		return (user as UserLike)?.pegawaiName ?? (user as UserLike)?.username ?? 'Pengguna';
 	});
 
-	const isNonOwnClass = $derived.by(() => {
-		if (!user || (user.type !== 'wali_kelas' && user.type !== 'user') || !kelasAktif?.id)
-			return false;
-		const u = user as UserLike;
-		const ownIds = u.ownKelasIds?.length ? u.ownKelasIds : u.kelasId != null ? [u.kelasId] : [];
-		return ownIds.length > 0 && !ownIds.includes(kelasAktif.id);
-	});
-
-	// Whether current user can stop the server (client-side guard)
-	// Allow users who explicitly have the `server_stop` permission, or
-	// any user of type 'admin' (administrators can stop the server by default).
-	const canStopServer = $derived.by(() => {
-		if (!user) return false;
-		// Admins should be allowed regardless of explicit permissions
-		if (isFullAdmin(user)) return true;
-		const perms = (user as UserLike)?.permissions ?? [];
-		return Array.isArray(perms) ? perms.includes('server_stop') : false;
-	});
-
-	import SvelteURLSearchParams from '$lib/svelte-helpers/url-search-params';
 	import { resolveHelpFile } from '$lib/help-maps';
 
-	function buildKelasHref(kelasId: number) {
-		const params = new SvelteURLSearchParams(page.url.search);
-		params.set('kelas_id', String(kelasId));
-		const query = params.toString();
-		return query ? `${page.url.pathname}?${query}` : page.url.pathname;
-	}
-
-	/** Link "keluar kelas": admin/kepala sekolah kembali ke mode semua kelas. */
-	function buildSemuaKelasHref() {
-		const params = new SvelteURLSearchParams(page.url.search);
-		params.set('kelas_id', 'semua');
-		const query = params.toString();
-		return query ? `${page.url.pathname}?${query}` : page.url.pathname;
-	}
-
-	function hasPindahPermission() {
-		if (user?.type === 'wali_asuh') return true;
-		const perms = user?.permissions ?? [];
-		return perms.includes('kelas_pindah');
-	}
-
-	function handleKelasClick(e: MouseEvent) {
-		if (hasPindahPermission()) {
-			// allow navigation
-			return;
+	async function stopImpersonation() {
+		profileDropdownOpen = false;
+		try {
+			await fetch('/api/auth/switch-user/stop', { method: 'POST' });
+			window.location.href = '/';
+		} catch {
+			window.location.href = '/';
 		}
-		// prevent navigation and show logout confirmation modal
-		e.preventDefault();
-		showModal({
-			title: 'Konfirmasi Keluar',
-			body: 'Anda tidak mempunyai akses untuk Pindah Kelas secara langsung, silakan masuk ulang ke kelas yang dituju. Keluar sekarang?',
-			dismissible: true,
-			onPositive: {
-				label: 'Keluar',
-				icon: 'export',
-				action: ({ close }: { close: () => void }) => {
-					close();
-					logout();
-				}
-			},
-			onNegative: { label: 'Batal', icon: 'close' }
-		});
-	}
-
-	/**
-	 * Return an excerpt of `text` limited to `limit` characters.
-	 * If text is shorter than or equal to limit, return it unchanged.
-	 */
-	function excerpt(text: string | null | undefined, limit = 16) {
-		if (!text) return text;
-		return text.length > limit ? text.slice(0, limit) + '…' : text;
 	}
 
 	async function getHelpPage(fileName: string) {
@@ -151,25 +80,32 @@
 
 	let loadingFav = $state(true);
 
-	onMount(async () => {
+	onMount(() => {
 		loadingFav = true;
 		const ssrFavorites = page.data.favorites;
 		if (Array.isArray(ssrFavorites) && ssrFavorites.length > 0) {
 			favoritesStore.items = ssrFavorites;
 			loadingFav = false;
-			return;
+		} else {
+			fetch('/api/favorites')
+				.then((res) => (res.ok ? res.json() : null))
+				.then((data) => {
+					if (data?.favorites) favoritesStore.items = data.favorites;
+				})
+				.catch(() => {})
+				.finally(() => {
+					loadingFav = false;
+				});
 		}
-		try {
-			const res = await fetch('/api/favorites');
-			if (res.ok) {
-				const data = await res.json();
-				favoritesStore.items = data.favorites;
+
+		const handleDocumentClick = (e: MouseEvent) => {
+			const target = e.target as HTMLElement | null;
+			if (!target?.closest('.navbar-profile-dropdown')) {
+				profileDropdownOpen = false;
 			}
-		} catch {
-			// ignore
-		} finally {
-			loadingFav = false;
-		}
+		};
+		window.addEventListener('click', handleDocumentClick);
+		return () => window.removeEventListener('click', handleDocumentClick);
 	});
 
 	const isFavorited = $derived(favoritesStore.items.some((f) => f.path === page.url.pathname));
@@ -306,143 +242,129 @@
 				</button>
 			</li>
 
-			<!-- Dropdown ganti kelas -->
-			<li class="ml-2">
-				<div class="dropdown dropdown-end">
+			<!-- Badge statis konteks kelas (pemilihan kelas dilakukan per halaman) -->
+			{#if kelasAktif || bolehSemuaKelas}
+				<li class="ml-2">
 					<div
-						tabindex="0"
-						role="button"
-						title="Ganti kelas"
-						class="btn rounded-full shadow-none bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 dark:bg-base-200 dark:text-emerald-200 dark:border-emerald-800"
+						class="btn btn-sm rounded-full shadow-none bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-base-200 dark:text-emerald-200 dark:border-emerald-700 font-bold gap-1.5 px-3 h-9 cursor-default pointer-events-none"
+						title={kelasAktif
+							? `Konteks kelas saat ini: ${kelasAktifLabel}. Ganti kelas lewat pemilih di halaman.`
+							: 'Mode Semua Kelas — pilih kelas lewat pemilih di halaman bila perlu.'}
 					>
-						<span class="hidden sm:block font-bold">{excerpt(kelasAktifLabel, 16)}</span>
-						<Icon name="users" class="sm:hidden text-emerald-600" />
-						<Icon name="select" class="hidden sm:block text-emerald-600" />
+						<Icon name="users" class="text-emerald-600 dark:text-emerald-400 text-sm" />
+						<span class="max-w-[130px] truncate">{kelasAktifLabel}</span>
 					</div>
-					<ul
-						class="border-base-300 menu dropdown-content bg-base-100 ring-opacity-5 z-1 mt-5 mr-1 w-72 origin-top-right rounded-xl border p-4 shadow-xl focus:outline-none"
+				</li>
+			{/if}
+
+			<!-- Dropdown Profil & Akun Pengguna -->
+			<li class="ml-1 navbar-profile-dropdown relative">
+				<div class="dropdown dropdown-end {profileDropdownOpen ? 'dropdown-open' : ''}">
+					<button
+						type="button"
+						title="Profil & Akun Pengguna"
+						class="btn btn-ghost btn-circle shadow-none text-emerald-800 dark:text-emerald-300"
+						onclick={(e) => {
+							e.stopPropagation();
+							profileDropdownOpen = !profileDropdownOpen;
+						}}
 					>
-						<!-- alert akun admin -->
-						{#if user?.type === 'admin'}
-							<div role="alert" class="alert alert-info mb-4">
-								<Icon name="info" />
-								<span>Masuk sebagai <strong>Admin</strong></span>
-							</div>
-						{:else if user?.type === 'kepala_sekolah'}
-							<div role="alert" class="alert alert-info mb-4">
-								<Icon name="info" />
-								<span>
-									<strong>{displayUserName}</strong> - Kepala Sekolah
-								</span>
-							</div>
-						{:else if user?.type === 'user' || user?.type === 'wali_kelas'}
-							<div role="alert" class="alert alert-info mb-4">
-								<Icon name="info" />
-								<span>
-									<strong>{displayUserName}</strong> - {!isNonOwnClass &&
-									(user as UserLike)?.ownKelasIds?.length
-										? `Wali Kelas ${kelasAktif?.nama ?? ''}`
-										: 'Guru'}
-								</span>
-							</div>
-						{/if}
-
-						<div class="flex items-center gap-4">
-							<div
-								class="bg-base-300 dark:bg-base-200 flex h-14 w-14 items-center justify-center rounded-full"
-							>
-								<Icon name="user" class="text-4xl" />
-							</div>
-							<div class="flex flex-col gap-1">
-								<!-- Nama wali kelas -->
-								<p class="text-base-content text-sm font-semibold">
-									{kelasAktif?.waliKelas?.nama ?? 'Belum ada wali kelas'}
-								</p>
-								<!-- Nama kelas -->
-								<p class="text-base-content/70 text-xs">{kelasAktifLabel}</p>
-							</div>
+						<div
+							class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 flex items-center justify-center font-bold text-sm border border-emerald-300 dark:border-emerald-700"
+						>
+							{displayUserName.charAt(0).toUpperCase()}
 						</div>
-
-						{#if daftarKelas.length}
-							<details
-								class="bg-base-300 dark:bg-base-200 collapse-plus collapse mt-6 rounded-b-none"
+					</button>
+					{#if profileDropdownOpen}
+						<ul
+							class="dropdown-content menu bg-base-100 dark:bg-base-200 rounded-2xl z-50 w-72 p-3 shadow-2xl border border-base-200 dark:border-base-300 mt-2 flex flex-col gap-2"
+						>
+							<!-- Info user card -->
+							<div
+								class="flex items-center gap-3 p-2.5 bg-base-200/60 dark:bg-base-300/60 rounded-xl"
 							>
-								<!-- opsi pindah kelas -->
-								<summary class="collapse-title font-semibold">Pindah Kelas</summary>
 								<div
-									class="border-base-100 flex max-h-[30vh] flex-col overflow-y-auto border-t-3 p-1"
+									class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-base shrink-0"
 								>
-									{#if bolehSemuaKelas}
-										<a
-											class="btn btn-ghost btn-sm justify-start text-left shadow-none"
-											href={buildSemuaKelasHref()}
-											class:active={!kelasAktif}
-										>
-											<Icon name="layers" />
-											Semua Kelas (keluar kelas)
-										</a>
-									{/if}
-									{#each daftarKelas as kelas (kelas.id)}
-										{@const label = kelas.fase ? `${kelas.nama} - ${kelas.fase}` : kelas.nama}
-										<a
-											class="btn btn-ghost btn-sm justify-start text-left shadow-none"
-											href={buildKelasHref(kelas.id)}
-											onclick={handleKelasClick}
-											class:active={kelasAktif?.id === kelas.id}
-										>
-											{label}
-										</a>
-									{/each}
+									{displayUserName.charAt(0).toUpperCase()}
 								</div>
-							</details>
-						{:else}
-							<p class="text-base-content/70 mt-6 text-sm">
-								Belum ada data kelas yang dapat dipilih.
-							</p>
-						{/if}
+								<div class="flex flex-col min-w-0">
+									<p class="font-bold text-sm text-base-content truncate" title={displayUserName}>
+										{displayUserName}
+									</p>
+									<p class="text-xs text-base-content/70 capitalize">
+										{#if user?.type === 'admin'}
+											Administrator
+										{:else if user?.type === 'kepala_sekolah'}
+											Kepala Sekolah
+										{:else if user?.type === 'wali_kelas'}
+											Wali Kelas {kelasAktif?.nama ? `• ${kelasAktif.nama}` : ''}
+										{:else}
+											Guru Mapel
+										{/if}
+									</p>
+								</div>
+							</div>
 
-						{#if canSwitchUser}
-							<li class="mt-1">
-								<button
-									type="button"
-									class="btn btn-sm btn-soft btn-primary rounded-none shadow-none justify-start"
-									onclick={() => (showSwitchModal = true)}
+							{#if impersonator}
+								<li>
+									<button
+										type="button"
+										class="btn btn-sm btn-warning w-full shadow-none font-bold justify-start rounded-xl"
+										onclick={stopImpersonation}
+									>
+										<Icon name="repeat" />
+										Kembali ke Admin (@{impersonator.username})
+									</button>
+								</li>
+							{/if}
+
+							{#if canSwitchUser}
+								<li>
+									<button
+										type="button"
+										class="btn btn-sm btn-soft btn-primary w-full shadow-none justify-start rounded-xl font-medium"
+										onclick={() => {
+											profileDropdownOpen = false;
+											showSwitchModal = true;
+										}}
+									>
+										<Icon name="repeat" />
+										Switch Akun (Beralih User)
+									</button>
+								</li>
+							{/if}
+
+							<li>
+								<a
+									class="flex items-center gap-2 py-2 rounded-xl font-medium"
+									href="/tentang"
+									onclick={() => (profileDropdownOpen = false)}
 								>
-									<Icon name="repeat" />
-									Switch Akun (Beralih User)
+									<Icon name="info" />
+									Tentang Aplikasi
+								</a>
+							</li>
+
+							<div class="divider my-0.5"></div>
+
+							<!-- Tombol Keluar (Logout) saja tanpa Stop Server -->
+							<li>
+								<button
+									class="btn btn-sm btn-error btn-soft w-full shadow-none justify-start font-semibold rounded-xl text-error hover:bg-error hover:text-white"
+									type="button"
+									onclick={() => {
+										profileDropdownOpen = false;
+										logout();
+									}}
+									disabled={loggingOut}
+								>
+									<Icon name="export" />
+									{loggingOut ? 'Keluar…' : 'Keluar'}
 								</button>
 							</li>
-						{/if}
-
-						<li class="mt-1">
-							<a class="btn btn-sm rounded-none shadow-none" href="/tentang">
-								<Icon name="info" />
-								Tentang Aplikasi
-							</a>
-						</li>
-						{#if user}{/if}
-						<li class="mt-1 flex flex-row">
-							<button
-								class="btn btn-sm hover:btn-warning flex-1 rounded-tl-none rounded-r-none rounded-bl-lg shadow-none"
-								type="button"
-								title="Keluar dari aplikasi"
-								onclick={logout}
-								disabled={loggingOut}
-							>
-								<Icon name="export" />
-								{loggingOut ? 'Keluar…' : 'Keluar'}
-							</button>
-							<button
-								class="btn btn-sm hover:btn-error flex-1 rounded-l-none rounded-tr-none rounded-br-lg shadow-none"
-								type="button"
-								onclick={stopServer}
-								disabled={stoppingServer || !canStopServer}
-							>
-								<Icon name="power" />
-								{stoppingServer ? 'Menghentikan server…' : 'Stop Server'}
-							</button>
-						</li>
-					</ul>
+						</ul>
+					{/if}
 				</div>
 			</li>
 		</ul>
@@ -451,4 +373,4 @@
 
 <!-- Tempel instance modal di bawah navbar dan bind ref -->
 <TasksModal bind:this={tasksModalRef} />
-<SwitchUserModal bind:open={showSwitchModal} currentUserId={user?.id} />
+<SwitchUserModal bind:open={showSwitchModal} currentUserId={user?.id} {impersonator} />

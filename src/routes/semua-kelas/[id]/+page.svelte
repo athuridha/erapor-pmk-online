@@ -73,13 +73,6 @@
 				{/if}
 			</div>
 		</div>
-		<form method="POST" action="/semua-kelas?/pilihKelas">
-			<input type="hidden" name="kelasId" value={kelas.id} />
-			<button class="btn btn-soft btn-info btn-sm shadow-none" type="submit">
-				<Icon name="right" />
-				Pindah ke Kelas Ini
-			</button>
-		</form>
 	</header>
 
 	<div class="card bg-base-100 rounded-box shadow-md">

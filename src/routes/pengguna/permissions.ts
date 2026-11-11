@@ -1,4 +1,4 @@
-﻿export const groupedUserPermissions = {
+export const groupedUserPermissions = {
 	user: {
 		values: [
 			['list', 'Lihat daftar pengguna'],
@@ -99,7 +99,6 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 	kepala_sekolah: userPermissions,
 	wali_kelas: [
 		'informasi_umum_murid',
-		'informasi_umum_kelas',
 		'mata_pelajaran_intrakurikuler',
 		'mata_pelajaran_kokurikuler',
 		'mata_pelajaran_ekstrakurikuler',
@@ -117,13 +116,13 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'administrasi_poin_siswa',
 		'administrasi_legger',
 		'administrasi_keputusan',
+		'administrasi_presensi_guru',
 		'administrasi_dinas_luar',
 		'cetak_dokumen'
 	],
 	wali_asuh: ['cetak_dokumen', 'administrasi_dinas_luar'],
 	user: [
 		'informasi_umum_murid',
-		'informasi_umum_kelas',
 		'mata_pelajaran_intrakurikuler',
 		'mata_pelajaran_kokurikuler',
 		'mata_pelajaran_ekstrakurikuler',
@@ -139,6 +138,7 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'administrasi_rekap_nilai',
 		'administrasi_poin_siswa',
 		'administrasi_legger',
+		'administrasi_presensi_guru',
 		'administrasi_dinas_luar',
 		'cetak_dokumen'
 	]

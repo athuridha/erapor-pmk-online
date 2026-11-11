@@ -228,18 +228,51 @@ export const actions: Actions = {
 		}
 
 		const catatan = formData.get('catatan')?.toString().trim() ?? '';
+		// Anggota awal opsional: banyak murid sekaligus saat projek dibuat.
+		const anggotaIds = uniqueIds(formData.getAll('anggota'));
 
 		try {
-			await db.insert(tableP5Projek).values({
-				sekolahId,
-				kelasId,
-				tema,
-				judul,
-				pembinaPegawaiId,
-				tahunTahunAjaranId: kelasRow.tahunAjaranId,
-				catatan: catatan || null
-			});
-			return { message: 'Projek P5 berhasil ditambahkan' };
+			const [dibuat] = await db
+				.insert(tableP5Projek)
+				.values({
+					sekolahId,
+					kelasId,
+					tema,
+					judul,
+					pembinaPegawaiId,
+					tahunTahunAjaranId: kelasRow.tahunAjaranId,
+					catatan: catatan || null
+				})
+				.returning({ id: tableP5Projek.id });
+
+			let anggotaDitambah = 0;
+			if (dibuat?.id && anggotaIds.length) {
+				// Hanya murid aktif dari kelas projek yang boleh jadi anggota.
+				const muridRows = await queryInChunks(anggotaIds, (ids) =>
+					db.query.tableMurid.findMany({
+						columns: { id: true },
+						where: and(
+							eq(tableMurid.kelasId, kelasId),
+							inArray(tableMurid.id, ids),
+							eq(tableMurid.status, 'aktif')
+						)
+					})
+				);
+				for (const muridChunk of chunk(muridRows, 30)) {
+					await db
+						.insert(tableP5Anggota)
+						.values(muridChunk.map((murid) => ({ sekolahId, projekId: dibuat.id, muridId: murid.id })))
+						.onConflictDoNothing();
+					anggotaDitambah += muridChunk.length;
+				}
+			}
+
+			return {
+				message:
+					anggotaDitambah > 0
+						? `Projek P5 berhasil ditambahkan beserta ${anggotaDitambah} anggota`
+						: 'Projek P5 berhasil ditambahkan'
+			};
 		} catch (error) {
 			if (isTableMissingError(error)) return fail(500, { fail: TABLE_MISSING_MESSAGE });
 			throw error;

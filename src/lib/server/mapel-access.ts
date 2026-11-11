@@ -1,5 +1,9 @@
 import db from '$lib/server/db';
-import { tableAuthUserMataPelajaran, tableMataPelajaran } from '$lib/server/db/schema';
+import {
+	tableAuthUser,
+	tableAuthUserMataPelajaran,
+	tableMataPelajaran
+} from '$lib/server/db/schema';
 import { agamaMapelNames, agamaParentName, pksMapelNames, pksParentName } from '$lib/statics';
 import { and, eq, inArray, or, type SQL } from 'drizzle-orm';
 
@@ -13,32 +17,20 @@ import { and, eq, inArray, or, type SQL } from 'drizzle-orm';
 //    ID dan namanya (nama ikut agar pindah kelas tetap jalan).
 
 /** Cek apakah user perlu difilter hanya ke mapel yang di-assign.
- *  - tipe 'user' (guru mapel) → selalu filter, KECUALI di kelas yang dia wali
- *    (guru merangkap wali kelas: bebas di kelasnya sendiri, seperti wali kelas lama).
- *  - tipe 'wali_kelas' → filter di kelas BUKAN miliknya, bebas di kelasnya sendiri. */
+ *  - admin & kepala_sekolah → bebas melihat semua mapel.
+ *  - guru & wali_kelas → hanya melihat mapel yang diampunya. */
 export function needsMapelFilter(
 	user:
 		| { type?: string; id?: number; kelasId?: number | null; ownKelasIds?: number[] | null }
 		| null
 		| undefined,
-	selectedKelasId: number | null | undefined
+	_selectedKelasId?: number | null | undefined
 ): boolean {
 	if (!user?.id) return false;
-	if (user.type === 'user') {
-		if (
-			selectedKelasId != null &&
-			Array.isArray(user.ownKelasIds) &&
-			user.ownKelasIds.includes(selectedKelasId)
-		) {
-			return false;
-		}
-		return true;
+	if (user.type === 'admin' || user.type === 'kepala_sekolah') {
+		return false;
 	}
-	if (user.type === 'wali_kelas' && selectedKelasId != null) {
-		const ownIds = user.ownKelasIds?.length ? user.ownKelasIds : [user.kelasId];
-		if (!ownIds.includes(selectedKelasId)) return true;
-	}
-	return false;
+	return true;
 }
 
 type MapelInti = { id: number; kelasId: number; nama: string | null };
@@ -73,16 +65,38 @@ export type AksesMapel = {
 export async function getAksesMapelUser(
 	user: {
 		id: number;
+		pegawaiId?: number | null;
 		mataPelajaranId?: number | null;
 	},
 	targetKelasId?: number | null
 ): Promise<AksesMapel> {
+	const ids = new Set<number>();
+	if (user.mataPelajaranId) ids.add(user.mataPelajaranId);
+
+	// 1. Ambil dari auth_user_mata_pelajaran
 	const assigned = await db.query.tableAuthUserMataPelajaran.findMany({
 		columns: { mataPelajaranId: true },
 		where: eq(tableAuthUserMataPelajaran.authUserId, user.id)
 	});
-	const ids = new Set(assigned.map((row) => row.mataPelajaranId));
-	if (user.mataPelajaranId) ids.add(user.mataPelajaranId);
+	for (const row of assigned) ids.add(row.mataPelajaranId);
+
+	// 2. Ambil dari tableMataPelajaran berdasarkan pengampuId (pegawaiId)
+	let pegawaiId = user.pegawaiId;
+	if (pegawaiId == null) {
+		const uRow = await db.query.tableAuthUser.findFirst({
+			columns: { pegawaiId: true },
+			where: eq(tableAuthUser.id, user.id)
+		});
+		pegawaiId = uRow?.pegawaiId ?? null;
+	}
+
+	if (pegawaiId) {
+		const byPengampu = await db.query.tableMataPelajaran.findMany({
+			columns: { id: true },
+			where: eq(tableMataPelajaran.pengampuId, pegawaiId)
+		});
+		for (const row of byPengampu) ids.add(row.id);
+	}
 
 	if (!ids.size) return { ids, names: new Set(), rawNames: new Set() };
 

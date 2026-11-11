@@ -55,6 +55,8 @@
 	let formSubmitting = $state(false);
 	let isBulkPhotoUploadOpen = $state(false);
 	let isMoveOpen = $state(false);
+	let isNaikKelasOpen = $state(false);
+	let naikKelasTujuanId = $state<number | string>('');
 	let dropdownToggle: HTMLButtonElement | null = $state(null);
 
 	type TargetMuridKeluarkan = {
@@ -154,6 +156,37 @@
 		isMoveOpen = true;
 	}
 
+	/** Naik kelas: murid terpilih dipindah ke kelas fase berikutnya (pilihan). */
+	function openNaikKelasModal() {
+		if (!hasSelection) return;
+		naikKelasTujuanId = '';
+		isNaikKelasOpen = true;
+	}
+
+	async function handleNaikKelasSuccess({ data: hasil }: { data?: Record<string, unknown> }) {
+		await invalidate('app:murid');
+		selectedIds = new Set();
+		isNaikKelasOpen = false;
+		naikKelasTujuanId = '';
+		toast({
+			message:
+				typeof hasil?.message === 'string' ? hasil.message : 'Kenaikan kelas berhasil disimpan.',
+			type: 'success',
+			persist: true
+		});
+	}
+
+	const kelasTujuanNaik = $derived.by(() => {
+		const groups = new Map<string, typeof data.kelasTujuan>();
+		for (const kelas of data.kelasTujuan ?? []) {
+			const label = [kelas.tahunAjaranNama, kelas.semesterNama].filter(Boolean).join(' — ');
+			const items = groups.get(label) ?? [];
+			items.push(kelas);
+			groups.set(label, items);
+		}
+		return [...groups.entries()];
+	});
+
 	function handleBulkMoveSuccess() {
 		selectedIds = new Set();
 	}
@@ -215,21 +248,6 @@
 	async function gotoPerHalaman(jumlah: number) {
 		const params = new SvelteURLSearchParams(page.url.search);
 		params.set('per_page', String(jumlah));
-		params.delete('page');
-		const nextQuery = params.toString();
-		await goto(`${page.url.pathname}${nextQuery ? `?${nextQuery}` : ''}`, {
-			replaceState: true,
-			keepFocus: true
-		});
-	}
-
-	async function gotoKelasFilter(kId: string) {
-		const params = new SvelteURLSearchParams(page.url.search);
-		if (!kId) {
-			params.delete('kelas_id');
-		} else {
-			params.set('kelas_id', kId);
-		}
 		params.delete('page');
 		const nextQuery = params.toString();
 		await goto(`${page.url.pathname}${nextQuery ? `?${nextQuery}` : ''}`, {
@@ -388,6 +406,18 @@
 						Pindahkan
 					</button>
 					<button
+						class="btn btn-soft btn-success shadow-none"
+						type="button"
+						disabled={formSubmitting || !canEdit}
+						onclick={openNaikKelasModal}
+						title={!canEdit
+							? 'Anda tidak memiliki izin untuk menaikkan kelas'
+							: 'Naikkan murid terpilih ke kelas fase berikutnya'}
+					>
+						<Icon name="up" />
+						Naik Kelas
+					</button>
+					<button
 						class="btn btn-soft btn-warning shadow-none"
 						type="button"
 						disabled={formSubmitting || !canEdit}
@@ -489,19 +519,6 @@
 	>
 		<!-- Cari nama murid -->
 		<div class="join w-full">
-			{#if data.kelasTujuan && data.kelasTujuan.length > 0}
-				<select
-					class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink font-medium dark:border-none"
-					value={data.page.kelasId ?? ''}
-					title="Filter Kelas"
-					onchange={(event) => gotoKelasFilter((event.currentTarget as HTMLSelectElement).value)}
-				>
-					<option value="">Semua Kelas</option>
-					{#each data.kelasTujuan as k (k.id)}
-						<option value={String(k.id)}>{k.nama}</option>
-					{/each}
-				</select>
-			{/if}
 			<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
 				<Icon name="search" />
 				<input
@@ -555,7 +572,11 @@
 								/>
 							</th>
 							<th style="width: 50px; min-width: 40px;">No</th>
-							<th style="width: 45%;">Nama</th>
+							<th style="min-width: 90px;">NIS</th>
+							<th style="min-width: 90px;">NISN</th>
+							<th style="width: 35%;">Nama</th>
+							<th style="min-width: 100px;">Kelas</th>
+							<th style="min-width: 100px;">Ayah</th>
 							<th>Agama</th>
 							<th>Tempat Lahir</th>
 							<th>Tanggal Lahir</th>
@@ -578,6 +599,8 @@
 									/>
 								</td>
 								<td>{offset + index + 1}</td>
+								<td class="font-mono text-xs">{murid.nis || '—'}</td>
+								<td class="font-mono text-xs">{murid.nisn || '—'}</td>
 								<td>
 									<div class="flex flex-wrap items-center gap-1.5">
 										<span class="font-medium"
@@ -603,6 +626,13 @@
 										</p>
 									{/if}
 								</td>
+								<td>
+									{murid.kelas?.nama ?? '—'}
+									{#if murid.kelas?.fase}
+										<span class="text-base-content/60 block text-xs">{murid.kelas.fase}</span>
+									{/if}
+								</td>
+								<td>{murid.ayah?.nama ?? '—'}</td>
 								<td>{murid.agama}</td>
 								<td>{murid.tempatLahir}</td>
 								<td>{murid.tanggalLahir}</td>
@@ -673,7 +703,7 @@
 							</tr>
 						{:else}
 							<tr>
-								<td class="text-center p-7" colspan="7">
+								<td class="text-center p-7" colspan="10">
 									<em class="opacity-50">Belum ada data murid</em>
 								</td>
 							</tr>
@@ -740,6 +770,104 @@
 	action="?/pindahMurid"
 	onSuccess={handleBulkMoveSuccess}
 />
+
+<!-- Modal Naik Kelas (massal) -->
+{#if isNaikKelasOpen}
+	<dialog class="modal modal-open">
+		<div class="modal-box max-w-lg">
+			<h3 class="flex items-center gap-2 text-lg font-bold">
+				<Icon name="up" />
+				Naik Kelas Massal
+			</h3>
+			<p class="py-2 text-sm">
+				<strong>{selectedMurids.length}</strong> murid terpilih akan dipindah ke kelas tujuan. Murid
+				yang sudah di kelas tujuan atau tidak punya fase lebih rendah dilaporkan gagal tanpa
+				membatalkan sisanya.
+			</p>
+
+			<FormEnhance
+				action="?/naikKelas"
+				onsuccess={handleNaikKelasSuccess}
+				showToast={false}
+			>
+				{#snippet children({ submitting, invalid })}
+					{#each selectedMurids as murid (murid.id)}
+						<input type="hidden" name="muridIds" value={murid.id} />
+					{/each}
+
+					{#if kelasTujuanNaik.length}
+						<fieldset class="fieldset mt-2">
+							<legend class="fieldset-legend">Kelas tujuan (fase berikutnya)</legend>
+							<select
+								name="kelasId"
+								class="select w-full"
+								required
+								disabled={submitting}
+								bind:value={naikKelasTujuanId}
+							>
+								<option value="" disabled>Pilih kelas tujuan</option>
+								{#each kelasTujuanNaik as [label, items] (label)}
+									<optgroup {label}>
+										{#each items as kelas (kelas.id)}
+											<option value={kelas.id}>
+												{kelas.nama}{kelas.fase ? ` (${kelas.fase})` : ''}
+											</option>
+										{/each}
+									</optgroup>
+								{/each}
+							</select>
+							<span class="label text-wrap text-xs text-base-content/60">
+								Kelas tujuan sebaiknya satu fase di atas kelas asal (mis. Fase E → Fase F).
+							</span>
+						</fieldset>
+					{:else}
+						<div class="alert alert-warning alert-soft mt-2">
+							<Icon name="warning" />
+							<span>Belum ada kelas tujuan yang tersedia pada semester ini.</span>
+						</div>
+					{/if}
+
+					<div class="bg-base-200 rounded-box mt-3 max-h-40 overflow-y-auto p-3 text-sm">
+						<ul class="list-disc space-y-1 pl-4">
+							{#each selectedMurids as murid (murid.id)}
+								<li>
+									{murid.nama}
+									<span class="opacity-60">({murid.kelas?.nama ?? '-'})</span>
+								</li>
+							{/each}
+						</ul>
+					</div>
+
+					<div class="modal-action mt-4">
+						<button
+							type="button"
+							class="btn btn-soft shadow-none"
+							onclick={() => (isNaikKelasOpen = false)}
+							disabled={submitting}
+						>
+							Batal
+						</button>
+						<button
+							type="submit"
+							class="btn btn-success shadow-none"
+							disabled={submitting || invalid || !naikKelasTujuanId}
+						>
+							{#if submitting}
+								<span class="loading loading-spinner loading-sm"></span>
+							{:else}
+								<Icon name="up" />
+							{/if}
+							Naikkan {selectedMurids.length} Murid
+						</button>
+					</div>
+				{/snippet}
+			</FormEnhance>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button onclick={() => (isNaikKelasOpen = false)}>close</button>
+		</form>
+	</dialog>
+{/if}
 
 <!-- Modal Keluarkan Satuan -->
 {#if targetMuridKeluarkan}

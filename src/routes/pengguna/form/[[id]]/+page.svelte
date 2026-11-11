@@ -2,11 +2,7 @@
 	import { goto } from '$app/navigation';
 	import FormEnhance from '$lib/components/form-enhance.svelte';
 	import Icon from '$lib/components/icon.svelte';
-	import {
-		defaultPermissionsByType,
-		groupedUserPermissions,
-		userPermissions
-	} from '../../permissions';
+	import { defaultPermissionsByType, userPermissions } from '../../permissions';
 
 	let { data } = $props();
 
@@ -124,13 +120,6 @@
 		kelasIds = new Set<number>();
 	}
 
-	function togglePermission(key: string) {
-		const next = new Set(permissions);
-		if (next.has(key)) next.delete(key);
-		else next.add(key);
-		permissions = next;
-	}
-
 	const isFormValid = $derived.by(() => {
 		const hasNama = nama.trim().length > 0;
 		const hasUsername = username.trim().length > 0;
@@ -223,7 +212,7 @@
 		</div>
 	</header>
 
-	<FormEnhance action="?/save" onsuccess={() => goto('/pengguna')}>
+	<FormEnhance action="?/save" onsuccess={() => goto('/master-data/pengguna/guru')}>
 		{#snippet children({ submitting })}
 			<div class="space-y-4">
 				<!-- Sekolah -->
@@ -499,7 +488,7 @@
 					</p>
 				</fieldset>
 
-				<!-- Hak Akses Collapse -->
+				<!-- Hak Akses Collapse — ringkasan saja; editor tunggal ada di /pengguna/{id} -->
 				<details class="bg-base-200 border-base-300 collapse-arrow collapse">
 					<summary class="collapse-title font-semibold">
 						Hak Akses
@@ -507,57 +496,33 @@
 					</summary>
 					<div class="collapse-content text-sm">
 						<div class="space-y-3">
-							<div class="flex flex-wrap items-center justify-between gap-2">
-								<p class="text-xs opacity-75">
-									Mengikuti template role di atas. Admin bisa menyalakan atau mematikan izin per
-									akun.
-								</p>
-								<button
-									type="button"
-									class="btn btn-xs btn-soft shadow-none"
-									disabled={isAdminRole || roles.length === 0}
-									onclick={() => applyRoleTemplates()}
-								>
-									<Icon name="repeat" /> Sesuai template
-								</button>
-							</div>
-
+							<p class="text-xs opacity-75">
+								Rincian izin disunting di halaman <strong>Kelola izin</strong> agar tidak ada dua editor
+								matriks yang bisa saling menimpa. Di sini hanya ringkasan; mengubah role di atas akan
+								menerapkan template izin role tersebut saat disimpan.
+							</p>
 							{#if isAdminRole}
 								<p class="text-info text-xs">
-									Admin dan Kepala Sekolah selalu memegang seluruh izin.
+									{adminRoleLabel} selalu memegang seluruh izin ({effectivePermissions.size} izin).
+								</p>
+							{:else}
+								<p class="text-xs">
+									<strong>{effectivePermissions.size}</strong> dari {userPermissions.length} izin aktif.
+									{#if multiKelas && hasEducator}
+										Izin <em>pindah kelas</em> ditambahkan otomatis karena akun memegang lebih dari satu
+										kelas.
+									{/if}
 								</p>
 							{/if}
-
-							{#each Object.entries(groupedUserPermissions) as [group, permission] (group)}
-								<div class="bg-base-300/60 rounded-lg p-2.5">
-									<p class="mb-1.5 text-xs font-bold">{permission.description}</p>
-									<div class="grid grid-cols-1 gap-0.5 sm:grid-cols-2">
-										{#each permission.values as [name, desc] (name)}
-											{@const key = `${group}_${name}`}
-											{@const autoPindah = key === 'kelas_pindah' && multiKelas}
-											<label
-												class="flex items-center justify-between gap-2 rounded px-2 py-1 {autoPindah
-													? 'opacity-70'
-													: 'hover:bg-base-200 cursor-pointer'}"
-											>
-												<span class="text-xs">
-													{desc}
-													{#if autoPindah}
-														<span class="badge badge-xs badge-info ml-1">otomatis</span>
-													{/if}
-												</span>
-												<input
-													type="checkbox"
-													class="toggle toggle-primary toggle-xs"
-													checked={effectivePermissions.has(key)}
-													disabled={isAdminRole || autoPindah}
-													onchange={() => togglePermission(key)}
-												/>
-											</label>
-										{/each}
-									</div>
-								</div>
-							{/each}
+							{#if isEditMode}
+								<a
+									class="btn btn-soft btn-sm shadow-none"
+									href={`/pengguna/${data.userDetail?.id}`}
+								>
+									<Icon name="lock" />
+									Kelola izin
+								</a>
+							{/if}
 						</div>
 					</div>
 				</details>
@@ -577,7 +542,9 @@
 			</div>
 
 			<div class="mt-6 flex items-center justify-between gap-2">
-				<a href="/pengguna" class="btn btn-soft shadow-none"><Icon name="left" /> Kembali</a>
+				<a href="/master-data/pengguna/guru" class="btn btn-soft shadow-none"
+					><Icon name="left" /> Kembali</a
+				>
 				<button
 					class="btn btn-primary shadow-none"
 					type="submit"

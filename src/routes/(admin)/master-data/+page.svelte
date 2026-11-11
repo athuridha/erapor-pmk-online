@@ -49,7 +49,7 @@
 								href={item.path ?? `/master-data/${item.key}`}
 							>
 								<Icon name="edit" />
-								Kelola
+								{item.readOnly ? 'Lihat' : 'Kelola'}
 							</a>
 						</td>
 					</tr>

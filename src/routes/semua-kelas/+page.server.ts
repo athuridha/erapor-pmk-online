@@ -1,13 +1,30 @@
-import { and, eq } from 'drizzle-orm';
-
-import db from '$lib/server/db';
 import { resolveSekolahAcademicContext } from '$lib/server/db/academic';
-import { tableKelas } from '$lib/server/db/schema';
-import { fail, redirect } from '@sveltejs/kit';
-import { cookieNames } from '$lib/utils';
 import { getRingkasanKelas } from '$lib/server/statistik-kelas';
+import { redirect } from '@sveltejs/kit';
 import { isAuthorizedUser } from '../pengguna/permissions';
-import type { Actions, PageServerLoad } from './$types';
+import type { PageServerLoad } from './$types';
+
+/**
+ * Ringkasan satu semester. `totalMapel` = jumlah baris mapel/kelas (sama
+ * dengan angka yang tampil di tabel "Mapel" per kelas), bukan jumlah mapel
+ * unik tingkat sekolah — supaya judul ringkasan tidak lagi menulis "Mapel 0"
+ * saat tabelnya menampilkan 23 mapel per kelas.
+ */
+function tambahTotalMapel<
+	T extends {
+		ringkasan: { totalKelas: number } | null;
+		daftarKelas: Array<{ jumlahMapel: number }>;
+	}
+>(hasil: T) {
+	if (!hasil.ringkasan) return hasil;
+	return {
+		...hasil,
+		ringkasan: {
+			...hasil.ringkasan,
+			totalMapel: hasil.daftarKelas.reduce((total, kelas) => total + kelas.jumlahMapel, 0)
+		}
+	};
+}
 
 const REQUIRED_PERMISSION: UserPermission = 'overview_semua_kelas';
 
@@ -64,45 +81,14 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	}
 
 	const { daftarKelas, ringkasan } = await getRingkasanKelas(sekolahId, semesterTerpilih.id);
+	const hasil = tambahTotalMapel({ daftarKelas, ringkasan });
 
 	return {
 		meta,
 		semesterOptions,
 		semesterTerpilih,
 		semesterAktifId: academic.activeSemesterId,
-		ringkasan,
-		daftarKelas
+		ringkasan: hasil.ringkasan,
+		daftarKelas: hasil.daftarKelas
 	};
-};
-
-export const actions: Actions = {
-	/** Jadikan kelas terpilih sebagai kelas aktif (setara fitur "Pindah Kelas") lalu buka dashboard. */
-	pilihKelas: async ({ request, cookies, locals }) => {
-		if (!isAuthorizedUser([REQUIRED_PERMISSION], locals.user)) {
-			return fail(403, { message: 'Anda tidak memiliki izin untuk membuka kelas.' });
-		}
-
-		const formData = await request.formData();
-		const kelasId = Number(formData.get('kelasId'));
-		if (!Number.isInteger(kelasId) || kelasId <= 0) {
-			return fail(400, { message: 'Kelas tidak valid.' });
-		}
-
-		const sekolahId = locals.sekolah?.id ?? null;
-		const kelas = sekolahId
-			? await db.query.tableKelas.findFirst({
-					columns: { id: true },
-					where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
-				})
-			: null;
-		if (!kelas) {
-			return fail(404, { message: 'Kelas tidak ditemukan pada sekolah ini.' });
-		}
-
-		cookies.set(cookieNames.ACTIVE_KELAS_ID, String(kelasId), {
-			path: '/',
-			secure: locals.requestIsSecure ?? false
-		});
-		redirect(303, `/?kelas_id=${kelasId}`);
-	}
 };

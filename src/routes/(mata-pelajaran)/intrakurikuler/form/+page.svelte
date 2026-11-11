@@ -46,7 +46,13 @@
 	const daftarKelas = $derived(data?.daftarKelas ?? []);
 
 	// svelte-ignore state_referenced_locally
-	let terpilihKelasIds = $state<number[]>(data?.kelasAktif?.id ? [data.kelasAktif.id] : []);
+	let terpilihKelasIds = $state<number[]>(
+		kelasAktif?.id
+			? [kelasAktif.id]
+			: mode === 'add'
+				? (data.daftarKelas ?? []).map((kelas) => kelas.id)
+				: []
+	);
 
 	const kelasAktifLabel = $derived(
 		kelasAktif
@@ -136,6 +142,15 @@
 	function onNamaInput(e: Event) {
 		applyNamaRules(((e.target as HTMLInputElement)?.value ?? '').trim());
 	}
+	/**
+	 * Ada kelas tujuan? Mode tambah bisa dijalankan dari mode "Semua Kelas"
+	 * (kelasAktif null) asalkan pengguna mencentang kelas di fieldset di atas.
+	 * Sebelumnya KKM/kode & tombol Simpan dikunci oleh `!kelasAktif` sehingga
+	 * form tidak pernah bisa disimpan bila tidak ada kelas aktif.
+	 */
+	const adaKelasTujuan = $derived(
+		mode === 'edit' ? Boolean(kelasAktif?.id) : terpilihKelasIds.length > 0
+	);
 	const heading = $derived(mode === 'edit' ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran');
 	const namaPlaceholder = $derived(
 		mode === 'edit' && isAgamaParent
@@ -442,7 +457,7 @@
 						placeholder="Kosongkan bila sama dengan Dapodik"
 						name="nama_lokal"
 						maxlength="100"
-						disabled={!kelasAktif}
+						disabled={!adaKelasTujuan}
 					/>
 					<p class="label text-wrap">
 						Nama lokal mata pelajaran di Dapodik (opsional). Kosongkan bila sama dengan Nama Mata
@@ -492,7 +507,7 @@
 						placeholder="Contoh: 76"
 						name="kkm"
 						required
-						disabled={!kelasAktif}
+						disabled={!adaKelasTujuan}
 						min="0"
 					/>
 				</fieldset>
@@ -504,7 +519,7 @@
 						placeholder="Contoh: PAPB"
 						name="kode"
 						bind:value={localKode}
-						disabled={isAgamaGroup || isPksGroup ? true : !kelasAktif}
+						disabled={isAgamaGroup || isPksGroup ? true : !adaKelasTujuan}
 					/>
 					<p class="label text-wrap">Singkatan/kode singkat untuk mata pelajaran (opsional).</p>
 				</fieldset>
@@ -546,7 +561,7 @@
 				class="btn btn-primary shadow-none"
 				disabled={submitting ||
 					(invalid && !isAgamaParent && !isPksParent) ||
-					!kelasAktif ||
+					!adaKelasTujuan ||
 					agamaDapodikBlocked}
 			>
 				{#if submitting}

@@ -42,6 +42,16 @@
 		}
 	);
 	const ekstrakurikulerStats = $derived(statistikDashboard.ekstrakurikuler ?? { total: 0 });
+	// Jumlah baris mapel kelas aktif (termasuk varian agama) — dipakai sebagai
+	// keterangan agar angka kartu tidak bertentangan dengan tabel per kelas.
+	const mapelBaris = $derived(
+		(mapelStats as { baris?: number }).baris ?? statistikDashboard.mapel?.total ?? 0
+	);
+	// 0% bisa berarti data memang belum diisi. Bedakan dari penghitung yang rusak
+	// dengan menampilkan keterangan eksplisit di bawah kartu progress.
+	const nilaiSumatifKosong = $derived(
+		(progressStats.akademik?.total ?? 0) > 0 && (progressStats.akademik?.completed ?? 0) === 0
+	);
 	const bellActive = $derived(data.bellActive ?? false);
 	const hariSekolah = $derived((data.hariSekolah as number) ?? 6);
 	const hariSekolahCustom = $derived((data.hariSekolahCustom as string | null) ?? null);
@@ -305,7 +315,7 @@
 			// fall through with unknown jam window
 		}
 		presensiWarningVisible = false;
-showModal({
+		showModal({
 			title: 'Presensi Guru',
 			body: PresensiGuruModal,
 			bodyProps: {
@@ -327,7 +337,12 @@ showModal({
 	});
 </script>
 
-<BellStatus {bellActive} {hariIni} {nextEventMessage} class="dg-alert alert alert-info alert-soft mb-4" />
+<BellStatus
+	{bellActive}
+	{hariIni}
+	{nextEventMessage}
+	class="dg-alert alert alert-info alert-soft mb-4"
+/>
 
 {#if presensiWarningVisible}
 	<div class="dg-alert alert alert-warning alert-soft mb-4 flex items-center gap-3">
@@ -356,17 +371,39 @@ showModal({
 		<FavoriteMenusCard favorites={data.favorites ?? []} />
 		<RombelMuridStats rombel={statistikDashboard.rombel} murid={statistikDashboard.murid} />
 		<MapelEkstrakurikulerStats mapel={mapelStats} ekstrakurikuler={ekstrakurikulerStats} />
+		{#if mapelBaris > 0}
+			<p class="text-base-content/60 -mt-2 px-1 text-xs">
+				Angka mapel di kartu di atas dihitung per nama mapel unik (varian agama digabung). Konteks
+				saat ini mencakup <strong>{mapelBaris} baris mapel</strong> — angka yang sama dengan tabel Mapel
+				di halaman Semua Kelas.
+			</p>
+		{/if}
 		{#if data.ringkasanKelas}
 			<RingkasanKelasCard
 				ringkasan={data.ringkasanKelas.ringkasan}
 				daftarKelas={data.ringkasanKelas.daftarKelas}
 			/>
+			{#if data.ringkasanKelas.ringkasan.persenNilai === 0 && data.ringkasanKelas.ringkasan.totalMurid > 0}
+				<p class="text-base-content/60 -mt-2 px-1 text-xs">
+					Kelengkapan nilai 0% karena belum ada nilai sumatif yang diisi untuk semester aktif —
+					bukan karena perhitungan gagal. Isi nilai di menu Input Nilai → Sumatif.
+				</p>
+			{/if}
 		{/if}
 	</div>
 
 	<!-- Kolom 2: Progress & Aksi -->
 	<div class="flex flex-col gap-5">
 		<ProgressCard progress={progressStats} />
+		{#if nilaiSumatifKosong}
+			<div class="alert alert-info alert-soft text-sm">
+				<Icon name="info" />
+				<span>
+					Belum ada nilai sumatif terisi untuk kelas aktif semester ini. Angka 0% berarti data masih
+					kosong, bukan penghitung kelengkapan yang rusak.
+				</span>
+			</div>
+		{/if}
 		<QuickActionsCard />
 	</div>
 </div>

@@ -4,6 +4,7 @@ import { appMenuItems } from './components/menu';
 export const cookieNames = {
 	ACTIVE_SEKOLAH_ID: 'active-sekolah-id',
 	ACTIVE_KELAS_ID: 'active-kelas-id',
+	ACTIVE_MODUL: 'active-modul',
 	AUTH_SESSION: 'erapor-pmk-session',
 	BUKU_TAMU_PASS: 'erapor-pmk-buku-tamu-pass',
 	IMPERSONATOR_SESSION: 'erapor-pmk-impersonator-session'

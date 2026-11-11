@@ -142,6 +142,7 @@ export const actions: Actions = {
 							.values({
 								nama,
 								nip: pegawaiNip,
+								sekolahId: locals.sekolah?.id ?? undefined,
 								createdAt: timestamp,
 								updatedAt: timestamp
 							})

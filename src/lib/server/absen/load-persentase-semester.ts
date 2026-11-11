@@ -1,4 +1,4 @@
-﻿import db from '$lib/server/db';
+import db from '$lib/server/db';
 import {
 	tableMurid,
 	tableKetidakhadiranHarian,
@@ -367,23 +367,30 @@ export async function loadPersentaseSemester(params: {
 		let sakit = 0;
 		let izin = 0;
 		let alfa = 0;
+		// Sesi (hari/slot) yang benar-benar sudah diisi. Hari/sesi kosong
+		// tidak dihitung ketidakhadiran; persentase memakai jumlah sesi
+		// terisi sebagai penyebut agar kelas tanpa data tidak tampil 0%
+		// palsu karena hari yang belum diisi.
+		let sesiTerisi = 0;
 
 		if (isWaliKelasMasukPulang) {
 			for (const tgl of allDates) {
 				if (redDaySet.has(tgl)) continue;
 				const masukKet = khMap.get(`${murid.id}:${tgl}`);
 				const pulangKet = khPulangMap.get(`${murid.id}:${tgl}`);
+				// `undefined` = belum diisi (bukan alfa), `null`/'' = hadir.
 				const countSession = (ket: string | null | undefined) => {
-					if (ket === null) countHadir++;
+					if (ket === undefined) return;
+					sesiTerisi++;
+					if (ket === null || ket === '') countHadir++;
 					else if (ket === 'sakit') sakit++;
 					else if (ket === 'izin') izin++;
-					else alfa++;
+					else if (ket === 'alfa') alfa++;
 				};
 				countSession(masukKet);
 				countSession(pulangKet);
 			}
-			const totalSessions = totalHariBelajar * 2;
-			const persentase = totalSessions > 0 ? Math.round((countHadir / totalSessions) * 100) : 0;
+			const persentase = sesiTerisi > 0 ? Math.round((countHadir / sesiTerisi) * 100) : 0;
 			return { no: index + 1, nama: murid.nama, persentase, hadir: countHadir, sakit, izin, alfa };
 		}
 
@@ -414,15 +421,23 @@ export async function loadPersentaseSemester(params: {
 								const absCount =
 									mpId != null ? (absensiPerMapel.get(`${murid.id}:${tgl}:${mpId}`) ?? 0) : 0;
 								countHadir += absCount > 0 ? absCount : 2;
+								sesiTerisi += 2;
 							} else {
 								countHadir++;
+								sesiTerisi++;
 							}
 						} else if (keterangan === 'sakit') {
-							sakit += isAwalAkhir ? 2 : 1;
+							const bobot = isAwalAkhir ? 2 : 1;
+							sakit += bobot;
+							sesiTerisi += bobot;
 						} else if (keterangan === 'izin') {
-							izin += isAwalAkhir ? 2 : 1;
-						} else {
-							alfa += isAwalAkhir ? 2 : 1;
+							const bobot = isAwalAkhir ? 2 : 1;
+							izin += bobot;
+							sesiTerisi += bobot;
+						} else if (keterangan === 'alfa') {
+							const bobot = isAwalAkhir ? 2 : 1;
+							alfa += bobot;
+							sesiTerisi += bobot;
 						}
 					} else {
 						const hasAbsensi =
@@ -434,17 +449,17 @@ export async function loadPersentaseSemester(params: {
 								const absCount =
 									mpId != null ? (absensiPerMapel.get(`${murid.id}:${tgl}:${mpId}`) ?? 0) : 0;
 								countHadir += absCount;
+								sesiTerisi += Math.max(1, Math.min(2, absCount));
 							} else {
 								countHadir++;
+								sesiTerisi++;
 							}
-						} else {
-							alfa += isAwalAkhir ? 2 : 1;
 						}
+						// Tanpa catatan sama sekali: sesi belum diisi, bukan alfa.
 					}
 				}
 			}
-			const denom = totalPertemuan;
-			const persentase = denom > 0 ? Math.round((countHadir / denom) * 100) : 0;
+			const persentase = sesiTerisi > 0 ? Math.round((countHadir / sesiTerisi) * 100) : 0;
 			return {
 				no: index + 1,
 				nama: murid.nama,
@@ -460,17 +475,18 @@ export async function loadPersentaseSemester(params: {
 			if (redDaySet.has(tgl)) continue;
 			const keterangan = khMap.get(`${murid.id}:${tgl}`);
 			if (keterangan !== undefined) {
-				if (keterangan === null) countHadir++;
+				sesiTerisi++;
+				if (keterangan === null || keterangan === '') countHadir++;
 				else if (keterangan === 'sakit') sakit++;
 				else if (keterangan === 'izin') izin++;
-				else alfa++;
+				else if (keterangan === 'alfa') alfa++;
 			} else if (absensiSet.has(`${murid.id}:${tgl}`)) {
 				countHadir++;
-			} else {
-				alfa++;
+				sesiTerisi++;
 			}
+			// Hari tanpa catatan presensi: belum diisi, bukan alfa.
 		}
-		const persentase = totalHariBelajar > 0 ? Math.round((countHadir / totalHariBelajar) * 100) : 0;
+		const persentase = sesiTerisi > 0 ? Math.round((countHadir / sesiTerisi) * 100) : 0;
 		return { no: index + 1, nama: murid.nama, persentase, hadir: countHadir, sakit, izin, alfa };
 	});
 

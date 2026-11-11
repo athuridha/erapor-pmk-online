@@ -1,4 +1,4 @@
-﻿export const appMenuItems: MenuItem[] = [
+export const appMenuItems: MenuItem[] = [
 	{
 		title: 'Beranda',
 		icon: 'grid',
@@ -33,6 +33,11 @@
 				title: 'Mata Pelajaran',
 				path: '/master-data/mata_pelajaran',
 				tags: ['mapel', 'mata pelajaran', 'kkm', 'pengampu', 'referensi']
+			},
+			{
+				title: 'Guru Pengampu',
+				path: '/master-data/pengampu',
+				tags: ['guru pengampu', 'pengampu', 'pembagian tugas', 'guru mapel', 'plotting']
 			},
 			{
 				title: 'Ekstrakurikuler',
@@ -123,10 +128,6 @@
 			{
 				title: 'Kokurikuler',
 				path: '/kokurikuler'
-			},
-			{
-				title: 'Ekstrakurikuler',
-				path: '/ekstrakurikuler'
 			}
 		]
 	},
@@ -171,11 +172,6 @@
 				title: 'PKL (Prakerin)',
 				path: '/prakerin',
 				tags: ['pkl', 'prakerin', 'magang', 'perusahaan', 'kelompok', 'pembimbing', 'rapor']
-			},
-			{
-				title: 'Legger',
-				path: '/legger',
-				tags: ['legger', 'leger', 'rekap', 'nilai akhir', 'excel']
 			}
 		]
 	},
@@ -206,9 +202,9 @@
 				tags: ['kirim', 'matev', 'nilai', 'dapodik']
 			},
 			{
-				title: 'Impor Nilai',
-				path: '/nilai-akhir/impor-nilai',
-				tags: ['impor', 'excel', 'nilai', 'bulk', 'murid']
+				title: 'Impor',
+				path: '/impor',
+				tags: ['import', 'impor', 'excel', 'data pokok', 'murid', 'kelas', 'pegawai', 'nilai']
 			},
 			{
 				title: 'Jejak Audit',
@@ -250,11 +246,6 @@
 				title: 'Poin Siswa',
 				path: '/poin-siswa',
 				tags: ['poin', 'pelanggaran', 'tata tertib', 'siswa', 'riwayat']
-			},
-			{
-				title: 'Impor Data',
-				path: '/import-data',
-				tags: ['import', 'impor', 'excel', 'data pokok', 'murid', 'kelas', 'pegawai']
 			}
 		]
 	},
@@ -277,6 +268,198 @@
 				title: 'Kustomisasi',
 				path: '/cetak/kustomisasi',
 				tags: ['kustomisasi', 'cetak', 'template', 'logo', 'kop', 'watermark', 'layout', 'jarak']
+			}
+		]
+	}
+];
+
+export const menuModulGuru: MenuItem[] = [
+	{
+		title: 'Beranda',
+		icon: 'grid',
+		path: '/',
+		tags: ['dashboard', 'home', 'beranda']
+	},
+	{
+		title: 'Persiapan Penilaian',
+		icon: 'book',
+		subMenu: [
+			{
+				title: 'Capaian Kompetensi & TP',
+				path: '/intrakurikuler',
+				tags: ['tujuan pembelajaran', 'lingkup materi', 'tp', 'mapel', 'mata pelajaran']
+			},
+			{
+				title: 'Teknik Penilaian',
+				path: '/teknik-penilaian',
+				tags: ['teknik', 'penilaian', 'asesmen', 'metode']
+			}
+		]
+	},
+	{
+		title: 'Penilaian',
+		icon: 'pen',
+		subMenu: [
+			{
+				title: 'Penilaian Formatif',
+				path: '/asesmen-formatif',
+				tags: ['formatif', 'tugas', 'kuis', 'nilai']
+			},
+			{
+				title: 'Penilaian Sumatif',
+				path: '/asesmen-sumatif',
+				tags: ['sumatif', 'sts', 'sas', 'ulangan', 'nilai']
+			},
+			{
+				title: 'Nilai Akhir & Deskripsi Rapor',
+				path: '/nilai-akhir',
+				tags: ['nilai akhir', 'deskripsi', 'rapor', 'rekap']
+			},
+			{
+				title: 'Impor',
+				path: '/impor',
+				tags: ['impor', 'excel', 'nilai', 'bulk']
+			}
+		]
+	},
+	{
+		title: 'Administrasi Guru',
+		icon: 'briefcase',
+		subMenu: [
+			{
+				title: 'Jurnal Mengajar',
+				path: '/jurnal-mengajar',
+				tags: ['jurnal', 'materi', 'pertemuan']
+			},
+			{
+				title: 'RPM (Rencana Pembelajaran)',
+				path: '/rpm',
+				tags: ['rpm', 'rencana pembelajaran', 'deep learning']
+			},
+			{
+				title: 'Presensi Guru',
+				path: '/presensi-guru',
+				tags: ['presensi', 'kehadiran', 'guru']
+			},
+			{
+				title: 'Dinas Luar',
+				path: '/dinas-luar',
+				tags: ['dinas luar', 'tugas', 'permohonan']
+			}
+		]
+	},
+	{
+		title: 'Fitur Tambahan',
+		icon: 'star',
+		subMenu: [
+			{
+				title: 'Poin Siswa',
+				path: '/poin-siswa',
+				tags: ['poin', 'pelanggaran', 'prestasi', 'tata tertib']
+			},
+			{
+				title: 'Buku Tamu',
+				path: '/buku-tamu',
+				tags: ['tamu', 'kunjungan']
+			}
+		]
+	}
+];
+
+export const menuModulWaliKelas: MenuItem[] = [
+	{
+		title: 'Beranda',
+		icon: 'grid',
+		path: '/',
+		tags: ['dashboard', 'home', 'beranda']
+	},
+	{
+		title: 'Manajemen Kelas',
+		icon: 'users',
+		subMenu: [
+			{
+				title: 'Peserta Didik',
+				path: '/murid',
+				tags: ['murid', 'siswa', 'data induk', 'kelas']
+			},
+			{
+				title: 'Absensi Murid',
+				path: '/presensi-murid',
+				tags: ['presensi', 'absen', 'kehadiran', 'harian', 'bulanan']
+			},
+			{
+				title: 'Catatan Wali Kelas',
+				path: '/catatan-wali-kelas',
+				tags: ['catatan', 'wali kelas', 'motivasi', 'rapor']
+			},
+			{
+				title: 'Prakerin (PKL)',
+				path: '/prakerin',
+				tags: ['pkl', 'prakerin', 'magang']
+			},
+			{
+				title: 'Pengaturan Naik Kelas',
+				path: '/keputusan',
+				tags: ['keputusan', 'kenaikan', 'lulus', 'naik kelas'],
+				condition: 'genap'
+			}
+		]
+	},
+	{
+		title: 'Monitor Penilaian',
+		icon: 'chart',
+		subMenu: [
+			{
+				title: 'Daftar Nilai / Rekap',
+				path: '/nilai-akhir',
+				tags: ['rekap', 'nilai akhir', 'rapor']
+			},
+			{
+				title: 'Kokurikuler / P5',
+				path: '/p5',
+				tags: ['p5', 'projek', 'pancasila']
+			},
+			{
+				title: 'Nilai Ekstrakurikuler',
+				path: '/nilai-ekstrakurikuler',
+				tags: ['ekstrakurikuler', 'ekskul', 'nilai']
+			}
+		]
+	},
+	{
+		title: 'Rapor',
+		icon: 'print',
+		subMenu: [
+			{
+				title: 'Daftar & Cetak Rapor',
+				path: '/cetak',
+				tags: ['cetak', 'rapor', 'pdf', 'piagam', 'biodata']
+			},
+			{
+				title: 'Tanda Tangan',
+				path: '/tanda-tangan',
+				tags: ['tanda tangan', 'paraf', 'ttd']
+			}
+		]
+	},
+	{
+		title: 'Fitur Tambahan',
+		icon: 'star',
+		subMenu: [
+			{
+				title: 'Poin Siswa',
+				path: '/poin-siswa',
+				tags: ['poin', 'pelanggaran', 'prestasi', 'tata tertib']
+			},
+			{
+				title: 'Presensi Guru',
+				path: '/presensi-guru',
+				tags: ['presensi', 'guru']
+			},
+			{
+				title: 'Dinas Luar',
+				path: '/dinas-luar',
+				tags: ['dinas luar']
 			}
 		]
 	}

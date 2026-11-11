@@ -112,12 +112,11 @@ export async function load({ depends, url, parent }) {
 			})
 		: [];
 
-	// If the current user is a 'user' role OR a 'wali_kelas' accessing a non-owned kelas,
-	// filter to show only assigned mata pelajaran (ID, nama lintas kelas,
-	// keluarga agama/PKS, dan sub pembelajaran induknya).
+	// Filter hanya menampilkan mata pelajaran yang diampu oleh guru yang login
 	const u = user as unknown as {
 		id?: number;
 		type?: string;
+		pegawaiId?: number | null;
 		mataPelajaranId?: number;
 		kelasId?: number | null;
 	};
@@ -125,11 +124,13 @@ export async function load({ depends, url, parent }) {
 		if (u.id) {
 			try {
 				const akses = await getAksesMapelUser(
-					{ id: u.id, mataPelajaranId: u.mataPelajaranId },
+					{ id: u.id, pegawaiId: u.pegawaiId, mataPelajaranId: u.mataPelajaranId },
 					kelasId
 				);
 				mapel = mapel.filter(
-					(m) => akses.ids.has(m.id) || akses.names.has((m.nama || '').trim().toLowerCase())
+					(m) =>
+						akses.ids.has(m.id) ||
+						(m.pengampuId != null && u.pegawaiId != null && m.pengampuId === u.pegawaiId)
 				);
 			} catch (err) {
 				// on error, don't block page — fallback to existing mapel list

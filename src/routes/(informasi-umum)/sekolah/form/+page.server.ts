@@ -139,6 +139,14 @@ export const actions = {
 
 		// Use updateData for further processing
 		const formSekolahFinal = updateData as typeof formSekolah;
+		// Input angka dari form selalu berupa string — ubah ke number agar
+		// kolom INTEGER (ambang kriteria rapor) tersimpan konsisten.
+		for (const key of ['raporKriteriaCukup', 'raporKriteriaBaik'] as const) {
+			const mentah = formSekolahFinal[key] as unknown as string | number | null | undefined;
+			if (mentah == null || mentah === '') continue;
+			const angka = Number(mentah);
+			if (Number.isFinite(angka)) formSekolahFinal[key] = Math.max(0, Math.round(angka));
+		}
 
 		// A PLT kepala sekolah is often also a wali kelas / guru mapel (must keep
 		// teaching hours). Reuse that existing guru pegawai instead of keeping a
@@ -301,6 +309,14 @@ export const actions = {
 					.values(formSekolahFinal)
 					.returning({ id: tableSekolah.id });
 				formSekolah.id = newSekolah?.id;
+				// Kepala sekolah baru dibuat sebelum baris sekolah ada (FK) —
+				// sekolah_id baru bisa diisi setelah insert sekolah.
+				if (newSekolah?.id && formSekolah.kepalaSekolahId) {
+					await db
+						.update(tablePegawai)
+						.set({ sekolahId: newSekolah.id })
+						.where(eq(tablePegawai.id, formSekolah.kepalaSekolahId));
+				}
 			}
 
 			if (!formSekolah.id) error(409, `Gagal simpan data sekolah`);

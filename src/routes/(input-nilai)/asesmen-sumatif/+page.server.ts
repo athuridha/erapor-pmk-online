@@ -1,12 +1,24 @@
 import db from '$lib/server/db';
 import { ensureAsesmenSumatifSchema } from '$lib/server/db/ensure-asesmen-sumatif';
-import { tableAsesmenSumatif, tableMataPelajaran, tableMurid } from '$lib/server/db/schema';
-import { redirect } from '@sveltejs/kit';
-import { getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
+import { queryInChunks, chunk } from '$lib/server/db/chunk';
+import {
+	tableAsesmenSumatif,
+	tableKelas,
+	tableMataPelajaran,
+	tableMurid
+} from '$lib/server/db/schema';
+import { fail, redirect } from '@sveltejs/kit';
+import { bolehAksesMapel, getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
 import { ownedKelasIdSet } from '$lib/server/kelas-akses';
 import { labelVarianUntukMurid, muridAgamaKey } from '$lib/server/mapel-picker';
 import { agamaMapelOptions, pksMapelOptions } from '$lib/statics';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { loadKunciNilai } from '$lib/server/nilai-kunci';
+import {
+	konfigurasiNilaiDariSekolah,
+	hitungNilaiAkhirRts,
+	hitungNilaiAkhirSumatif
+} from '$lib/server/nilai-sumatif';
 
 const AGAMA_BASE_SUBJECT = 'Pendidikan Agama dan Budi Pekerti';
 const PKS_BASE_SUBJECT = 'Pendalaman Kitab Suci';
@@ -100,6 +112,8 @@ type MuridRow = {
 	no: number;
 	nama: string;
 	agamaLabel?: string | null;
+	/** mapelId efektif baris ini (varian agama/PKS sudah di-resolve) — dipakai isi massal. */
+	mapelId: number | null;
 	nilaiAkhirRts: number | null;
 	nilaiAkhir: number | null;
 	naLingkup: number | null;
@@ -406,6 +420,7 @@ export async function load({ parent, url, depends, locals }) {
 		no: offset + index + 1,
 		nama: murid.nama,
 		agamaLabel: null,
+		mapelId: null,
 		nilaiAkhirRts: null,
 		nilaiAkhir: null,
 		naLingkup: null,
@@ -534,6 +549,7 @@ export async function load({ parent, url, depends, locals }) {
 				no: offset + index + 1,
 				nama: murid.nama,
 				agamaLabel,
+				mapelId: targetMapelId,
 				nilaiAkhirRts: null,
 				nilaiAkhir: null,
 				naLingkup: null,
@@ -556,6 +572,7 @@ export async function load({ parent, url, depends, locals }) {
 			no: offset + index + 1,
 			nama: murid.nama,
 			agamaLabel,
+			mapelId: targetMapelId,
 			nilaiAkhirRts: formatScore(
 				computeNilaiAkhirRts(sumatif?.naLingkup, sumatif?.sts, bobotRtsLingkup, bobotRtsSts)
 			),
@@ -591,3 +608,211 @@ export async function load({ parent, url, depends, locals }) {
 		page: pageState
 	};
 }
+
+type BulkNilaiItem = { muridId: number; mapelId: number };
+
+function parseBulkItems(raw: FormDataEntryValue | null): BulkNilaiItem[] {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(String(raw ?? '[]'));
+	} catch {
+		return [];
+	}
+	if (!Array.isArray(parsed)) return [];
+	const seen = new Set<string>();
+	const items: BulkNilaiItem[] = [];
+	for (const entry of parsed) {
+		const record = entry as { muridId?: unknown; mapelId?: unknown } | null;
+		const muridId = Number(record?.muridId);
+		const mapelId = Number(record?.mapelId);
+		if (!Number.isInteger(muridId) || muridId <= 0) continue;
+		if (!Number.isInteger(mapelId) || mapelId <= 0) continue;
+		const key = `${muridId}|${mapelId}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		items.push({ muridId, mapelId });
+	}
+	return items;
+}
+
+const BULK_KOMPONEN_LABEL: Record<'lingkup' | 'sts' | 'sas', string> = {
+	lingkup: 'Lingkup Materi',
+	sts: 'STS',
+	sas: 'SAS'
+};
+
+export const actions = {
+	/**
+	 * Isi satu komponen nilai untuk banyak murid sekaligus ("Isi Sekaligus").
+	 * `items` berisi pasangan muridId+mapelId (mapel sudah di-resolve per murid
+	 * oleh halaman, termasuk varian agama/PKS), jadi server tidak perlu menebak.
+	 */
+	simpanMassal: async ({ request, locals }) => {
+		const sekolahId = locals.sekolah?.id ?? null;
+		if (!sekolahId) return fail(401, { fail: 'Sekolah aktif tidak ditemukan.' });
+
+		const formData = await request.formData();
+		const items = parseBulkItems(formData.get('items'));
+		if (!items.length) return fail(400, { fail: 'Pilih minimal satu murid.' });
+		if (items.length > 300) {
+			return fail(400, { fail: 'Maksimal 300 murid per sekali simpan.' });
+		}
+
+		const komponenRaw = String(formData.get('komponen') ?? '');
+		if (komponenRaw !== 'lingkup' && komponenRaw !== 'sts' && komponenRaw !== 'sas') {
+			return fail(400, { fail: 'Komponen nilai tidak valid.' });
+		}
+		const komponen = komponenRaw;
+
+		const nilaiRaw = String(formData.get('nilai') ?? '').trim();
+		if (!nilaiRaw) return fail(400, { fail: 'Nilai wajib diisi.' });
+		const normalized = nilaiRaw.replace(',', '.');
+		if (!/^(?:100(?:\.0{1,2})?|\d{1,2}(?:\.\d{1,2})?)$/.test(normalized)) {
+			return fail(400, { fail: 'Nilai harus 0-100 dengan maksimal 2 desimal.' });
+		}
+		const nilai = Math.round(Number.parseFloat(normalized) * 100) / 100;
+
+		const muridIds = [...new Set(items.map((item) => item.muridId))];
+		const mapelIds = [...new Set(items.map((item) => item.mapelId))];
+
+		const muridRows = await queryInChunks(muridIds, (ids) =>
+			db
+				.select({ id: tableMurid.id, kelasId: tableMurid.kelasId })
+				.from(tableMurid)
+				.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, ids)))
+		);
+		const muridKelas = new Map(muridRows.map((row) => [row.id, row.kelasId]));
+
+		const mapelRows = await queryInChunks(mapelIds, (ids) =>
+			db
+				.select({
+					id: tableMataPelajaran.id,
+					nama: tableMataPelajaran.nama,
+					kelasId: tableMataPelajaran.kelasId
+				})
+				.from(tableMataPelajaran)
+				.where(inArray(tableMataPelajaran.id, ids))
+		);
+		const mapelById = new Map(mapelRows.map((row) => [row.id, row]));
+
+		const valid = items.filter((item) => {
+			const kelasId = muridKelas.get(item.muridId);
+			const mapel = mapelById.get(item.mapelId);
+			return kelasId != null && mapel != null && mapel.kelasId === kelasId;
+		});
+		if (!valid.length) {
+			return fail(400, { fail: 'Tidak ada pasangan murid dan mata pelajaran yang valid.' });
+		}
+
+		// Izin: guru mapel hanya mapel yang diampu; wali kelas boleh kelas
+		// binaannya, selain itu tetap dicek per mapel (paritas formulir).
+		const user = locals.user as {
+			id?: number;
+			type?: string;
+			mataPelajaranId?: number | null;
+			pegawaiId?: number | null;
+		} | null;
+		const uniqueMapelIds = [...new Set(valid.map((item) => item.mapelId))];
+		if (user?.id && user.type !== 'admin' && user.type !== 'kepala_sekolah') {
+			for (const mapelId of uniqueMapelIds) {
+				const mapel = mapelById.get(mapelId);
+				if (!mapel) continue;
+				if (user.type === 'wali_kelas' && user.pegawaiId) {
+					const ownKelas = await db.query.tableKelas.findFirst({
+						columns: { id: true },
+						where: and(eq(tableKelas.id, mapel.kelasId), eq(tableKelas.waliKelasId, user.pegawaiId))
+					});
+					if (ownKelas) continue;
+				}
+				const allowed = await bolehAksesMapel(
+					{ id: user.id, mataPelajaranId: user.mataPelajaranId ?? null },
+					{ id: mapel.id, nama: mapel.nama }
+				);
+				if (!allowed) {
+					return fail(403, { fail: `Anda tidak memiliki akses ke mata pelajaran ${mapel.nama}.` });
+				}
+			}
+		}
+
+		await ensureAsesmenSumatifSchema();
+
+		// Kunci nilai membatasi edit; periksa per potongan id.
+		for (const part of chunk(uniqueMapelIds, 90)) {
+			const kunci = await loadKunciNilai(part);
+			for (const [mapelId, info] of kunci) {
+				return fail(403, {
+					fail: `Nilai ${mapelById.get(mapelId)?.nama ?? ''} sudah dikunci${
+						info?.dikunciOleh ? ` oleh ${info.dikunciOleh}` : ''
+					}. Hubungi operator sekolah untuk membuka kunci.`
+				});
+			}
+		}
+
+		// Ambil nilai lama untuk komponen lain (lingkup/STS/SAS tidak ikut diubah).
+		const nilaiLama = new Map<
+			string,
+			{ naLingkup: number | null; sts: number | null; sas: number | null }
+		>();
+		for (const mapelId of uniqueMapelIds) {
+			const ids = valid.filter((item) => item.mapelId === mapelId).map((item) => item.muridId);
+			await queryInChunks(ids, async (part) => {
+				const rows = await db.query.tableAsesmenSumatif.findMany({
+					columns: { muridId: true, naLingkup: true, sts: true, sas: true },
+					where: and(
+						eq(tableAsesmenSumatif.mataPelajaranId, mapelId),
+						inArray(tableAsesmenSumatif.muridId, part)
+					)
+				});
+				for (const row of rows) {
+					nilaiLama.set(`${row.muridId}|${mapelId}`, {
+						naLingkup: row.naLingkup,
+						sts: row.sts,
+						sas: row.sas
+					});
+				}
+				return rows;
+			});
+		}
+
+		const konfigurasi = konfigurasiNilaiDariSekolah(locals.sekolah ?? null);
+		const now = new Date().toISOString();
+		const values = valid.map((item) => {
+			const lama = nilaiLama.get(`${item.muridId}|${item.mapelId}`);
+			const naLingkup = komponen === 'lingkup' ? nilai : (lama?.naLingkup ?? null);
+			const sts = komponen === 'sts' ? nilai : (lama?.sts ?? null);
+			const sas = komponen === 'sas' ? nilai : (lama?.sas ?? null);
+			return {
+				muridId: item.muridId,
+				mataPelajaranId: item.mapelId,
+				naLingkup,
+				sts,
+				sas,
+				nilaiAkhir: hitungNilaiAkhirSumatif({ naLingkup, sts, sas }, konfigurasi.bobotAkhir),
+				nilaiAkhirRts: hitungNilaiAkhirRts({ naLingkup, sts }, konfigurasi.bobotRts),
+				updatedAt: now
+			};
+		});
+
+		// Satu statement upsert per potongan kecil (D1 maks 100 parameter).
+		for (const part of chunk(values, 10)) {
+			await db
+				.insert(tableAsesmenSumatif)
+				.values(part)
+				.onConflictDoUpdate({
+					target: [tableAsesmenSumatif.muridId, tableAsesmenSumatif.mataPelajaranId],
+					set: {
+						naLingkup: sql`excluded.na_lingkup`,
+						sts: sql`excluded.sts`,
+						sas: sql`excluded.sas`,
+						nilaiAkhir: sql`excluded.nilai_akhir`,
+						nilaiAkhirRts: sql`excluded.nilai_akhir_rts`,
+						updatedAt: now
+					}
+				});
+		}
+
+		return {
+			message: `${values.length} murid diperbarui: ${BULK_KOMPONEN_LABEL[komponen]} = ${nilai}.`
+		};
+	}
+};

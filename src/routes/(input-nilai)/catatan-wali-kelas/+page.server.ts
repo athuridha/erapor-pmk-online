@@ -12,11 +12,28 @@ export async function load({ locals, url, depends, parent }) {
 	await ensureCatatanWaliSchema();
 
 	const parentData = await parent();
-	const { sekolahId, kelasId, kelasIds, academicContext } = await buildKelasContext(
-		locals,
-		parentData,
-		url
-	);
+	const {
+		sekolahId,
+		kelasId: kelasIdKonteks,
+		kelasIds,
+		academicContext
+	} = await buildKelasContext(locals, parentData, url);
+
+	// Pilihan kelas untuk dropdown lokal halaman ini.
+	const daftarKelas = (
+		(parentData as { daftarKelas?: Array<{ id: number; nama: string; fase?: string | null }> })
+			.daftarKelas ?? []
+	).map((kelas) => ({ id: kelas.id, nama: kelas.nama, fase: kelas.fase ?? null }));
+
+	// `?kelas=` dari dropdown lokal menang atas konteks kelas global; tanpa
+	// parameter itu konteks global (kelas_id / kelas aktif) tetap dipakai.
+	const kelasParam = url.searchParams.get('kelas');
+	const kelasParamId =
+		kelasParam && daftarKelas.some((kelas) => kelas.id === Number(kelasParam))
+			? String(Number(kelasParam))
+			: null;
+	const kelasId = kelasParamId ?? kelasIdKonteks;
+
 	const searchRaw = url.searchParams.get('q')?.trim() ?? '';
 	const search = searchRaw || null;
 	const status = url.searchParams.get('status') || 'all';
@@ -29,6 +46,7 @@ export async function load({ locals, url, depends, parent }) {
 		return {
 			meta: { title: 'Catatan Wali Kelas' },
 			academicContext,
+			daftarKelas,
 			daftarCatatan: [],
 			statusCounts: { all: 0, filled: 0, empty: 0 },
 			page: {
@@ -135,6 +153,7 @@ export async function load({ locals, url, depends, parent }) {
 	return {
 		meta: { title: 'Catatan Wali Kelas' },
 		academicContext,
+		daftarKelas,
 		daftarCatatan,
 		statusCounts,
 		page: {

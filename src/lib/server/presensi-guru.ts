@@ -11,6 +11,7 @@ import {
 	tablePresensiSettings
 } from '$lib/server/db/schema';
 import { resolveSekolahAcademicContext } from '$lib/server/db/academic';
+import { queryInChunks } from '$lib/server/db/chunk';
 import { compareKepegawaian } from '$lib/server/kepegawaian-order';
 import { buildLiburDates, buildRedDaysByType } from './absen/libur';
 import { dateStr, getDaysInMonth } from './absen/utils';
@@ -297,10 +298,13 @@ export async function listGuruBySekolah(sekolahId: number): Promise<GuruSekolah[
 		});
 		const mapelIds = mapelRows.map((m) => m.id);
 		if (mapelIds.length) {
-			const mapelLinkRows = await db.query.tableAuthUserMataPelajaran.findMany({
-				columns: { authUserId: true },
-				where: inArray(tableAuthUserMataPelajaran.mataPelajaranId, mapelIds)
-			});
+			// D1 menolak query dengan >100 parameter; mapel satu sekolah bisa ratusan.
+			const mapelLinkRows = await queryInChunks(mapelIds, (ids) =>
+				db.query.tableAuthUserMataPelajaran.findMany({
+					columns: { authUserId: true },
+					where: inArray(tableAuthUserMataPelajaran.mataPelajaranId, ids)
+				})
+			);
 			usersByMapelLink = new Set(mapelLinkRows.map((r) => r.authUserId));
 		}
 	}
