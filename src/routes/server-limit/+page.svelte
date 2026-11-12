@@ -3,218 +3,111 @@
 
 	let showContactModal = $state(false);
 	let isRefreshing = $state(false);
-	let copied = $state(false);
-
-	const incidentId = 'INC-' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
 	function handleRefresh() {
 		isRefreshing = true;
 		setTimeout(() => {
 			window.location.reload();
-		}, 600);
-	}
-
-	function copyIncidentId() {
-		navigator.clipboard?.writeText?.(incidentId);
-		copied = true;
-		setTimeout(() => {
-			copied = false;
-		}, 2000);
+		}, 500);
 	}
 </script>
 
 <svelte:head>
-	<title>508 Resource Limit Reached | Server Over Quota</title>
+	<title>500 - OOPS! Server Error | Server Telah Melebihi Batas Limit</title>
 </svelte:head>
 
-<div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-rose-500 selection:text-white font-sans antialiased relative overflow-hidden">
-	<!-- Background ambient glow -->
-	<div class="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-rose-600/15 via-amber-500/10 to-transparent blur-3xl opacity-70"></div>
-	<div class="pointer-events-none absolute bottom-0 left-1/4 w-[500px] h-[250px] bg-red-600/5 blur-3xl"></div>
+<!-- Fullscreen Outer Container with Decorative Dark Navy Background -->
+<div class="min-h-screen bg-[#282433] text-slate-800 flex items-center justify-center p-4 sm:p-8 relative overflow-hidden font-sans antialiased selection:bg-orange-200">
+	<!-- Abstract Colorful Background Shapes (Matching Mockup) -->
+	<!-- Top-Left Blue Circle -->
+	<div class="pointer-events-none absolute -top-24 -left-20 w-80 h-80 rounded-full bg-[#2d6dcf] blur-2xl opacity-90"></div>
+	<div class="pointer-events-none absolute -top-16 -left-12 w-64 h-64 rounded-full bg-[#2563eb] opacity-80"></div>
 
-	<!-- Top Navigation Bar (Hosting Platform style) -->
-	<header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md px-6 py-4 relative z-10">
-		<div class="max-w-6xl mx-auto flex items-center justify-between">
-			<div class="flex items-center gap-3">
-				<!-- Vercel / Cloud triangular prism icon -->
-				<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 flex items-center justify-center shadow-inner">
-					<svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-						<path d="M12 2L1 21h22L12 2zm0 3.8L19.5 19H4.5L12 5.8z" />
-					</svg>
-				</div>
-				<div>
-					<div class="text-sm font-semibold tracking-tight text-white flex items-center gap-2">
-						Cloud Edge Network
-						<span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30">
-							Quota Exceeded
-						</span>
-					</div>
-					<div class="text-xs text-slate-400 font-mono">{data.host || 'erapor-pmk.titipit.id'}</div>
-				</div>
-			</div>
+	<!-- Top-Right / Right Orange Area -->
+	<div class="pointer-events-none absolute -top-32 -right-24 w-[520px] h-[520px] rounded-full bg-[#f7691f] blur-3xl opacity-80"></div>
+	<div class="pointer-events-none absolute top-0 -right-28 w-[400px] h-[400px] rounded-full bg-[#ea580c] opacity-85"></div>
 
-			<div class="flex items-center gap-2">
-				<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-slate-900 border border-slate-800 text-slate-300">
-					<span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-					STATUS: 508 / 402
-				</span>
-			</div>
-		</div>
-	</header>
+	<!-- Bottom-Left Yellow Ring -->
+	<div class="pointer-events-none absolute -bottom-24 -left-12 w-64 h-64 rounded-full border-[22px] border-[#e5aa3a] opacity-85"></div>
+	<div class="pointer-events-none absolute -bottom-16 -left-8 w-48 h-48 rounded-full border-[14px] border-[#fbbf24] opacity-50 blur-sm"></div>
 
-	<!-- Main Content Area -->
-	<main class="flex-1 max-w-4xl w-full mx-auto px-6 py-12 flex flex-col justify-center relative z-10">
-		<!-- Hero Alert Section -->
-		<div class="text-center mb-10">
-			<div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-950/60 border border-rose-800/60 text-rose-300 text-xs font-mono uppercase tracking-wider mb-6 shadow-lg shadow-rose-950/30">
-				<svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-				</svg>
-				Deployment Resource Limit Reached
-			</div>
+	<!-- Main White Card -->
+	<div class="max-w-4xl w-full bg-white rounded-[32px] sm:rounded-[36px] shadow-[0_30px_90px_rgba(0,0,0,0.45)] p-8 sm:p-14 lg:p-16 relative z-10 my-auto">
+		<div class="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center">
+			<!-- Left Column: 500, Message, and Button -->
+			<div class="md:col-span-7 flex flex-col items-center md:items-start text-center md:text-left">
+				<!-- Big Orange 500 -->
+				<h1 class="text-7xl sm:text-8xl lg:text-9xl font-black text-[#ed6e29] tracking-tight leading-none mb-3">
+					500
+				</h1>
 
-			<h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white mb-4">
-				Server Has Reached Its Limit
-			</h1>
-			<p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-				This deployment has exceeded 100% of its allocated compute execution, bandwidth, and database transaction limits for the current billing cycle.
-			</p>
-			<p class="text-sm text-slate-400 max-w-xl mx-auto mt-2">
-				Layanan aplikasi sementara ditangguhkan oleh sistem cloud. Silakan tingkatkan paket langganan server untuk mengaktifkan kembali akses.
-			</p>
-		</div>
+				<!-- Sub-headline -->
+				<h2 class="text-xl sm:text-2xl font-bold text-slate-700 tracking-tight mb-3">
+					OOPS! Server Error
+				</h2>
 
-		<!-- Resource Metrics Gauges -->
-		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-			<!-- Gauge 1: Function Execution -->
-			<div class="bg-slate-900/90 border border-rose-900/40 rounded-xl p-5 shadow-sm">
-				<div class="flex items-center justify-between mb-2">
-					<span class="text-xs font-mono text-slate-400 uppercase tracking-wide">Serverless Execution</span>
-					<span class="text-xs font-mono font-bold text-rose-400">100% (1,000,000 / 1,000,000 req)</span>
-				</div>
-				<div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden mb-2">
-					<div class="bg-rose-500 h-2 rounded-full w-full"></div>
-				</div>
-				<p class="text-[11px] text-slate-400">Function invocations capped. Requests return HTTP 508.</p>
-			</div>
-
-			<!-- Gauge 2: Bandwidth Egress -->
-			<div class="bg-slate-900/90 border border-rose-900/40 rounded-xl p-5 shadow-sm">
-				<div class="flex items-center justify-between mb-2">
-					<span class="text-xs font-mono text-slate-400 uppercase tracking-wide">Edge Bandwidth Egress</span>
-					<span class="text-xs font-mono font-bold text-rose-400">100.4 GB / 100 GB (Over Quota)</span>
-				</div>
-				<div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden mb-2">
-					<div class="bg-rose-500 h-2 rounded-full w-full"></div>
-				</div>
-				<p class="text-[11px] text-slate-400">Data transfer limit exceeded for current billing cycle.</p>
-			</div>
-
-			<!-- Gauge 3: Database Pool -->
-			<div class="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-sm">
-				<div class="flex items-center justify-between mb-2">
-					<span class="text-xs font-mono text-slate-400 uppercase tracking-wide">Database Pool Connections</span>
-					<span class="text-xs font-mono font-bold text-amber-400">Max Concurrent Limit</span>
-				</div>
-				<div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden mb-2">
-					<div class="bg-amber-500 h-2 rounded-full w-full"></div>
-				</div>
-				<p class="text-[11px] text-slate-400">Connection pools throttled to protect database integrity.</p>
-			</div>
-
-			<!-- Gauge 4: Compute Memory -->
-			<div class="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-sm">
-				<div class="flex items-center justify-between mb-2">
-					<span class="text-xs font-mono text-slate-400 uppercase tracking-wide">Memory & CPU Compute</span>
-					<span class="text-xs font-mono font-bold text-amber-400">Throttled (100% Capped)</span>
-				</div>
-				<div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden mb-2">
-					<div class="bg-amber-500 h-2 rounded-full w-full"></div>
-				</div>
-				<p class="text-[11px] text-slate-400">Instance temporarily paused pending quota replenishment.</p>
-			</div>
-		</div>
-
-		<!-- Action / Please Upgrade Section -->
-		<div class="bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6">
-			<div>
-				<h3 class="text-lg font-bold text-white mb-1 flex items-center gap-2">
-					<svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-					</svg>
-					Please Upgrade Your Server Plan
-				</h3>
-				<p class="text-sm text-slate-300 max-w-xl">
-					Upgrade to <strong>Pro</strong> or <strong>Enterprise Tier</strong> to uncap execution limits, expand bandwidth, and restore instantaneous 24/7 uptime for e-Rapor.
+				<!-- Description text as requested -->
+				<p class="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-md mb-8">
+					Oooh!, Maaf server telah melebihi batas limit penggunaan sumber daya. Layanan ditangguhkan sementara dan harus melakukan upgrade paket server untuk mengaktifkan kembali akses.
 				</p>
+
+				<!-- Buttons -->
+				<div class="flex flex-wrap items-center justify-center md:justify-start gap-3">
+					<!-- Orange Upgrade Server Pill Button -->
+					<button
+						type="button"
+						onclick={() => showContactModal = true}
+						class="px-6 py-3 rounded-full bg-[#ed6e29] hover:bg-[#d95d1d] text-white text-xs sm:text-sm font-semibold shadow-lg shadow-orange-500/25 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+					>
+						<!-- Upgrade / Arrow Up Icon -->
+						<svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+						</svg>
+						<span>Upgrade Server</span>
+					</button>
+
+					<!-- Refresh Button -->
+					<button
+						type="button"
+						onclick={handleRefresh}
+						disabled={isRefreshing}
+						class="px-5 py-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs sm:text-sm font-medium transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+					>
+						<svg class="w-4 h-4 {isRefreshing ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+						</svg>
+						<span>{isRefreshing ? 'Memuat...' : 'Coba Lagi'}</span>
+					</button>
+				</div>
 			</div>
 
-			<div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto shrink-0">
-				<button
-					type="button"
-					onclick={() => showContactModal = true}
-					class="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm transition-all shadow-md shadow-white/10 flex items-center justify-center gap-2"
-				>
-					<svg class="w-4 h-4 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-					</svg>
-					Upgrade Plan
-				</button>
-
-				<button
-					type="button"
-					onclick={handleRefresh}
-					disabled={isRefreshing}
-					class="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-sm transition-all flex items-center justify-center gap-2"
-				>
-					<svg class="w-4 h-4 {isRefreshing ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-					</svg>
-					{isRefreshing ? 'Checking...' : 'Check Status'}
-				</button>
+			<!-- Right Column: Isometric Illustration from image -->
+			<div class="md:col-span-5 flex justify-center items-center py-4">
+				<img
+					src="/server-error-illustration.png"
+					alt="Server Telah Melebihi Batas Limit"
+					class="w-full max-w-[280px] sm:max-w-[340px] h-auto object-contain mx-auto select-none pointer-events-none drop-shadow-sm"
+					loading="eager"
+				/>
 			</div>
 		</div>
-
-		<!-- Diagnostic Footprint -->
-		<div class="mt-8 pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 font-mono gap-3">
-			<div class="flex items-center gap-3 flex-wrap">
-				<span>Ray ID: <strong class="text-slate-300">{incidentId}</strong></span>
-				<span>•</span>
-				<span>Region: <strong class="text-slate-300">sin1 (Singapore)</strong></span>
-				<span>•</span>
-				<span>Client IP: <strong class="text-slate-300">Protected</strong></span>
-			</div>
-
-			<button
-				type="button"
-				onclick={copyIncidentId}
-				class="hover:text-slate-300 transition-colors underline decoration-slate-700 underline-offset-4"
-			>
-				{copied ? 'Copied to clipboard' : 'Copy diagnostic details'}
-			</button>
-		</div>
-	</main>
-
-	<!-- Footer -->
-	<footer class="border-t border-slate-900/80 bg-slate-950 px-6 py-6 text-center text-xs text-slate-400">
-		<p>Cloud Server Infrastructure • Edge Network Protection • HTTP 508 Resource Limit Reached</p>
-	</footer>
+	</div>
 </div>
 
-<!-- Modal Contact / Upgrade Plan -->
+<!-- Modal Dialog: Upgrade Server -->
 {#if showContactModal}
-	<div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-		<div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+	<div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+		<div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in-95 duration-150">
 			<div class="flex items-start justify-between mb-4">
 				<div>
-					<h4 class="text-lg font-bold text-white">Upgrade Server Tier</h4>
-					<p class="text-xs text-slate-400">Pilihan paket peningkatan sumber daya server</p>
+					<h3 class="text-lg font-bold text-slate-900">Upgrade Paket Server</h3>
+					<p class="text-xs text-slate-500">Tingkatkan kuota & kapasitas sumber daya</p>
 				</div>
 				<button
 					type="button"
 					aria-label="Tutup"
 					onclick={() => showContactModal = false}
-					class="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+					class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
 				>
 					<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -222,34 +115,34 @@
 				</button>
 			</div>
 
-			<div class="space-y-3 mb-6 text-sm">
-				<div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-3">
-					<div class="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 shrink-0"></div>
-					<div>
-						<div class="font-semibold text-white">Pro Tier (Recommended)</div>
-						<div class="text-xs text-slate-400 mt-0.5">10x Function Execution, 1 TB Bandwidth, Unlimited DB pool. Cocok untuk input nilai puncak satu sekolah.</div>
-					</div>
+			<div class="p-4 rounded-2xl bg-orange-50 border border-orange-100 mb-5 text-xs text-orange-950 space-y-1.5">
+				<div class="flex items-center gap-2 font-bold text-orange-800">
+					<svg class="w-4 h-4 text-orange-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+						<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+					</svg>
+					Batas Kuota Server Telah Tercapai
 				</div>
-
-				<div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-3">
-					<div class="w-2 h-2 rounded-full bg-blue-400 mt-1.5 shrink-0"></div>
-					<div>
-						<div class="font-semibold text-white">Enterprise Dedicated</div>
-						<div class="text-xs text-slate-400 mt-0.5">Dedicated VPS/Instance, Uncapped bandwidth, 99.99% SLA, backup harian otomatis.</div>
-					</div>
-				</div>
+				<p class="text-slate-600 leading-relaxed">
+					Server ini telah mencapai batas pemakaian sumber daya paket saat ini. Untuk mengaktifkan kembali layanan dan memperbesar kuota CPU, RAM, serta bandwidth, diperlukan upgrade paket server.
+				</p>
 			</div>
 
-			<div class="p-4 rounded-xl bg-rose-950/40 border border-rose-900/50 mb-6 text-xs text-rose-200">
-				<strong class="font-semibold block mb-1">Hubungi Administrator / Pengembang:</strong>
-				Silakan hubungi admin sekolah atau tim IT untuk konfirmasi perpanjangan/upgrade kuota hosting agar layanan dapat dibuka kembali segera.
+			<div class="space-y-2.5 mb-6 text-xs text-slate-600">
+				<div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+					<span class="font-medium text-slate-500">Domain</span>
+					<span class="font-mono font-bold text-slate-800">{data.host || 'erapor-pmk.titipit.id'}</span>
+				</div>
+				<div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+					<span class="font-medium text-slate-500">Status Server</span>
+					<span class="font-bold text-orange-600">Upgrade Required (Over Quota)</span>
+				</div>
 			</div>
 
 			<div class="flex items-center justify-end gap-3">
 				<button
 					type="button"
 					onclick={() => showContactModal = false}
-					class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs transition-colors"
+					class="w-full py-2.5 rounded-xl bg-[#ed6e29] hover:bg-[#d95d1d] text-white font-semibold text-xs transition-colors shadow-md shadow-orange-500/20 cursor-pointer"
 				>
 					Tutup
 				</button>
