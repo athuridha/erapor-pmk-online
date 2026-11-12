@@ -3,9 +3,11 @@ import { ensureAsesmenSumatifSchema } from '$lib/server/db/ensure-asesmen-sumati
 import { queryInChunks, chunk } from '$lib/server/db/chunk';
 import {
 	tableAsesmenSumatif,
+	tableAsesmenSumatifTujuan,
 	tableKelas,
 	tableMataPelajaran,
-	tableMurid
+	tableMurid,
+	tableTujuanPembelajaran
 } from '$lib/server/db/schema';
 import { fail, redirect } from '@sveltejs/kit';
 import { bolehAksesMapel, getAksesMapelUser, needsMapelFilter } from '$lib/server/mapel-access';
@@ -123,6 +125,7 @@ type MuridRow = {
 	canNilai: boolean;
 	/** True bila data milik guru lain (murid di luar varian/mapel guru). */
 	diisiUserLain?: boolean;
+	tpScores: Record<number, number | null>;
 };
 
 type PageState = {
@@ -143,7 +146,8 @@ export async function load({ parent, url, depends, locals }) {
 	const searchParam = url.searchParams.get('q');
 	const searchTrimmed = searchParam ? searchParam.trim() : '';
 	const search = searchTrimmed.length ? searchTrimmed : null;
-	const perPage = 20;
+	const perPageParam = Number(url.searchParams.get('perPage'));
+	const perPage = Number.isFinite(perPageParam) && perPageParam > 0 ? perPageParam : 50;
 	const requestedPage = Number(url.searchParams.get('page')) || 1;
 	const pageNumber =
 		Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
@@ -168,7 +172,7 @@ export async function load({ parent, url, depends, locals }) {
 	}
 
 	let mapelRecords = await db.query.tableMataPelajaran.findMany({
-		columns: { id: true, nama: true, namaLokal: true },
+		columns: { id: true, nama: true, namaLokal: true, kkm: true },
 		where: eq(tableMataPelajaran.kelasId, kelasKontenAktif.id),
 		orderBy: asc(tableMataPelajaran.nama)
 	});
@@ -427,7 +431,8 @@ export async function load({ parent, url, depends, locals }) {
 		sts: null,
 		sas: null,
 		nilaiHref: null,
-		canNilai: true
+		canNilai: true,
+		tpScores: {}
 	}));
 
 	if (!selectedMapelValue) {
@@ -489,6 +494,59 @@ export async function load({ parent, url, depends, locals }) {
 		}
 		map.set(record.mataPelajaranId, record);
 	}
+
+	const tujuanRecords = relevantMapelIds.length
+		? await db.query.tableTujuanPembelajaran.findMany({
+				where: inArray(tableTujuanPembelajaran.mataPelajaranId, relevantMapelIds),
+				with: {
+					teknikPenilaian: true
+				},
+				orderBy: [asc(tableTujuanPembelajaran.lingkupMateri), asc(tableTujuanPembelajaran.id)]
+			})
+		: [];
+
+	const sumatifTujuanRecords =
+		relevantMapelIds.length && muridIds.length
+			? await db.query.tableAsesmenSumatifTujuan.findMany({
+					where: and(
+						inArray(tableAsesmenSumatifTujuan.mataPelajaranId, relevantMapelIds),
+						inArray(tableAsesmenSumatifTujuan.muridId, muridIds)
+					)
+				})
+			: [];
+
+	const tpScoresByMurid = new Map<number, Record<number, number | null>>();
+	for (const st of sumatifTujuanRecords) {
+		let m = tpScoresByMurid.get(st.muridId);
+		if (!m) {
+			m = {};
+			tpScoresByMurid.set(st.muridId, m);
+		}
+		m[st.tujuanPembelajaranId] = st.nilai != null ? Number(st.nilai) : null;
+	}
+
+	const tujuanList = tujuanRecords.map((t, idx) => ({
+		id: t.id,
+		no: idx + 1,
+		mataPelajaranId: t.mataPelajaranId,
+		deskripsi: t.deskripsi,
+		lingkupMateri: t.lingkupMateri,
+		bobot: t.bobot ?? 0,
+		teknikPenilaianId: t.teknikPenilaianId,
+		teknikNama: t.teknikPenilaian?.nama ?? null,
+		teknikSingkatan: t.teknikPenilaian?.singkatan ?? null
+	}));
+
+	const kunciNilai = selectedMapelRecord
+		? await loadKunciNilai([selectedMapelRecord.id])
+		: new Map();
+	const isTerkunci = selectedMapelRecord ? kunciNilai.has(selectedMapelRecord.id) : false;
+
+	const bobotLingkup = Number(locals.sekolah?.sumatifBobotLingkup ?? 60);
+	const bobotSts = Number(locals.sekolah?.sumatifBobotSts ?? 20);
+	const bobotSas = Number(locals.sekolah?.sumatifBobotSas ?? 20);
+	const bobotRtsLingkup = Number(locals.sekolah?.sumatifBobotRtsLingkup ?? 70);
+	const bobotRtsSts = Number(locals.sekolah?.sumatifBobotRtsSts ?? 30);
 
 	const pickMapelIdForMurid = (muridAgama: string | null | undefined): number | null => {
 		if (isAgamaSelected) {
@@ -557,15 +615,10 @@ export async function load({ parent, url, depends, locals }) {
 				sas: null,
 				nilaiHref: null,
 				canNilai: false,
-				diisiUserLain: true
+				diisiUserLain: true,
+				tpScores: {}
 			};
 		}
-
-		const bobotLingkup = Number(locals.sekolah?.sumatifBobotLingkup ?? 60);
-		const bobotSts = Number(locals.sekolah?.sumatifBobotSts ?? 20);
-		const bobotSas = Number(locals.sekolah?.sumatifBobotSas ?? 20);
-		const bobotRtsLingkup = Number(locals.sekolah?.sumatifBobotRtsLingkup ?? 70);
-		const bobotRtsSts = Number(locals.sekolah?.sumatifBobotRtsSts ?? 30);
 
 		return {
 			id: murid.id,
@@ -593,7 +646,8 @@ export async function load({ parent, url, depends, locals }) {
 				targetMapelId && canAccess
 					? `/asesmen-sumatif/formulir-asesmen?kelas=${kelasKontenAktif.id}&murid_id=${murid.id}&mapel_id=${targetMapelId}`
 					: null,
-			canNilai: Boolean(canAccess)
+			canNilai: Boolean(canAccess),
+			tpScores: tpScoresByMurid.get(murid.id) ?? {}
 		};
 	});
 
@@ -604,6 +658,14 @@ export async function load({ parent, url, depends, locals }) {
 		selectedMapelValue,
 		selectedMapel,
 		daftarMurid,
+		tujuanList,
+		kkm: selectedMapelRecord?.kkm ?? 75,
+		isTerkunci,
+		sumatifWeights: {
+			lingkup: bobotLingkup,
+			sts: bobotSts,
+			sas: bobotSas
+		},
 		allowedAgamaForUser,
 		page: pageState
 	};
@@ -642,6 +704,153 @@ const BULK_KOMPONEN_LABEL: Record<'lingkup' | 'sts' | 'sas', string> = {
 };
 
 export const actions = {
+	/**
+	 * Simpan seluruh nilai matriks spreadsheet satu kelas (TP, STS, SAS).
+	 */
+	simpanMatriks: async ({ request, locals }) => {
+		const sekolahId = locals.sekolah?.id ?? null;
+		if (!sekolahId) return fail(401, { fail: 'Sekolah aktif tidak ditemukan.' });
+
+		const formData = await request.formData();
+		const payloadRaw = formData.get('payload');
+		if (!payloadRaw) return fail(400, { fail: 'Data nilai kosong.' });
+
+		let rows: Array<{
+			muridId: number;
+			mapelId: number;
+			tpScores: Record<string, number | null>;
+			sts: number | null;
+			sas: number | null;
+		}>;
+		try {
+			rows = JSON.parse(String(payloadRaw));
+		} catch {
+			return fail(400, { fail: 'Format data matriks tidak valid.' });
+		}
+
+		if (!Array.isArray(rows) || !rows.length) {
+			return fail(400, { fail: 'Pilih minimal satu murid untuk disimpan.' });
+		}
+
+		await ensureAsesmenSumatifSchema();
+
+		// Check locks
+		const uniqueMapelIds = [...new Set(rows.map((r) => r.mapelId).filter(Boolean))];
+		for (const part of chunk(uniqueMapelIds, 90)) {
+			const kunci = await loadKunciNilai(part);
+			for (const [mapelId, info] of kunci) {
+				return fail(403, {
+					fail: `Nilai mata pelajaran sudah dikunci${info?.dikunciOleh ? ` oleh ${info.dikunciOleh}` : ''}. Hubungi operator untuk membuka kunci.`
+				});
+			}
+		}
+
+		const bobotLingkup = Number(locals.sekolah?.sumatifBobotLingkup ?? 60);
+		const bobotSts = Number(locals.sekolah?.sumatifBobotSts ?? 20);
+		const bobotSas = Number(locals.sekolah?.sumatifBobotSas ?? 20);
+		const bobotRtsLingkup = Number(locals.sekolah?.sumatifBobotRtsLingkup ?? 70);
+		const bobotRtsSts = Number(locals.sekolah?.sumatifBobotRtsSts ?? 30);
+		const nowIso = new Date().toISOString();
+
+		for (const row of rows) {
+			const muridId = row.muridId;
+			const mapelId = row.mapelId;
+			if (!muridId || !mapelId) continue;
+
+			const validTpValues: number[] = [];
+			if (row.tpScores && typeof row.tpScores === 'object') {
+				for (const [tpIdStr, scoreRaw] of Object.entries(row.tpScores)) {
+					const tpId = Number(tpIdStr);
+					if (!Number.isInteger(tpId) || tpId <= 0) continue;
+					const score =
+						scoreRaw != null && !Number.isNaN(Number(scoreRaw)) && String(scoreRaw).trim() !== ''
+							? Math.min(100, Math.max(0, Math.round(Number(scoreRaw) * 100) / 100))
+							: null;
+
+					if (score != null) {
+						validTpValues.push(score);
+						await db
+							.insert(tableAsesmenSumatifTujuan)
+							.values({
+								muridId,
+								mataPelajaranId: mapelId,
+								tujuanPembelajaranId: tpId,
+								nilai: score,
+								createdAt: nowIso,
+								updatedAt: nowIso
+							})
+							.onConflictDoUpdate({
+								target: [
+									tableAsesmenSumatifTujuan.muridId,
+									tableAsesmenSumatifTujuan.tujuanPembelajaranId
+								],
+								set: {
+									nilai: score,
+									mataPelajaranId: mapelId,
+									updatedAt: nowIso
+								}
+							});
+					} else {
+						await db
+							.delete(tableAsesmenSumatifTujuan)
+							.where(
+								and(
+									eq(tableAsesmenSumatifTujuan.muridId, muridId),
+									eq(tableAsesmenSumatifTujuan.tujuanPembelajaranId, tpId)
+								)
+							);
+					}
+				}
+			}
+
+			const naLingkup =
+				validTpValues.length > 0
+					? Math.round((validTpValues.reduce((a, b) => a + b, 0) / validTpValues.length) * 100) / 100
+					: null;
+
+			const sts =
+				row.sts != null && !Number.isNaN(Number(row.sts)) && String(row.sts).trim() !== ''
+					? Math.min(100, Math.max(0, Math.round(Number(row.sts) * 100) / 100))
+					: null;
+			const sas =
+				row.sas != null && !Number.isNaN(Number(row.sas)) && String(row.sas).trim() !== ''
+					? Math.min(100, Math.max(0, Math.round(Number(row.sas) * 100) / 100))
+					: null;
+
+			const nilaiAkhir = computeNilaiAkhir(naLingkup, sts, sas, bobotLingkup, bobotSts, bobotSas);
+			const nilaiAkhirRts = computeNilaiAkhirRts(naLingkup, sts, bobotRtsLingkup, bobotRtsSts);
+
+			await db
+				.insert(tableAsesmenSumatif)
+				.values({
+					muridId,
+					mataPelajaranId: mapelId,
+					naLingkup,
+					sts,
+					sas,
+					nilaiAkhir,
+					nilaiAkhirRts,
+					createdAt: nowIso,
+					updatedAt: nowIso
+				})
+				.onConflictDoUpdate({
+					target: [tableAsesmenSumatif.muridId, tableAsesmenSumatif.mataPelajaranId],
+					set: {
+						naLingkup,
+						sts,
+						sas,
+						nilaiAkhir,
+						nilaiAkhirRts,
+						updatedAt: nowIso
+					}
+				});
+		}
+
+		return {
+			success: true,
+			message: `Berhasil menyimpan nilai untuk ${rows.length} murid.`
+		};
+	},
 	/**
 	 * Isi satu komponen nilai untuk banyak murid sekaligus ("Isi Sekaligus").
 	 * `items` berisi pasangan muridId+mapelId (mapel sudah di-resolve per murid

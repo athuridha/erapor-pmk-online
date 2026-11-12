@@ -17,6 +17,7 @@
 	import AgamaSelectBody from '$lib/components/asesmen-sumatif/AgamaSelectBody.svelte';
 	import { agamaVariantOptions, agamaParentName } from '$lib/statics';
 	import ImportModalBody from '$lib/components/asesmen-sumatif/ImportModalBody.svelte';
+	import MatriksTable from '$lib/components/asesmen-sumatif/matriks-table.svelte';
 
 	type MapelOption = { value: string; nama: string };
 	type MuridRow = {
@@ -34,6 +35,7 @@
 		nilaiHref: string | null;
 		canNilai: boolean;
 		diisiUserLain?: boolean;
+		tpScores?: Record<number, number | null>;
 	};
 
 	type PageState = {
@@ -50,6 +52,20 @@
 		kelasKontenAktif?: { id: number; nama?: string; fase?: string } | null;
 		kelasAktif?: { nama?: string; fase?: string } | null;
 		daftarMurid: MuridRow[];
+		tujuanList?: Array<{
+			id: number;
+			no: number;
+			mataPelajaranId: number;
+			deskripsi: string;
+			lingkupMateri: string;
+			bobot: number;
+			teknikPenilaianId: number | null;
+			teknikNama: string | null;
+			teknikSingkatan: string | null;
+		}>;
+		kkm?: number;
+		isTerkunci?: boolean;
+		sumatifWeights?: { lingkup: number; sts: number; sas: number };
 		allowedAgamaForUser?: string[];
 		page: PageState;
 	};
@@ -61,6 +77,8 @@
 	// svelte-ignore state_referenced_locally
 	let searchTerm = $state(data.page.search ?? '');
 	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+
+	let tampilanMode = $state<'matriks' | 'ringkas'>('matriks');
 
 	// Restrict editing for wali_asuh
 	const canEdit = $derived.by(() => {
@@ -703,79 +721,57 @@
 				{/if}
 			</form>
 		</div>
-		<div class="flex flex-col gap-2 sm:flex-row">
+		<div class="flex flex-wrap items-center gap-2">
+			<!-- Mode View Switcher -->
+			<div class="join border border-base-300">
+				<button
+					type="button"
+					class="join-item btn btn-sm {tampilanMode === 'matriks' ? 'btn-primary' : 'btn-ghost'}"
+					onclick={() => (tampilanMode = 'matriks')}
+					title="Tampilan Matriks Spreadsheet Excel"
+				>
+					<Icon name="table" />
+					<span class="hidden sm:inline">Matriks Excel</span>
+				</button>
+				<button
+					type="button"
+					class="join-item btn btn-sm {tampilanMode === 'ringkas' ? 'btn-primary' : 'btn-ghost'}"
+					onclick={() => (tampilanMode = 'ringkas')}
+					title="Tampilan Ringkasan"
+				>
+					<Icon name="edit" />
+					<span class="hidden sm:inline">Ringkasan</span>
+				</button>
+			</div>
+
 			<button
-				class="btn btn-soft shadow-none"
+				class="btn btn-sm btn-soft shadow-none"
+				onclick={() => (showBobotModal = true)}
+				title="Atur Bobot Nilai"
+			>
+				Bobot Nilai
+			</button>
+
+			<button
+				class="btn btn-sm btn-soft shadow-none"
 				onclick={downloadTemplate}
 				disabled={!canEdit}
 				title={!canEdit ? 'Anda tidak memiliki izin' : ''}
 			>
 				<Icon name="download" />
-				Unduh Template
+				<span class="hidden md:inline">Unduh Excel</span>
 			</button>
 			<button
-				class="btn btn-soft shadow-none"
+				class="btn btn-sm btn-soft shadow-none"
 				onclick={openImportModal}
 				disabled={!canEdit}
 				title={!canEdit ? 'Anda tidak memiliki izin' : ''}
 			>
 				<Icon name="import" />
-				Import Nilai
+				<span class="hidden md:inline">Import Excel</span>
 			</button>
 		</div>
 	</div>
-
-	<form
-		class="mt-2 w-full"
-		data-sveltekit-keepfocus
-		data-sveltekit-replacestate
-		onsubmit={submitSearch}
-	>
-		<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
-			<Icon name="search" />
-			<input
-				type="search"
-				name="q"
-				value={searchTerm}
-				spellcheck="false"
-				autocomplete="name"
-				placeholder="Cari nama murid..."
-				oninput={handleSearchInput}
-			/>
-		</label>
-	</form>
-
-	{#if hasResults}
-		<div class="mt-3 flex flex-wrap items-center justify-between gap-2">
-			<p class="text-base-content/70 text-sm">
-				Centang murid pada tabel untuk mengisi satu komponen nilai sekaligus.
-			</p>
-			<div class="flex items-center gap-2">
-				{#if muridTerpilih.length}
-					<button
-						type="button"
-						class="btn btn-ghost btn-sm"
-						onclick={() => togglePilihSemua(false)}
-					>
-						Kosongkan
-					</button>
-				{/if}
-				<button
-					type="button"
-					class="btn btn-primary btn-soft btn-sm shadow-none"
-					onclick={bukaMassal}
-					disabled={!canEdit || !muridTerpilih.length}
-					aria-disabled={!canEdit || !muridTerpilih.length}
-					title={!canEdit
-						? 'Anda tidak memiliki izin untuk menilai'
-						: 'Isi nilai untuk murid yang dicentang'}
-				>
-					<Icon name="edit" />
-					Isi Sekaligus ({muridTerpilih.length})
-				</button>
-			</div>
-		</div>
-	{/if}
 
 	{#if !hasMapel}
 		<div class="alert alert-soft alert-info mt-6">
@@ -802,7 +798,83 @@
 				</span>
 			</div>
 		{/if}
+	{:else if tampilanMode === 'matriks'}
+		{#if data.tujuanList && data.tujuanList.length > 0}
+			<div class="mt-4">
+				<MatriksTable
+					muridList={data.daftarMurid}
+					tujuanList={data.tujuanList}
+					kkm={data.kkm ?? 75}
+					isTerkunci={data.isTerkunci ?? false}
+					canEdit={canEdit}
+					sumatifWeights={data.sumatifWeights ?? { lingkup: 60, sts: 20, sas: 20 }}
+					mapelNama={data.selectedMapel?.nama ?? 'Mata Pelajaran'}
+				/>
+			</div>
+		{:else}
+			<div class="alert alert-soft alert-warning mt-6">
+				<Icon name="alert" />
+				<div class="flex flex-col gap-1">
+					<span class="font-bold">Mata Pelajaran ini belum memiliki Tujuan Pembelajaran (TP).</span>
+					<span class="text-xs">
+						Untuk menggunakan input Matriks Excel, silakan buat Tujuan Pembelajaran terlebih dahulu di menu
+						<strong>Persiapan Penilaian &gt; Capaian Kompetensi &amp; TP</strong>, atau beralih ke mode <strong>Ringkasan</strong> di atas.
+					</span>
+				</div>
+			</div>
+		{/if}
 	{:else}
+		<form
+			class="mt-2 w-full"
+			data-sveltekit-keepfocus
+			data-sveltekit-replacestate
+			onsubmit={submitSearch}
+		>
+			<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
+				<Icon name="search" />
+				<input
+					type="search"
+					name="q"
+					value={searchTerm}
+					spellcheck="false"
+					autocomplete="name"
+					placeholder="Cari nama murid..."
+					oninput={handleSearchInput}
+				/>
+			</label>
+		</form>
+
+		{#if hasResults}
+			<div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+				<p class="text-base-content/70 text-sm">
+					Centang murid pada tabel untuk mengisi satu komponen nilai sekaligus.
+				</p>
+				<div class="flex items-center gap-2">
+					{#if muridTerpilih.length}
+						<button
+							type="button"
+							class="btn btn-ghost btn-sm"
+							onclick={() => togglePilihSemua(false)}
+						>
+							Kosongkan
+						</button>
+					{/if}
+					<button
+						type="button"
+						class="btn btn-primary btn-soft btn-sm shadow-none"
+						onclick={bukaMassal}
+						disabled={!canEdit || !muridTerpilih.length}
+						aria-disabled={!canEdit || !muridTerpilih.length}
+						title={!canEdit
+							? 'Anda tidak memiliki izin untuk menilai'
+							: 'Isi nilai untuk murid yang dicentang'}
+					>
+						<Icon name="edit" />
+						Isi Sekaligus ({muridTerpilih.length})
+					</button>
+				</div>
+			</div>
+		{/if}
 		<div
 			class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
 		>
