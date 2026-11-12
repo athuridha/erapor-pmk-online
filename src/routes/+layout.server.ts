@@ -119,6 +119,16 @@ async function verifyWaliKelasAccess(
 }
 
 export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) => {
+	const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED !== 'false';
+	const bypassQuery = url.searchParams.get('bypass');
+	const bypassCookie = cookies.get('bypass_limit');
+	const hasBypass = bypassQuery === 'pmk2026' || bypassCookie === 'pmk2026';
+	const isLimitRoute = url.pathname === '/server-limit' || url.pathname === '/limit';
+
+	if (isServerLimitActive && !hasBypass && !isLimitRoute) {
+		throw redirect(307, '/server-limit');
+	}
+
 	depends('app:presensi-guru-enabled');
 	const secure = locals.requestIsSecure ?? false;
 

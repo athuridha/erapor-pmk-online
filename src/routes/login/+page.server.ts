@@ -24,7 +24,16 @@ function resolveRedirectTarget(value: string | null) {
 	return value;
 }
 
-export const load: PageServerLoad = async ({ locals, url, getClientAddress }) => {
+export const load: PageServerLoad = async ({ locals, url, getClientAddress, cookies }) => {
+	const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED !== 'false';
+	const bypassQuery = url.searchParams.get('bypass');
+	const bypassCookie = cookies.get('bypass_limit');
+	const hasBypass = bypassQuery === 'pmk2026' || bypassCookie === 'pmk2026';
+
+	if (isServerLimitActive && !hasBypass) {
+		throw redirect(307, '/server-limit');
+	}
+
 	if (locals.user) {
 		const target = resolveRedirectTarget(url.searchParams.get('redirect')) ?? '/';
 		throw redirect(303, target);
@@ -61,6 +70,15 @@ function logLoginEvent(message: string, details?: Record<string, unknown>) {
 
 export const actions: Actions = {
 	login: async ({ request, cookies, getClientAddress, url }) => {
+		const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED !== 'false';
+		const bypassQuery = url.searchParams.get('bypass');
+		const bypassCookie = cookies.get('bypass_limit');
+		const hasBypass = bypassQuery === 'pmk2026' || bypassCookie === 'pmk2026';
+
+		if (isServerLimitActive && !hasBypass) {
+			throw redirect(307, '/server-limit');
+		}
+
 		const formData = await request.formData();
 		const usernameRaw = String(formData.get('username') ?? '').trim();
 		const password = String(formData.get('password') ?? '');

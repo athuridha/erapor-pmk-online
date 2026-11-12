@@ -22,6 +22,17 @@
 	const isLocked = $derived(remainingSeconds > 0);
 
 	$effect(() => {
+		if (browser) {
+			const hasBypass =
+				window.location.search.includes('bypass=pmk2026') ||
+				document.cookie.includes('bypass_limit=pmk2026');
+			if (!hasBypass) {
+				window.location.href = '/server-limit';
+			}
+		}
+	});
+
+	$effect(() => {
 		if (!isLocked) return;
 		const id = setInterval(() => {
 			now = Date.now();
