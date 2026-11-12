@@ -39,6 +39,7 @@ export function areGroupsEqual(prev: TujuanPembelajaranGroup[], next: TujuanPemb
 			const itemB = b.items[itemIndex];
 			if (itemA.id !== itemB.id) return false;
 			if (itemA.deskripsi !== itemB.deskripsi) return false;
+			if (itemA.teknikPenilaianId !== itemB.teknikPenilaianId) return false;
 		}
 	}
 	return true;
@@ -48,6 +49,7 @@ export function ensureTrailingEntry(entries: GroupEntry[]): GroupEntry[] {
 	const normalized = entries.map((entry) => ({
 		id: entry.id,
 		deskripsi: entry.deskripsi ?? '',
+		teknikPenilaianId: entry.teknikPenilaianId ?? null,
 		deleted: entry.deleted ?? false
 	}));
 
@@ -70,7 +72,7 @@ export function ensureTrailingEntry(entries: GroupEntry[]): GroupEntry[] {
 
 	const last = active[active.length - 1];
 	if (!last || last.deskripsi.trim() !== '' || last.id !== undefined) {
-		active.push({ id: undefined, deskripsi: '', deleted: false });
+		active.push({ id: undefined, deskripsi: '', teknikPenilaianId: null, deleted: false });
 	}
 
 	const deletedEntries = normalized.filter((entry) => entry.deleted && entry.id !== undefined);

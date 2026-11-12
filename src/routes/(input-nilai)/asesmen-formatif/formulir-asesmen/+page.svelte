@@ -17,6 +17,13 @@
 			tujuanPembelajaranId: number;
 			deskripsi: string;
 			lingkupMateri: string;
+			teknikPenilaianId?: number | null;
+			teknikPenilaian?: {
+				id: number;
+				nama: string;
+				singkatan: string;
+				keterangan?: string | null;
+			} | null;
 			status: EntryStatus;
 		}>;
 		hasTujuan: boolean;
@@ -193,9 +200,22 @@
 									<td>{entry.index}</td>
 									<td>
 										<p class="font-medium">{entry.deskripsi}</p>
-										<p class="text-base-content/60 mt-2 text-xs tracking-wide uppercase">
-											{entry.lingkupMateri}
-										</p>
+										<div
+											class="mt-2 flex flex-wrap items-center gap-2 text-xs text-base-content/70"
+										>
+											<span class="font-semibold uppercase tracking-wider"
+												>{entry.lingkupMateri}</span
+											>
+											{#if entry.teknikPenilaian}
+												<span
+													class="badge badge-xs badge-info badge-outline font-semibold gap-1 py-1"
+												>
+													<span class="font-bold">{entry.teknikPenilaian.singkatan}</span>
+													<span class="opacity-60">•</span>
+													<span>{entry.teknikPenilaian.nama}</span>
+												</span>
+											{/if}
+										</div>
 										<input
 											type="hidden"
 											name={`entries.${index}.tujuanPembelajaranId`}

@@ -463,7 +463,7 @@
 		groupForm = {
 			mode: 'create',
 			lingkupMateri: '',
-			entries: ensureTrailingEntry([{ deskripsi: '' }]),
+			entries: ensureTrailingEntry([{ deskripsi: '', teknikPenilaianId: null }]),
 			targetIds: []
 		};
 	}
@@ -573,7 +573,11 @@
 		if (bulkDeleteDialog) {
 			closeBulkDeleteDialog();
 		}
-		const entries = group.items.map((item) => ({ id: item.id, deskripsi: item.deskripsi }));
+		const entries = group.items.map((item) => ({
+			id: item.id,
+			deskripsi: item.deskripsi,
+			teknikPenilaianId: item.teknikPenilaianId ?? null
+		}));
 		groupForm = {
 			mode: 'edit',
 			lingkupMateri: group.lingkupMateri,
@@ -668,6 +672,14 @@
 			entryIndex === index ? { ...entry, deskripsi: value, deleted: false } : entry
 		);
 		groupForm = { ...groupForm, entries: ensureTrailingEntry(entries) };
+	}
+
+	function handleTeknikInput(index: number, value: number | null) {
+		if (!groupForm) return;
+		const nextEntries = groupForm.entries.map((entry, entryIndex) =>
+			entryIndex === index ? { ...entry, teknikPenilaianId: value } : entry
+		);
+		groupForm = { ...groupForm, entries: nextEntries };
 	}
 
 	function openEntryDeleteDialog(index: number) {
@@ -1015,8 +1027,10 @@
 					<GroupFormRow
 						rowNumber={1}
 						form={currentForm}
+						teknikPenilaianList={data.teknikPenilaianList ?? []}
 						onLingkupMateriInput={handleLingkupMateriInput}
 						onEntryInput={handleEntryInput}
+						onTeknikInput={handleTeknikInput}
 						onOpenDeleteEntry={openEntryDeleteDialog}
 						onSubmitSuccess={handleFormSuccess}
 						onFormRegistered={handleFormRegistered}
@@ -1033,8 +1047,10 @@
 							<GroupFormRow
 								{rowNumber}
 								form={currentForm}
+								teknikPenilaianList={data.teknikPenilaianList ?? []}
 								onLingkupMateriInput={handleLingkupMateriInput}
 								onEntryInput={handleEntryInput}
+								onTeknikInput={handleTeknikInput}
 								onOpenDeleteEntry={openEntryDeleteDialog}
 								onSubmitSuccess={handleFormSuccess}
 								onFormRegistered={handleFormRegistered}

@@ -259,6 +259,13 @@ export async function load({ depends, params, parent, locals }) {
 	// return the tujuan pembelajaran for that assigned variant so the
 	// page shows the correct TP even without client navigation.
 	// Supports both legacy (mataPelajaranId) and multi-mapel (join table) users.
+	const teknikPenilaianList = sekolahId
+		? await db.query.tableTeknikPenilaian.findMany({
+				where: eq(tableTeknikPenilaian.sekolahId, sekolahId),
+				orderBy: [asc(tableTeknikPenilaian.urutan), asc(tableTeknikPenilaian.nama)]
+			})
+		: [];
+
 	let agamaSelection = agamaOptions.find((item) => item.isActive)?.id?.toString() ?? '';
 	if (
 		agamaOptions.length > 0 &&
@@ -287,6 +294,7 @@ export async function load({ depends, params, parent, locals }) {
 			}));
 			return {
 				tujuanPembelajaran,
+				teknikPenilaianList,
 				agamaOptions,
 				agamaSelection,
 				assignedLocalMapelId,
@@ -318,13 +326,6 @@ export async function load({ depends, params, parent, locals }) {
 		},
 		orderBy: asc(tableTujuanPembelajaran.createdAt)
 	});
-
-	const teknikPenilaianList = sekolahId
-		? await db.query.tableTeknikPenilaian.findMany({
-				where: eq(tableTeknikPenilaian.sekolahId, sekolahId),
-				orderBy: [asc(tableTeknikPenilaian.urutan), asc(tableTeknikPenilaian.nama)]
-			})
-		: [];
 
 	const agamaSelectDisabledValue = Boolean(
 		user?.type === 'user' &&
@@ -413,8 +414,15 @@ export const actions = {
 			mode?: string;
 			lingkupMateri?: string;
 			entries?:
-				| Array<{ id?: string | number; deskripsi?: string }>
-				| { id?: string | number; deskripsi?: string };
+				| Array<{
+						id?: string | number;
+						deskripsi?: string;
+						teknikPenilaianId?: string | number | null;
+				  }>
+				| Record<
+						string,
+						{ id?: string | number; deskripsi?: string; teknikPenilaianId?: string | number | null }
+				  >;
 		}>(formData);
 
 		const mode = payload.mode === 'edit' ? 'edit' : 'create';
@@ -445,9 +453,22 @@ export const actions = {
 						: typeof idRaw === 'string' && idRaw !== ''
 							? Number(idRaw)
 							: undefined;
+				const teknikRaw =
+					typeof (entry as { teknikPenilaianId?: unknown }).teknikPenilaianId === 'string'
+						? ((entry as { teknikPenilaianId?: string }).teknikPenilaianId ?? '').trim()
+						: (entry as { teknikPenilaianId?: unknown }).teknikPenilaianId;
+				const teknikPenilaianId =
+					typeof teknikRaw === 'number'
+						? teknikRaw
+						: typeof teknikRaw === 'string' && teknikRaw !== ''
+							? Number(teknikRaw)
+							: null;
 				return {
 					id: Number.isFinite(id) ? (id as number) : undefined,
-					deskripsi: typeof entry.deskripsi === 'string' ? entry.deskripsi.trim() : ''
+					deskripsi: typeof entry.deskripsi === 'string' ? entry.deskripsi.trim() : '',
+					teknikPenilaianId: Number.isFinite(teknikPenilaianId)
+						? (teknikPenilaianId as number)
+						: null
 				};
 			})
 			.filter((entry) => entry.deskripsi !== '' || entry.id !== undefined);
@@ -469,6 +490,7 @@ export const actions = {
 				toInsert.map((entry) => ({
 					lingkupMateri,
 					deskripsi: entry.deskripsi,
+					teknikPenilaianId: entry.teknikPenilaianId ?? null,
 					mataPelajaranId
 				}))
 			);
@@ -507,6 +529,7 @@ export const actions = {
 									.map((e) => ({
 										lingkupMateri,
 										deskripsi: e.deskripsi,
+										teknikPenilaianId: e.teknikPenilaianId ?? null,
 										mataPelajaranId: target.mapelId
 									}));
 								if (targetInserts.length > 0) {
@@ -538,7 +561,12 @@ export const actions = {
 						entry.id
 							? tx
 									.update(tableTujuanPembelajaran)
-									.set({ lingkupMateri, deskripsi: entry.deskripsi, mataPelajaranId })
+									.set({
+										lingkupMateri,
+										deskripsi: entry.deskripsi,
+										teknikPenilaianId: entry.teknikPenilaianId ?? null,
+										mataPelajaranId
+									})
 									.where(eq(tableTujuanPembelajaran.id, entry.id))
 							: Promise.resolve()
 					)
@@ -550,6 +578,7 @@ export const actions = {
 					toInsert.map((entry) => ({
 						lingkupMateri,
 						deskripsi: entry.deskripsi,
+						teknikPenilaianId: entry.teknikPenilaianId ?? null,
 						mataPelajaranId
 					}))
 				);

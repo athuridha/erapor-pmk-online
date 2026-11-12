@@ -98,7 +98,12 @@ export async function load({ url, locals, depends, parent }) {
 	await ensureAsesmenFormatifSchema();
 
 	const tujuanPembelajaran = await db.query.tableTujuanPembelajaran.findMany({
-		columns: { id: true, deskripsi: true, lingkupMateri: true },
+		columns: { id: true, deskripsi: true, lingkupMateri: true, teknikPenilaianId: true },
+		with: {
+			teknikPenilaian: {
+				columns: { id: true, nama: true, singkatan: true, keterangan: true }
+			}
+		},
 		where: eq(tableTujuanPembelajaran.mataPelajaranId, mapel.id),
 		orderBy: [asc(tableTujuanPembelajaran.lingkupMateri), asc(tableTujuanPembelajaran.id)]
 	});
@@ -126,6 +131,8 @@ export async function load({ url, locals, depends, parent }) {
 			tujuanPembelajaranId: item.id,
 			deskripsi: item.deskripsi,
 			lingkupMateri: item.lingkupMateri?.trim() || DEFAULT_LINGKUP,
+			teknikPenilaianId: item.teknikPenilaianId ?? null,
+			teknikPenilaian: item.teknikPenilaian ?? null,
 			status
 		};
 	});

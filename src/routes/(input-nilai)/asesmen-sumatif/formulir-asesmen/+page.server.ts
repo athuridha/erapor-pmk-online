@@ -217,7 +217,18 @@ export async function load({ url, locals, depends, parent }) {
 	await ensureAsesmenSumatifSchema();
 
 	const tujuanPembelajaran = await db.query.tableTujuanPembelajaran.findMany({
-		columns: { id: true, deskripsi: true, lingkupMateri: true, bobot: true },
+		columns: {
+			id: true,
+			deskripsi: true,
+			lingkupMateri: true,
+			bobot: true,
+			teknikPenilaianId: true
+		},
+		with: {
+			teknikPenilaian: {
+				columns: { id: true, nama: true, singkatan: true, keterangan: true }
+			}
+		},
 		where: eq(tableTujuanPembelajaran.mataPelajaranId, mapel.id),
 		orderBy: [asc(tableTujuanPembelajaran.lingkupMateri), asc(tableTujuanPembelajaran.id)]
 	});
@@ -270,6 +281,8 @@ export async function load({ url, locals, depends, parent }) {
 			deskripsi: item.deskripsi,
 			lingkupMateri,
 			bobot,
+			teknikPenilaianId: item.teknikPenilaianId ?? null,
+			teknikPenilaian: item.teknikPenilaian ?? null,
 			nilai: nilaiMap.has(item.id) ? (nilaiMap.get(item.id) ?? null) : null
 		};
 	});

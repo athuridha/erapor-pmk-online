@@ -512,90 +512,122 @@
 				/>
 			</div>
 
-			<h3 class="mt-4 pb-2 text-lg font-bold">
-				Isi nilai harian tiap tujuan pembelajaran untuk {data.murid.nama}.
-			</h3>
+			<!-- Bagian 1: Asesmen Sumatif Lingkup Materi -->
+			<div class="mt-6 pt-4 border-t border-base-200 dark:border-base-300">
+				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 pb-1">
+					<h3 class="text-lg font-bold text-base-content flex items-center gap-2">
+						<span>1. Nilai Harian / Sumatif Lingkup Materi</span>
+					</h3>
+					<span class="text-xs text-base-content/70">
+						Murid: <strong class="text-base-content">{data.murid.nama}</strong>
+					</span>
+				</div>
+				<p class="text-xs text-base-content/60">
+					Isi nilai per Tujuan Pembelajaran (TP) yang dikategorikan berdasarkan teknik penilaian
+					(Tes Tulis, Penugasan, Praktik, dll.).
+				</p>
 
-			{#if !data.hasTujuan}
-				<div class="alert alert-soft alert-info mt-4">
-					<Icon name="info" />
-					<span>
-						Belum ada tujuan pembelajaran untuk mata pelajaran ini. Tambahkan tujuan pembelajaran di
-						menu
-						<strong>Intrakurikuler</strong> terlebih dahulu.
-					</span>
+				{#if !data.hasTujuan}
+					<div class="alert alert-soft alert-info mt-4">
+						<Icon name="info" />
+						<span>
+							Belum ada tujuan pembelajaran untuk mata pelajaran ini. Tambahkan tujuan pembelajaran
+							di menu <strong>Intrakurikuler</strong> terlebih dahulu.
+						</span>
+					</div>
+				{:else if !data.hasLingkupComplete}
+					<div class="alert alert-soft alert-warning mt-4">
+						<Icon name="alert" />
+						<span>
+							Semua kolom <strong>Lingkup Materi</strong> harus diisi sebelum menyimpan penilaian
+							sumatif. Silakan lengkapi Lingkup Materi pada menu <strong>Intrakurikuler</strong>.
+						</span>
+					</div>
+				{:else}
+					<TujuanTable
+						{entries}
+						{formatScore}
+						{getInputClass}
+						on:nilaiChange={handleEntryNilaiChange}
+					/>
+				{/if}
+
+				<LingkupSummaryCard {naSumatifLingkup} {lingkupSummaries} {totalBobot} {formatScore} />
+			</div>
+
+			<!-- Bagian 2: Sumatif Tengah Semester (STS) -->
+			<div class="mt-8 pt-5 border-t border-base-200 dark:border-base-300">
+				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 pb-1">
+					<h3 class="text-lg font-bold text-base-content flex items-center gap-2">
+						<span>2. Sumatif Tengah Semester (STS)</span>
+						<span class="badge badge-soft badge-ghost text-xs font-normal">Opsional</span>
+					</h3>
 				</div>
-			{:else if !data.hasLingkupComplete}
-				<div class="alert alert-soft alert-warning mt-4">
-					<Icon name="alert" />
-					<span>
-						Semua kolom <strong>Lingkup Materi</strong> harus diisi sebelum menyimpan penilaian
-						sumatif. Silakan lengkapi Lingkup Materi pada menu
-						<strong>Intrakurikuler</strong>.
-					</span>
-				</div>
-			{:else}
-				<TujuanTable
-					{entries}
-					{formatScore}
+				<p class="text-xs text-base-content/60 mb-3">
+					Isi nilai ujian tengah semester (Tes & Non-Tes) jika sekolah menyelenggarakan STS.
+				</p>
+				<SasInputTable
+					tesText={stsTesText}
+					nonTesText={stsNonTesText}
+					namePrefix="sts"
+					tesLabel="Nilai Tes Sumatif Tengah Semester (STS)"
+					nonTesLabel="Nilai Non Tes Sumatif Tengah Semester (STS)"
 					{getInputClass}
-					on:nilaiChange={handleEntryNilaiChange}
+					on:sasChange={handleSasChange}
 				/>
-			{/if}
 
-			<LingkupSummaryCard {naSumatifLingkup} {lingkupSummaries} {totalBobot} {formatScore} />
+				<SasSummaryCard
+					nilaiSas={nilaiSts}
+					{formatScore}
+					title="NA Sumatif Tengah Semester"
+					subtitle="Rata-rata dari nilai Tes dan Non Tes STS"
+				/>
+			</div>
 
-			<h3 class="mt-6 pb-2 text-lg font-bold">
-				Isi Sumatif Tengah Semester di bawah ini untuk {data.murid.nama} (opsional).
-			</h3>
-			<SasInputTable
-				tesText={stsTesText}
-				nonTesText={stsNonTesText}
-				namePrefix="sts"
-				tesLabel="Nilai Tes Sumatif Tengah Semester (STS)"
-				nonTesLabel="Nilai Non Tes Sumatif Tengah Semester (STS)"
-				{getInputClass}
-				on:sasChange={handleSasChange}
-			/>
+			<!-- Bagian 3: Sumatif Akhir Semester (SAS) -->
+			<div class="mt-8 pt-5 border-t border-base-200 dark:border-base-300">
+				<h3 class="text-lg font-bold text-base-content pb-1">3. Sumatif Akhir Semester (SAS)</h3>
+				<p class="text-xs text-base-content/60 mb-3">
+					Isi nilai tes dan non-tes asesmen sumatif akhir semester (SAS / PAS).
+				</p>
+				<SasInputTable
+					tesText={sasTesText}
+					nonTesText={sasNonTesText}
+					{getInputClass}
+					on:sasChange={handleSasChange}
+				/>
 
-			<SasSummaryCard
-				nilaiSas={nilaiSts}
-				{formatScore}
-				title="NA Sumatif Tengah Semester"
-				subtitle="Rata-rata dari nilai Tes dan Non Tes STS"
-			/>
+				<SasSummaryCard {nilaiSas} {formatScore} />
+			</div>
 
-			<h3 class="mt-6 pb-2 text-lg font-bold">
-				Isi Sumatif Akhir Semester di bawah ini untuk {data.murid.nama}.
-			</h3>
-			<SasInputTable
-				tesText={sasTesText}
-				nonTesText={sasNonTesText}
-				{getInputClass}
-				on:sasChange={handleSasChange}
-			/>
+			<!-- Bagian 4: Rekapitulasi Nilai Rapor -->
+			<div class="mt-8 pt-5 border-t border-base-200 dark:border-base-300">
+				<h3 class="text-lg font-bold text-base-content pb-1">4. Rekapitulasi Nilai Rapor</h3>
+				<p class="text-xs text-base-content/60 mb-3">
+					Akumulasi nilai akhir rapor berdasarkan pembobotan resmi sekolah.
+				</p>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<NilaiAkhirCard
+						title="Nilai Rapor Tengah Semester"
+						nilaiAkhir={nilaiAkhirRts}
+						nilaiAkhirCategory={nilaiAkhirRtsCategory}
+						{kkm}
+						{formatScore}
+						sumatifWeights={{
+							lingkup: data.sumatifWeightsRts?.lingkup ?? 70,
+							sts: data.sumatifWeightsRts?.sts ?? 30
+						}}
+					/>
 
-			<SasSummaryCard {nilaiSas} {formatScore} />
-
-			<NilaiAkhirCard
-				title="Nilai Rapor Tengah Semester"
-				nilaiAkhir={nilaiAkhirRts}
-				nilaiAkhirCategory={nilaiAkhirRtsCategory}
-				{kkm}
-				{formatScore}
-				sumatifWeights={{
-					lingkup: data.sumatifWeightsRts?.lingkup ?? 70,
-					sts: data.sumatifWeightsRts?.sts ?? 30
-				}}
-			/>
-
-			<NilaiAkhirCard
-				{nilaiAkhir}
-				{nilaiAkhirCategory}
-				{kkm}
-				{formatScore}
-				sumatifWeights={effectiveSumatifWeights}
-			/>
+					<NilaiAkhirCard
+						{nilaiAkhir}
+						{nilaiAkhirCategory}
+						{kkm}
+						{formatScore}
+						sumatifWeights={effectiveSumatifWeights}
+					/>
+				</div>
+			</div>
 		{/snippet}
 	</FormEnhance>
 </div>

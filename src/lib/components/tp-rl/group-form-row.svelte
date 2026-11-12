@@ -7,8 +7,10 @@
 	interface Props {
 		rowNumber: number;
 		form: GroupFormState;
+		teknikPenilaianList?: Array<{ id: number; nama: string; singkatan: string }>;
 		onLingkupMateriInput: (value: string) => void;
 		onEntryInput: (index: number, value: string) => void;
+		onTeknikInput?: (index: number, value: number | null) => void;
 		onOpenDeleteEntry: (index: number) => void;
 		onSubmitSuccess: () => void;
 		onFormRegistered: (formId: string) => void;
@@ -19,8 +21,10 @@
 	let {
 		rowNumber,
 		form,
+		teknikPenilaianList = [],
 		onLingkupMateriInput,
 		onEntryInput,
+		onTeknikInput,
 		onOpenDeleteEntry,
 		onSubmitSuccess,
 		onFormRegistered,
@@ -92,7 +96,7 @@
 		></textarea>
 	</td>
 	<td class="align-top" colspan="2">
-		<div class="flex flex-col gap-2">
+		<div class="flex flex-col gap-3">
 			{#each form.entries as entry, entryIndex (`${entry.id ?? 'new'}-${entryIndex}`)}
 				<input
 					type="hidden"
@@ -103,27 +107,59 @@
 				{#if entry.deleted}
 					<input type="hidden" form={formId} name={`entries.${entryIndex}.deskripsi`} value="" />
 				{:else}
-					<div class="flex flex-col gap-2 sm:flex-row">
-						<textarea
-							form={formId}
-							class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
-							value={entry.deskripsi}
-							name={`entries.${entryIndex}.deskripsi`}
-							aria-label={`Tujuan pembelajaran ${entryIndex + 1}`}
-							placeholder="Tuliskan tujuan pembelajaran"
-							required={form.mode === 'create' && entryIndex === 0}
-							oninput={(event) =>
-								onEntryInput(entryIndex, (event.currentTarget as HTMLTextAreaElement).value)}
-						></textarea>
-						{#if shouldShowDeleteButton(entry)}
-							<button
-								type="button"
-								class="btn btn-sm btn-soft btn-error shadow-none"
-								title="Hapus tujuan pembelajaran ini"
-								onclick={() => onOpenDeleteEntry(entryIndex)}
-							>
-								<Icon name="del" />
-							</button>
+					<div
+						class="flex flex-col gap-1.5 rounded-lg border border-base-200 bg-base-100/60 p-2 shadow-2xs dark:border-base-300 dark:bg-base-200/40"
+					>
+						<div class="flex flex-col gap-2 sm:flex-row sm:items-start">
+							<textarea
+								form={formId}
+								class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								value={entry.deskripsi}
+								name={`entries.${entryIndex}.deskripsi`}
+								aria-label={`Tujuan pembelajaran ${entryIndex + 1}`}
+								placeholder="Tuliskan tujuan pembelajaran"
+								required={form.mode === 'create' && entryIndex === 0}
+								oninput={(event) =>
+									onEntryInput(entryIndex, (event.currentTarget as HTMLTextAreaElement).value)}
+							></textarea>
+							{#if shouldShowDeleteButton(entry)}
+								<button
+									type="button"
+									class="btn btn-sm btn-soft btn-error shadow-none shrink-0"
+									title="Hapus tujuan pembelajaran ini"
+									onclick={() => onOpenDeleteEntry(entryIndex)}
+								>
+									<Icon name="del" />
+								</button>
+							{/if}
+						</div>
+						{#if teknikPenilaianList && teknikPenilaianList.length > 0}
+							<div class="flex items-center gap-2 pt-0.5">
+								<label
+									class="text-xs text-base-content/70 shrink-0 font-medium"
+									for={`tp-teknik-${entryIndex}`}
+								>
+									Teknik Penilaian:
+								</label>
+								<select
+									id={`tp-teknik-${entryIndex}`}
+									form={formId}
+									name={`entries.${entryIndex}.teknikPenilaianId`}
+									class="select select-xs select-bordered bg-base-200 dark:bg-base-300 max-w-xs"
+									value={entry.teknikPenilaianId ? String(entry.teknikPenilaianId) : ''}
+									onchange={(e) => {
+										const val = (e.currentTarget as HTMLSelectElement).value;
+										onTeknikInput?.(entryIndex, val ? Number(val) : null);
+									}}
+								>
+									<option value="">-- Pilih Teknik (Opsional) --</option>
+									{#each teknikPenilaianList as teknik (teknik.id)}
+										<option value={String(teknik.id)}>
+											{teknik.nama} ({teknik.singkatan})
+										</option>
+									{/each}
+								</select>
+							</div>
 						{/if}
 					</div>
 				{/if}

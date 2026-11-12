@@ -68,13 +68,27 @@
 		{/if}
 	</td>
 	<td class="align-top">
-		<div class="flex flex-col gap-2">
+		<div class="flex flex-col gap-2.5">
 			{#each group.items as item, itemIndex (item.id)}
 				<div class="flex items-start gap-2">
-					<span class="text-base-content/70 w-5 shrink-0 text-sm font-semibold">
+					<span class="text-base-content/70 w-5 shrink-0 text-sm font-semibold pt-0.5">
 						{itemIndex + 1}.
 					</span>
-					<span class="leading-snug">{item.deskripsi}</span>
+					<div class="flex flex-col gap-1 flex-1">
+						<span class="leading-snug">{item.deskripsi}</span>
+						{#if item.teknikPenilaian}
+							<div class="flex items-center gap-1.5 pt-0.5">
+								<span
+									class="badge badge-xs badge-info badge-outline font-semibold gap-1 py-1"
+									title={`Teknik Penilaian: ${item.teknikPenilaian.nama}`}
+								>
+									<span class="font-bold">{item.teknikPenilaian.singkatan}</span>
+									<span class="opacity-60">•</span>
+									<span>{item.teknikPenilaian.nama}</span>
+								</span>
+							</div>
+						{/if}
+					</div>
 				</div>
 			{/each}
 		</div>

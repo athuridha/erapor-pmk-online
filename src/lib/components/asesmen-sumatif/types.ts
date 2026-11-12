@@ -5,6 +5,13 @@ export type TujuanEntry = {
 	lingkupMateri: string;
 	bobot: number | null;
 	nilai: number | null;
+	teknikPenilaianId?: number | null;
+	teknikPenilaian?: {
+		id: number;
+		nama: string;
+		singkatan: string;
+		keterangan?: string | null;
+	} | null;
 };
 
 export type EntryDraft = TujuanEntry & {
