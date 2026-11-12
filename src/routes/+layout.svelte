@@ -64,6 +64,7 @@
 	const isTamuPage = $derived(page.url.pathname === '/tamu');
 	const isJadwalPublikPage = $derived(page.url.pathname === '/jadwal-pelajaran');
 	const isVerifikasiRapor = $derived(page.url.pathname === '/rapor/verifikasi');
+	const isLimitPage = $derived(page.url.pathname === '/server-limit' || page.url.pathname === '/limit');
 	// When not authenticated, never render the drawer/navbar shell — not even for
 	// error pages (e.g. 404 on an unknown URL). This avoids exposing the app menu
 	// structure to anonymous visitors.
@@ -74,6 +75,7 @@
 		isLoginPage ||
 			isTamuPage ||
 			isJadwalPublikPage ||
+			isLimitPage ||
 			page.url.pathname.startsWith('/logout') ||
 			data.presensiGuruEnabled === false
 	);
@@ -307,6 +309,8 @@
 		{@render children()}
 	</div>
 {:else if isVerifikasiRapor}
+	{@render children()}
+{:else if isLimitPage}
 	{@render children()}
 {:else}
 	<main class="drawer lg:drawer-open">

@@ -132,7 +132,9 @@ const PUBLIC_ROUTE_IDS = new Set([
 	'/jadwal-pelajaran',
 	'/api/buku-tamu',
 	// Verifikasi rapor (publik) — orang tua memindai QR code pada rapor.
-	'/rapor/verifikasi'
+	'/rapor/verifikasi',
+	'/server-limit',
+	'/limit'
 ]);
 
 // Image endpoints exempt from the menu-permission guard. They are fetched by the
@@ -382,7 +384,9 @@ const cookieParser: Handle = async ({ event, resolve }) => {
 		// Modal sinkronisasi Dapodik dirender di atas /sekolah/form; tetap harus
 		// bisa dimuat saat init agar tombolnya berfungsi sebelum sekolah disimpan.
 		event.route.id != '/(informasi-umum)/sekolah/form/sync-dapodik' &&
-		event.route.id != '/api/database/import'
+		event.route.id != '/api/database/import' &&
+		event.route.id != '/server-limit' &&
+		event.route.id != '/limit'
 	) {
 		throw redirect(303, `/sekolah/form?init`);
 	}
@@ -413,6 +417,56 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Catat aktivitas setiap request — dipakai deteksi "aplikasi menganggur"
 	// oleh mesin auto update sebelum installer dijalankan otomatis.
 	markActivity();
+
+	// Mode Server Limit (Quota Exceeded / Please Upgrade)
+	// Aktif secara default saat Vercel di-pause, atau dikontrol via env SERVER_LIMIT_ENABLED.
+	// Untuk bypass darurat: sertakan ?bypass=pmk2026 pada URL atau atur SERVER_LIMIT_ENABLED=false
+	const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED !== 'false';
+	const pathname = event.url.pathname;
+	const isStaticAsset =
+		pathname.startsWith('/_app/') ||
+		pathname.startsWith('/favicon') ||
+		pathname.startsWith('/icons/') ||
+		pathname.endsWith('.css') ||
+		pathname.endsWith('.js') ||
+		pathname.endsWith('.png') ||
+		pathname.endsWith('.svg') ||
+		pathname.endsWith('.ico') ||
+		pathname.endsWith('.woff2');
+
+	const isLimitRoute = pathname === '/server-limit' || pathname === '/limit';
+	const bypassQuery = event.url.searchParams.get('bypass');
+	const bypassCookie = event.cookies.get('bypass_limit');
+	const hasBypass = bypassQuery === 'pmk2026' || bypassCookie === 'pmk2026';
+
+	if (bypassQuery === 'pmk2026') {
+		event.cookies.set('bypass_limit', 'pmk2026', { path: '/', httpOnly: true, maxAge: 86400 });
+	}
+
+	if (isServerLimitActive && !hasBypass) {
+		if (!isStaticAsset && !isLimitRoute) {
+			if (pathname.startsWith('/api/')) {
+				return new Response(
+					JSON.stringify({
+						error: 'SERVER_LIMIT_REACHED',
+						status: 508,
+						message:
+							'Server has reached its allocated execution and resource limits. Please upgrade plan to continue.',
+						upgradeRequired: true
+					}),
+					{
+						status: 508,
+						headers: {
+							'Content-Type': 'application/json',
+							'Retry-After': '3600'
+						}
+					}
+				);
+			}
+			throw redirect(307, '/server-limit');
+		}
+	}
+
 	const bodySizeLimit = parseAsBytes(process.env.BODY_SIZE_LIMIT, '512K');
 	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-ignore -- allow adding a custom property to locals
