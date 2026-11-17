@@ -119,7 +119,7 @@ async function verifyWaliKelasAccess(
 }
 
 export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) => {
-	const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED !== 'false';
+	const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED === 'true';
 	const bypassQuery = url.searchParams.get('bypass');
 	const bypassCookie = cookies.get('bypass_limit');
 	const hasBypass = bypassQuery === 'pmk2026' || bypassCookie === 'pmk2026';

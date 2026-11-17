@@ -419,9 +419,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	markActivity();
 
 	// Mode Server Limit (Quota Exceeded / Please Upgrade)
-	// Aktif secara default saat Vercel di-pause, atau dikontrol via env SERVER_LIMIT_ENABLED.
-	// Untuk bypass darurat: sertakan ?bypass=pmk2026 pada URL atau atur SERVER_LIMIT_ENABLED=false
-	const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED !== 'false';
+	// Dinonaktifkan secara default. Aktifkan bila perlu via env SERVER_LIMIT_ENABLED=true.
+	// Untuk bypass darurat: sertakan ?bypass=pmk2026 pada URL.
+	const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED === 'true';
 	const pathname = event.url.pathname;
 	const isStaticAsset =
 		pathname.startsWith('/_app/') ||

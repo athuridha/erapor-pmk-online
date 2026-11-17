@@ -25,7 +25,7 @@ function resolveRedirectTarget(value: string | null) {
 }
 
 export const load: PageServerLoad = async ({ locals, url, getClientAddress, cookies }) => {
-	const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED !== 'false';
+	const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED === 'true';
 	const bypassQuery = url.searchParams.get('bypass');
 	const bypassCookie = cookies.get('bypass_limit');
 	const hasBypass = bypassQuery === 'pmk2026' || bypassCookie === 'pmk2026';
@@ -70,7 +70,7 @@ function logLoginEvent(message: string, details?: Record<string, unknown>) {
 
 export const actions: Actions = {
 	login: async ({ request, cookies, getClientAddress, url }) => {
-		const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED !== 'false';
+		const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED === 'true';
 		const bypassQuery = url.searchParams.get('bypass');
 		const bypassCookie = cookies.get('bypass_limit');
 		const hasBypass = bypassQuery === 'pmk2026' || bypassCookie === 'pmk2026';
