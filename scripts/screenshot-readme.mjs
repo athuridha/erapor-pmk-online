@@ -24,9 +24,9 @@ const outputDir = path.join(projectRoot, 'static');
 const HALAMAN = [
 	{ path: '/', file: 'screenshot-dashboard.png' },
 	{ path: '/cetak/kustomisasi', file: 'screenshot-kustomisasi-cetak.png' },
-	{ path: '/master-data/pengguna/guru', file: 'screenshot-data-pengguna.png' },
-	{ path: '/master-data/ekstrakurikuler', file: 'screenshot-master-data.png' },
-	{ path: '/presensi-murid', file: 'screenshot-presensi-murid.png' }
+	{ path: '/master-data/pengguna', file: 'screenshot-data-pengguna.png' },
+	{ path: '/master-data', file: 'screenshot-master-data.png' },
+	{ path: '/presensi-murid', file: 'screenshot-presensi-murid.png', pickFirstKelas: true }
 ];
 
 function findChrome() {
@@ -79,6 +79,22 @@ try {
 			waitUntil: 'networkidle2',
 			timeout: 60000
 		});
+		if (halaman.pickFirstKelas) {
+			const firstKelasId = await page.evaluate(() => {
+				const select = document.getElementById('kelas-picker-lokal');
+				if (!(select instanceof HTMLSelectElement)) return null;
+				const opt = Array.from(select.options).find(
+					(o) => o.value && o.value !== 'semua' && !o.disabled
+				);
+				return opt ? opt.value : null;
+			});
+			if (firstKelasId) {
+				await Promise.all([
+					page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 60000 }).catch(() => null),
+					page.select('#kelas-picker-lokal', firstKelasId)
+				]);
+			}
+		}
 		// Preview kustomisasi butuh HTML besar (base64 logo/QR) — tunggu sampai iframe terisi.
 		await page
 			.waitForFunction(
@@ -95,6 +111,12 @@ try {
 		await page.screenshot({ path: target });
 		console.log('Tersimpan:', path.relative(projectRoot, target));
 	}
+
+	fs.copyFileSync(
+		path.join(outputDir, 'screenshot-dashboard.png'),
+		path.join(outputDir, 'image.png')
+	);
+	console.log('Tersimpan:', path.relative(projectRoot, path.join(outputDir, 'image.png')));
 } finally {
 	await browser.close();
 }

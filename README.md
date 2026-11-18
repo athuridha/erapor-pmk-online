@@ -1,40 +1,29 @@
 # e-Rapor SMK Pratama Mulya
 
-![screenshot](static/image.png)
+![Tampilan Dashboard e-Rapor SMK Pratama Mulya](static/image.png)
 
 <a href='https://nodejs.org/en' target="_blank"><img alt='node.js' src='https://img.shields.io/badge/Node.JS-100000?style=for-the-badge&logo=node.js&logoColor=35C354&labelColor=000000&color=35C354'/></a> <a href='https://svelte.dev/' target="_blank"><img alt='Svelte' src='https://img.shields.io/badge/Svelte-100000?style=for-the-badge&logo=Svelte&logoColor=F45A20&labelColor=000000&color=F45A20'/></a> <a href='https://orm.drizzle.team/' target="_blank"><img alt='Drizzle' src='https://img.shields.io/badge/Drizzle_ORM-100000?style=for-the-badge&logo=Drizzle&logoColor=FAF61D&labelColor=000000&color=FAF61D'/></a> <a href='https://sqlite.org/' target="_blank"><img alt='Sqlite' src='https://img.shields.io/badge/SQLite3-100000?style=for-the-badge&logo=Sqlite&logoColor=5EA765&labelColor=000000&color=5EA765'/></a> <a href='https://tailwindcss.com/' target="_blank"><img alt='tailwindcss' src='https://img.shields.io/badge/Tailwind_CSS-100000?style=for-the-badge&logo=tailwindcss&logoColor=36DBFF&labelColor=000000&color=36DBFF'/></a> <a href='https://daisyui.com/' target="_blank"><img alt='DaisyUI' src='https://img.shields.io/badge/Daisy_UI-100000?style=for-the-badge&logo=DaisyUI&logoColor=FFEC25&labelColor=000000&color=FFEC25'/></a>
 
-> e-Rapor SMK Pratama Mulya awalnya dibuat sebagai alternatif E-Rapor Kurikulum Merdeka.
+e-Rapor SMK Pratama Mulya adalah aplikasi administrasi guru dan penilaian Kurikulum Merdeka untuk SMK Pratama Mulya Karawang. Repositori ini merupakan varian web daring yang berjalan dengan database terpusat (Cloudflare D1 atau LibSQL/SQLite) dan mendukung deployment Node.js maupun Vercel di https://erapor-pmk.titipit.id.
 
-Seiring perkembangannya, e-Rapor SMK Pratama Mulya kini menjadi aplikasi terpadu yang membantu berbagai kebutuhan administrasi guru dan sekolah.
+> **Mengapa tetap memakai aplikasi ini bersama E-Rapor resmi?**
 
-> **Mengapa masih menggunakan e-Rapor SMK Pratama Mulya jika pemerintah sudah menyediakan E-Rapor resmi?**
+E-Rapor resmi berfokus pada pengisian nilai akhir semester dan penentuan ketercapaian Tujuan Pembelajaran (TP). Aplikasi ini mencatat proses harian yang mendahuluinya: penilaian formatif, sumatif lingkup materi, STS, SAS, presensi, jurnal mengajar, hingga rekap nilai otomatis sebelum nilainya dikirim atau diekspor ke E-Rapor Kemdikdas.
 
-Karena E-Rapor resmi berfokus pada input nilai akhir serta penentuan Tujuan Pembelajaran (TP) yang tercapai atau belum tercapai secara manual. e-Rapor SMK Pratama Mulya hadir sebagai pelengkap proses tersebut dengan menyediakan pencatatan penilaian harian, pengolahan nilai, hingga rekapitulasi secara otomatis sehingga pekerjaan guru menjadi lebih praktis.
+Pembahasan teknis dan catatan pengembangan lengkap tersedia di folder `docs/`.
 
-Dokumentasi lengkap aplikasi ini disusun dalam bahasa Indonesia. File README ini memberikan gambaran singkat untuk pengguna dan pengembang, sedangkan pembahasan teknis serta panduan kontribusi tersedia di folder `docs/`.
+## Daftar fitur
 
-## Daftar Fitur
-
-- AI Generator untuk membuat Lingkup Materi berserta Tujuan Pembelajarannya secara otomatis berdasarkan Capaian Pembelajaran dari BSKAP
-- Mengelola data sekolah, kelas, dan murid.
-- Input nilai intrakurikuler berdasarkan Tujuan Pembelajaran (TP), meliputi penilaian harian, STS, SAS, dan formatif.
-- Jadwal pembelajaran beserta bell sekolah yang berjalan secara otomatis.
-- Presensi murid dengan cara input langsung secara massal oleh guru mata pelajaran maupun wali kelas.
-- Jurnal harian guru.
-- Pembuatan rapor, piagam, dan berbagai dokumen pendukung yang siap dicetak.
-- Mendukung penggunaan campuran huruf latin dan arab pada Capaian Pembelajaran (CP) di rapor.
-- Ekspor nilai dan Tujuan Pembelajaran (TP) ke file Excel yang dapat diimpor ke E-Rapor Kemdikdas.
-- Presensi guru beserta laporannya
-- Buku tamu digital yang dapat diakses melalui halaman `ipAddress:3000/tamu`
-- Jadwal pelajaran yang dapat diakses melalui halaman `ipAddress:3000/jadwal-pelajaran`
-- Dinas luar dan SPPD otomatis
-- Tarik data dari Dapodik (sinkronisasi sekolah, guru, kelas, murid, dan jadwal pembelajaran secara otomatis dari aplikasi Dapodik Desktop)
-- Kirim nilai akhir dan mata evaluasi (matev) langsung ke Dapodik
-- Kustomisasi cetak: mengubah teks kop, gambar (logo & watermark), dan jarak/layout dokumen cetak, lengkap dengan live preview dokumen sebelum disimpan.
-- Master Data terpadu: tahun ajaran, semester, kelas, murid, mata pelajaran, ekstrakurikuler (sekolah bisa menganggotakan murid ke ekstrakurikuler), data pengguna, orang tua, dan profil sekolah.
-- Manajemen data pengguna untuk guru & operator, termasuk impor daftar guru dari Excel/CSV (akun guru dibuat dengan kata sandi awal dan wajib menggantinya saat login pertama).
-- Mode "Semua Kelas" untuk admin dan kepala sekolah agar bisa melihat data seluruh kelas tanpa memilih kelas aktif.
+- Pembuatan Lingkup Materi dan Tujuan Pembelajaran (TP) memakai generator AI berdasarkan Capaian Pembelajaran BSKAP.
+- Input nilai intrakurikuler (asesmen formatif, sumatif materi, STS, SAS), kokurikuler, P5, PKL/Prakerin, serta ekstrakurikuler lengkap dengan legger dan rekap keseluruhan.
+- Pemilih modul kerja di sidebar (`Mode Admin / Operator`, `Modul Wali Kelas`, `Modul Guru`) serta ruang kerja otomatis `Pembina Eskul` untuk pembina eksternal tanpa masuk ke daftar pegawai atau presensi guru.
+- Pengelolaan Akun Pengguna terpadu (`/master-data/pengguna`) dengan filter tab `Semua`, `Guru`, `Operator`, dan `Pembina Eskul`, termasuk impor daftar guru dari Excel atau CSV.
+- Penjadwalan pelajaran dengan bel sekolah otomatis (`/jadwal-pelajaran`) dan layar monitoring publik `/tamu` untuk buku tamu digital.
+- Presensi murid harian dan per mata pelajaran untuk guru mapel maupun wali kelas, jurnal harian guru, poin siswa, dinas luar, serta cetak SPPD otomatis.
+- Cetak cover, biodata, rapor, dan piagam dalam format PDF dengan halaman kustomisasi kop, logo, watermark, dan tata letak disertai live preview (`/cetak/kustomisasi`).
+- Penulisan Capaian Pembelajaran (CP) dan deskripsi rapor dengan campuran huruf Latin dan Arab.
+- Portal Orang Tua (`/portal-orang-tua`), pengelolaan tanda tangan digital, serta tarik data dan kirim nilai akhir/matev ke Dapodik.
+- Mode `Semua Kelas` bagi admin dan kepala sekolah untuk memantau seluruh rombel sekaligus dalam mode tampilan terang atau gelap.
 
 ## Screenshot
 
@@ -42,172 +31,102 @@ Dokumentasi lengkap aplikasi ini disusun dalam bahasa Indonesia. File README ini
 
 ![Dashboard e-Rapor SMK Pratama Mulya](static/screenshot-dashboard.png)
 
-### Kustomisasi Cetak (live preview)
+### Kustomisasi cetak (live preview)
 
 ![Halaman Kustomisasi Cetak](static/screenshot-kustomisasi-cetak.png)
 
-### Data Pengguna (Guru & Operator)
+### Akun pengguna terpadu
 
-![Halaman Data Pengguna](static/screenshot-data-pengguna.png)
+![Halaman Akun Pengguna](static/screenshot-data-pengguna.png)
 
-### Master Data
+### Master data
 
 ![Halaman Master Data](static/screenshot-master-data.png)
 
-### Presensi Murid
+### Presensi murid
 
 ![Halaman Presensi Murid](static/screenshot-presensi-murid.png)
 
-## Siapa yang Cocok Menggunakan e-Rapor SMK Pratama Mulya?
+## Kecocokan penggunaan
 
-- Sekolah yang tidak dapat menggunakan E-Rapor Kemdikdas karena alasan tertentu.
-- Sekolah yang sudah menggunakan E-Rapor tetapi ingin seluruh proses penilaian harian tercatat secara elektronik sehingga rekapitulasi nilai tidak lagi dilakukan secara manual di Excel. Nilai akhir cukup diimpor ke E-Rapor.
-- Sekolah swasta, khususnya sekolah Islam, yang membutuhkan dukungan penulisan Capaian Pembelajaran (CP) dengan kombinasi huruf latin dan arab.
+Aplikasi ini cocok untuk sekolah yang ingin mencatat penilaian harian, presensi, jurnal mengajar, dan ekstrakurikuler secara elektronik agar rekap nilai rapor akhir tidak lagi dihitung manual di Excel. Sekolah swasta atau sekolah Islam yang menuliskan Capaian Pembelajaran berbahasa Arab dan Latin dalam satu dokumen rapor juga didukung penuh.
 
 ## Quickstart
 
-### Versi Pengguna (Windows Installer)
+### Deployment web (Vercel / Cloudflare D1)
 
-1. Kunjungi halaman rilis:
-   https://github.com/athuridha/eraport/releases
-2. Unduh file `ERaporPMKSetup.exe`.
-3. Jalankan installer dan ikuti proses instalasi.
-4. Setelah selesai, buka aplikasi melalui shortcut yang tersedia.
+Konfigurasi adapter pada `svelte.config.js` memilih `@sveltejs/adapter-vercel` secara otomatis saat `VERCEL=1` atau `ADAPTER=vercel`:
 
-### Versi Linux dan Sistem Operasi Lain (Menggunakan Node.js)
+```bash
+vercel deploy --prod
+```
 
-#### Persyaratan
+Atur variabel lingkungan koneksi database terpusat (`DB_URL` dan `DB_AUTH_TOKEN`, atau kredensial D1 sesuai pengaturan proyek) pada panel Vercel.
 
-- Node.js 20 LTS (direkomendasikan)
-- pnpm
-- Google Chrome atau Chromium (digunakan untuk proses rendering PDF melalui PagedJS + Puppeteer)
+### Jalankan lokal dengan Node.js
 
-#### Instalasi
+Persyaratan yang perlu disiapkan adalah Node.js 20 LTS atau lebih baru, `pnpm`, serta Google Chrome atau Chromium untuk rendering PDF lewat PagedJS dan Puppeteer.
 
-1. Clone repository menggunakan perintah di bawah atau download [file zip](https://github.com/athuridha/eraport/archive/refs/heads/main.zip) dari proyek ini.
+1. Clone repositori dan masuk ke direktori proyek:
 
    ```bash
-   git clone https://github.com/athuridha/eraport && cd eraport
+   git clone https://github.com/athuridha/erapor-pmk-online && cd erapor-pmk-online
    ```
 
-2. Install seluruh dependency.
+2. Pasang dependency proyek:
 
    ```bash
    pnpm install
    ```
 
-3. Build aplikasi dan jalankan.
+3. Jalankan server pengembangan di port `5173` (atau buat build produksi dengan `pnpm build && node build`):
 
    ```bash
-   pnpm build && node build
+   pnpm dev -- --port 5173
    ```
 
-Untuk panduan instalasi manual serta proses pengembangan yang lebih lengkap, silakan baca:
+Untuk pengguna aplikasi desktop Windows tanpa server terpisah, installer `ERaporPMKSetup.exe` tersedia di halaman rilis https://github.com/athuridha/eraport/releases.
 
-`docs/DEVELOPMENT.md`
+### Skrip penting
 
-## Menjalankan Versi Pengembangan (Untuk Pengembang)
+Daftar lengkap tersedia di `package.json`:
 
-### Persyaratan
+- `pnpm dev`: menjalankan server pengembangan (`node scripts/dev.js`) sekaligus generator ikon.
+- `pnpm build`: membuat build produksi (`adapter-node` bawaan, atau `ADAPTER=vercel` untuk Vercel).
+- `pnpm db:push`: menerapkan perubahan skema database lewat skrip migrasi khusus.
+- `pnpm db:studio`: membuka Drizzle Studio untuk memeriksa tabel database.
+- `pnpm lint` dan `pnpm check`: memeriksa pemformatan Prettier, aturan ESLint, dan tipe Svelte.
+- `pnpm screenshot:readme`: memperbarui tangkapan layar aplikasi pada folder `static/` dari server lokal yang sedang berjalan.
 
-- Node.js 20 LTS (direkomendasikan)
-- pnpm
-- Google Chrome atau Chromium (digunakan untuk proses rendering PDF melalui PagedJS + Puppeteer)
+Lokasi database SQLite bawaan saat berjalan lokal:
 
-### Langkah Singkat
-
-```bash
-pnpm install
-pnpm dev -- --port 5173
-```
-
-Selanjutnya buka:
-
-```
-http://localhost:5173
-```
-
-Jika port `5173` sedang digunakan, jalankan dengan port lain, misalnya:
-
-```
---port 5174
-```
-
-### Beberapa Skrip Penting
-
-(Lihat juga `package.json`)
-
-- `pnpm dev` — Menjalankan server pengembangan (`node scripts/dev.js`) sekaligus generator ikon.
-- `pnpm build` — Membuat build produksi.
-- `pnpm db:push` — Menjalankan migrasi database menggunakan Drizzle.
-- `pnpm db:studio` — Membuka Drizzle Studio untuk melihat dan mengelola database.
-- `pnpm lint` dan `pnpm check` — Melakukan pengecekan format, lint, dan tipe Svelte.
-
-Lokasi database lokal:
-
-```
+```text
 data/database.sqlite3
 ```
 
-### Skills untuk AI Coding Agent (opencode)
+### Skills untuk AI coding agent
 
-Skills (instruksi untuk agent coding) disimpan di folder `.agents/skills/` dan dibaca otomatis oleh opencode. Terdapat dua kelompok:
+Instruksi khusus untuk AI agent berada di folder `.agents/skills/`:
 
-- **Strix (security testing):** 9 skill untuk menjalankan AI pentest, memperbaiki temuan keamanan, dan menyiapkan CI scanning. Cara install/pembaruan:
+- Strix security testing (9 skill audit keamanan, panduan di `docs/SKILLS.md`).
+- Penulisan bahasa Indonesia (`bahasa-inti` dan `bahasa-website`).
 
-  ```sh
-  npx skills add usestrix/strix
-  ```
+## Struktur proyek
 
-  Panduan instalasi Strix CLI, konfigurasi LLM, dan perintah scan tersedia di `docs/SKILLS.md`.
+- `src/`: kode sumber aplikasi SvelteKit (halaman, API route, komponen UI, dan logika server).
+- `static/`: aset statis, logo, suara bel, dan screenshot dokumentasi.
+- `scripts/`: skrip utilitas untuk migrasi, seed data, pembaruan screenshot, dan build.
+- `data/`: direktori database SQLite lokal serta berkas unggahan saat mode lokal.
+- `drizzle/`: berkas migrasi SQL Drizzle ORM.
 
-- **Bahasa Indonesia:** skill `bahasa-inti` (aturan inti penulisan bahasa Indonesia) dan `bahasa-website` (penulisan UX/microcopy) — sudah termasuk di repository.
+Detail pola pengembangan memakai Svelte 5 Runes, Tailwind CSS v4, DaisyUI, dan Drizzle ORM dijelaskan di `docs/DEVELOPMENT.md`.
 
-Restart ulang session opencode setelah menambah atau memperbarui skills agar dikenali.
+## Lisensi
 
-## Struktur Proyek (Singkat)
+Perangkat lunak ini dirilis dengan lisensi khusus pada file `LICENSE`. Anda boleh menggunakan, menyalin, dan memodifikasi kode untuk keperluan nonkomersial dengan mempertahankan atribusi pembuat asli, namun dilarang menjual atau memonetisasi aplikasi maupun hasil turunannya.
 
-- `src/` — Kode sumber aplikasi SvelteKit (komponen, route, dan server).
-- `static/` — Aset statis yang disajikan apa adanya.
-- `scripts/` — Berisi skrip utilitas seperti migrasi, seed, dan generator ikon.
-- `data/` — Menyimpan database lokal serta file upload.
-- `drizzle/` — File migrasi SQL yang digunakan oleh Drizzle ORM.
+Ikon pada folder `src/lib/icons` bersumber dari Feather Icons berlisensi MIT (catatan kredit tersedia di `docs/ICON-CREDITS.md`).
 
-Penjelasan lebih lengkap mengenai pola implementasi (Svelte 5 Runes, DaisyUI, Tailwind CSS v4, dan Drizzle ORM) tersedia pada:
+## Kontribusi & bantuan
 
-`docs/DEVELOPMENT.md`
-
-## Lisensi & Pengecualian
-
-Perangkat lunak ini menggunakan lisensi khusus (custom license).
-
-Anda bebas menggunakan, memodifikasi, dan membagikan aplikasi ini untuk keperluan nonkomersial dengan tetap mencantumkan atribusi kepada pembuatnya.
-
-Tidak diperbolehkan menjual atau memonetisasi perangkat lunak ini maupun hasil modifikasinya dalam bentuk apa pun.
-
-Silakan lihat file `LICENSE` di root proyek untuk mengetahui ketentuan lengkap beserta daftar aset yang termasuk di dalamnya.
-
-Ikon yang berada pada folder `src/lib/icons` berasal dari Feather dan dirilis di bawah lisensi MIT.
-
-Informasi lisensi dan kredit selengkapnya tersedia di:
-
-`docs/ICON-CREDITS.md`
-
-## Kontribusi
-
-Terima kasih atas minat Anda untuk berkontribusi pada e-Rapor SMK Pratama Mulya.
-
-Sebelum mengirim Pull Request, mohon perhatikan beberapa hal berikut:
-
-- Ikuti panduan penulisan kode yang berlaku.
-- Jalankan `pnpm lint` dan `pnpm check` untuk memastikan tidak ada masalah pada kode.
-- Gunakan bahasa Indonesia untuk seluruh teks yang ditampilkan kepada pengguna (user-facing copy dan dokumentasi pengguna).
-- Jika mengubah fitur penting, tambahkan pengujian sederhana atau sertakan langkah verifikasi secara manual.
-
-Panduan lengkap alur pengembangan tersedia pada:
-
-`docs/DEVELOPMENT.md`
-
-## Bantuan
-
-Apabila menemukan bug, mengalami kendala, atau memiliki pertanyaan, silakan buat Issue pada repository GitHub.
+Sebelum mengirim Pull Request, pastikan `pnpm lint` dan `pnpm check` selesai tanpa error serta seluruh teks antarmuka menggunakan bahasa Indonesia yang baku. Jika menemukan bug atau kendala penggunaan, silakan buat Issue di repositori GitHub.
