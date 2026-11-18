@@ -44,11 +44,9 @@
 			{ value: 'rapor', label: 'Rapor' },
 			{ value: 'piagam', label: 'Piagam' }
 		],
-		onPreviewMurid,
 		onBulkDownload,
 		onPreviewJurnal = () => {},
 		onPreviewBukuTamu = () => {},
-		onPreviewPresensiGuru = () => {},
 		onDownloadLaporanTpp = () => {},
 		bukuTamuTanggalMulai = $bindable(''),
 		bukuTamuTanggalSelesai = $bindable(''),
@@ -82,11 +80,9 @@
 		daftarMurid: MuridData[];
 		piagamRankingOptions: PiagamRankingOption[];
 		documentOptions?: Array<{ value: DocumentType; label: string }>;
-		onPreviewMurid: (murid: MuridData) => void;
 		onBulkDownload: () => void;
 		onPreviewJurnal?: () => void;
 		onPreviewBukuTamu?: () => void;
-		onPreviewPresensiGuru?: () => void;
 		onDownloadLaporanTpp?: () => void;
 		bukuTamuTanggalMulai?: string;
 		bukuTamuTanggalSelesai?: string;
@@ -121,6 +117,42 @@
 	const isLaporanTpp = $derived(selectedDocument === 'laporan-tpp');
 	const hasMurid = $derived(daftarMurid.length > 0);
 	const hasPiagamRankingOptions = $derived(piagamRankingOptions.length > 0);
+
+	function buildMuridPreviewHref(muridId: number): string {
+		const doc = selectedDocument || 'cover';
+		const params = new URLSearchParams();
+		params.set('murid_id', String(muridId));
+		if (kelasId != null && String(kelasId).trim() !== '') {
+			params.set('kelas_id', String(kelasId));
+		}
+		if (doc === 'rapor') {
+			if (tpMode === 'full-desc') params.set('full_tp', 'desc');
+			params.set('krit_cukup', String(kritCukup));
+			params.set('krit_baik', String(kritBaik));
+			if (selectedRaporPeriode) params.set('rapor_periode', selectedRaporPeriode);
+		}
+		if (doc === 'piagam') {
+			params.set('template', selectedTemplate);
+		}
+		if (showBgLogo) {
+			params.set('bg_logo', '1');
+		}
+		return `/cetak/${doc}.pdf?${params.toString()}`;
+	}
+
+	const jurnalPreviewHref = $derived(
+		jurnalTanggalMulai && jurnalTanggalSelesai
+			? `/api/pdf/jurnal-mengajar?${new URLSearchParams({ tanggal_mulai: jurnalTanggalMulai, tanggal_selesai: jurnalTanggalSelesai }).toString()}`
+			: null
+	);
+	const bukuTamuPreviewHref = $derived(
+		bukuTamuTanggalMulai && bukuTamuTanggalSelesai
+			? `/api/pdf/buku-tamu?${new URLSearchParams({ tanggal_mulai: bukuTamuTanggalMulai, tanggal_selesai: bukuTamuTanggalSelesai }).toString()}`
+			: null
+	);
+	const presensiPreviewHref = $derived(
+		`/api/pdf/presensi-guru?${new URLSearchParams({ bulan: String(presensiBulan), tahun: String(presensiTahun) }).toString()}`
+	);
 
 	const bulanList = [
 		'Januari',
@@ -226,10 +258,10 @@
 </script>
 
 <div class="flex flex-col gap-4">
-	<div class="flex flex-col gap-2 sm:flex-row">
-		<div class="min-w-0 flex-1">
+	<div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+		<div class="relative flex min-w-0 flex-1 items-center">
 			<select
-				class="select bg-base-200 w-full min-w-0 truncate dark:border-none"
+				class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 				bind:value={selectedDocument}
 				title="Pilih dokumen yang ingin dipreview"
 			>
@@ -238,23 +270,35 @@
 					<option value={option.value}>{option.label}</option>
 				{/each}
 			</select>
+			<span
+				aria-hidden="true"
+				class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+			>
+				<Icon name="down" class="h-3.5 w-3.5" />
+			</span>
 		</div>
 		{#if isPiagamSelected}
-			<div class="min-w-0 flex-1">
+			<div class="relative flex min-w-0 flex-1 items-center">
 				<select
-					class="select bg-base-200 w-full min-w-0 truncate dark:border-none"
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					bind:value={selectedTemplate}
 					title="Pilih template piagam"
 				>
 					<option value="1">Template 1</option>
 					<option value="2">Template 2</option>
 				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
 			</div>
 		{/if}
 		{#if selectedDocument === 'rapor'}
-			<div class="min-w-0 flex-1">
+			<div class="relative flex min-w-0 flex-1 items-center">
 				<select
-					class="select bg-base-200 w-full min-w-0 truncate dark:border-none"
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					bind:value={selectedRaporPeriode}
 					title="Pilih periode rapor"
 				>
@@ -262,54 +306,60 @@
 					<option value="ras">Rapor Akhir Semester</option>
 					<option value="rts">Rapor Tengah Semester</option>
 				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
 			</div>
 		{/if}
 		{#if isJurnalMengajar}
-			<fieldset class="fieldset min-w-0 flex-1 py-0">
+			<label class="flex min-w-0 flex-1 flex-col gap-1">
+				<span class="text-xs font-semibold text-slate-600 dark:text-zinc-400">Tanggal mulai</span>
 				<input
 					type="date"
-					class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					bind:value={jurnalTanggalMulai}
 				/>
-				<p class="text-wrap">Pilih tanggal mulai</p>
-			</fieldset>
-			<fieldset class="fieldset min-w-0 flex-1 py-0">
+			</label>
+			<label class="flex min-w-0 flex-1 flex-col gap-1">
+				<span class="text-xs font-semibold text-slate-600 dark:text-zinc-400">Tanggal selesai</span>
 				<input
 					type="date"
-					class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					bind:value={jurnalTanggalSelesai}
 				/>
-				<p class="text-wrap">Pilih tanggal selesai</p>
-			</fieldset>
+			</label>
 		{/if}
 		{#if isBukuTamu}
-			<fieldset class="fieldset min-w-0 flex-1 py-0">
+			<label class="flex min-w-0 flex-1 flex-col gap-1">
+				<span class="text-xs font-semibold text-slate-600 dark:text-zinc-400">Tanggal mulai</span>
 				<input
 					type="date"
-					class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					value={bukuTamuTanggalMulai}
 					onchange={(e) => {
 						bukuTamuTanggalMulai = (e.target as HTMLInputElement).value;
 					}}
 				/>
-				<p class="text-wrap">Pilih tanggal mulai</p>
-			</fieldset>
-			<fieldset class="fieldset min-w-0 flex-1 py-0">
+			</label>
+			<label class="flex min-w-0 flex-1 flex-col gap-1">
+				<span class="text-xs font-semibold text-slate-600 dark:text-zinc-400">Tanggal selesai</span>
 				<input
 					type="date"
-					class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					value={bukuTamuTanggalSelesai}
 					onchange={(e) => {
 						bukuTamuTanggalSelesai = (e.target as HTMLInputElement).value;
 					}}
 				/>
-				<p class="text-wrap">Pilih tanggal selesai</p>
-			</fieldset>
+			</label>
 		{/if}
 		{#if isPresensiGuru}
-			<div class="min-w-0 flex-1">
+			<div class="relative flex min-w-0 flex-1 items-center">
 				<select
-					class="select bg-base-200 w-full min-w-0 truncate dark:border-none"
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					bind:value={presensiBulan}
 					title="Pilih bulan"
 				>
@@ -317,11 +367,17 @@
 						<option value={i + 1}>{nama}</option>
 					{/each}
 				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
 			</div>
 			<div class="min-w-0 flex-1">
 				<input
 					type="number"
-					class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					bind:value={presensiTahun}
 					min="2000"
 					max="2099"
@@ -331,9 +387,9 @@
 		{/if}
 		{#if isLaporanTpp}
 			<div class="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-row sm:gap-2">
-				<div class="min-w-0 sm:w-32">
+				<div class="relative flex min-w-0 items-center sm:w-32">
 					<select
-						class="select bg-base-200 w-full min-w-0 truncate dark:border-none"
+						class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 						bind:value={laporanBulan}
 						title="Pilih bulan"
 					>
@@ -341,106 +397,144 @@
 							<option value={i + 1}>{nama}</option>
 						{/each}
 					</select>
+					<span
+						aria-hidden="true"
+						class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+					>
+						<Icon name="down" class="h-3.5 w-3.5" />
+					</span>
 				</div>
 				<div class="min-w-0 sm:w-24">
 					<input
 						type="number"
-						class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 						bind:value={laporanTahun}
 						min="2000"
 						max="2099"
 						title="Pilih tahun"
 					/>
 				</div>
-				<div class="col-span-2 min-w-0 sm:w-40">
+				<div class="relative col-span-2 flex min-w-0 items-center sm:w-40">
 					<select
-						class="select bg-base-200 w-full min-w-0 truncate dark:border-none"
+						class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 						bind:value={statusKepegawaian}
 						title="Pilih status kepegawaian"
 					>
 						<option value="PNS">PNS</option>
 						<option value="PPPK">PPPK</option>
 					</select>
+					<span
+						aria-hidden="true"
+						class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+					>
+						<Icon name="down" class="h-3.5 w-3.5" />
+					</span>
 				</div>
 			</div>
 		{/if}
 		<div class="flex flex-row gap-2 max-sm:flex-col">
 			{#if isJurnalMengajar}
-				<button
-					class="btn btn-primary shadow-none"
-					type="button"
-					disabled={!jurnalTanggalMulai || !jurnalTanggalSelesai || downloadLoading}
-					onclick={onPreviewJurnal}
-					title={!jurnalTanggalMulai || !jurnalTanggalSelesai
-						? 'Pilih rentang tanggal terlebih dahulu'
-						: 'Preview Jurnal Mengajar'}
-				>
-					{#if downloadLoading}
-						<span class="loading loading-spinner loading-sm"></span>
-					{:else}
-						<Icon name="eye" />
-					{/if}
-					Preview
-				</button>
+				{#if jurnalPreviewHref && !downloadLoading}
+					<a
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 max-sm:w-full"
+						href={jurnalPreviewHref}
+						target="_blank"
+						rel="noopener noreferrer"
+						title="Buka preview Jurnal Mengajar di tab baru"
+					>
+						<Icon name="eye" class="h-4 w-4" />
+						Preview
+					</a>
+				{:else}
+					<button
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full"
+						type="button"
+						disabled={!jurnalTanggalMulai || !jurnalTanggalSelesai || downloadLoading}
+						aria-disabled={!jurnalTanggalMulai || !jurnalTanggalSelesai || downloadLoading}
+						onclick={onPreviewJurnal}
+						title={!jurnalTanggalMulai || !jurnalTanggalSelesai
+							? 'Pilih rentang tanggal terlebih dahulu'
+							: 'Preview Jurnal Mengajar'}
+					>
+						{#if downloadLoading}
+							<span class="loading loading-spinner loading-sm"></span>
+						{:else}
+							<Icon name="eye" class="h-4 w-4" />
+						{/if}
+						Preview
+					</button>
+				{/if}
 			{:else if isBukuTamu}
-				<button
-					class="btn btn-primary shadow-none max-sm:w-full"
-					type="button"
-					disabled={!bukuTamuTanggalMulai || !bukuTamuTanggalSelesai || downloadLoading}
-					onclick={onPreviewBukuTamu}
-					title={!bukuTamuTanggalMulai || !bukuTamuTanggalSelesai
-						? 'Pilih rentang tanggal terlebih dahulu'
-						: 'Preview Buku Tamu'}
-				>
-					{#if downloadLoading}
-						<span class="loading loading-spinner loading-sm"></span>
-					{:else}
-						<Icon name="eye" />
-					{/if}
-					Preview
-				</button>
+				{#if bukuTamuPreviewHref && !downloadLoading}
+					<a
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 max-sm:w-full"
+						href={bukuTamuPreviewHref}
+						target="_blank"
+						rel="noopener noreferrer"
+						title="Buka preview Buku Tamu di tab baru"
+					>
+						<Icon name="eye" class="h-4 w-4" />
+						Preview
+					</a>
+				{:else}
+					<button
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full"
+						type="button"
+						disabled={!bukuTamuTanggalMulai || !bukuTamuTanggalSelesai || downloadLoading}
+						aria-disabled={!bukuTamuTanggalMulai || !bukuTamuTanggalSelesai || downloadLoading}
+						onclick={onPreviewBukuTamu}
+						title={!bukuTamuTanggalMulai || !bukuTamuTanggalSelesai
+							? 'Pilih rentang tanggal terlebih dahulu'
+							: 'Preview Buku Tamu'}
+					>
+						{#if downloadLoading}
+							<span class="loading loading-spinner loading-sm"></span>
+						{:else}
+							<Icon name="eye" class="h-4 w-4" />
+						{/if}
+						Preview
+					</button>
+				{/if}
 			{:else if isPresensiGuru}
-				<button
-					class="btn btn-primary shadow-none max-sm:w-full"
-					type="button"
-					disabled={downloadLoading}
-					onclick={onPreviewPresensiGuru}
-					title="Preview Presensi Guru"
+				<a
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 max-sm:w-full"
+					href={presensiPreviewHref}
+					target="_blank"
+					rel="noopener noreferrer"
+					title="Buka preview Presensi Guru di tab baru"
 				>
-					{#if downloadLoading}
-						<span class="loading loading-spinner loading-sm"></span>
-					{:else}
-						<Icon name="eye" />
-					{/if}
+					<Icon name="eye" class="h-4 w-4" />
 					Preview
-				</button>
+				</a>
 			{:else if isLaporanTpp}
 				<button
-					class="btn btn-primary shadow-none w-full sm:w-auto"
+					class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
 					type="button"
 					disabled={downloadLoading}
+					aria-disabled={downloadLoading}
 					onclick={onDownloadLaporanTpp}
 					title="Download Laporan TPP"
 				>
 					{#if downloadLoading}
 						<span class="loading loading-spinner loading-sm"></span>
 					{:else}
-						<Icon name="download" />
+						<Icon name="download" class="h-4 w-4" />
 					{/if}
 					Download
 				</button>
 			{:else}
 				<button
-					class="btn btn-soft shadow-none max-sm:w-full"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					type="button"
 					disabled={downloadDisabled}
+					aria-disabled={downloadDisabled}
 					onclick={onBulkDownload}
 					title="Download semua murid"
 				>
 					{#if downloadLoading}
 						<span class="loading loading-spinner loading-sm"></span>
 					{:else}
-						<Icon name="download" />
+						<Icon name="download" class="h-4 w-4" />
 					{/if}
 					Semua
 				</button>
@@ -479,22 +573,30 @@
 			spellcheck="false"
 			onsubmit={submitSearch}
 		>
-			<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
-				<Icon name="search" />
+			<div class="relative flex items-center">
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute left-3 flex items-center text-slate-500 dark:text-zinc-400"
+				>
+					<Icon name="search" class="h-4 w-4" />
+				</span>
 				<input
 					type="search"
 					name="q"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 					value={localSearch}
 					placeholder="Cari nama murid..."
 					oninput={handleSearchInput}
 					autocomplete="off"
 				/>
-			</label>
+			</div>
 		</form>
 
 		{#if currentItems.length === 0}
-			<div class="alert alert-soft alert-info mt-2">
-				<Icon name="info" />
+			<div
+				class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/70 dark:text-zinc-300"
+			>
+				<Icon name="info" class="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 				<span
 					>{isPiagamSelected
 						? 'Tidak ada peringkat piagam yang cocok dengan pencarian.'
@@ -503,32 +605,41 @@
 			</div>
 		{:else}
 			<div
-				class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+				class="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 			>
-				<table class="table border-base-200 border dark:border-none">
+				<table class="w-full border-collapse text-xs">
 					<thead>
-						<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-							<th style="width: 50px; min-width: 40px;">No</th>
+						<tr
+							class="border-b border-slate-200/80 bg-slate-50/75 text-left font-semibold text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-300"
+						>
+							<th class="px-3 py-2.5" style="width: 50px; min-width: 40px;">No</th>
 							{#if isPiagamSelected}
-								<th style="min-width: 80px;">Peringkat</th>
+								<th class="px-3 py-2.5" style="min-width: 80px;">Peringkat</th>
 							{/if}
-							<th class="w-full" style="min-width: 160px;">Nama</th>
+							<th class="w-full px-3 py-2.5" style="min-width: 160px;">Nama</th>
 							{#if isPiagamSelected}
-								<th style="min-width: 100px;">Nilai Rata-rata</th>
+								<th class="px-3 py-2.5" style="min-width: 100px;">Nilai Rata-rata</th>
 							{:else}
-								<th style="min-width: 100px;">NISN</th>
+								<th class="px-3 py-2.5" style="min-width: 100px;">NISN</th>
 							{/if}
-							<th class="text-center" style="min-width: 120px;">Aksi</th>
+							<th class="px-3 py-2.5 text-center" style="min-width: 120px;">Aksi</th>
 						</tr>
 					</thead>
-					<tbody>
+					<tbody class="divide-y divide-slate-200/70 dark:divide-zinc-800">
 						{#if isPiagamSelected}
 							{#each paginatedPiagam as item, i (item.muridId)}
-								<tr>
-									<td>{(currentPage - 1) * PER_PAGE + i + 1}</td>
-									<td>{item.peringkat}</td>
-									<td>{@html searchQueryMarker(searchTerm || null, item.nama)}</td>
+								<tr class="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40">
+									<td class="px-3 py-2.5 text-slate-600 tabular-nums dark:text-zinc-400"
+										>{(currentPage - 1) * PER_PAGE + i + 1}</td
+									>
 									<td
+										class="px-3 py-2.5 font-semibold text-slate-900 tabular-nums dark:text-zinc-100"
+										>{item.peringkat}</td
+									>
+									<td class="px-3 py-2.5 font-medium text-slate-900 dark:text-zinc-100"
+										>{@html searchQueryMarker(searchTerm || null, item.nama)}</td
+									>
+									<td class="px-3 py-2.5 text-slate-700 tabular-nums dark:text-zinc-300"
 										>{item.nilaiRataRata != null
 											? item.nilaiRataRata.toLocaleString('id-ID', {
 													minimumFractionDigits: 2,
@@ -536,37 +647,43 @@
 												})
 											: '-'}</td
 									>
-									<td class="text-center">
-										<button
-											type="button"
-											class="btn btn-primary btn-soft btn-sm shadow-none"
-											disabled={downloadLoading}
-											onclick={() => onPreviewMurid({ id: item.muridId, nama: item.nama })}
-											title="Preview piagam untuk {item.nama}"
+									<td class="px-3 py-2.5 text-center">
+										<a
+											href={buildMuridPreviewHref(item.muridId)}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="inline-flex h-8 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+											title="Buka preview piagam untuk {item.nama} di tab baru"
 										>
-											<Icon name="eye" />
+											<Icon name="eye" class="h-3.5 w-3.5" />
 											Preview
-										</button>
+										</a>
 									</td>
 								</tr>
 							{/each}
 						{:else}
 							{#each paginatedMurid as murid, i (murid.id)}
-								<tr>
-									<td>{(currentPage - 1) * PER_PAGE + i + 1}</td>
-									<td>{@html searchQueryMarker(searchTerm || null, murid.nama)}</td>
-									<td>{murid.nisn ?? murid.nis ?? '-'}</td>
-									<td class="text-center">
-										<button
-											type="button"
-											class="btn btn-primary btn-soft btn-sm shadow-none"
-											disabled={downloadLoading}
-											onclick={() => onPreviewMurid(murid)}
-											title="Preview dokumen untuk {murid.nama}"
+								<tr class="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40">
+									<td class="px-3 py-2.5 text-slate-600 tabular-nums dark:text-zinc-400"
+										>{(currentPage - 1) * PER_PAGE + i + 1}</td
+									>
+									<td class="px-3 py-2.5 font-medium text-slate-900 dark:text-zinc-100"
+										>{@html searchQueryMarker(searchTerm || null, murid.nama)}</td
+									>
+									<td class="px-3 py-2.5 text-slate-700 tabular-nums dark:text-zinc-300"
+										>{murid.nisn ?? murid.nis ?? '-'}</td
+									>
+									<td class="px-3 py-2.5 text-center">
+										<a
+											href={buildMuridPreviewHref(murid.id)}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="inline-flex h-8 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+											title="Buka preview dokumen untuk {murid.nama} di tab baru"
 										>
-											<Icon name="eye" />
+											<Icon name="eye" class="h-3.5 w-3.5" />
 											Preview
-										</button>
+										</a>
 									</td>
 								</tr>
 							{/each}
@@ -575,24 +692,29 @@
 				</table>
 			</div>
 			{#if totalPages > 1}
-				<div class="join mt-2 self-center sm:mx-auto">
+				<div class="mt-1 flex flex-wrap items-center justify-center gap-1">
 					<button
 						type="button"
-						class="join-item btn btn-sm"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 						disabled={currentPage <= 1}
 						onclick={() => handlePageClick(currentPage - 1)}
 						aria-label="Halaman sebelumnya"
 					>
-						«
+						&laquo;
 					</button>
 					{#each nomorHalaman as nomor, index (index)}
 						{#if nomor === '…'}
-							<button type="button" class="join-item btn btn-sm" disabled>…</button>
+							<span
+								class="inline-flex h-8 min-w-8 items-center justify-center text-xs text-slate-400"
+								>…</span
+							>
 						{:else}
 							<button
 								type="button"
-								class="join-item btn btn-sm"
-								class:btn-active={nomor === currentPage}
+								class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-xs font-semibold tabular-nums transition-colors {nomor ===
+								currentPage
+									? 'border-blue-600 bg-blue-600 text-white'
+									: 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
 								onclick={() => handlePageClick(nomor)}
 								aria-current={nomor === currentPage ? 'page' : undefined}
 							>
@@ -602,12 +724,12 @@
 					{/each}
 					<button
 						type="button"
-						class="join-item btn btn-sm"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 						disabled={currentPage >= totalPages}
 						onclick={() => handlePageClick(currentPage + 1)}
 						aria-label="Halaman berikutnya"
 					>
-						»
+						&raquo;
 					</button>
 				</div>
 			{/if}
@@ -615,20 +737,26 @@
 	{/if}
 
 	{#if !selectedDocument}
-		<div class="alert alert-soft alert-info">
-			<Icon name="info" />
+		<div
+			class="flex items-center gap-2 rounded-xl border border-blue-200/80 bg-blue-50/80 px-3.5 py-3 text-xs text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 			<span>Pilih dokumen terlebih dahulu untuk melihat file yang ingin dicetak.</span>
 		</div>
 	{:else if (!showTable || isJurnalMengajar || isBukuTamu || isPresensiGuru || isLaporanTpp) && !isPiagamSelected}
 		<!-- no table shown for jurnal / buku tamu / presensi guru / laporan tpp -->
 	{:else if !hasMurid && !isPiagamSelected}
-		<div class="alert alert-soft alert-warning">
-			<Icon name="alert" />
+		<div
+			class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0" />
 			<span>Belum ada murid di kelas ini. Tambahkan murid terlebih dahulu.</span>
 		</div>
 	{:else if isPiagamSelected && !hasPiagamRankingOptions}
-		<div class="alert alert-soft alert-warning">
-			<Icon name="alert" />
+		<div
+			class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0" />
 			<span>Belum ada data peringkat piagam untuk kelas ini.</span>
 		</div>
 	{/if}

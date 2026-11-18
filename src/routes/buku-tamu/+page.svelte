@@ -188,11 +188,17 @@
 	const hasFilteredTamu = $derived(data.page.totalItems > 0);
 </script>
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="mb-4 flex items-start justify-between">
+<section
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div
+		class="mb-4 flex flex-col gap-1 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800"
+	>
 		<div>
-			<h2 class="text-xl font-bold">Buku Tamu</h2>
-			<p class="text-base-content/80 block text-sm">{data.tamuCount} data kunjungan</p>
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">Buku Tamu</h1>
+			<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+				{data.tamuCount} data kunjungan tercatat
+			</p>
 		</div>
 	</div>
 
@@ -204,82 +210,105 @@
 		spellcheck="false"
 		onsubmit={submitSearch}
 	>
-		<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
-			<Icon name="search" />
+		<div class="relative flex w-full items-center">
+			<span
+				aria-hidden="true"
+				class="pointer-events-none absolute left-3 flex items-center text-slate-400 dark:text-zinc-400"
+			>
+				<Icon name="search" class="h-3.5 w-3.5" />
+			</span>
 			<input
 				type="search"
 				name="q"
 				value={searchTerm}
 				placeholder="Cari nama tamu..."
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-8 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				oninput={handleSearchInput}
 				autocomplete="off"
 			/>
-		</label>
+		</div>
 	</form>
 
 	{#if !hasTamu}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
-			<span
-				>Belum ada data tamu. Arahkan tamu untuk membuka halaman <code
-					class="bg-warning p-1 rounded-sm text-base-content">ip:3000/tamu</code
+		<div
+			class="mt-5 flex items-start gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200"
+		>
+			<Icon name="alert" class="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+			<span class="leading-relaxed">
+				Belum ada data tamu. Arahkan tamu untuk membuka halaman
+				<code
+					class="rounded-md bg-amber-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-amber-900 dark:bg-amber-900/60 dark:text-amber-100"
+					>ip:3000/tamu</code
 				>
 				atau
-				<code class="bg-warning p-1 rounded-sm text-base-content">domain-sekolah.sch.id/tamu</code> untuk
-				mengisi buku tamu.</span
-			>
+				<code
+					class="rounded-md bg-amber-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-amber-900 dark:bg-amber-900/60 dark:text-amber-100"
+					>domain-sekolah.sch.id/tamu</code
+				>
+				untuk mengisi buku tamu.
+			</span>
 		</div>
 	{:else if !hasFilteredTamu}
-		<div class="alert alert-soft alert-info mt-6">
-			<Icon name="info" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/70 px-4 py-3 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 			<span>Tidak ada tamu yang cocok dengan pencarian.</span>
 		</div>
 	{:else}
 		<div
-			class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+			class="mt-4 overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 		>
-			<table class="border-base-200 table border dark:border-none">
+			<table class="w-full border-collapse text-xs">
 				<thead>
-					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-						<th style="width: 50px; min-width: 40px;">No</th>
-						<th style="min-width: 140px;">Nama</th>
-						<th style="min-width: 140px;">Asal/Instansi</th>
-						<th style="min-width: 120px;">Keperluan</th>
-						<th style="min-width: 100px;">Tanggal</th>
-						<th class="text-center" style="min-width: 100px;">Aksi</th>
+					<tr
+						class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+					>
+						<th class="w-12 px-3.5 py-2.5">No</th>
+						<th class="min-w-36 px-3.5 py-2.5">Nama</th>
+						<th class="min-w-36 px-3.5 py-2.5">Asal/Instansi</th>
+						<th class="min-w-32 px-3.5 py-2.5">Keperluan</th>
+						<th class="min-w-24 px-3.5 py-2.5">Tanggal</th>
+						<th class="w-24 px-3.5 py-2.5 text-center">Aksi</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 					{#each data.daftarTamu as tamu (tamu.id)}
-						<tr>
-							<td>{tamu.no}</td>
-							<td>{@html searchQueryMarker(data.page.search, tamu.nama)}</td>
-							<td>{tamu.asalInstansi}</td>
-							<td class="max-w-48 truncate">{tamu.keperluan}</td>
-							<td class="whitespace-nowrap">
+						<tr class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
+							<td class="px-3.5 py-2.5 text-slate-500 dark:text-zinc-400">{tamu.no}</td>
+							<td class="px-3.5 py-2.5 font-medium text-slate-900 dark:text-zinc-100">
+								{@html searchQueryMarker(data.page.search, tamu.nama)}
+							</td>
+							<td class="px-3.5 py-2.5 text-slate-600 dark:text-zinc-300">{tamu.asalInstansi}</td>
+							<td class="max-w-48 truncate px-3.5 py-2.5 text-slate-600 dark:text-zinc-300">
+								{tamu.keperluan}
+							</td>
+							<td class="px-3.5 py-2.5 whitespace-nowrap text-slate-600 dark:text-zinc-300">
 								{new Date(tamu.createdAt).toLocaleDateString('id-ID', {
 									day: 'numeric',
 									month: 'short',
 									year: 'numeric'
 								})}
 							</td>
-							<td class="text-center">
-								<div class="flex items-center justify-center gap-1">
+							<td class="px-3.5 py-2.5 text-center">
+								<div class="flex items-center justify-center gap-1.5">
 									<button
 										type="button"
-										class="btn btn-primary btn-soft btn-sm shadow-none"
+										class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-blue-200/80 bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950"
 										onclick={() => viewDetail(tamu)}
+										aria-label="Lihat detail"
 										title="Lihat detail"
 									>
-										<Icon name="eye" />
+										<Icon name="eye" class="h-3.5 w-3.5" />
 									</button>
 									<button
 										type="button"
-										class="btn btn-error btn-soft btn-sm shadow-none"
+										class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 										onclick={() => handleDelete(tamu)}
+										aria-label="Hapus"
 										title="Hapus"
 									>
-										<Icon name="del" />
+										<Icon name="del" class="h-3.5 w-3.5" />
 									</button>
 								</div>
 							</td>
@@ -289,18 +318,22 @@
 			</table>
 		</div>
 
-		<div class="join mx-auto mt-4">
-			{#each pages as pageNumber (pageNumber)}
-				<button
-					type="button"
-					class="join-item btn pointer-events-auto"
-					class:btn-active={pageNumber === currentPage}
-					onclick={() => handlePageClick(pageNumber)}
-					aria-current={pageNumber === currentPage ? 'page' : undefined}
-				>
-					{pageNumber}
-				</button>
-			{/each}
-		</div>
+		{#if pages.length > 1}
+			<div class="mt-4 flex flex-wrap items-center justify-center gap-1.5">
+				{#each pages as pageNumber (pageNumber)}
+					<button
+						type="button"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2.5 text-xs font-semibold transition-colors {pageNumber ===
+						currentPage
+							? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
+							: 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
+						onclick={() => handlePageClick(pageNumber)}
+						aria-current={pageNumber === currentPage ? 'page' : undefined}
+					>
+						{pageNumber}
+					</button>
+				{/each}
+			</div>
+		{/if}
 	{/if}
-</div>
+</section>

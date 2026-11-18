@@ -135,49 +135,55 @@
 </script>
 
 <div class="not-prose flex flex-col gap-4">
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">Nama Kegiatan</legend>
+	<label class="flex flex-col gap-1.5">
+		<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Nama Kegiatan</span>
 		<input
 			type="text"
-			class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+			class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 			bind:value={nama}
 			placeholder="Contoh: Literasi, Senam Pagi"
 			disabled={submitting}
 		/>
-	</fieldset>
+	</label>
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<fieldset class="fieldset min-w-0">
-			<legend class="fieldset-legend">Kode</legend>
+		<label class="flex min-w-0 flex-col gap-1.5">
+			<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Kode</span>
 			<input
 				type="text"
-				class="input bg-base-200 dark:bg-base-300 w-full uppercase dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 uppercase placeholder:text-slate-400 focus:border-blue-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				bind:value={kode}
 				oninput={normalizeKode}
 				placeholder="Contoh: LIT, SP"
 				maxlength={10}
 				disabled={submitting}
 			/>
-			<p class="label w-full text-wrap">Kode akan otomatis dikapitalisasi. Maksimal 10 karakter.</p>
-		</fieldset>
-		<fieldset class="fieldset min-w-0">
-			<legend class="fieldset-legend">Durasi (menit)</legend>
+			<p class="text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
+				Kode akan otomatis dikapitalisasi. Maksimal 10 karakter.
+			</p>
+		</label>
+		<label class="flex min-w-0 flex-col gap-1.5">
+			<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Durasi (menit)</span>
 			<input
 				type="number"
-				class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				bind:value={durasi}
 				placeholder="Contoh: 20"
 				min="1"
 				disabled={submitting}
 			/>
-			<p class="label w-full text-wrap">Opsional, kosongkan jika sama dengan 1 jam pelajaran</p>
-		</fieldset>
+			<p class="text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
+				Opsional, kosongkan jika sama dengan 1 jam pelajaran
+			</p>
+		</label>
 	</div>
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">Sound Kegiatan (opsional)</legend>
+	<fieldset class="space-y-1.5">
+		<legend class="text-xs font-medium text-slate-700 dark:text-zinc-300"
+			>Sound Kegiatan (opsional)</legend
+		>
 		<div class="flex items-center gap-2">
 			<input
 				type="file"
-				class="file-input file-input-soft bg-base-200 file-input-sm w-full dark:border-none"
+				class="file-input file-input-bordered file-input-sm w-full rounded-xl border-[#7e8b9b] bg-white text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				accept=".mp3,audio/mpeg"
 				onchange={handleFileSelect}
 				disabled={submitting}
@@ -185,15 +191,15 @@
 			{#if soundFileName}
 				<button
 					type="button"
-					class="btn btn-ghost btn-sm text-error shadow-none"
+					class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 					onclick={handleHapusSound}
 					aria-label="Hapus sound"
 				>
-					<Icon name="del" />
+					<Icon name="del" class="h-3.5 w-3.5" />
 				</button>
 			{/if}
 		</div>
-		<p class="label w-full text-wrap">
+		<p class="text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
 			MP3/audio, maksimal 2MB. Akan dibunyikan saat kegiatan ini dimulai.
 		</p>
 	</fieldset>

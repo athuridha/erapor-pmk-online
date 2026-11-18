@@ -206,7 +206,7 @@ export async function load({ locals, url, depends }) {
 				kodeRekening: row.kodeRekening,
 				tingkatBiaya: row.tingkatBiaya,
 				keteranganLain: row.keteranganLain,
-				namaLengkap: row.pegawai[0]?.nama ?? '—',
+				namaLengkap: row.pegawai[0]?.nama ?? '-',
 				jumlah: row.pegawai.length,
 				undanganFile: row.undanganFile,
 				pegawai: row.pegawai.map((p) => ({

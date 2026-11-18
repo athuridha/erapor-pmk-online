@@ -45,13 +45,19 @@
 </script>
 
 {#if previewError}
-	<div class="alert alert-error mt-6 flex items-center gap-2 text-sm">
-		<Icon name="error" />
+	<div
+		role="alert"
+		class="mt-6 flex items-center gap-3 rounded-2xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-xs font-medium text-red-900 dark:border-red-900/60 dark:bg-red-950/35 dark:text-red-200"
+	>
+		<Icon name="error" class="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
 		<span>{previewError}</span>
 	</div>
 {:else if previewDocument && previewData}
-	<div class="alert alert-info mt-6">
-		<Icon name="info" />
+	<div
+		role="status"
+		class="mt-6 flex items-center gap-3 rounded-2xl border border-blue-200/80 bg-blue-50/80 px-4 py-3 text-xs font-medium text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/35 dark:text-blue-200"
+	>
+		<Icon name="info" class="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 		<span>Pilih murid dan klik tombol "Unduh PDF" untuk mengunduh dokumen.</span>
 	</div>
 {/if}

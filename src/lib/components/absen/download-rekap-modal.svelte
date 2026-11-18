@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { hideModal } from '$lib/components/global-modal.svelte';
+	import Icon from '$lib/components/icon.svelte';
 	import { toast } from '$lib/components/toast.svelte';
 
 	const bulanList = [
@@ -68,28 +69,38 @@
 	});
 </script>
 
-<div class="not-prose flex flex-col gap-6">
+<div class="not-prose flex flex-col gap-5">
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<label class="fieldset flex flex-col gap-1">
-			<span class="fieldset-legend text-sm font-semibold">Bulan</span>
-			<select
-				class="select bg-base-200 dark:bg-base-300 w-full truncate dark:border-none"
-				bind:value={bulan}
+		<div>
+			<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">Bulan</span
 			>
-				{#each bulanList as nama, i (nama)}
-					<option value={i + 1}>{nama}</option>
-				{/each}
-			</select>
-		</label>
-		<label class="fieldset flex flex-col gap-1">
-			<span class="fieldset-legend text-sm font-semibold">Tahun</span>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					bind:value={bulan}
+				>
+					{#each bulanList as nama, i (nama)}
+						<option value={i + 1}>{nama}</option>
+					{/each}
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
+		</div>
+		<div>
+			<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">Tahun</span
+			>
 			<input
 				type="number"
-				class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				bind:value={tahun}
 				min="2000"
 				max="2099"
 			/>
-		</label>
+		</div>
 	</div>
 </div>

@@ -143,19 +143,25 @@
 {#if modalShown}
 	<dialog
 		bind:this={modal}
-		class="modal"
+		class="modal bg-slate-950/45 backdrop-blur-[2px]"
 		onkeydowncapture={handleDialogKeydown}
 		oncancel={handleDialogCancel}
 		onclose={clearModal}
 	>
-		<div class="modal-box flex max-h-[85vh] flex-col sm:w-full sm:max-w-2xl">
+		<div
+			class="modal-box flex max-h-[85vh] flex-col rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl sm:w-full sm:max-w-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		>
 			{#if modalProps.title}
-				<h3 class="shrink-0 text-lg font-bold">{modalProps.title}</h3>
+				<h3
+					class="shrink-0 border-b border-slate-100 pb-3 text-base font-bold text-slate-900 dark:border-zinc-800 dark:text-zinc-100"
+				>
+					{modalProps.title}
+				</h3>
 			{/if}
 
 			<div
-				class="min-h-0 w-full max-w-none flex-1 overflow-y-auto px-1 py-4 {modalProps.typography
-					? 'prose'
+				class="min-h-0 w-full max-w-none flex-1 overflow-y-auto px-1 py-4 text-sm text-slate-700 dark:text-zinc-300 {modalProps.typography
+					? 'prose dark:prose-invert'
 					: ''}"
 			>
 				{#if typeof modalProps.body === 'function'}
@@ -166,10 +172,15 @@
 			</div>
 
 			{#if modalProps.onPositive || modalProps.onNeutral || modalProps.onNegative || modalProps.onExtra}
-				<div class="modal-action shrink-0 {modalProps.spreadActions ? 'justify-between' : ''}">
+				<div
+					class="modal-action mt-0 shrink-0 border-t border-slate-100 pt-3 dark:border-zinc-800 {modalProps.spreadActions
+						? 'justify-between'
+						: ''}"
+				>
 					{#if modalProps.spreadActions && modalProps.onNeutral}
 						<button
-							class="btn {modalProps.onNeutral.class ?? 'btn-soft'} gap-2 shadow-none"
+							class="btn btn-sm rounded-xl {modalProps.onNeutral.class ??
+								'border border-[#7e8b9b] bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'} gap-2 shadow-none"
 							type="button"
 							onclick={() => {
 								if (modalProps?.onNeutral?.action) {
@@ -189,7 +200,8 @@
 					<div class="flex flex-wrap justify-end gap-2">
 						{#if modalProps.onNegative}
 							<button
-								class="btn {modalProps.onNegative.class ?? 'btn-soft'} gap-2 shadow-none"
+								class="btn btn-sm rounded-xl {modalProps.onNegative.class ??
+									'border border-[#7e8b9b] bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'} gap-2 shadow-none"
 								type="button"
 								onclick={() => {
 									if (modalProps?.onNegative?.action) {
@@ -208,7 +220,8 @@
 
 						{#if !modalProps.spreadActions && modalProps.onNeutral}
 							<button
-								class="btn {modalProps.onNeutral.class ?? 'btn-soft'} gap-2 shadow-none"
+								class="btn btn-sm rounded-xl {modalProps.onNeutral.class ??
+									'border border-[#7e8b9b] bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'} gap-2 shadow-none"
 								type="button"
 								onclick={() => {
 									if (modalProps?.onNeutral?.action) {
@@ -227,7 +240,8 @@
 
 						{#if modalProps.onExtra}
 							<a
-								class="btn {modalProps.onExtra.class ?? 'btn-soft'} gap-2 shadow-none"
+								class="btn btn-sm rounded-xl {modalProps.onExtra.class ??
+									'border border-[#7e8b9b] bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'} gap-2 shadow-none"
 								href={modalProps.onExtra.href}
 								target="_blank"
 								rel="noopener"
@@ -241,7 +255,8 @@
 
 						{#if modalProps.onPositive}
 							<button
-								class="btn {modalProps.onPositive.class ?? 'btn-primary'} gap-2 shadow-none"
+								class="btn btn-sm rounded-xl {modalProps.onPositive.class ??
+									'border-0 bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'} gap-2 shadow-none"
 								type="button"
 								disabled={isLoading}
 								onclick={() => {
@@ -277,7 +292,7 @@
 			{/if}
 		</div>
 		{#if modalProps.dismissible}
-			<form method="dialog" class="modal-backdrop">
+			<form method="dialog" class="modal-backdrop bg-transparent">
 				<button>close</button>
 			</form>
 		{/if}

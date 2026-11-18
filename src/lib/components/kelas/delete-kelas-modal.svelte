@@ -43,7 +43,7 @@
 </script>
 
 <dialog
-	class="modal"
+	class="modal bg-slate-950/45 backdrop-blur-[2px]"
 	bind:this={dialogEl}
 	aria-modal="true"
 	role="alertdialog"
@@ -51,82 +51,126 @@
 >
 	{#if targetKelas}
 		{@const kelas = targetKelas as KelasCard}
-		<div class="modal-box max-h-[85vh] w-full max-w-2xl overflow-hidden p-0 sm:max-h-[90vh]">
+		<div
+			class="modal-box max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-0 text-slate-900 shadow-2xl sm:max-h-[90vh] dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		>
 			<FormEnhance action="?/delete" onsuccess={handleDeleteSuccess}>
 				{#snippet children({ submitting })}
 					<input name="id" value={kelas.id} hidden />
 					<div class="flex max-h-[85vh] flex-col sm:max-h-[90vh]">
-						<header class="border-base-300 bg-base-100 shrink-0 border-b p-4">
+						<header
+							class="shrink-0 border-b border-slate-200/70 bg-white p-4 sm:px-5 dark:border-zinc-800 dark:bg-zinc-900"
+						>
 							<div class="flex items-start gap-3">
 								<span
-									class="bg-error/10 text-error flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+									class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400"
 									aria-hidden="true"
 								>
-									<Icon name="warning" class="text-xl" />
+									<Icon name="warning" class="h-5 w-5" />
 								</span>
-								<div class="flex flex-col gap-1">
-									<h3 class="text-xl font-bold">Hapus kelas?</h3>
-									<p class="text-base-content/70 text-sm">
-										Yakin ingin menghapus kelas <span class="font-semibold">{kelas.nama}</span> dari daftar
-										rombel?
+								<div class="flex flex-col gap-0.5">
+									<h3
+										class="text-base font-semibold tracking-tight text-slate-900 dark:text-zinc-100"
+									>
+										Hapus kelas?
+									</h3>
+									<p class="text-xs text-slate-500 dark:text-zinc-400">
+										Yakin ingin menghapus kelas <span
+											class="font-semibold text-slate-800 dark:text-zinc-200">{kelas.nama}</span
+										> dari daftar rombel?
 									</p>
 								</div>
 							</div>
 						</header>
-						<section class="flex-1 overflow-y-auto p-4">
+						<section class="flex-1 overflow-y-auto p-4 sm:p-5">
 							<div class="space-y-4">
-								<div class="space-y-1 text-sm">
-									<p class="text-base font-semibold">{kelas.nama}</p>
-									<p>Fase: {kelas.fase ?? '-'}</p>
-									<p>Tahun Ajaran: {kelas.tahunAjaran?.nama ?? '-'}</p>
-									<p>Semester: {kelas.semester?.nama ?? '-'}</p>
+								<div class="space-y-1 text-xs text-slate-600 dark:text-zinc-400">
+									<p class="text-sm font-semibold text-slate-900 dark:text-zinc-100">
+										{kelas.nama}
+									</p>
+									<p>
+										Fase: <span class="font-medium text-slate-800 dark:text-zinc-200"
+											>{kelas.fase ?? '-'}</span
+										>
+									</p>
+									<p>
+										Tahun Ajaran: <span class="font-medium text-slate-800 dark:text-zinc-200"
+											>{kelas.tahunAjaran?.nama ?? '-'}</span
+										>
+									</p>
+									<p>
+										Semester: <span class="font-medium text-slate-800 dark:text-zinc-200"
+											>{kelas.semester?.nama ?? '-'}</span
+										>
+									</p>
 								</div>
 
 								<div class="grid gap-3 sm:grid-cols-2">
 									<div
-										class="bg-base-200/70 dark:bg-base-300/60 border-base-300/60 rounded-lg border p-3"
+										class="rounded-xl border border-slate-200/80 bg-slate-50/65 p-3 dark:border-zinc-800 dark:bg-zinc-800/45"
 									>
-										<p class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+										<p
+											class="text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-zinc-400"
+										>
 											Jumlah Murid
 										</p>
-										<p class="text-base-content text-lg font-bold">{kelas.jumlahMurid}</p>
+										<p class="mt-0.5 text-lg font-bold text-slate-900 dark:text-zinc-100">
+											{kelas.jumlahMurid}
+										</p>
 									</div>
 									<div
-										class="bg-base-200/70 dark:bg-base-300/60 border-base-300/60 rounded-lg border p-3"
+										class="rounded-xl border border-slate-200/80 bg-slate-50/65 p-3 dark:border-zinc-800 dark:bg-zinc-800/45"
 									>
-										<p class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+										<p
+											class="text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-zinc-400"
+										>
 											Mata Pelajaran
 										</p>
-										<p class="text-base-content text-lg font-bold">{kelas.jumlahMapel}</p>
+										<p class="mt-0.5 text-lg font-bold text-slate-900 dark:text-zinc-100">
+											{kelas.jumlahMapel}
+										</p>
 									</div>
 									<div
-										class="bg-base-200/70 dark:bg-base-300/60 border-base-300/60 rounded-lg border p-3"
+										class="rounded-xl border border-slate-200/80 bg-slate-50/65 p-3 dark:border-zinc-800 dark:bg-zinc-800/45"
 									>
-										<p class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+										<p
+											class="text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-zinc-400"
+										>
 											Ekstrakurikuler
 										</p>
-										<p class="text-base-content text-lg font-bold">{kelas.jumlahEkstrakurikuler}</p>
+										<p class="mt-0.5 text-lg font-bold text-slate-900 dark:text-zinc-100">
+											{kelas.jumlahEkstrakurikuler}
+										</p>
 									</div>
 									<div
-										class="bg-base-200/70 dark:bg-base-300/60 border-base-300/60 rounded-lg border p-3"
+										class="rounded-xl border border-slate-200/80 bg-slate-50/65 p-3 dark:border-zinc-800 dark:bg-zinc-800/45"
 									>
-										<p class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+										<p
+											class="text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-zinc-400"
+										>
 											Kokurikuler
 										</p>
-										<p class="text-base-content text-lg font-bold">{kelas.jumlahKokurikuler}</p>
+										<p class="mt-0.5 text-lg font-bold text-slate-900 dark:text-zinc-100">
+											{kelas.jumlahKokurikuler}
+										</p>
 									</div>
 								</div>
 
 								{#if needsPurgeAck}
-									<div class="alert alert-warning">
-										<Icon name="warning" />
+									<div
+										class="flex items-start gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-3.5 py-2.5 text-xs leading-relaxed text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+									>
+										<Icon
+											name="warning"
+											class="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400"
+										/>
 										<span>
 											Kelas masih memiliki relasi data. Centang persetujuan untuk menghapus seluruh
 											data berikut secara permanen.
 										</span>
 									</div>
 									<div
-										class="bg-base-200/70 dark:bg-base-300/60 border-base-300/60 text-base-content/70 space-y-3 rounded-lg border p-4 text-sm"
+										class="space-y-3 rounded-xl border border-slate-200/80 bg-slate-50/65 p-4 text-xs text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/45 dark:text-zinc-300"
 									>
 										<ul class="ml-5 list-disc space-y-1">
 											<li>Seluruh murid dalam kelas</li>
@@ -137,42 +181,50 @@
 												Data orang tua/wali murid beserta alamat yang hanya dimiliki kelas ini
 											</li>
 										</ul>
-										<label class="bg-error/5 text-error flex items-start gap-3 rounded-lg p-3">
+										<label
+											class="flex cursor-pointer items-start gap-2.5 rounded-xl border border-red-200/80 bg-red-50/75 p-3 text-red-700 dark:border-red-900/60 dark:bg-red-950/35 dark:text-red-300"
+										>
 											<input
 												type="checkbox"
-												class="checkbox checkbox-error mt-1"
+												class="checkbox checkbox-sm mt-0.5 rounded border-red-400 checked:border-red-600 checked:bg-red-600 checked:text-white"
 												name="forceDelete"
 												value="true"
 												bind:checked={purgeAck}
 												required
 											/>
-											<span
+											<span class="leading-relaxed"
 												>Saya paham tindakan ini tidak dapat dibatalkan dan ingin menghapus seluruh
 												data tersebut secara permanen.</span
 											>
 										</label>
 									</div>
 								{:else}
-									<p class="text-base-content/70 text-sm">
+									<p class="text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
 										Tindakan ini akan menghapus data kelas secara permanen, termasuk wali kelas,
 										data orang tua/wali murid, serta alamat yang hanya dimiliki kelas ini.
 									</p>
 								{/if}
 							</div>
 						</section>
-						<footer class="border-base-300 bg-base-100 shrink-0 border-t p-4">
-							<div class="modal-action">
-								<button class="btn btn-soft shadow-none sm:w-auto" type="button" onclick={close}>
+						<footer
+							class="shrink-0 border-t border-slate-200/70 bg-white p-4 sm:px-5 dark:border-zinc-800 dark:bg-zinc-900"
+						>
+							<div class="flex items-center justify-end gap-2">
+								<button
+									class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-4 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 sm:w-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+									type="button"
+									onclick={close}
+								>
 									Batal
 								</button>
 								<button
-									class="btn btn-error btn-soft shadow-none sm:w-auto"
+									class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-red-200/80 bg-red-50 px-4 text-xs font-medium text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 									disabled={submitting || (needsPurgeAck && !purgeAck)}
 								>
 									{#if submitting}
-										<div class="loading loading-spinner"></div>
+										<span class="loading loading-spinner loading-xs"></span>
 									{:else}
-										<Icon name="del" />
+										<Icon name="del" class="h-3.5 w-3.5" />
 									{/if}
 									Hapus
 								</button>
@@ -182,7 +234,7 @@
 				{/snippet}
 			</FormEnhance>
 		</div>
-		<form method="dialog" class="modal-backdrop">
+		<form method="dialog" class="modal-backdrop bg-transparent">
 			<button>close</button>
 		</form>
 	{/if}

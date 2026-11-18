@@ -43,20 +43,22 @@
 	<td class="align-top">
 		<input
 			type="checkbox"
-			class="checkbox"
+			class="checkbox checkbox-sm rounded border-[#7e8b9b] checked:border-blue-600 checked:bg-blue-600 checked:text-white dark:border-zinc-600"
 			aria-label={`Pilih lingkup materi ${group.lingkupMateri}`}
 			checked={isSelected}
 			onchange={handleSelectionChange}
 			disabled={areActionsDisabled}
 		/>
 	</td>
-	<td class="align-top">{rowNumber}</td>
-	<td class="align-top">{group.lingkupMateri}</td>
+	<td class="align-top text-xs text-slate-500 dark:text-zinc-400">{rowNumber}</td>
+	<td class="align-top text-xs font-medium text-slate-900 dark:text-zinc-100">
+		{group.lingkupMateri}
+	</td>
 	<td class="align-top">
 		{#if isEditingBobot}
 			<input
 				type="number"
-				class="input bg-base-200 dark:bg-base-300 input-bordered input-sm w-full shadow-none"
+				class="h-8 w-full rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				min="0"
 				max="100"
 				step="0.01"
@@ -64,25 +66,29 @@
 				oninput={handleBobotChange}
 			/>
 		{:else}
-			<span class="font-semibold">{bobotDisplayValue}</span>
+			<span class="text-xs font-semibold text-slate-800 dark:text-zinc-200"
+				>{bobotDisplayValue}</span
+			>
 		{/if}
 	</td>
 	<td class="align-top">
 		<div class="flex flex-col gap-2.5">
 			{#each group.items as item, itemIndex (item.id)}
 				<div class="flex items-start gap-2">
-					<span class="text-base-content/70 w-5 shrink-0 text-sm font-semibold pt-0.5">
+					<span class="w-5 shrink-0 pt-0.5 text-xs font-semibold text-slate-500 dark:text-zinc-400">
 						{itemIndex + 1}.
 					</span>
-					<div class="flex flex-col gap-1 flex-1">
-						<span class="leading-snug">{item.deskripsi}</span>
+					<div class="flex flex-1 flex-col gap-1">
+						<span class="text-xs leading-snug text-slate-700 dark:text-zinc-300"
+							>{item.deskripsi}</span
+						>
 						{#if item.teknikPenilaian}
 							<div class="flex items-center gap-1.5 pt-0.5">
 								<span
-									class="badge badge-xs badge-info badge-outline font-semibold gap-1 py-1"
+									class="inline-flex items-center gap-1 rounded-full border border-blue-200/80 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-300"
 									title={`Teknik Penilaian: ${item.teknikPenilaian.nama}`}
 								>
-									<span class="font-bold">{item.teknikPenilaian.singkatan}</span>
+									<span class="font-semibold">{item.teknikPenilaian.singkatan}</span>
 									<span class="opacity-60">•</span>
 									<span>{item.teknikPenilaian.nama}</span>
 								</span>
@@ -94,24 +100,26 @@
 		</div>
 	</td>
 	<td class="align-top">
-		<div class="flex flex-col gap-2">
+		<div class="flex flex-col gap-1.5">
 			<button
-				class="btn btn-sm btn-soft shadow-none"
+				class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#7e8b9b] bg-white text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 				type="button"
 				title="Edit lingkup dan tujuan pembelajaran"
 				onclick={onEdit}
 				disabled={areActionsDisabled}
+				aria-disabled={areActionsDisabled}
 			>
-				<Icon name="edit" />
+				<Icon name="edit" class="h-3.5 w-3.5" />
 			</button>
 			<button
-				class="btn btn-sm btn-soft btn-error shadow-none"
+				class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 				type="button"
 				title="Hapus lingkup dan tujuan pembelajaran"
 				onclick={onDelete}
 				disabled={areActionsDisabled}
+				aria-disabled={areActionsDisabled}
 			>
-				<Icon name="del" />
+				<Icon name="del" class="h-3.5 w-3.5" />
 			</button>
 		</div>
 	</td>

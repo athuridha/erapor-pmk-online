@@ -17,22 +17,40 @@
 
 <FormEnhance action="?/delete" onsuccess={handleDeleteSuccess} showToast={false}>
 	{#snippet children({ submitting })}
-		<h3 class="mb-4 text-xl font-bold">Hapus data murid?</h3>
-		<p>NIS: {data.murid.nis}</p>
-		<p>NISN: {data.murid.nisn}</p>
-		<p>Nama: <b>{data.murid.nama}</b></p>
+		<h2 class="mb-3 text-lg font-bold tracking-tight text-red-700 dark:text-red-400">
+			Hapus data murid?
+		</h2>
+		<div
+			class="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/70 dark:text-zinc-300"
+		>
+			<p><span class="font-medium text-slate-500 dark:text-zinc-400">NIS:</span> {data.murid.nis ?? '-'}</p>
+			<p><span class="font-medium text-slate-500 dark:text-zinc-400">NISN:</span> {data.murid.nisn ?? '-'}</p>
+			<p>
+				<span class="font-medium text-slate-500 dark:text-zinc-400">Nama:</span>
+				<strong class="text-slate-900 dark:text-zinc-100">{data.murid.nama}</strong>
+			</p>
+		</div>
 
-		<div class="mt-4 flex justify-end gap-2">
-			<button class="btn btn-soft shadow-none" type="button" onclick={() => history.back()}>
-				<Icon name="close" />
+		<div
+			class="mt-4 flex justify-end gap-2 border-t border-slate-200 pt-3 dark:border-zinc-800"
+		>
+			<button
+				class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+				type="button"
+				onclick={() => history.back()}
+			>
+				<Icon name="close" class="h-3.5 w-3.5" />
 				Batal
 			</button>
 
-			<button class="btn btn-error btn-soft shadow-none" disabled={submitting}>
+			<button
+				class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-red-600 px-3.5 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+				disabled={submitting}
+			>
 				{#if submitting}
-					<div class="loading loading-spinner"></div>
+					<span class="loading loading-spinner loading-sm"></span>
 				{:else}
-					<Icon name="del" />
+					<Icon name="del" class="h-3.5 w-3.5" />
 				{/if}
 				Hapus
 			</button>

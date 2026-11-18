@@ -3,14 +3,14 @@
 	import { touchDragSource } from '$lib/touch-drag.svelte';
 
 	const badgeColors = [
-		'badge-neutral',
-		'badge-primary',
-		'badge-secondary',
-		'badge-accent',
-		'badge-info',
-		'badge-success',
-		'badge-warning',
-		'badge-error'
+		'border-slate-200/80 bg-slate-100 text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200',
+		'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300',
+		'border-indigo-200/80 bg-indigo-50 text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/50 dark:text-indigo-300',
+		'border-violet-200/80 bg-violet-50 text-violet-700 dark:border-violet-900/50 dark:bg-violet-950/50 dark:text-violet-300',
+		'border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-900/50 dark:bg-sky-950/50 dark:text-sky-300',
+		'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300',
+		'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300',
+		'border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300'
 	];
 
 	let {
@@ -63,11 +63,14 @@
 		const map: Record<string, string> = {};
 		allKodes.forEach((kode, i) => {
 			if (kode === 'UPB') {
-				map[kode] = 'badge-warning';
+				map[kode] =
+					'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300';
 			} else if (kode === 'IST') {
-				map[kode] = 'badge-success';
+				map[kode] =
+					'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300';
 			} else if (kode === 'PLG') {
-				map[kode] = 'badge-error';
+				map[kode] =
+					'border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300';
 			} else {
 				map[kode] = badgeColors[i % badgeColors.length];
 			}
@@ -90,18 +93,26 @@
 	let activeTab = $state<string | number>('umum');
 </script>
 
-<select
-	class="select select-sm bg-base-200 dark:bg-base-300 dark:border-none mb-3 w-full"
-	bind:value={activeTab}
->
-	<option value="umum">Umum</option>
-	{#each kodeMapelPerKelas as kelasGroup (kelasGroup.kelasId)}
-		<option value={kelasGroup.kelasId}>{kelasGroup.namaKelas}</option>
-	{/each}
-	{#if kodeKokurikuler.length > 0}
-		<option value="ekstra">Ekstra</option>
-	{/if}
-</select>
+<div class="relative mb-3 flex items-center">
+	<select
+		class="h-8 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+		bind:value={activeTab}
+	>
+		<option value="umum">Umum</option>
+		{#each kodeMapelPerKelas as kelasGroup (kelasGroup.kelasId)}
+			<option value={kelasGroup.kelasId}>{kelasGroup.namaKelas}</option>
+		{/each}
+		{#if kodeKokurikuler.length > 0}
+			<option value="ekstra">Ekstra</option>
+		{/if}
+	</select>
+	<span
+		aria-hidden="true"
+		class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+	>
+		<Icon name="down" class="h-3.5 w-3.5" />
+	</span>
+</div>
 
 {#if activeTab === 'umum'}
 	<div class="flex flex-wrap gap-1.5">
@@ -109,7 +120,10 @@
 			<span
 				role="button"
 				tabindex="-1"
-				class="badge {kodeColorMap[kode] ?? 'badge-info'} badge-soft cursor-grab"
+				class="inline-flex cursor-grab items-center rounded-lg border px-2 py-1 text-xs font-semibold {kodeColorMap[
+					kode
+				] ??
+					'border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-900/50 dark:bg-sky-950/50 dark:text-sky-300'}"
 				draggable="true"
 				ondragstart={(e) => handleDragStart(e, kode)}
 				ondragend={() => onDragEnd?.()}
@@ -122,7 +136,10 @@
 			<span
 				role="button"
 				tabindex="-1"
-				class="badge {kodeColorMap[kegiatan.kode] ?? 'badge-secondary'} badge-soft cursor-grab"
+				class="inline-flex cursor-grab items-center gap-1 rounded-lg border px-2 py-1 text-xs font-semibold {kodeColorMap[
+					kegiatan.kode
+				] ??
+					'border-indigo-200/80 bg-indigo-50 text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/50 dark:text-indigo-300'}"
 				draggable="true"
 				ondragstart={(e) => handleDragStart(e, kegiatan.kode)}
 				ondragend={() => onDragEnd?.()}
@@ -135,7 +152,7 @@
 				{#if canManage}
 					<button
 						type="button"
-						class="btn btn-xs btn-ghost hover:text-info ml-0.5 h-4 w-4 p-0 shadow-none"
+						class="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded transition-colors hover:bg-black/10 hover:text-blue-600 dark:hover:bg-white/10"
 						onclick={() => onEditKegiatan?.(kegiatan)}
 						aria-label="Edit {kegiatan.kode}"
 					>
@@ -143,7 +160,7 @@
 					</button>
 					<button
 						type="button"
-						class="btn btn-xs btn-ghost hover:text-error h-4 w-4 p-0 shadow-none"
+						class="inline-flex h-4 w-4 items-center justify-center rounded transition-colors hover:bg-black/10 hover:text-red-600 dark:hover:bg-white/10"
 						onclick={() => onHapusKegiatan(kegiatan.kode)}
 						aria-label="Hapus {kegiatan.kode}"
 					>
@@ -159,7 +176,10 @@
 			<span
 				role="button"
 				tabindex="-1"
-				class="badge {kodeColorMap[kode] ?? 'badge-accent'} badge-soft cursor-grab"
+				class="inline-flex cursor-grab items-center rounded-lg border px-2 py-1 text-xs font-semibold {kodeColorMap[
+					kode
+				] ??
+					'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300'}"
 				draggable="true"
 				ondragstart={(e) => handleDragStart(e, kode)}
 				ondragend={() => onDragEnd?.()}
@@ -177,7 +197,10 @@
 					<span
 						role="button"
 						tabindex="-1"
-						class="badge {kodeColorMap[kode] ?? 'badge-primary'} badge-soft cursor-grab"
+						class="inline-flex cursor-grab items-center rounded-lg border px-2 py-1 text-xs font-semibold {kodeColorMap[
+							kode
+						] ??
+							'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300'}"
 						draggable="true"
 						ondragstart={(e) => handleDragStart(e, kode, kelasGroup.kelasId)}
 						ondragend={() => onDragEnd?.()}

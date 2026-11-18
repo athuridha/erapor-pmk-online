@@ -1,12 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/icon.svelte';
-	import { createEventDispatcher } from 'svelte';
-
-	const emit = createEventDispatcher<{
-		toggleAdd: void;
-		clearCompleted: void;
-		clearAll: void;
-	}>();
+	import { onMount } from 'svelte';
 
 	let {
 		isAdding = false,
@@ -15,7 +9,12 @@
 		showInitialSpinner = false,
 		hasCompletedTasks = false,
 		hasAnyTasks = false,
-		kelasLabel = null
+		kelasLabel = null,
+		showCloseButton = false,
+		onToggleAdd = () => {},
+		onClearCompleted = () => {},
+		onClearAll = () => {},
+		onClose = () => {}
 	} = $props<{
 		isAdding?: boolean;
 		isProcessing?: boolean;
@@ -24,67 +23,125 @@
 		hasCompletedTasks?: boolean;
 		hasAnyTasks?: boolean;
 		kelasLabel?: string | null;
+		showCloseButton?: boolean;
+		onToggleAdd?: () => void;
+		onClearCompleted?: () => void;
+		onClearAll?: () => void;
+		onClose?: () => void;
 	}>();
+
+	let menuOpen = $state(false);
+
+	onMount(() => {
+		const closeOnOutside = (e: MouseEvent) => {
+			const target = e.target as HTMLElement | null;
+			if (!target?.closest('.task-header-menu')) {
+				menuOpen = false;
+			}
+		};
+		window.addEventListener('click', closeOnOutside);
+		return () => window.removeEventListener('click', closeOnOutside);
+	});
 </script>
 
-<div class="flex flex-col gap-1 p-4">
-	<div class="flex flex-row items-center">
-		<h2 class="text-sm font-bold">Daftar tugas</h2>
+<div class="flex flex-col gap-1.5 border-b border-slate-200 px-4 py-3.5 dark:border-zinc-800">
+	<div class="flex items-center gap-2">
+		<h2 class="text-base font-semibold tracking-tight text-slate-900 dark:text-zinc-100">
+			Daftar Tugas
+		</h2>
 		{#if showInitialSpinner}
-			<span class="loading loading-spinner loading-xs text-primary ml-2" aria-hidden="true"></span>
+			<span
+				class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent dark:border-blue-400"
+				aria-hidden="true"
+			></span>
 		{/if}
 		<div class="flex-1"></div>
-		<div class="join">
+		<div class="flex items-center gap-1.5">
 			<button
 				type="button"
-				class="btn btn-sm join-item btn-soft {isAdding ? 'btn-error' : ''} shadow-none"
-				onclick={() => emit('toggleAdd')}
-				title={isAdding ? 'Batalkan tambah tugas' : 'Tambah tugas'}
+				class="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors disabled:opacity-50 {isAdding
+					? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/60 dark:text-red-300'
+					: 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'}"
+				onclick={onToggleAdd}
+				title={isAdding ? 'Batalkan tambah tugas' : 'Tambah tugas baru'}
+				aria-label={isAdding ? 'Batalkan tambah tugas' : 'Tambah tugas baru'}
 				disabled={isProcessing || !canManage}
 				aria-disabled={isProcessing || !canManage}
 			>
-				<Icon name={isAdding ? 'close' : 'plus'} />
+				<span aria-hidden="true">
+					<Icon name={isAdding ? 'close' : 'plus'} class="h-3.5 w-3.5" />
+				</span>
+				<span>{isAdding ? 'Batal' : 'Tambah'}</span>
 			</button>
-			<div class="dropdown dropdown-end">
-				<div
-					tabindex="0"
-					role="button"
-					title="Tombol hapus"
-					class="join-item btn btn-sm shadow-none"
+
+			<div class="task-header-menu relative">
+				<button
+					type="button"
+					title="Opsi hapus tugas"
+					aria-label="Opsi hapus tugas"
+					aria-expanded={menuOpen}
+					disabled={!hasAnyTasks || isProcessing || !canManage}
+					aria-disabled={!hasAnyTasks || isProcessing || !canManage}
+					onclick={(e) => {
+						e.stopPropagation();
+						menuOpen = !menuOpen;
+					}}
+					class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 				>
-					<Icon name="del" class="text-error" />
-					<Icon name="collapse-all" class="text-error" />
-				</div>
-				<ul
-					class="border-base-300 menu dropdown-content bg-base-100 rounded-box z-1 mt-2 w-43 border p-2 shadow-md"
-				>
-					<li>
+					<span aria-hidden="true">
+						<Icon name="more-vertical" class="h-4 w-4" />
+					</span>
+				</button>
+
+				{#if menuOpen}
+					<div
+						class="absolute right-0 z-20 mt-1.5 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
+						role="menu"
+					>
 						<button
 							type="button"
-							class="btn btn-ghost btn-sm justify-start"
-							onclick={() => emit('clearCompleted')}
+							role="menuitem"
+							class="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-40 dark:text-zinc-200 dark:hover:bg-zinc-800"
+							onclick={() => {
+								menuOpen = false;
+								onClearCompleted();
+							}}
 							disabled={!hasCompletedTasks || isProcessing || !canManage}
 						>
 							Hapus tugas selesai
 						</button>
-					</li>
-					<li>
 						<button
 							type="button"
-							class="btn btn-ghost btn-sm text-error justify-start"
-							onclick={() => emit('clearAll')}
+							role="menuitem"
+							class="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-950/50"
+							onclick={() => {
+								menuOpen = false;
+								onClearAll();
+							}}
 							disabled={!hasAnyTasks || isProcessing || !canManage}
 						>
 							Hapus semua tugas
 						</button>
-					</li>
-				</ul>
+					</div>
+				{/if}
 			</div>
+
+			{#if showCloseButton}
+				<button
+					type="button"
+					class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+					onclick={onClose}
+					title="Tutup panel tugas"
+					aria-label="Tutup panel tugas"
+				>
+					<span aria-hidden="true"><Icon name="close" class="h-4 w-4" /></span>
+				</button>
+			{/if}
 		</div>
 	</div>
 	{#if kelasLabel}
-		<p class="text-base-content/60 truncate text-xs" title={kelasLabel}>
-			Kelas aktif: {kelasLabel.slice(0, 15)}{kelasLabel.length > 15 ? '…' : ''}
+		<p class="truncate text-xs text-slate-600 dark:text-zinc-400" title={kelasLabel}>
+			Kelas aktif: <span class="font-semibold text-slate-900 dark:text-zinc-100">{kelasLabel}</span>
 		</p>
 	{/if}
 </div>

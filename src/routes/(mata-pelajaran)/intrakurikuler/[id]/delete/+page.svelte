@@ -46,15 +46,35 @@
 	}}
 >
 	{#snippet children({ submitting })}
-		<h3 class="mb-4 text-xl font-bold">Hapus data mata pelajaran:</h3>
-		<p>Nama: {data.mapel.nama}</p>
-		<p>KKM: {data.mapel.kkm}</p>
-		<p>Jenis: {getJenisMapelLabel(data.mapel.jenis)}</p>
+		<h3 class="mb-3 text-base font-bold text-slate-900 dark:text-zinc-100">
+			Hapus Data Mata Pelajaran
+		</h3>
+		<dl
+			class="space-y-1.5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs dark:border-zinc-800 dark:bg-zinc-800/60"
+		>
+			<div class="flex justify-between gap-2">
+				<dt class="text-slate-500 dark:text-zinc-400">Nama</dt>
+				<dd class="font-semibold text-slate-900 dark:text-zinc-100">{data.mapel.nama}</dd>
+			</div>
+			<div class="flex justify-between gap-2">
+				<dt class="text-slate-500 dark:text-zinc-400">KKM</dt>
+				<dd class="font-semibold text-slate-900 tabular-nums dark:text-zinc-100">{data.mapel.kkm}</dd>
+			</div>
+			<div class="flex justify-between gap-2">
+				<dt class="text-slate-500 dark:text-zinc-400">Jenis</dt>
+				<dd class="font-semibold text-slate-900 dark:text-zinc-100">
+					{getJenisMapelLabel(data.mapel.jenis)}
+				</dd>
+			</div>
+		</dl>
 
 		{#if isAgamaMapel}
-			<div class="alert alert-warning mt-4 items-start gap-3" role="alert">
-				<Icon name="warning" />
-				<div class="space-y-1 text-sm">
+			<div
+				class="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+				role="alert"
+			>
+				<Icon name="warning" class="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+				<div class="space-y-1">
 					<p class="font-semibold">Perhatian: mata pelajaran ini memiliki perlakuan khusus.</p>
 					<p>
 						Terdapat beberapa sub-mata pelajaran Pendidikan Agama
@@ -69,37 +89,41 @@
 		{/if}
 
 		<!-- Konfirmasi eksplisit sebelum menghapus -->
-		<div class="form-control mt-4">
-			<label class="label cursor-pointer gap-3">
-				<input
-					type="checkbox"
-					class="checkbox"
-					name="confirm"
-					bind:checked={confirmDelete}
-					value="1"
-				/>
-				<span class="label-text text-sm text-wrap"
-					>Saya mengerti bahwa menghapus mata pelajaran ini akan menghapus Tujuan Pembelajaran dan
-					data terkait.</span
-				>
-			</label>
-		</div>
+		<label
+			class="mt-4 flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+		>
+			<input
+				type="checkbox"
+				class="checkbox checkbox-sm mt-0.5"
+				name="confirm"
+				bind:checked={confirmDelete}
+				value="1"
+			/>
+			<span>
+				Saya mengerti bahwa menghapus mata pelajaran ini akan menghapus Tujuan Pembelajaran dan data
+				terkait.
+			</span>
+		</label>
 
-		<div class="mt-4 flex justify-end gap-2">
-			<button class="btn btn-soft shadow-none mr-auto" type="button" onclick={() => history.back()}>
-				<Icon name="close" />
+		<div class="mt-5 flex items-center justify-between gap-2 border-t border-slate-200 pt-3 dark:border-zinc-800">
+			<button
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+				type="button"
+				onclick={() => history.back()}
+			>
+				<Icon name="close" class="h-4 w-4" />
 				Batal
 			</button>
 
 			<button
-				class="btn btn-error btn-soft shadow-none"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-red-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
 				type="submit"
 				disabled={submitting || !confirmDelete}
 			>
 				{#if submitting}
-					<div class="loading loading-spinner"></div>
+					<span class="loading loading-spinner loading-xs"></span>
 				{:else}
-					<Icon name="del" />
+					<Icon name="del" class="h-4 w-4" />
 				{/if}
 				Hapus
 			</button>

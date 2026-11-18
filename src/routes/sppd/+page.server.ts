@@ -222,7 +222,7 @@ export async function load({ locals, url, depends }) {
 			kodeRekening: row.kodeRekening,
 			tingkatBiaya: row.tingkatBiaya,
 			keteranganLain: row.keteranganLain,
-			namaLengkap: pegawai[0]?.nama ?? '—',
+			namaLengkap: pegawai[0]?.nama ?? '-',
 			jumlah: pegawai.length,
 			undanganFile: row.undanganFile,
 			pegawai,

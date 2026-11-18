@@ -92,11 +92,16 @@
 </script>
 
 <div class="relative">
-	<label class="input bg-base-200 w-full dark:border-none">
-		<Icon name="search" />
+	<div class="relative flex items-center">
+		<span
+			aria-hidden="true"
+			class="pointer-events-none absolute left-3 flex items-center text-slate-400 dark:text-zinc-400"
+		>
+			<Icon name="search" class="h-3.5 w-3.5" />
+		</span>
 		<input
 			type="search"
-			class="w-full grow bg-transparent outline-none"
+			class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-8 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 			placeholder="Ketik nama murid atau pilih di sini"
 			autocomplete="off"
 			role="combobox"
@@ -118,33 +123,36 @@
 			onblur={() => (daftarTerbuka = false)}
 			onkeydown={onKeydown}
 		/>
-	</label>
+	</div>
 	{#if daftarTerbuka && muridTersaring.length > 0}
 		<ul
 			id="daftar-murid-formulir"
 			role="listbox"
-			class="bg-base-200 absolute z-50 mt-1 max-h-60 w-full list-none overflow-y-auto rounded-box p-1 shadow-lg"
+			class="absolute z-50 mt-1.5 max-h-60 w-full list-none overflow-y-auto rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
 		>
 			{#each muridTersaring.slice(0, MAX_OPSI) as opsi, i (opsi.id)}
 				<li id={`picker-murid-opsi-${i}`} role="option" aria-selected={i === indeksSorot}>
 					<button
 						type="button"
-						class="w-full truncate rounded px-2 py-1.5 text-left text-sm transition-colors duration-200 hover:bg-base-content/10 {i ===
+						class="flex w-full items-center truncate rounded-lg px-2.5 py-2 text-left text-xs text-slate-800 transition-colors hover:bg-blue-50/70 hover:text-blue-700 dark:text-zinc-200 dark:hover:bg-blue-950/40 dark:hover:text-blue-300 {i ===
 						indeksSorot
-							? 'bg-base-content/10'
+							? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
 							: ''}"
 						onmousedown={(e) => e.preventDefault()}
 						onclick={() => pilihMurid(opsi)}
 					>
 						{#if opsi.id === muridId}
-							<Icon name="check" class="mr-1.5 inline size-4" />
+							<Icon
+								name="check"
+								class="mr-1.5 inline size-3.5 shrink-0 text-blue-600 dark:text-blue-400"
+							/>
 						{/if}
-						{opsi.nama}
+						<span class="truncate">{opsi.nama}</span>
 					</button>
 				</li>
 			{/each}
 			{#if muridTersaring.length > MAX_OPSI}
-				<li class="px-2 py-1 text-sm opacity-60">
+				<li class="px-2.5 py-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
 					{muridTersaring.length - MAX_OPSI} lainnya. Ketik untuk mempersempit.
 				</li>
 			{/if}
@@ -152,16 +160,16 @@
 	{:else if daftarTerbuka && muridLoading}
 		<ul
 			role="listbox"
-			class="bg-base-200 absolute z-50 mt-1 w-full list-none rounded-box p-2 shadow-lg"
+			class="absolute z-50 mt-1.5 w-full list-none rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
 		>
-			<li class="text-sm opacity-60">Memuat...</li>
+			<li class="text-xs text-slate-500 dark:text-zinc-400">Memuat...</li>
 		</ul>
 	{:else if daftarTerbuka}
 		<ul
 			role="listbox"
-			class="bg-base-200 absolute z-50 mt-1 w-full list-none rounded-box p-2 shadow-lg"
+			class="absolute z-50 mt-1.5 w-full list-none rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
 		>
-			<li class="text-sm opacity-60">Murid tidak ditemukan.</li>
+			<li class="text-xs text-slate-500 dark:text-zinc-400">Murid tidak ditemukan.</li>
 		</ul>
 	{/if}
 </div>

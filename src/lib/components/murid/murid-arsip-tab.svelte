@@ -161,19 +161,24 @@
 <div class="space-y-4">
 	<div class="flex flex-wrap items-start justify-between gap-3">
 		<div>
-			<p class="font-semibold">Arsip dokumen murid</p>
-			<p class="text-base-content/60 mt-1 text-sm">
+			<p class="text-sm font-semibold text-slate-900 dark:text-zinc-100">Arsip dokumen murid</p>
+			<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
 				Simpan berkas penting dalam format PDF, JPG, atau PNG. Maksimal 4MB per berkas.
 			</p>
 		</div>
 		{#if status === 'lulus'}
-			<span class="badge badge-success badge-soft">Murid lulus</span>
+			<span
+				class="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300"
+				>Murid lulus</span
+			>
 		{/if}
 	</div>
 
 	{#if !canEdit}
-		<div class="alert alert-info alert-soft text-sm">
-			<Icon name="info" />
+		<div
+			class="flex items-start gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/80 px-3.5 py-2.5 text-xs text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200"
+		>
+			<Icon name="info" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 			<span
 				>Akun ini hanya dapat melihat arsip. Hubungi admin untuk mengunggah atau mengganti berkas.</span
 			>
@@ -185,76 +190,90 @@
 			{@const entry = entryFor(item.jenis)}
 			{@const terkunci = item.hanyaLulus && status !== 'lulus'}
 			<article
-				class="rounded-xl border border-base-300 bg-base-100 p-4 {terkunci
+				class="rounded-2xl border border-slate-200/80 bg-white p-4 transition-colors dark:border-zinc-800 dark:bg-zinc-900 {terkunci
 					? 'opacity-60'
-					: 'hover:border-primary/40'}"
+					: 'hover:border-blue-300 dark:hover:border-blue-800'}"
 			>
 				<div class="flex items-start gap-3">
 					<span
-						class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"
+						class="grid size-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
 					>
-						<Icon name={terkunci ? 'lock' : 'folder'} />
+						<Icon name={terkunci ? 'lock' : 'folder'} class="h-4 w-4" />
 					</span>
 					<div class="min-w-0 flex-1">
-						<p class="text-sm font-semibold">{item.label}</p>
-						<p class="text-base-content/55 mt-0.5 text-xs leading-5">{item.description}</p>
+						<p class="text-xs font-semibold text-slate-900 dark:text-zinc-100">{item.label}</p>
+						<p class="mt-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
+							{item.description}
+						</p>
 					</div>
 				</div>
 
 				{#if terkunci}
-					<p class="mt-4 rounded-lg bg-base-200 px-3 py-2 text-xs text-base-content/60">
-						Ubah status murid menjadi <strong>Lulus</strong> di form data murid untuk membuka arsip ijazah
-						sekolah.
+					<p
+						class="mt-4 rounded-xl border border-slate-200/70 bg-slate-50/75 px-3 py-2 text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/45 dark:text-zinc-400"
+					>
+						Ubah status murid menjadi <strong class="text-slate-700 dark:text-zinc-200"
+							>Lulus</strong
+						> di form data murid untuk membuka arsip ijazah sekolah.
 					</p>
 				{:else if entry}
-					<div class="mt-4 rounded-lg bg-base-200/70 px-3 py-2">
-						<p class="truncate text-xs font-medium" title={entry.namaFile}>{entry.namaFile}</p>
-						<p class="text-base-content/50 mt-0.5 text-[11px]">{sizeLabel(entry.ukuran)}</p>
+					<div
+						class="mt-4 rounded-xl border border-slate-200/70 bg-slate-50/75 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/45"
+					>
+						<p
+							class="truncate text-xs font-medium text-slate-800 dark:text-zinc-200"
+							title={entry.namaFile}
+						>
+							{entry.namaFile}
+						</p>
+						<p class="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
+							{sizeLabel(entry.ukuran)}
+						</p>
 					</div>
 					<div class="mt-3 flex flex-wrap gap-1.5">
 						<a
-							class="btn btn-xs btn-soft"
+							class="inline-flex h-7 items-center gap-1 rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-[11px] font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							href={`/api/murid-arsip/${muridId}?jenis=${encodeURIComponent(item.jenis)}`}
 							target="_blank"
 							rel="noopener"
 						>
-							<Icon name="eye" />
+							<Icon name="eye" class="h-3 w-3" />
 							Lihat
 						</a>
 						<a
-							class="btn btn-xs btn-soft"
+							class="inline-flex h-7 items-center gap-1 rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-[11px] font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							href={`/api/murid-arsip/${muridId}?jenis=${encodeURIComponent(item.jenis)}&download=1`}
 							target="_blank"
 							rel="noopener"
 						>
-							<Icon name="download" />
+							<Icon name="download" class="h-3 w-3" />
 							Unduh
 						</a>
 						{#if canEdit}
 							<button
-								class="btn btn-xs btn-soft"
+								class="inline-flex h-7 items-center gap-1 rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-[11px] font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 								type="button"
 								onclick={() => pickFile(item.jenis)}
 							>
-								<Icon name="edit" />
+								<Icon name="edit" class="h-3 w-3" />
 								Ganti
 							</button>
 							<button
-								class="btn btn-xs btn-soft btn-error"
+								class="inline-flex h-7 items-center gap-1 rounded-lg border border-red-200/80 bg-red-50 px-2.5 text-[11px] font-medium text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 								type="button"
 								disabled={deletingJenis === item.jenis}
 								onclick={() => confirmDelete(item.jenis, item.label)}
 							>
-								<Icon name="del" />
+								<Icon name="del" class="h-3 w-3" />
 								Hapus
 							</button>
 						{/if}
 					</div>
 				{:else}
-					<p class="text-base-content/45 mt-4 text-xs">Belum ada berkas.</p>
+					<p class="mt-4 text-xs text-slate-400 dark:text-zinc-500">Belum ada berkas.</p>
 					{#if canEdit}
 						<button
-							class="btn btn-sm btn-primary btn-soft mt-3 shadow-none"
+							class="mt-3 inline-flex h-8 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
 							type="button"
 							disabled={uploading}
 							onclick={() => pickFile(item.jenis)}
@@ -262,7 +281,7 @@
 							{#if uploading && uploadJenis === item.jenis}
 								<span class="loading loading-spinner loading-xs"></span>
 							{:else}
-								<Icon name="import" />
+								<Icon name="import" class="h-3.5 w-3.5" />
 							{/if}
 							Unggah
 						</button>

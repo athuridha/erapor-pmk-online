@@ -33,21 +33,23 @@
 </script>
 
 <div
-	class="bg-base-100 dark:bg-base-200 border-base-200 mt-2 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+	class="mt-2 overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 >
-	<table class="border-base-200 table border dark:border-none">
+	<table class="w-full border-collapse text-xs">
 		<thead>
-			<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-				<th style="width: 40px; min-width: 40px;">No</th>
-				<th class="w-full" style="min-width: 220px;">Jenis Tes</th>
-				<th style="min-width: 140px;">Nilai</th>
+			<tr
+				class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+			>
+				<th class="w-12 min-w-10 px-3.5 py-2.5">No</th>
+				<th class="w-full min-w-52 px-3.5 py-2.5">Jenis Tes</th>
+				<th class="min-w-36 px-3.5 py-2.5">Nilai</th>
 			</tr>
 		</thead>
-		<tbody>
-			<tr>
-				<td>1</td>
-				<td>{tesLabel}</td>
-				<td>
+		<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
+			<tr class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
+				<td class="px-3.5 py-2.5 text-slate-500 dark:text-zinc-400">1</td>
+				<td class="px-3.5 py-2.5 font-medium text-slate-900 dark:text-zinc-100">{tesLabel}</td>
+				<td class="px-3.5 py-2.5">
 					<input
 						type="number"
 						name={`${namePrefix}Tes`}
@@ -64,10 +66,10 @@
 					/>
 				</td>
 			</tr>
-			<tr>
-				<td>2</td>
-				<td>{nonTesLabel}</td>
-				<td>
+			<tr class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
+				<td class="px-3.5 py-2.5 text-slate-500 dark:text-zinc-400">2</td>
+				<td class="px-3.5 py-2.5 font-medium text-slate-900 dark:text-zinc-100">{nonTesLabel}</td>
+				<td class="px-3.5 py-2.5">
 					<input
 						type="number"
 						name={`${namePrefix}NonTes`}

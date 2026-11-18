@@ -97,127 +97,182 @@
 
 <input id="sumatif-bobot-modal" type="checkbox" class="modal-toggle" bind:checked={open} hidden />
 <div
-	class="modal"
+	class="modal bg-slate-950/45 backdrop-blur-[2px]"
+	class:modal-open={open}
 	aria-hidden={!open}
 	onclick={(e) => {
 		if (e.target === e.currentTarget) close();
 	}}
 >
-	<div class="modal-box max-w-lg">
-		<h3 class="text-lg font-bold">Atur Bobot Default - Sumatif</h3>
-		<p class="text-base-content/70 text-sm">
-			Atur distribusi bobot default untuk perhitungan nilai akhir sumatif.
-		</p>
-
-		<div role="tablist" class="tabs tabs-box mt-4">
-			<input
-				type="radio"
-				name="sumatif-bobot-tab"
-				class="tab"
-				aria-label="Rapor Akhir Semester"
-				bind:group={activeTab}
-				value="ras"
-			/>
-			<div class="tab-content p-4">
-				<div class="grid grid-cols-1 gap-3">
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Lingkup Materi (%)</legend>
-						<input
-							type="number"
-							min="0"
-							max="100"
-							class="input dark:bg-base-300 w-full dark:border-none"
-							bind:value={lingkupLocal}
-							disabled={loading || saving}
-						/>
-					</fieldset>
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Sumatif Tengah Semester (STS) (%)</legend>
-						<input
-							type="number"
-							min="0"
-							max="100"
-							class="input dark:bg-base-300 w-full dark:border-none"
-							bind:value={stsLocal}
-							disabled={loading || saving}
-						/>
-					</fieldset>
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Sumatif Akhir Semester (SAS) (%)</legend>
-						<input
-							type="number"
-							min="0"
-							max="100"
-							class="input dark:bg-base-300 w-full dark:border-none"
-							bind:value={sasLocal}
-							disabled={loading || saving}
-						/>
-					</fieldset>
-				</div>
-			</div>
-			<input
-				type="radio"
-				name="sumatif-bobot-tab"
-				class="tab"
-				aria-label="Rapor Tengah Semester"
-				bind:group={activeTab}
-				value="rts"
-			/>
-			<div class="tab-content p-4">
-				<div class="grid grid-cols-1 gap-3">
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Lingkup Materi (%)</legend>
-						<input
-							type="number"
-							min="0"
-							max="100"
-							class="input dark:bg-base-300 w-full dark:border-none"
-							bind:value={lingkupRtsLocal}
-							disabled={loading || saving}
-						/>
-					</fieldset>
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Sumatif Tengah Semester (STS) (%)</legend>
-						<input
-							type="number"
-							min="0"
-							max="100"
-							class="input dark:bg-base-300 w-full dark:border-none"
-							bind:value={stsRtsLocal}
-							disabled={loading || saving}
-						/>
-					</fieldset>
-				</div>
-			</div>
-		</div>
-
-		<div class="mt-4 text-sm">
-			{#if loading}
-				<p class="text-base-content/70 text-sm">Memuat bobot...</p>
-			{/if}
-			<p>
-				Total: <strong>{currentTotal}%</strong>
+	<div
+		class="modal-box max-w-lg rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+	>
+		<div class="border-b border-slate-100 pb-3 dark:border-zinc-800">
+			<h3 class="text-base font-bold text-slate-900 dark:text-zinc-100">
+				Atur Bobot Default - Sumatif
+			</h3>
+			<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+				Atur distribusi bobot default untuk perhitungan nilai akhir sumatif.
 			</p>
-			{#if error}
-				<p class="text-error mt-2">{error}</p>
-			{:else if !isComplete}
-				<p class="text-warning mt-2">Perhatian: jumlah bobot belum 100%.</p>
-			{/if}
 		</div>
 
-		<div class="modal-action">
-			<button type="button" class="btn btn-soft shadow-none max-sm:me-auto" onclick={close}>
-				<Icon name="left" />Batal
+		<div
+			role="tablist"
+			class="mt-4 inline-flex w-full rounded-xl border border-slate-200/80 bg-slate-50 p-1 dark:border-zinc-700 dark:bg-zinc-800"
+		>
+			<button
+				type="button"
+				role="tab"
+				aria-selected={activeTab === 'ras'}
+				class="flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors {activeTab ===
+				'ras'
+					? 'bg-blue-600 text-white shadow-xs dark:bg-blue-500'
+					: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'}"
+				onclick={() => (activeTab = 'ras')}
+			>
+				Rapor Akhir Semester
 			</button>
 			<button
 				type="button"
-				class="btn btn-soft btn-error shadow-none sm:ml-auto"
+				role="tab"
+				aria-selected={activeTab === 'rts'}
+				class="flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors {activeTab ===
+				'rts'
+					? 'bg-blue-600 text-white shadow-xs dark:bg-blue-500'
+					: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'}"
+				onclick={() => (activeTab = 'rts')}
+			>
+				Rapor Tengah Semester
+			</button>
+		</div>
+
+		<div class="mt-4 space-y-3">
+			{#if activeTab === 'ras'}
+				<div>
+					<label
+						for="bobot-ras-lingkup"
+						class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					>
+						Lingkup Materi (%)
+					</label>
+					<input
+						id="bobot-ras-lingkup"
+						type="number"
+						min="0"
+						max="100"
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						bind:value={lingkupLocal}
+						disabled={loading || saving}
+					/>
+				</div>
+				<div>
+					<label
+						for="bobot-ras-sts"
+						class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					>
+						Sumatif Tengah Semester (STS) (%)
+					</label>
+					<input
+						id="bobot-ras-sts"
+						type="number"
+						min="0"
+						max="100"
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						bind:value={stsLocal}
+						disabled={loading || saving}
+					/>
+				</div>
+				<div>
+					<label
+						for="bobot-ras-sas"
+						class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					>
+						Sumatif Akhir Semester (SAS) (%)
+					</label>
+					<input
+						id="bobot-ras-sas"
+						type="number"
+						min="0"
+						max="100"
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						bind:value={sasLocal}
+						disabled={loading || saving}
+					/>
+				</div>
+			{:else}
+				<div>
+					<label
+						for="bobot-rts-lingkup"
+						class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					>
+						Lingkup Materi (%)
+					</label>
+					<input
+						id="bobot-rts-lingkup"
+						type="number"
+						min="0"
+						max="100"
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						bind:value={lingkupRtsLocal}
+						disabled={loading || saving}
+					/>
+				</div>
+				<div>
+					<label
+						for="bobot-rts-sts"
+						class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					>
+						Sumatif Tengah Semester (STS) (%)
+					</label>
+					<input
+						id="bobot-rts-sts"
+						type="number"
+						min="0"
+						max="100"
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						bind:value={stsRtsLocal}
+						disabled={loading || saving}
+					/>
+				</div>
+			{/if}
+		</div>
+
+		<div class="mt-4 text-xs">
+			{#if loading}
+				<p class="text-slate-500 dark:text-zinc-400">Memuat bobot...</p>
+			{/if}
+			<p class="text-slate-700 dark:text-zinc-300">
+				Total: <strong class="text-slate-900 dark:text-zinc-100">{currentTotal}%</strong>
+			</p>
+			{#if error}
+				<p class="mt-1.5 font-medium text-red-600 dark:text-red-400">{error}</p>
+			{:else if !isComplete}
+				<p class="mt-1.5 font-medium text-amber-600 dark:text-amber-400">
+					Perhatian: jumlah bobot belum 100%.
+				</p>
+			{/if}
+		</div>
+
+		<div
+			class="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4 dark:border-zinc-800"
+		>
+			<button
+				type="button"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 max-sm:me-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+				onclick={close}
+			>
+				<Icon name="left" class="h-3.5 w-3.5" />
+				Batal
+			</button>
+			<button
+				type="button"
+				class="inline-flex h-9 items-center justify-center rounded-xl border border-red-200/80 bg-red-50 px-3.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 sm:ml-auto dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 				onclick={reset}
 				disabled={saving}>Reset</button
 			>
 			<button
 				type="button"
-				class="btn btn-primary shadow-none"
+				class="inline-flex h-9 items-center justify-center rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
 				onclick={save}
 				disabled={saving || !isComplete}
 			>

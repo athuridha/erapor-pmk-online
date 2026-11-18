@@ -7,7 +7,9 @@
 	let { data } = $props();
 
 	const isEditMode = $derived(!!data.userDetail);
-	const guruName = $derived(data.userDetail?.pegawaiName?.trim() ?? '');
+	const guruName = $derived(
+		(data.userDetail?.namaLengkap ?? data.userDetail?.pegawaiName ?? '').trim()
+	);
 	const pageTitle = $derived(
 		isEditMode ? `Edit Pengguna${guruName ? `: ${guruName}` : ''}` : 'Tambah Pengguna'
 	);
@@ -30,6 +32,11 @@
 			desc: 'Kelola satu kelas penuh: semua mapel, catatan, rapor.'
 		},
 		{
+			value: 'pembina_eskul',
+			label: 'Pembina Eskul (Eksternal)',
+			desc: 'Kelola TP & nilai ekstrakurikuler binaan tanpa masuk daftar pegawai.'
+		},
+		{
 			value: 'operator',
 			label: 'Operator',
 			desc: 'Mengelola data master, presensi guru, dan administrasi sekolah.'
@@ -47,7 +54,7 @@
 	] as const;
 
 	// svelte-ignore state_referenced_locally
-	let nama = $state(data.userDetail?.pegawaiName ?? '');
+	let nama = $state(data.userDetail?.namaLengkap ?? data.userDetail?.pegawaiName ?? '');
 	// svelte-ignore state_referenced_locally
 	let nik = $state(data.userDetail?.pegawaiNik ?? '');
 	// svelte-ignore state_referenced_locally
@@ -92,6 +99,15 @@
 	});
 
 	/** Gabungkan izin default dari semua role yang dicentang. */
+	function handleRoleChange(changedRole: string, checked: boolean) {
+		if (changedRole === 'pembina_eskul' && checked) {
+			roles = ['pembina_eskul'];
+		} else if (changedRole !== 'pembina_eskul' && checked) {
+			roles = roles.filter((r) => r !== 'pembina_eskul');
+		}
+		applyRoleTemplates();
+	}
+
 	function applyRoleTemplates() {
 		const templateKeys: string[] = [];
 		if (rolesSet.has('admin')) templateKeys.push('admin');
@@ -99,6 +115,7 @@
 		if (rolesSet.has('operator')) templateKeys.push('admin');
 		if (rolesSet.has('wali_kelas')) templateKeys.push('wali_kelas');
 		if (rolesSet.has('guru')) templateKeys.push('user');
+		if (rolesSet.has('pembina_eskul')) templateKeys.push('pembina_eskul');
 		const merged = new Set<string>();
 		for (const key of templateKeys) {
 			for (const permission of defaultPermissionsByType[key as AuthUser['type']] ?? []) {
@@ -106,7 +123,7 @@
 			}
 		}
 		permissions = merged;
-		if (isAdminRole) {
+		if (isAdminRole || rolesSet.has('pembina_eskul')) {
 			mataPelajaranIds = new Set<number>();
 			kelasIds = new Set<number>();
 		}
@@ -204,71 +221,88 @@
 	}
 </script>
 
-<section class="card bg-base-100 mx-auto w-full rounded-lg border border-none p-6 shadow-md">
-	<header class="mb-6">
-		<div>
-			<h1 class="text-2xl font-bold">{pageTitle}</h1>
-			<p class="text-base-content/70 mt-1 text-sm">{pageDesc}</p>
-		</div>
+<section
+	class="mx-auto w-full rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<header class="mb-5 border-b border-slate-200 pb-4 dark:border-zinc-800">
+		<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">{pageTitle}</h1>
+		<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">{pageDesc}</p>
 	</header>
 
-	<FormEnhance action="?/save" onsuccess={() => goto('/master-data/pengguna/guru')}>
+	<FormEnhance action="?/save" onsuccess={() => goto('/master-data/pengguna')}>
 		{#snippet children({ submitting })}
 			<div class="space-y-4">
 				<!-- Sekolah -->
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend">Sekolah</legend>
-					<select
-						id="form-sekolah"
-						class="select bg-base-200 dark:bg-base-300 w-full truncate dark:border-none"
-						name="sekolahId"
-						bind:value={sekolahId}
-						onchange={() => {
-							kelasIds = new Set<number>();
-						}}
-					>
-						<option disabled selected={sekolahId === ''} value="">Pilih Sekolah</option>
-						{#if data.sekolahList && data.sekolahList.length}
-							{#each data.sekolahList as s (s.id)}
-								<option value={s.id}>{s.nama}</option>
-							{/each}
-						{:else}
-							<option disabled>- tidak ada sekolah -</option>
-						{/if}
-					</select>
-					<p class="label text-wrap">
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Sekolah</span>
+					<div class="relative flex items-center">
+						<select
+							id="form-sekolah"
+							class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+							name="sekolahId"
+							bind:value={sekolahId}
+							onchange={() => {
+								kelasIds = new Set<number>();
+							}}
+						>
+							<option disabled selected={sekolahId === ''} value="">Pilih Sekolah</option>
+							{#if data.sekolahList && data.sekolahList.length}
+								{#each data.sekolahList as s (s.id)}
+									<option value={s.id}>{s.nama}</option>
+								{/each}
+							{:else}
+								<option disabled>- tidak ada sekolah -</option>
+							{/if}
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
+					</div>
+					<span class="text-xs text-slate-500 dark:text-zinc-400">
 						Opsional: kaitkan pengguna ke sekolah tertentu sehingga saat login sekolah aktif bisa
 						disesuaikan.
-					</p>
-				</fieldset>
+					</span>
+				</label>
 
 				<!-- Mata Pelajaran Collapse -->
-				<details class="bg-base-200 border-base-300 collapse-arrow collapse">
-					<summary class="collapse-title font-semibold">
+				<details
+					class="collapse-arrow collapse rounded-xl border border-slate-200 bg-slate-50/70 dark:border-zinc-800 dark:bg-zinc-800/40"
+				>
+					<summary class="collapse-title text-sm font-semibold text-slate-900 dark:text-zinc-100">
 						Mata Pelajaran
 						{#if isAdminRole}
-							<span class="badge badge-sm badge-ghost text-xs ml-1"
+							<span
+								class="ml-1.5 inline-flex items-center rounded bg-slate-200/80 px-1.5 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-zinc-700 dark:text-zinc-200"
 								>Opsional untuk {adminRoleLabel}</span
 							>
 						{/if}
 						{#if mataPelajaranIds.size > 0}
-							<span class="badge badge-sm badge-primary ml-1">{mataPelajaranIds.size}</span>
+							<span
+								class="ml-1.5 inline-flex items-center rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700 tabular-nums dark:bg-blue-950/60 dark:text-blue-300"
+								>{mataPelajaranIds.size}</span
+							>
 						{/if}
 					</summary>
-					<div class="collapse-content text-sm">
-						<div class="space-y-3">
+					<div class="collapse-content text-xs">
+						<div class="space-y-3 pt-1">
 							{#if isAdminRole}
 								<div
-									class="alert alert-info bg-info/10 text-info-content border-info/20 text-xs py-2"
+									class="flex items-start gap-2 rounded-xl border border-blue-200/80 bg-blue-50/75 px-3 py-2 text-xs text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200"
 								>
-									<Icon name="info" class="w-4 h-4 shrink-0 text-info" />
+									<Icon
+										name="info"
+										class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"
+									/>
 									<span>
 										Role <strong>{adminRoleLabel}</strong> memiliki akses manajerial penuh ke seluruh
 										mata pelajaran. Bagian ini tidak perlu diisi.
 									</span>
 								</div>
 							{:else}
-								<p class="text-xs opacity-75">
+								<p class="text-xs text-slate-600 dark:text-zinc-400">
 									Pilih satu atau lebih mata pelajaran yang diajari. Khusus role "Wali Kelas" skip
 									langkah ini, karena bawaan Wali Kelas sudah punya akses ke semua mata pelajaran.
 								</p>
@@ -276,7 +310,7 @@
 							{#if mataPelajaranIds.size > 0}
 								<button
 									type="button"
-									class="btn btn-xs btn-outline btn-error shadow-none"
+									class="inline-flex h-7 items-center rounded-lg border border-red-300 bg-red-50 px-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
 									onclick={clearMapel}
 								>
 									Kosongkan pilihan mata pelajaran
@@ -285,56 +319,71 @@
 							{#if filteredMataPelajaran.length > 0}
 								<div class="space-y-2">
 									{#each filteredMataPelajaran as m (m.id)}
-										<label class="flex cursor-pointer gap-2">
+										<label
+											class="flex cursor-pointer items-center gap-2 text-slate-800 dark:text-zinc-200"
+										>
 											<input
 												type="checkbox"
-												class="checkbox checkbox-sm"
+												class="checkbox checkbox-sm rounded border-[#7e8b9b] checked:border-blue-600 checked:bg-blue-600 checked:text-white dark:border-zinc-600"
 												checked={mataPelajaranIds.has(m.id)}
 												onchange={() => toggleMapel(m.id)}
 											/>
-											<span class="text-sm">{m.nama}</span>
+											<span class="text-xs">{m.nama}</span>
 										</label>
 									{/each}
 								</div>
 							{:else}
-								<p class="text-xs opacity-75">- tidak ada mata pelajaran -</p>
+								<p class="text-xs text-slate-500 dark:text-zinc-400">
+									- tidak ada mata pelajaran -
+								</p>
 							{/if}
 						</div>
 					</div>
 				</details>
 
 				<!-- Kelas Collapse -->
-				<details class="bg-base-200 border-base-300 collapse-arrow collapse">
-					<summary class="collapse-title font-semibold">
+				<details
+					class="collapse-arrow collapse rounded-xl border border-slate-200 bg-slate-50/70 dark:border-zinc-800 dark:bg-zinc-800/40"
+				>
+					<summary class="collapse-title text-sm font-semibold text-slate-900 dark:text-zinc-100">
 						Kelas
 						{#if isAdminRole}
-							<span class="badge badge-sm badge-ghost text-xs ml-1"
+							<span
+								class="ml-1.5 inline-flex items-center rounded bg-slate-200/80 px-1.5 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-zinc-700 dark:text-zinc-200"
 								>Opsional untuk {adminRoleLabel}</span
 							>
 						{/if}
 						{#if visibleKelasCount > 0}
-							<span class="badge badge-sm badge-secondary ml-1">{visibleKelasCount}</span>
+							<span
+								class="ml-1.5 inline-flex items-center rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700 tabular-nums dark:bg-blue-950/60 dark:text-blue-300"
+								>{visibleKelasCount}</span
+							>
 						{/if}
 					</summary>
-					<div class="collapse-content text-sm">
-						<div class="space-y-3">
+					<div class="collapse-content text-xs">
+						<div class="space-y-3 pt-1">
 							{#if isAdminRole}
 								<div
-									class="alert alert-info bg-info/10 text-info-content border-info/20 text-xs py-2"
+									class="flex items-start gap-2 rounded-xl border border-blue-200/80 bg-blue-50/75 px-3 py-2 text-xs text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200"
 								>
-									<Icon name="info" class="w-4 h-4 shrink-0 text-info" />
+									<Icon
+										name="info"
+										class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"
+									/>
 									<span>
 										Role <strong>{adminRoleLabel}</strong> memiliki akses ke semua kelas. Bagian ini tidak
 										perlu dipilih jika tidak merangkap wali kelas.
 									</span>
 								</div>
 							{:else}
-								<p class="text-xs opacity-75">Pilih satu atau lebih kelas yang bisa diakses</p>
+								<p class="text-xs text-slate-600 dark:text-zinc-400">
+									Pilih satu atau lebih kelas yang bisa diakses
+								</p>
 							{/if}
 							{#if visibleKelasCount > 0}
 								<button
 									type="button"
-									class="btn btn-xs btn-outline btn-error shadow-none"
+									class="inline-flex h-7 items-center rounded-lg border border-red-300 bg-red-50 px-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
 									onclick={clearKelas}
 								>
 									Kosongkan pilihan kelas
@@ -342,35 +391,42 @@
 							{/if}
 							{#if filteredKelasList.length > 0}
 								<div class="space-y-2">
-									<label class="bg-base-300 flex cursor-pointer gap-2 rounded p-2 font-semibold">
+									<label
+										class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 font-semibold text-slate-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+									>
 										<input
 											type="checkbox"
-											class="checkbox checkbox-sm"
+											class="checkbox checkbox-sm rounded border-[#7e8b9b] checked:border-blue-600 checked:bg-blue-600 checked:text-white dark:border-zinc-600"
 											checked={allKelasSelected}
 											onchange={toggleSelectAllKelas}
 										/>
-										<span class="text-sm">Pilih Semua</span>
+										<span class="text-xs">Pilih Semua</span>
 									</label>
 									{#each filteredKelasList as k (k.id)}
-										<label class="flex cursor-pointer gap-2">
+										<label
+											class="flex cursor-pointer items-center gap-2 text-slate-800 dark:text-zinc-200"
+										>
 											<input
 												type="checkbox"
-												class="checkbox checkbox-sm"
+												class="checkbox checkbox-sm rounded border-[#7e8b9b] checked:border-blue-600 checked:bg-blue-600 checked:text-white dark:border-zinc-600"
 												checked={kelasIds.has(k.id)}
 												onchange={() => toggleKelas(k.id)}
 											/>
-											<span class="text-sm">
+											<span class="text-xs">
 												{k.nama}
 												{#if k.fase}({k.fase}){/if}
 												{#if waliKelasIdSet.has(k.id)}
-													<span class="badge badge-sm badge-primary ml-1">wali</span>
+													<span
+														class="ml-1 inline-flex items-center rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300"
+														>wali</span
+													>
 												{/if}
 											</span>
 										</label>
 									{/each}
 								</div>
 							{:else}
-								<p class="text-xs opacity-75">- tidak ada kelas -</p>
+								<p class="text-xs text-slate-500 dark:text-zinc-400">- tidak ada kelas -</p>
 							{/if}
 						</div>
 					</div>
@@ -378,92 +434,122 @@
 
 				<!-- Nama + Role -->
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Nama</legend>
+					<label class="flex flex-col gap-1.5 sm:col-span-2">
+						<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Nama</span>
 						<input
 							id="form-nama"
 							required
-							class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 							name="nama"
 							bind:value={nama}
 							placeholder="Contoh: Bruce Wayne, Bat."
 						/>
-						<p class="label text-wrap">Nama lengkap pengguna dan gelar</p>
-					</fieldset>
+						<span class="text-xs text-slate-500 dark:text-zinc-400"
+							>Nama lengkap pengguna dan gelar</span
+						>
+					</label>
 
 					<!-- Role (checkbox, boleh dikombinasi) -->
-					<fieldset class="fieldset sm:col-span-2">
-						<legend class="fieldset-legend">Role</legend>
+					<div class="flex flex-col gap-1.5 sm:col-span-2">
+						<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Role</span>
 						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
 							{#each ROLE_OPTIONS as role (role.value)}
 								<label
-									class="bg-base-200 dark:bg-base-300 flex cursor-pointer items-start gap-2 rounded-lg p-2.5"
+									class="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/70 p-3 transition-colors hover:border-blue-300 dark:border-zinc-800 dark:bg-zinc-800/40 dark:hover:border-blue-800"
 								>
 									<input
 										type="checkbox"
-										class="checkbox checkbox-primary checkbox-sm mt-0.5"
+										class="checkbox checkbox-sm mt-0.5 rounded border-[#7e8b9b] checked:border-blue-600 checked:bg-blue-600 checked:text-white dark:border-zinc-600"
 										name="roles"
 										bind:group={roles}
 										value={role.value}
-										onchange={applyRoleTemplates}
+										onchange={(e) => handleRoleChange(role.value, e.currentTarget.checked)}
 									/>
 									<span>
-										<span class="text-sm font-semibold">{role.label}</span>
-										<span class="block text-xs opacity-70">{role.desc}</span>
+										<span class="text-xs font-bold text-slate-900 dark:text-zinc-100"
+											>{role.label}</span
+										>
+										<span
+											class="mt-0.5 block text-[11px] leading-snug text-slate-600 dark:text-zinc-400"
+											>{role.desc}</span
+										>
 									</span>
 								</label>
 							{/each}
 						</div>
-						<p class="label text-wrap">
+						<p class="text-xs text-slate-500 dark:text-zinc-400">
 							Centang lebih dari satu untuk akun peran ganda (contoh: operator yang juga guru atau
 							wali kelas).
 						</p>
 						{#if roleHint}
-							<p class="label text-wrap font-medium text-info">{roleHint}</p>
+							<p class="text-xs font-medium text-sky-700 dark:text-sky-400">{roleHint}</p>
 						{/if}
-					</fieldset>
+					</div>
 				</div>
 
-				<!-- NIK -->
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend">NIK Guru</legend>
-					<input
-						id="form-nik"
-						type="text"
-						inputmode="numeric"
-						maxlength="16"
-						class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
-						name="nik"
-						bind:value={nik}
-						placeholder="16 digit NIK"
-					/>
-					<p class="label text-wrap">
-						Dipakai guru untuk masuk ke e-Rapor. Kosongkan jika akun ini hanya memakai nama pengguna
-						(mis. admin).
-					</p>
-				</fieldset>
+				{#if rolesSet.has('pembina_eskul')}
+					<div
+						class="flex items-start gap-2 rounded-xl border border-blue-200/80 bg-blue-50/75 px-3.5 py-2.5 text-xs text-blue-950 dark:border-blue-900/50 dark:bg-blue-950/35 dark:text-blue-200"
+					>
+						<Icon name="info" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+						<span>
+							Akun <strong>Pembina Eskul (Eksternal)</strong> masuk menggunakan
+							<strong>Nama Pengguna</strong>, tidak memerlukan NIK/pegawai sekolah, dan hanya
+							mengelola ekstrakurikuler yang ditugaskan.
+						</span>
+					</div>
+				{:else}
+					<!-- NIK -->
+					<label class="flex flex-col gap-1.5">
+						<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">NIK Guru</span>
+						<input
+							id="form-nik"
+							type="text"
+							inputmode="numeric"
+							maxlength="16"
+							class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+							name="nik"
+							bind:value={nik}
+							placeholder="16 digit NIK"
+						/>
+						<span class="text-xs text-slate-500 dark:text-zinc-400">
+							Dipakai guru untuk masuk ke e-Rapor. Kosongkan jika akun ini hanya memakai nama
+							pengguna (mis. admin).
+						</span>
+					</label>
+				{/if}
 
 				<!-- Akun -->
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend">Akun</legend>
+				<div class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Akun</span>
 					<div class="flex flex-col gap-2 sm:flex-row">
-						<label class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none">
-							<Icon name="user" />
+						<div
+							class="flex h-9 flex-1 items-center overflow-hidden rounded-xl border border-[#7e8b9b] bg-white focus-within:border-blue-600 dark:border-zinc-600 dark:bg-zinc-900 dark:focus-within:border-blue-400"
+						>
+							<span class="pl-3 text-slate-500 dark:text-zinc-400"
+								><Icon name="user" class="h-4 w-4" /></span
+							>
 							<input
 								id="form-username"
 								type="text"
+								class="validator h-full w-full bg-transparent px-2.5 text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-400"
 								required
 								placeholder="Nama pengguna"
 								title="Hanya huruf, angka, atau tanda hubung"
 								name="username"
 								bind:value={username}
 							/>
-						</label>
-						<label class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none">
-							<Icon name="lock" />
+						</div>
+						<div
+							class="flex h-9 flex-1 items-center overflow-hidden rounded-xl border border-[#7e8b9b] bg-white focus-within:border-blue-600 dark:border-zinc-600 dark:bg-zinc-900 dark:focus-within:border-blue-400"
+						>
+							<span class="pl-3 text-slate-500 dark:text-zinc-400"
+								><Icon name="lock" class="h-4 w-4" /></span
+							>
 							<input
 								id="form-password"
 								type={showPassword ? 'text' : 'password'}
+								class="validator h-full w-full bg-transparent px-2.5 text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-400"
 								name="password"
 								placeholder={isEditMode
 									? 'Kata sandi baru (kosongkan jika tidak diubah)'
@@ -472,41 +558,48 @@
 							/>
 							<button
 								type="button"
-								class="cursor-pointer"
+								class="cursor-pointer pr-3 text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200"
 								onclick={() => (showPassword = !showPassword)}
 								aria-label="Lihat atau sembunyikan kata sandi"
 							>
-								<Icon name={showPassword ? 'eye-off' : 'eye'} />
+								<Icon name={showPassword ? 'eye-off' : 'eye'} class="h-4 w-4" />
 							</button>
-						</label>
+						</div>
 					</div>
-					<p class="validator-hint hidden">Isi nama pengguna dan kata sandi dulu!</p>
-					<p class="label text-wrap">
+					<p class="validator-hint hidden text-xs text-red-600">
+						Isi nama pengguna dan kata sandi dulu!
+					</p>
+					<p class="text-xs text-slate-500 dark:text-zinc-400">
 						{isEditMode
 							? 'Nama pengguna wajib diisi. Kata sandi opsional (kosongkan jika tidak diubah).'
 							: 'Nama pengguna dan kata sandi untuk masuk'}
 					</p>
-				</fieldset>
+				</div>
 
-				<!-- Hak Akses Collapse — ringkasan saja; editor tunggal ada di /pengguna/{id} -->
-				<details class="bg-base-200 border-base-300 collapse-arrow collapse">
-					<summary class="collapse-title font-semibold">
+				<!-- Hak Akses Collapse - ringkasan saja; editor tunggal ada di /pengguna/{id} -->
+				<details
+					class="collapse-arrow collapse rounded-xl border border-slate-200 bg-slate-50/70 dark:border-zinc-800 dark:bg-zinc-800/40"
+				>
+					<summary class="collapse-title text-sm font-semibold text-slate-900 dark:text-zinc-100">
 						Hak Akses
-						<span class="badge badge-sm badge-accent">{effectivePermissions.size}</span>
+						<span
+							class="ml-1.5 inline-flex items-center rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700 tabular-nums dark:bg-blue-950/60 dark:text-blue-300"
+							>{effectivePermissions.size}</span
+						>
 					</summary>
-					<div class="collapse-content text-sm">
-						<div class="space-y-3">
-							<p class="text-xs opacity-75">
+					<div class="collapse-content text-xs">
+						<div class="space-y-3 pt-1">
+							<p class="text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
 								Rincian izin disunting di halaman <strong>Kelola izin</strong> agar tidak ada dua editor
 								matriks yang bisa saling menimpa. Di sini hanya ringkasan; mengubah role di atas akan
 								menerapkan template izin role tersebut saat disimpan.
 							</p>
 							{#if isAdminRole}
-								<p class="text-info text-xs">
+								<p class="text-xs font-medium text-sky-700 dark:text-sky-400">
 									{adminRoleLabel} selalu memegang seluruh izin ({effectivePermissions.size} izin).
 								</p>
 							{:else}
-								<p class="text-xs">
+								<p class="text-xs text-slate-700 dark:text-zinc-300">
 									<strong>{effectivePermissions.size}</strong> dari {userPermissions.length} izin aktif.
 									{#if multiKelas && hasEducator}
 										Izin <em>pindah kelas</em> ditambahkan otomatis karena akun memegang lebih dari satu
@@ -516,10 +609,10 @@
 							{/if}
 							{#if isEditMode}
 								<a
-									class="btn btn-soft btn-sm shadow-none"
+									class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-800 hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 									href={`/pengguna/${data.userDetail?.id}`}
 								>
-									<Icon name="lock" />
+									<Icon name="lock" class="h-3.5 w-3.5" />
 									Kelola izin
 								</a>
 							{/if}
@@ -541,15 +634,19 @@
 				/>
 			</div>
 
-			<div class="mt-6 flex items-center justify-between gap-2">
-				<a href="/master-data/pengguna/guru" class="btn btn-soft shadow-none"
-					><Icon name="left" /> Kembali</a
+			<div
+				class="mt-6 flex items-center justify-between gap-2 border-t border-slate-200 pt-4 dark:border-zinc-800"
+			>
+				<a
+					href="/master-data/pengguna"
+					class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+					><Icon name="left" class="h-4 w-4" /> Kembali</a
 				>
 				<button
-					class="btn btn-primary shadow-none"
+					class="inline-flex h-9 items-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 					type="submit"
 					disabled={!isFormValid || submitting}
-					><Icon name="save" /> {submitting ? 'Menyimpan...' : 'Simpan'}</button
+					><Icon name="save" class="h-4 w-4" /> {submitting ? 'Menyimpan...' : 'Simpan'}</button
 				>
 			</div>
 		{/snippet}

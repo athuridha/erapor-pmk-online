@@ -16,11 +16,13 @@
 		id: number;
 		nama: string;
 		tujuanCount: number;
+		pembina?: string | null;
 	};
 
 	type EkstrakurikulerDetail = {
 		id: number;
 		nama: string;
+		pembina?: string | null;
 		tujuan: Array<{ id: number; deskripsi: string }>;
 	};
 
@@ -35,6 +37,7 @@
 	type MuridRow = {
 		id: number;
 		nama: string;
+		kelasNama?: string | null;
 		no: number;
 		nilai: NilaiEntry[];
 		deskripsi: string | null;
@@ -49,6 +52,7 @@
 	};
 
 	type PageData = {
+		pembinaMode?: boolean;
 		ekstrakurikulerList: EkstrakurikulerOption[];
 		selectedEkstrakurikulerId: number | null;
 		selectedEkstrakurikuler: EkstrakurikulerDetail | null;
@@ -61,6 +65,7 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const pembinaMode = $derived(Boolean(data.pembinaMode));
 	const hasEkstrakurikuler = $derived.by(() => data.ekstrakurikulerList.length > 0);
 	const selectedEkstrak = $derived.by(() => data.selectedEkstrakurikuler);
 	const selectedEkstrakHasTujuan = $derived.by(() =>
@@ -189,7 +194,7 @@
 	}
 
 	async function handleDownloadTemplate() {
-		if (!selectedEkstrakValue || !selectedEkstrakHasTujuan || !kelasAktif?.id) {
+		if (!selectedEkstrakValue || !selectedEkstrakHasTujuan || (!kelasAktif?.id && !pembinaMode)) {
 			toast(
 				'Pilih ekstrakurikuler dan pastikan memiliki tujuan pembelajaran terlebih dahulu',
 				'error'
@@ -199,7 +204,7 @@
 
 		isDownloadingTemplate = true;
 		try {
-			const success = await downloadTemplate(selectedEkstrakValue, kelasAktif.id);
+			const success = await downloadTemplate(selectedEkstrakValue, kelasAktif?.id ?? 0);
 			if (success) {
 				toast('Template berhasil diunduh', 'success');
 			} else {
@@ -214,7 +219,7 @@
 	}
 
 	function openImportModal() {
-		if (!selectedEkstrakValue || !selectedEkstrakHasTujuan || !kelasAktif?.id) {
+		if (!selectedEkstrakValue || !selectedEkstrakHasTujuan || (!kelasAktif?.id && !pembinaMode)) {
 			toast(
 				'Pilih ekstrakurikuler dan pastikan memiliki tujuan pembelajaran terlebih dahulu',
 				'error'
@@ -288,17 +293,33 @@
 	}
 </script>
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div
+		class="mb-4 flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-start sm:justify-between dark:border-zinc-800"
+	>
 		<div>
-			<h2 class="text-xl font-bold">
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
 				Daftar Nilai Ekstrakurikuler
 				{#if selectedEkstrak}
-					- {capitalizeSentence(selectedEkstrak.nama)}
+					: {capitalizeSentence(selectedEkstrak.nama)}
 				{/if}
-			</h2>
-			{#if kelasAktifLabel}
-				<p class="text-base-content/80 block text-sm">{kelasAktifLabel}</p>
+			</h1>
+			{#if pembinaMode}
+				<p class="mt-0.5 block text-xs text-slate-600 dark:text-zinc-400">
+					Mode Pembina Eskul · Lintas Kelas
+					{#if selectedEkstrak?.pembina}
+						({selectedEkstrak.pembina})
+					{/if}
+				</p>
+			{:else if kelasAktifLabel}
+				<p class="mt-0.5 block text-xs text-slate-600 dark:text-zinc-400">
+					{kelasAktifLabel}
+					{#if selectedEkstrak?.pembina}
+						· Pembina: {selectedEkstrak.pembina}
+					{/if}
+				</p>
 			{/if}
 		</div>
 	</div>
@@ -311,117 +332,165 @@
 		onImport={handleFileImport}
 	/>
 
-	<div class="flex flex-col items-center gap-2 sm:flex-row">
+	<div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
 		<label class="w-full md:max-w-80">
 			<span class="sr-only">Pilih ekstrakurikuler</span>
-			<select
-				class="select bg-base-200 w-full truncate dark:border-none"
-				title={!canEdit ? 'Anda tidak memiliki izin untuk mengubah' : 'Pilih ekstrakurikuler'}
-				bind:value={selectedEkstrakValue}
-				onchange={(event) => handleEkstrakChange((event.currentTarget as HTMLSelectElement).value)}
-				disabled={!hasEkstrakurikuler || !canEdit}
-			>
-				{#if !hasEkstrakurikuler}
-					<option value="">Belum ada ekstrakurikuler</option>
-				{:else}
-					<option value="" disabled selected={selectedEkstrakValue === ''}>
-						Pilih Ekstrakurikuler
-					</option>
-					{#each data.ekstrakurikulerList as item (item.id)}
-						<option value={String(item.id)}>{capitalizeSentence(item.nama)}</option>
-					{/each}
-				{/if}
-			</select>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+					title={!canEdit ? 'Anda tidak memiliki izin untuk mengubah' : 'Pilih ekstrakurikuler'}
+					bind:value={selectedEkstrakValue}
+					onchange={(event) =>
+						handleEkstrakChange((event.currentTarget as HTMLSelectElement).value)}
+					aria-disabled={!hasEkstrakurikuler || !canEdit}
+					disabled={!hasEkstrakurikuler || !canEdit}
+				>
+					{#if !hasEkstrakurikuler}
+						<option value="">Belum ada ekstrakurikuler</option>
+					{:else}
+						<option value="" disabled selected={selectedEkstrakValue === ''}>
+							Pilih Ekstrakurikuler
+						</option>
+						{#each data.ekstrakurikulerList as item (item.id)}
+							<option value={String(item.id)}>{capitalizeSentence(item.nama)}</option>
+						{/each}
+					{/if}
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
 		</label>
 		<form
-			class="w-full"
+			class="w-full flex-1"
 			autocomplete="off"
 			data-sveltekit-keepfocus
 			data-sveltekit-replacestate
 			onsubmit={submitSearch}
 		>
-			<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
-				<Icon name="search" />
+			<div class="relative">
+				<span
+					class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 dark:text-zinc-500"
+				>
+					<Icon name="search" class="h-4 w-4" />
+				</span>
 				<input
 					type="search"
 					name="q"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 					value={searchTerm}
 					autocomplete="off"
 					placeholder="Cari nama murid..."
 					oninput={handleSearchInput}
 				/>
-			</label>
+			</div>
 		</form>
 	</div>
 
 	{#if !hasEkstrakurikuler}
-		<div class="alert alert-soft alert-info mt-6">
-			<Icon name="info" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-sky-200 bg-sky-50/90 px-4 py-3 text-xs text-sky-950 dark:border-sky-900/60 dark:bg-sky-950/35 dark:text-sky-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
 			<span>
-				Belum ada data ekstrakurikuler untuk kelas ini. Tambahkan terlebih dahulu di menu
-				<strong>Ekstrakurikuler</strong>.
+				{#if pembinaMode}
+					Belum ada ekstrakurikuler yang ditugaskan kepada akun Pembina Anda. Hubungi Operator/Admin
+					untuk menetapkan pembina di Master Data Ekstrakurikuler.
+				{:else}
+					Belum ada data ekstrakurikuler untuk kelas ini. Tambahkan terlebih dahulu di menu
+					<strong>Ekstrakurikuler</strong>.
+				{/if}
 			</span>
 		</div>
 	{:else if !selectedEkstrak}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>Pilih ekstrakurikuler untuk mulai menilai.</span>
 		</div>
 	{:else if !selectedEkstrakHasTujuan}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>
 				Ekstrakurikuler ini belum memiliki tujuan pembelajaran. Tambahkan tujuan terlebih dahulu
 				melalui menu <strong>Ekstrakurikuler &gt; Tujuan</strong>.
 			</span>
 		</div>
 	{:else if data.muridCount === 0}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>
-				Belum ada data murid di kelas ini. Tambahkan murid terlebih dahulu melalui menu
-				<strong>Murid</strong>.
+				{#if pembinaMode}
+					Belum ada anggota terdaftar untuk ekstrakurikuler ini. Minta Operator/Admin memilih
+					anggota di Master Data Ekstrakurikuler.
+				{:else}
+					Belum ada data murid di kelas ini. Tambahkan murid terlebih dahulu melalui menu
+					<strong>Murid</strong>.
+				{/if}
 			</span>
 		</div>
 	{:else if data.totalMurid === 0}
-		<div class="alert alert-soft alert-info mt-6">
-			<Icon name="info" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-sky-200 bg-sky-50/90 px-4 py-3 text-xs text-sky-950 dark:border-sky-900/60 dark:bg-sky-950/35 dark:text-sky-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
 			<span>Tidak ada murid yang cocok dengan pencarian.</span>
 		</div>
 	{:else}
 		<div
-			class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+			class="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 		>
-			<table class="border-base-200 table min-w-150 border dark:border-none">
+			<table class="w-full min-w-150 border-collapse text-xs">
 				<thead>
-					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-						<th style="width: 50px; min-width: 40px;">No</th>
-						<th class="min-w-48">Nama</th>
-						<th class="min-w-32">Aksi</th>
-						<th class="w-full" style="min-width: 240px;">Deskripsi Nilai</th>
+					<tr
+						class="border-b border-slate-200 bg-slate-50 text-left font-semibold text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+					>
+						<th style="width: 50px; min-width: 40px;" class="px-3 py-2.5">No</th>
+						<th class="min-w-48 px-3 py-2.5">Nama</th>
+						<th class="min-w-32 px-3 py-2.5">Aksi</th>
+						<th class="w-full px-3 py-2.5" style="min-width: 240px;">Deskripsi Nilai</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody class="divide-y divide-slate-200 dark:divide-zinc-800">
 					{#each data.daftarMurid as murid (murid.id)}
-						<tr>
-							<td class="align-top">{murid.no}</td>
-							<td class="align-top">
-								{@html searchQueryMarker(data.search, murid.nama)}
+						<tr class="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+							<td class="px-3 py-2.5 align-top tabular-nums text-slate-600 dark:text-zinc-400">
+								{murid.no}
 							</td>
-							<td class="align-top">
+							<td class="px-3 py-2.5 align-top font-medium text-slate-900 dark:text-zinc-100">
+								<div>{@html searchQueryMarker(data.search, murid.nama)}</div>
+								{#if murid.kelasNama}
+									<span
+										class="mt-1 inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
+									>
+										{murid.kelasNama}
+									</span>
+								{/if}
+							</td>
+							<td class="px-3 py-2.5 align-top">
 								<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- intentional prebuilt href -->
 								<a
-									class="btn btn-sm btn-soft shadow-none"
+									class="inline-flex h-8 items-center gap-1 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 {!selectedEkstrakHasTujuan ||
+									!canEdit
+										? 'pointer-events-none opacity-50'
+										: ''}"
 									href={buildNilaiLink(murid.id)}
-									class:btn-disabled={!selectedEkstrakHasTujuan || !canEdit}
 									aria-disabled={!selectedEkstrakHasTujuan || !canEdit}
 									title={!canEdit ? 'Anda tidak memiliki izin untuk menilai' : ''}
 								>
-									<Icon name="edit" />
+									<Icon name="edit" class="h-3.5 w-3.5" />
 									Nilai
 								</a>
 							</td>
-							<td class="align-top">
+							<td class="px-3 py-2.5 align-top">
 								<DeskripsiCell text={murid.deskripsi} />
 							</td>
 						</tr>
@@ -429,18 +498,22 @@
 				</tbody>
 			</table>
 		</div>
-		<div class="join mt-4 sm:mx-auto">
-			{#each pages as pageNumber (pageNumber)}
-				<button
-					type="button"
-					class="join-item btn"
-					class:btn-active={pageNumber === currentPage}
-					onclick={() => handlePageClick(pageNumber)}
-					aria-current={pageNumber === currentPage ? 'page' : undefined}
-				>
-					{pageNumber}
-				</button>
-			{/each}
-		</div>
+		{#if pages.length > 1}
+			<div class="mt-4 flex flex-wrap items-center justify-center gap-1">
+				{#each pages as pageNumber (pageNumber)}
+					<button
+						type="button"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors {pageNumber ===
+						currentPage
+							? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+							: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
+						onclick={() => handlePageClick(pageNumber)}
+						aria-current={pageNumber === currentPage ? 'page' : undefined}
+					>
+						{pageNumber}
+					</button>
+				{/each}
+			</div>
+		{/if}
 	{/if}
 </div>

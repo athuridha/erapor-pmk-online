@@ -22,11 +22,12 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		.select({
 			id: u.id,
 			username: u.username,
+			namaLengkap: u.namaLengkap,
 			type: u.type,
 			pegawaiId: u.pegawaiId,
-				pegawaiName: tablePegawai.nama,
-				pegawaiNik: tablePegawai.nik,
-				kelasId: u.kelasId,
+			pegawaiName: tablePegawai.nama,
+			pegawaiNik: tablePegawai.nik,
+			kelasId: u.kelasId,
 			kelasName: tableKelas.nama
 		})
 		.from(u)
@@ -34,7 +35,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		.leftJoin(tableKelas, eq(u.kelasId, tableKelas.id))
 		.where(
 			q
-				? sql`lower(${u.username}) like ${'%' + q + '%'} or lower(coalesce(${tablePegawai.nama}, '')) like ${'%' + q + '%'}`
+				? sql`lower(${u.username}) like ${'%' + q + '%'} or lower(coalesce(${u.namaLengkap}, ${tablePegawai.nama}, '')) like ${'%' + q + '%'}`
 				: undefined
 		)
 		.orderBy(u.id)
@@ -45,6 +46,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		kepala_sekolah: 'Kepala Sekolah',
 		wali_kelas: 'Wali Kelas',
 		wali_asuh: 'Wali Asuh',
+		pembina_eskul: 'Pembina Eskul',
 		user: 'Guru'
 	};
 
@@ -53,7 +55,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		users: users.map((user) => ({
 			id: user.id,
 			username: user.username,
-			fullName: user.pegawaiName || user.pegawaiNik || user.username,
+			fullName: user.namaLengkap || user.pegawaiName || user.pegawaiNik || user.username,
 			role: user.type,
 			roleLabel: roleLabel[user.type] ?? user.type,
 			kelasName: user.kelasName ?? null

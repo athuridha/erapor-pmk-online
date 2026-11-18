@@ -34,6 +34,7 @@
 	type Props = {
 		muridList: MatriksMurid[];
 		tujuanList: MatriksTp[];
+		kelasId?: number | null;
 		kkm?: number;
 		isTerkunci?: boolean;
 		canEdit?: boolean;
@@ -44,6 +45,7 @@
 	let {
 		muridList = [],
 		tujuanList = [],
+		kelasId = null,
 		kkm = 75,
 		isTerkunci = false,
 		canEdit = true,
@@ -149,13 +151,9 @@
 	function calcNilaiAkhir(r: RowState): number | null {
 		const naLingkup = calcNaLingkup(r);
 		const stsNum =
-			r.sts !== '' && !Number.isNaN(Number(r.sts))
-				? Math.round(Number(r.sts) * 100) / 100
-				: null;
+			r.sts !== '' && !Number.isNaN(Number(r.sts)) ? Math.round(Number(r.sts) * 100) / 100 : null;
 		const sasNum =
-			r.sas !== '' && !Number.isNaN(Number(r.sas))
-				? Math.round(Number(r.sas) * 100) / 100
-				: null;
+			r.sas !== '' && !Number.isNaN(Number(r.sas)) ? Math.round(Number(r.sas) * 100) / 100 : null;
 
 		const eff =
 			stsNum == null
@@ -185,7 +183,7 @@
 	}
 
 	function formatScore(val: number | null): string {
-		if (val == null || Number.isNaN(val)) return '—';
+		if (val == null || Number.isNaN(val)) return '-';
 		return val.toFixed(1);
 	}
 
@@ -315,10 +313,7 @@
 			toast(`Berhasil menyimpan nilai untuk ${rows.length} murid!`, 'success');
 			await invalidate('app:asesmen-sumatif');
 		} catch (err) {
-			toast(
-				'Terjadi kesalahan saat menyimpan: ' + String((err as Error)?.message ?? err),
-				'error'
-			);
+			toast('Terjadi kesalahan saat menyimpan: ' + String((err as Error)?.message ?? err), 'error');
 		} finally {
 			saving = false;
 		}
@@ -372,63 +367,95 @@
 	function getTeknikBadge(singkatan: string | null, nama: string | null) {
 		const s = (singkatan || nama || '').toLowerCase();
 		if (s.includes('tulis') || s.includes('uh')) {
-			return { label: 'UH/Tulis', cls: 'badge-primary' };
+			return {
+				label: 'UH/Tulis',
+				cls: 'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300'
+			};
 		}
 		if (s.includes('tugas')) {
-			return { label: 'Tugas', cls: 'badge-info' };
+			return {
+				label: 'Tugas',
+				cls: 'border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-900/50 dark:bg-sky-950/50 dark:text-sky-300'
+			};
 		}
 		if (s.includes('kinerja') || s.includes('praktik')) {
-			return { label: 'Praktik', cls: 'badge-secondary' };
+			return {
+				label: 'Praktik',
+				cls: 'border-indigo-200/80 bg-indigo-50 text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/50 dark:text-indigo-300'
+			};
 		}
 		if (s.includes('proyek') || s.includes('produk')) {
-			return { label: 'Proyek', cls: 'badge-accent' };
+			return {
+				label: 'Proyek',
+				cls: 'border-violet-200/80 bg-violet-50 text-violet-700 dark:border-violet-900/50 dark:bg-violet-950/50 dark:text-violet-300'
+			};
 		}
-		return { label: singkatan || 'TP', cls: 'badge-ghost' };
+		return {
+			label: singkatan || 'TP',
+			cls: 'border-slate-200/80 bg-slate-100 text-slate-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+		};
 	}
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div class="space-y-3" onkeydown={handleKeyDown} role="region" aria-label="Matriks Penilaian Sumatif">
+<div
+	class="space-y-3"
+	onkeydown={handleKeyDown}
+	role="region"
+	aria-label="Matriks Penilaian Sumatif"
+>
 	<!-- Action / Status Toolbar -->
 	<div
-		class="bg-base-100 border-base-200 sticky top-14 z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 shadow-sm backdrop-blur"
+		class="sticky top-14 z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-white/95 p-3 shadow-xs backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/95"
 	>
 		<!-- Left: Status & Search -->
 		<div class="flex flex-wrap items-center gap-3">
-			<div class="relative w-56">
+			<div class="relative flex w-56 items-center">
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute left-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="search" class="h-3.5 w-3.5" />
+				</span>
 				<input
 					type="text"
 					placeholder="Cari nama murid..."
 					bind:value={searchFilter}
-					class="input input-sm input-bordered w-full pr-8 text-xs"
+					class="h-8 w-full rounded-xl border border-[#7e8b9b] bg-white pr-7 pl-8 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				/>
 				{#if searchFilter}
 					<button
 						type="button"
-						class="text-base-content/40 hover:text-base-content absolute top-1/2 right-2 -translate-y-1/2"
+						class="absolute right-2 flex items-center text-slate-400 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200"
 						onclick={() => (searchFilter = '')}
 						aria-label="Bersihkan pencarian"
 					>
-						<Icon name="close" />
+						<Icon name="close" class="h-3.5 w-3.5" />
 					</button>
 				{/if}
 			</div>
 
 			{#if isDirty}
-				<div class="badge badge-warning gap-1.5 py-2.5 text-xs font-semibold shadow-xs">
+				<div
+					class="inline-flex items-center gap-1.5 rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300"
+				>
 					<span class="inline-block h-2 w-2 animate-ping rounded-full bg-amber-600"></span>
 					{dirtyCount} nilai belum disimpan
 				</div>
 			{:else}
-				<div class="badge badge-soft badge-success gap-1 text-xs text-emerald-700 dark:text-emerald-300">
-					<Icon name="check" />
+				<div
+					class="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300"
+				>
+					<Icon name="check" class="h-3.5 w-3.5" />
 					Semua tersimpan
 				</div>
 			{/if}
 
 			{#if isTerkunci}
-				<div class="badge badge-error gap-1 text-xs">
-					<Icon name="alert" />
+				<div
+					class="inline-flex items-center gap-1 rounded-full border border-red-200/80 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+				>
+					<Icon name="alert" class="h-3.5 w-3.5" />
 					Nilai Terkunci
 				</div>
 			{/if}
@@ -439,7 +466,7 @@
 			{#if isDirty}
 				<button
 					type="button"
-					class="btn btn-ghost btn-sm text-xs"
+					class="inline-flex h-8 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					onclick={resetChanges}
 					disabled={saving}
 				>
@@ -449,56 +476,98 @@
 
 			<button
 				type="button"
-				class="btn btn-primary btn-sm gap-1.5 shadow-sm"
+				class="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
 				onclick={saveAll}
 				disabled={saving || !isDirty || isTerkunci || !canEdit}
+				aria-disabled={saving || !isDirty || isTerkunci || !canEdit}
 				title="Simpan perubahan (Tekan Ctrl + S)"
 			>
 				{#if saving}
-					<span class="loading loading-spinner loading-xs"></span>
+					<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
 					Menyimpan...
 				{:else}
-					<Icon name="save" />
+					<Icon name="save" class="h-3.5 w-3.5" />
 					<span>Simpan Nilai</span>
-					<span class="text-primary-content/70 hidden text-[10px] sm:inline">(Ctrl+S)</span>
+					<span class="hidden text-[10px] text-white/75 sm:inline">(Ctrl+S)</span>
 				{/if}
 			</button>
 		</div>
 	</div>
 
 	<!-- Instructions / Keyboard Hint Pill -->
-	<div class="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-base-content/60">
+	<div
+		class="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-500 dark:text-zinc-400"
+	>
 		<div class="flex items-center gap-2">
-			<span>💡 <strong>Tips Cepat:</strong> Tekan <kbd class="kbd kbd-xs">Enter</kbd> atau <kbd class="kbd kbd-xs">↓</kbd> untuk pindah murid ke bawah, <kbd class="kbd kbd-xs">Tab</kbd> untuk geser TP, dan <kbd class="kbd kbd-xs">Ctrl + S</kbd> untuk simpan.</span>
+			<span>
+				<strong>Tips Cepat:</strong> Tekan
+				<kbd
+					class="rounded border border-slate-200 bg-slate-100 px-1 py-0.5 font-mono text-[10px] text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+					>Enter</kbd
+				>
+				atau
+				<kbd
+					class="rounded border border-slate-200 bg-slate-100 px-1 py-0.5 font-mono text-[10px] text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+					>↓</kbd
+				>
+				untuk pindah murid ke bawah,
+				<kbd
+					class="rounded border border-slate-200 bg-slate-100 px-1 py-0.5 font-mono text-[10px] text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+					>Tab</kbd
+				>
+				untuk geser TP, dan
+				<kbd
+					class="rounded border border-slate-200 bg-slate-100 px-1 py-0.5 font-mono text-[10px] text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+					>Ctrl + S</kbd
+				> untuk simpan.
+			</span>
 		</div>
 		<div>
-			<span><strong>{mapelNama}</strong> • KKM: <strong>{kkm}</strong> • Bobot: <strong>{sumatifWeights.lingkup}% Lingkup + {sumatifWeights.sts}% STS + {sumatifWeights.sas}% SAS</strong></span>
+			<span>
+				<strong class="text-slate-700 dark:text-zinc-200">{mapelNama}</strong> · KKM:
+				<strong class="text-slate-700 dark:text-zinc-200">{kkm}</strong> · Bobot:
+				<strong class="text-slate-700 dark:text-zinc-200"
+					>{sumatifWeights.lingkup}% Lingkup + {sumatifWeights.sts}% STS + {sumatifWeights.sas}% SAS</strong
+				>
+			</span>
 		</div>
 	</div>
 
 	<!-- Main Spreadsheet Matrix Table Container -->
 	<div
-		class="border-base-200 bg-base-100 max-h-[calc(100vh-250px)] overflow-auto rounded-lg border shadow-sm"
+		class="max-h-[calc(100vh-250px)] overflow-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 	>
-		<table class="table-pin-rows table-pin-cols table table-xs min-w-full text-center">
+		<table class="min-w-full border-collapse text-center text-xs">
 			<thead>
-				<tr class="bg-base-200/90 text-base-content border-b font-bold backdrop-blur">
+				<tr
+					class="border-b border-slate-200 bg-slate-50 font-semibold text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+				>
 					<!-- Sticky Col 1: No -->
-					<th class="w-10 text-center font-bold">No</th>
+					<th
+						class="sticky top-0 left-0 z-30 w-10 min-w-10 border-b border-slate-200 bg-slate-50 py-2 text-center font-bold dark:border-zinc-700 dark:bg-zinc-800"
+					>
+						No
+					</th>
 
 					<!-- Sticky Col 2: Nama Murid -->
-					<th class="min-w-48 max-w-56 text-left font-bold">Nama Murid</th>
+					<th
+						class="sticky top-0 left-10 z-30 min-w-44 max-w-52 border-r border-b border-slate-200 bg-slate-50 px-3 py-2 text-left font-bold dark:border-zinc-700 dark:bg-zinc-800"
+					>
+						Nama Murid
+					</th>
 
 					<!-- Dynamic TP Columns -->
 					{#each tujuanList as t, idx (t.id)}
 						{@const badge = getTeknikBadge(t.teknikSingkatan, t.teknikNama)}
-						<th class="min-w-22 max-w-28 px-1.5 py-2">
+						<th
+							class="sticky top-0 z-20 min-w-22 max-w-28 border-b border-slate-200 bg-slate-50 px-1.5 py-2 dark:border-zinc-700 dark:bg-zinc-800"
+						>
 							<div class="flex flex-col items-center gap-0.5">
 								<div class="flex items-center gap-1">
-									<span class="font-extrabold text-xs">TP {idx + 1}</span>
+									<span class="text-xs font-bold">TP {idx + 1}</span>
 									<button
 										type="button"
-										class="btn btn-ghost btn-circle btn-xs h-4 w-4 p-0 opacity-40 hover:opacity-100"
+										class="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:bg-blue-100 hover:text-blue-700 dark:text-zinc-400 dark:hover:bg-blue-950 dark:hover:text-blue-300"
 										onclick={() => openBulkModal('tp', t.id, `TP ${idx + 1}`)}
 										title="Isi seluruh kolom TP {idx + 1} sekaligus"
 									>
@@ -509,7 +578,9 @@
 									class="tooltip tooltip-bottom max-w-xs text-left"
 									data-tip="{t.lingkupMateri ? `[${t.lingkupMateri}] ` : ''}{t.deskripsi}"
 								>
-									<span class="badge {badge.cls} badge-xs font-semibold cursor-help">
+									<span
+										class="inline-flex cursor-help items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold {badge.cls}"
+									>
 										{badge.label}
 									</span>
 								</div>
@@ -518,63 +589,84 @@
 					{/each}
 
 					<!-- Rata TP (NA Lingkup) Column -->
-					<th class="bg-base-300/40 min-w-18 px-2 text-center text-xs font-bold">
+					<th
+						class="sticky top-0 z-20 min-w-18 border-b border-slate-200 bg-slate-50 px-2 text-center text-xs font-bold dark:border-zinc-700 dark:bg-zinc-800"
+					>
 						<div class="flex flex-col items-center">
 							<span>Rata TP</span>
-							<span class="text-[10px] font-normal text-base-content/60">({sumatifWeights.lingkup}%)</span>
+							<span class="text-[10px] font-normal text-slate-400 dark:text-zinc-400"
+								>({sumatifWeights.lingkup}%)</span
+							>
 						</div>
 					</th>
 
 					<!-- STS Column -->
-					<th class="min-w-20 px-1 text-center">
+					<th
+						class="sticky top-0 z-20 min-w-20 border-b border-slate-200 bg-slate-50 px-1 text-center dark:border-zinc-700 dark:bg-zinc-800"
+					>
 						<div class="flex flex-col items-center">
 							<div class="flex items-center gap-1">
 								<span class="text-xs font-bold">STS</span>
 								<button
 									type="button"
-									class="btn btn-ghost btn-circle btn-xs h-4 w-4 p-0 opacity-40 hover:opacity-100"
+									class="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:bg-blue-100 hover:text-blue-700 dark:text-zinc-400 dark:hover:bg-blue-950 dark:hover:text-blue-300"
 									onclick={() => openBulkModal('sts', undefined, 'STS')}
 									title="Isi seluruh kolom STS sekaligus"
 								>
 									⚡
 								</button>
 							</div>
-							<span class="text-[10px] font-normal text-base-content/60">({sumatifWeights.sts}%)</span>
+							<span class="text-[10px] font-normal text-slate-400 dark:text-zinc-400"
+								>({sumatifWeights.sts}%)</span
+							>
 						</div>
 					</th>
 
 					<!-- SAS Column -->
-					<th class="min-w-20 px-1 text-center">
+					<th
+						class="sticky top-0 z-20 min-w-20 border-b border-slate-200 bg-slate-50 px-1 text-center dark:border-zinc-700 dark:bg-zinc-800"
+					>
 						<div class="flex flex-col items-center">
 							<div class="flex items-center gap-1">
 								<span class="text-xs font-bold">SAS</span>
 								<button
 									type="button"
-									class="btn btn-ghost btn-circle btn-xs h-4 w-4 p-0 opacity-40 hover:opacity-100"
+									class="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:bg-blue-100 hover:text-blue-700 dark:text-zinc-400 dark:hover:bg-blue-950 dark:hover:text-blue-300"
 									onclick={() => openBulkModal('sas', undefined, 'SAS')}
 									title="Isi seluruh kolom SAS sekaligus"
 								>
 									⚡
 								</button>
 							</div>
-							<span class="text-[10px] font-normal text-base-content/60">({sumatifWeights.sas}%)</span>
+							<span class="text-[10px] font-normal text-slate-400 dark:text-zinc-400"
+								>({sumatifWeights.sas}%)</span
+							>
 						</div>
 					</th>
 
 					<!-- Nilai Akhir (NA) Column -->
-					<th class="bg-primary/5 min-w-22 px-2 text-center text-xs font-extrabold text-primary">
+					<th
+						class="sticky top-0 z-20 min-w-22 border-b border-slate-200 bg-blue-50 px-2 text-center text-xs font-bold text-blue-800 dark:border-zinc-700 dark:bg-blue-950/70 dark:text-blue-200"
+					>
 						Nilai Akhir
 					</th>
 
 					<!-- Action Column -->
-					<th class="w-14 text-center">Aksi</th>
+					<th
+						class="sticky top-0 z-20 w-14 border-b border-slate-200 bg-slate-50 text-center dark:border-zinc-700 dark:bg-zinc-800"
+					>
+						Aksi
+					</th>
 				</tr>
 			</thead>
 
-			<tbody>
+			<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 				{#if filteredRows.length === 0}
 					<tr>
-						<td colspan={tujuanList.length + 6} class="py-8 text-center text-base-content/60">
+						<td
+							colspan={tujuanList.length + 6}
+							class="py-8 text-center text-xs text-slate-500 dark:text-zinc-400"
+						>
 							{searchFilter
 								? `Tidak ditemukan murid dengan nama "${searchFilter}".`
 								: 'Belum ada data murid untuk kelas ini.'}
@@ -601,13 +693,19 @@
 								return false;
 							}
 						})()}
-						<tr class="hover:bg-base-200/40 transition-colors">
+						<tr class="group transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50">
 							<!-- Col 1: No -->
-							<td class="font-medium text-base-content/70 text-center">{r.no}</td>
+							<td
+								class="sticky left-0 z-10 w-10 min-w-10 bg-white py-1.5 text-center font-medium text-slate-500 group-hover:bg-slate-50 dark:bg-zinc-900 dark:text-zinc-400 dark:group-hover:bg-zinc-800"
+							>
+								{r.no}
+							</td>
 
 							<!-- Col 2: Nama Murid -->
-							<td class="text-left font-semibold">
-								<div class="truncate max-w-52" title={r.nama}>
+							<td
+								class="sticky left-10 z-10 min-w-44 max-w-52 border-r border-slate-200 bg-white px-3 py-1.5 text-left font-semibold text-slate-900 group-hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:group-hover:bg-zinc-800"
+							>
+								<div class="max-w-48 truncate" title={r.nama}>
 									{r.nama}
 								</div>
 							</td>
@@ -633,16 +731,18 @@
 										disabled={!r.canNilai || isTerkunci}
 										bind:value={r.tp[t.id]}
 										onfocus={handleFocus}
-										placeholder="—"
-										class="input input-xs h-7 w-16 text-center font-mono text-xs font-semibold transition-all {isCellModified
-											? 'border-warning ring-1 ring-warning/50 bg-warning/5'
-											: 'border-base-300 focus:border-primary focus:ring-1 focus:ring-primary'}"
+										placeholder="-"
+										class="h-7 w-16 rounded-lg border text-center font-mono text-xs font-semibold transition-all focus:outline-none disabled:bg-slate-100 disabled:opacity-50 dark:disabled:bg-zinc-800 {isCellModified
+											? 'border-amber-400 bg-amber-50/70 text-amber-900 ring-1 ring-amber-400/40 dark:border-amber-600 dark:bg-amber-950/30 dark:text-amber-200'
+											: 'border-slate-300 bg-white text-slate-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100'}"
 									/>
 								</td>
 							{/each}
 
 							<!-- Col: Rata TP (NA Lingkup) -->
-							<td class="bg-base-200/30 font-mono text-xs font-bold text-base-content/80">
+							<td
+								class="bg-slate-50/70 px-2 font-mono text-xs font-bold text-slate-700 dark:bg-zinc-800/40 dark:text-zinc-200"
+							>
 								{formatScore(naLingkup)}
 							</td>
 
@@ -656,10 +756,10 @@
 									disabled={!r.canNilai || isTerkunci}
 									bind:value={r.sts}
 									onfocus={handleFocus}
-									placeholder="—"
-									class="input input-xs h-7 w-16 text-center font-mono text-xs font-semibold transition-all {isStsModified
-										? 'border-warning ring-1 ring-warning/50 bg-warning/5'
-										: 'border-base-300 focus:border-primary focus:ring-1 focus:ring-primary'}"
+									placeholder="-"
+									class="h-7 w-16 rounded-lg border text-center font-mono text-xs font-semibold transition-all focus:outline-none disabled:bg-slate-100 disabled:opacity-50 dark:disabled:bg-zinc-800 {isStsModified
+										? 'border-amber-400 bg-amber-50/70 text-amber-900 ring-1 ring-amber-400/40 dark:border-amber-600 dark:bg-amber-950/30 dark:text-amber-200'
+										: 'border-slate-300 bg-white text-slate-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100'}"
 								/>
 							</td>
 
@@ -673,38 +773,38 @@
 									disabled={!r.canNilai || isTerkunci}
 									bind:value={r.sas}
 									onfocus={handleFocus}
-									placeholder="—"
-									class="input input-xs h-7 w-16 text-center font-mono text-xs font-semibold transition-all {isSasModified
-										? 'border-warning ring-1 ring-warning/50 bg-warning/5'
-										: 'border-base-300 focus:border-primary focus:ring-1 focus:ring-primary'}"
+									placeholder="-"
+									class="h-7 w-16 rounded-lg border text-center font-mono text-xs font-semibold transition-all focus:outline-none disabled:bg-slate-100 disabled:opacity-50 dark:disabled:bg-zinc-800 {isSasModified
+										? 'border-amber-400 bg-amber-50/70 text-amber-900 ring-1 ring-amber-400/40 dark:border-amber-600 dark:bg-amber-950/30 dark:text-amber-200'
+										: 'border-slate-300 bg-white text-slate-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100'}"
 								/>
 							</td>
 
 							<!-- Col: Nilai Akhir (NA) -->
-							<td class="bg-primary/5 font-mono text-xs font-extrabold">
+							<td class="bg-blue-50/40 px-2 font-mono text-xs font-bold dark:bg-blue-950/20">
 								{#if nilaiAkhir != null}
 									<span
-										class="badge badge-sm font-mono font-bold {isLulus
-											? 'badge-success text-success-content'
-											: 'badge-warning text-warning-content'}"
+										class="inline-flex items-center rounded-md border px-1.5 py-0.5 font-mono text-[11px] font-bold {isLulus
+											? 'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300'
+											: 'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300'}"
 									>
 										{formatScore(nilaiAkhir)}
 									</span>
 								{:else}
-									<span class="text-base-content/40">—</span>
+									<span class="text-slate-300 dark:text-zinc-600">-</span>
 								{/if}
 							</td>
 
 							<!-- Col: Action link to detail -->
-							<td class="text-center">
+							<td class="px-2 text-center">
 								<a
-									href={`/asesmen-sumatif/formulir-asesmen?kelas=${r.mapelId}&murid_id=${r.id}&mapel_id=${r.mapelId}`}
-									class="btn btn-ghost btn-circle btn-xs text-base-content/50 hover:text-primary"
+									href={`/asesmen-sumatif/formulir-asesmen?kelas=${kelasId ?? r.mapelId}&murid_id=${r.id}&mapel_id=${r.mapelId}`}
+									class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-zinc-400 dark:hover:bg-blue-950/50 dark:hover:text-blue-300"
 									title="Buka form rincian murid {r.nama}"
 									target="_blank"
 									rel="noreferrer"
 								>
-									<Icon name="edit" />
+									<Icon name="edit" class="h-3.5 w-3.5" />
 								</a>
 							</td>
 						</tr>
@@ -717,46 +817,58 @@
 
 <!-- Modal Quick Bulk Fill Column -->
 {#if bulkModalCol}
-	<div class="modal modal-open modal-bottom sm:modal-middle" role="dialog">
-		<div class="modal-box">
-			<h3 class="text-base font-bold flex items-center gap-2">
+	<div
+		class="modal modal-open modal-bottom bg-slate-950/45 backdrop-blur-[2px] sm:modal-middle"
+		role="dialog"
+	>
+		<div
+			class="modal-box max-w-md rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		>
+			<h3
+				class="flex items-center gap-2 border-b border-slate-100 pb-3 text-base font-bold dark:border-zinc-800"
+			>
 				<span>⚡</span>
 				<span>Isi Nilai Kolom {bulkModalCol.label} Sekaligus</span>
 			</h3>
-			<p class="py-2 text-xs text-base-content/70">
-				Masukkan nilai angka (0 - 100) yang akan diterapkan ke <strong>seluruh murid aktif</strong> pada kolom {bulkModalCol.label}. Anda masih dapat mengubahnya satuan sebelum disimpan.
+			<p class="mt-3 text-xs leading-relaxed text-slate-500 dark:text-zinc-400">
+				Masukkan nilai angka (0 - 100) yang akan diterapkan ke
+				<strong class="text-slate-800 dark:text-zinc-200">seluruh murid aktif</strong> pada kolom
+				{bulkModalCol.label}. Anda masih dapat mengubahnya satuan sebelum disimpan.
 			</p>
 
-			<div class="py-3">
-				<label class="block text-xs font-semibold mb-1" for="bulk-input-field">Nilai (0 - 100):</label>
+			<div class="mt-3">
+				<label
+					class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					for="bulk-input-field">Nilai (0 - 100):</label
+				>
 				<input
 					id="bulk-input-field"
 					type="text"
 					inputmode="decimal"
 					placeholder="Contoh: 85"
 					bind:value={bulkValueInput}
-					class="input input-bordered w-full font-mono text-center font-bold text-lg"
+					class="h-10 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-center font-mono text-base font-bold text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				/>
 			</div>
 
-			<div class="modal-action">
+			<div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-zinc-800">
 				<button
 					type="button"
-					class="btn btn-ghost btn-sm"
+					class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					onclick={() => (bulkModalCol = null)}
 				>
 					Batal
 				</button>
 				<button
 					type="button"
-					class="btn btn-primary btn-sm"
+					class="inline-flex h-9 items-center justify-center rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
 					onclick={applyBulkValue}
 				>
 					Terapkan Nilai
 				</button>
 			</div>
 		</div>
-		<form method="dialog" class="modal-backdrop">
+		<form method="dialog" class="modal-backdrop bg-transparent">
 			<button type="button" onclick={() => (bulkModalCol = null)}>close</button>
 		</form>
 	</div>

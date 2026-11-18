@@ -1,5 +1,6 @@
 import { eq, inArray } from 'drizzle-orm';
 import db from '$lib/server/db';
+import { queryInChunks } from '$lib/server/db/chunk';
 import { tableMurid, tablePortalOrangtua, tablePortalOrangtuaMurid } from '$lib/server/db/schema';
 import { defaultPortalPassword } from '$lib/server/portal-auth';
 import { authority } from '../../pengguna/utils.server';
@@ -21,15 +22,17 @@ export const GET: RequestHandler = async ({ locals }) => {
 	});
 	const accountIds = accounts.map((account) => account.id);
 	const links = accountIds.length
-		? await db
-				.select({
-					orangtuaId: tablePortalOrangtuaMurid.orangtuaId,
-					nama: tableMurid.nama,
-					nis: tableMurid.nis
-				})
-				.from(tablePortalOrangtuaMurid)
-				.innerJoin(tableMurid, eq(tablePortalOrangtuaMurid.muridId, tableMurid.id))
-				.where(inArray(tablePortalOrangtuaMurid.orangtuaId, accountIds))
+		? await queryInChunks(accountIds, (ids) =>
+				db
+					.select({
+						orangtuaId: tablePortalOrangtuaMurid.orangtuaId,
+						nama: tableMurid.nama,
+						nis: tableMurid.nis
+					})
+					.from(tablePortalOrangtuaMurid)
+					.innerJoin(tableMurid, eq(tablePortalOrangtuaMurid.muridId, tableMurid.id))
+					.where(inArray(tablePortalOrangtuaMurid.orangtuaId, ids))
+			)
 		: [];
 
 	const children = new Map<number, string[]>();

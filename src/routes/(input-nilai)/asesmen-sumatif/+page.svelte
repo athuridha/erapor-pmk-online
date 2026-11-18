@@ -522,7 +522,7 @@
 	const hasResults = $derived(data.daftarMurid.length > 0);
 
 	function formatScore(value: number | null) {
-		if (value == null || Number.isNaN(value)) return '—';
+		if (value == null || Number.isNaN(value)) return '-';
 		return value.toFixed(2);
 	}
 
@@ -660,20 +660,26 @@
 	});
 </script>
 
-<div class="card bg-base-100 cursor-default rounded-lg border-none p-4 shadow-md">
-	<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+<div
+	class="cursor-default rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div
+		class="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-4 dark:border-zinc-800"
+	>
 		<div>
-			<h2 class="text-xl font-bold">
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
 				Daftar Nilai Sumatif
 				{#if selectedMapelLabel}
-					- {selectedMapelLabel}
+					: {selectedMapelLabel}
 				{/if}
-			</h2>
+			</h1>
 
 			{#if kelasLabel}
-				<p class="text-base-content/70 text-sm">Kelas: {kelasLabel}</p>
+				<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">
+					Kelas: <span class="font-medium text-slate-800 dark:text-zinc-200">{kelasLabel}</span>
+				</p>
 			{:else}
-				<p class="text-base-content/60 text-sm">
+				<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
 					Pilih kelas di navbar atau pemilih kelas untuk melihat mata pelajaran intrakurikuler.
 				</p>
 			{/if}
@@ -681,41 +687,57 @@
 		<div>
 			<button
 				type="button"
-				class="btn btn-soft shadow-none max-sm:w-full"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				onclick={openBobotModal}
 				disabled={!canEdit}
+				aria-disabled={!canEdit}
 				title={!canEdit ? 'Anda tidak memiliki izin untuk mengatur bobot' : ''}
 			>
-				<Icon name="gear" />
+				<Icon name="gear" class="h-4 w-4" />
 				Atur Bobot
 			</button>
 		</div>
 	</div>
 
-	<div class="flex flex-col justify-between gap-2 sm:flex-row sm:flex-wrap">
-		<div class="flex flex-col items-center gap-2 sm:flex-row">
+	<div class="flex flex-col justify-between gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+		<div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
 			<KelasKontenPicker
 				currentId={((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id ?? null}
 			/>
 			<form class="w-full sm:w-64 md:w-72" method="get" use:autoSubmit>
-				<select
-					class="select bg-base-200 w-full truncate dark:border-none"
-					title="Pilih mata pelajaran"
-					name="mapel_id"
-					bind:value={selectedMapelValue}
-					disabled={!hasMapel}
-				>
-					{#if !hasMapel}
-						<option value="">Belum ada mata pelajaran</option>
-					{:else}
-						<option value="" disabled selected={selectedMapelValue === ''}>
-							Pilih Mata Pelajaran
-						</option>
-						{#each data.mapelList as mapel (mapel.value)}
-							<option value={mapel.value}>{mapel.nama}</option>
-						{/each}
-					{/if}
-				</select>
+				{#if ((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id != null}
+					<input
+						type="hidden"
+						name="kelas"
+						value={String(((data as any).kelasKontenAktif ?? (data as any).kelasAktif).id)}
+					/>
+				{/if}
+				<div class="relative flex items-center">
+					<select
+						class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+						title="Pilih mata pelajaran"
+						name="mapel_id"
+						bind:value={selectedMapelValue}
+						disabled={!hasMapel}
+					>
+						{#if !hasMapel}
+							<option value="">Belum ada mata pelajaran</option>
+						{:else}
+							<option value="" disabled selected={selectedMapelValue === ''}>
+								Pilih Mata Pelajaran
+							</option>
+							{#each data.mapelList as mapel (mapel.value)}
+								<option value={mapel.value}>{mapel.nama}</option>
+							{/each}
+						{/if}
+					</select>
+					<span
+						aria-hidden="true"
+						class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+					>
+						<Icon name="down" class="h-3.5 w-3.5" />
+					</span>
+				</div>
 				{#if searchTerm.trim().length}
 					<input type="hidden" name="q" value={searchTerm.trim()} />
 				{/if}
@@ -723,29 +745,38 @@
 		</div>
 		<div class="flex flex-wrap items-center gap-2">
 			<!-- Mode View Switcher -->
-			<div class="join border border-base-300">
+			<div
+				class="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-0.5 dark:border-zinc-700 dark:bg-zinc-800"
+			>
 				<button
 					type="button"
-					class="join-item btn btn-sm {tampilanMode === 'matriks' ? 'btn-primary' : 'btn-ghost'}"
+					class="inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors {tampilanMode ===
+					'matriks'
+						? 'bg-blue-600 text-white shadow-sm'
+						: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-zinc-100'}"
 					onclick={() => (tampilanMode = 'matriks')}
 					title="Tampilan Matriks Spreadsheet Excel"
 				>
-					<Icon name="table" />
+					<Icon name="table" class="h-3.5 w-3.5" />
 					<span class="hidden sm:inline">Matriks Excel</span>
 				</button>
 				<button
 					type="button"
-					class="join-item btn btn-sm {tampilanMode === 'ringkas' ? 'btn-primary' : 'btn-ghost'}"
+					class="inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors {tampilanMode ===
+					'ringkas'
+						? 'bg-blue-600 text-white shadow-sm'
+						: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-zinc-100'}"
 					onclick={() => (tampilanMode = 'ringkas')}
 					title="Tampilan Ringkasan"
 				>
-					<Icon name="edit" />
+					<Icon name="edit" class="h-3.5 w-3.5" />
 					<span class="hidden sm:inline">Ringkasan</span>
 				</button>
 			</div>
 
 			<button
-				class="btn btn-sm btn-soft shadow-none"
+				type="button"
+				class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				onclick={() => (showBobotModal = true)}
 				title="Atur Bobot Nilai"
 			>
@@ -753,29 +784,35 @@
 			</button>
 
 			<button
-				class="btn btn-sm btn-soft shadow-none"
+				type="button"
+				class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				onclick={downloadTemplate}
 				disabled={!canEdit}
+				aria-disabled={!canEdit}
 				title={!canEdit ? 'Anda tidak memiliki izin' : ''}
 			>
-				<Icon name="download" />
+				<Icon name="download" class="h-3.5 w-3.5" />
 				<span class="hidden md:inline">Unduh Excel</span>
 			</button>
 			<button
-				class="btn btn-sm btn-soft shadow-none"
+				type="button"
+				class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				onclick={openImportModal}
 				disabled={!canEdit}
+				aria-disabled={!canEdit}
 				title={!canEdit ? 'Anda tidak memiliki izin' : ''}
 			>
-				<Icon name="import" />
+				<Icon name="import" class="h-3.5 w-3.5" />
 				<span class="hidden md:inline">Import Excel</span>
 			</button>
 		</div>
 	</div>
 
 	{#if !hasMapel}
-		<div class="alert alert-soft alert-info mt-6">
-			<Icon name="info" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-sky-200 bg-sky-50/90 px-4 py-3 text-xs text-sky-950 dark:border-sky-900/60 dark:bg-sky-950/35 dark:text-sky-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
 			<span>
 				Belum ada mata pelajaran intrakurikuler untuk kelas ini. Tambahkan terlebih dahulu di menu
 				<strong>Intrakurikuler</strong>.
@@ -783,16 +820,20 @@
 		</div>
 	{:else if !hasResults}
 		{#if searchActive}
-			<div class="alert alert-soft alert-warning mt-6">
-				<Icon name="alert" />
+			<div
+				class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+			>
+				<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 				<span>
 					Tidak ditemukan murid dengan kata kunci
 					<strong>"{data.page.search}"</strong>. Coba gunakan nama lain atau hapus pencarian.
 				</span>
 			</div>
 		{:else}
-			<div class="alert alert-soft alert-warning mt-6">
-				<Icon name="alert" />
+			<div
+				class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+			>
+				<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 				<span>
 					Belum ada data murid untuk kelas ini. Silakan tambah murid di menu <strong>Murid</strong>.
 				</span>
@@ -804,56 +845,68 @@
 				<MatriksTable
 					muridList={data.daftarMurid}
 					tujuanList={data.tujuanList}
+					kelasId={((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id ?? null}
 					kkm={data.kkm ?? 75}
 					isTerkunci={data.isTerkunci ?? false}
-					canEdit={canEdit}
+					{canEdit}
 					sumatifWeights={data.sumatifWeights ?? { lingkup: 60, sts: 20, sas: 20 }}
 					mapelNama={data.selectedMapel?.nama ?? 'Mata Pelajaran'}
 				/>
 			</div>
 		{:else}
-			<div class="alert alert-soft alert-warning mt-6">
-				<Icon name="alert" />
+			<div
+				class="mt-5 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+			>
+				<Icon name="alert" class="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 				<div class="flex flex-col gap-1">
 					<span class="font-bold">Mata Pelajaran ini belum memiliki Tujuan Pembelajaran (TP).</span>
-					<span class="text-xs">
-						Untuk menggunakan input Matriks Excel, silakan buat Tujuan Pembelajaran terlebih dahulu di menu
-						<strong>Persiapan Penilaian &gt; Capaian Kompetensi &amp; TP</strong>, atau beralih ke mode <strong>Ringkasan</strong> di atas.
+					<span>
+						Untuk menggunakan input Matriks Excel, silakan buat Tujuan Pembelajaran terlebih dahulu
+						di menu
+						<strong>Persiapan Penilaian &gt; Capaian Kompetensi &amp; TP</strong>, atau beralih ke
+						mode <strong>Ringkasan</strong> di atas.
 					</span>
 				</div>
 			</div>
 		{/if}
 	{:else}
 		<form
-			class="mt-2 w-full"
+			class="mt-3 w-full"
 			data-sveltekit-keepfocus
 			data-sveltekit-replacestate
 			onsubmit={submitSearch}
 		>
-			<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
-				<Icon name="search" />
+			<div class="relative">
+				<span
+					class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 dark:text-zinc-500"
+				>
+					<Icon name="search" class="h-4 w-4" />
+				</span>
 				<input
 					type="search"
 					name="q"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 					value={searchTerm}
 					spellcheck="false"
 					autocomplete="name"
 					placeholder="Cari nama murid..."
 					oninput={handleSearchInput}
 				/>
-			</label>
+			</div>
 		</form>
 
 		{#if hasResults}
-			<div class="mt-3 flex flex-wrap items-center justify-between gap-2">
-				<p class="text-base-content/70 text-sm">
+			<div
+				class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/40"
+			>
+				<p class="text-xs text-slate-600 dark:text-zinc-400">
 					Centang murid pada tabel untuk mengisi satu komponen nilai sekaligus.
 				</p>
 				<div class="flex items-center gap-2">
 					{#if muridTerpilih.length}
 						<button
 							type="button"
-							class="btn btn-ghost btn-sm"
+							class="inline-flex h-8 items-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 							onclick={() => togglePilihSemua(false)}
 						>
 							Kosongkan
@@ -861,7 +914,7 @@
 					{/if}
 					<button
 						type="button"
-						class="btn btn-primary btn-soft btn-sm shadow-none"
+						class="inline-flex h-8 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 						onclick={bukaMassal}
 						disabled={!canEdit || !muridTerpilih.length}
 						aria-disabled={!canEdit || !muridTerpilih.length}
@@ -869,19 +922,21 @@
 							? 'Anda tidak memiliki izin untuk menilai'
 							: 'Isi nilai untuk murid yang dicentang'}
 					>
-						<Icon name="edit" />
+						<Icon name="edit" class="h-3.5 w-3.5" />
 						Isi Sekaligus ({muridTerpilih.length})
 					</button>
 				</div>
 			</div>
 		{/if}
 		<div
-			class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+			class="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 		>
-			<table class="border-base-200 table min-w-140 border dark:border-none">
+			<table class="w-full min-w-140 border-collapse text-xs">
 				<thead>
-					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-						<th class="text-center" style="width: 40px;">
+					<tr
+						class="border-b border-slate-200 bg-slate-50 text-left font-semibold text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+					>
+						<th class="px-3 py-2.5 text-center" style="width: 44px;">
 							<input
 								type="checkbox"
 								class="checkbox checkbox-sm"
@@ -892,18 +947,18 @@
 								aria-label="Pilih semua murid yang bisa dinilai"
 							/>
 						</th>
-						<th style="width: 50px; min-width: 40px;">No</th>
-						<th class="min-w-48">Nama</th>
-						<th class="min-w-40">Nilai Tengah Semester</th>
-						<th class="min-w-40">Nilai Rapor Semester</th>
-						<th class="min-w-32">Aksi</th>
+						<th style="width: 50px; min-width: 40px;" class="px-3 py-2.5">No</th>
+						<th class="min-w-48 px-3 py-2.5">Nama</th>
+						<th class="min-w-40 px-3 py-2.5">Nilai Tengah Semester</th>
+						<th class="min-w-40 px-3 py-2.5">Nilai Rapor Semester</th>
+						<th class="min-w-32 px-3 py-2.5">Aksi</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody class="divide-y divide-slate-200 dark:divide-zinc-800">
 					{#each data.daftarMurid as murid (murid.id)}
 						{@const bisaDipilih = murid.mapelId != null && murid.canNilai && canEdit}
-						<tr>
-							<td class="text-center">
+						<tr class="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+							<td class="px-3 py-2.5 text-center">
 								<input
 									type="checkbox"
 									class="checkbox checkbox-sm"
@@ -916,19 +971,27 @@
 									aria-label="Pilih {murid.nama}"
 								/>
 							</td>
-							<td>{murid.no}</td>
-							<td>
+							<td class="px-3 py-2.5 tabular-nums text-slate-600 dark:text-zinc-400">{murid.no}</td>
+							<td class="px-3 py-2.5 font-medium text-slate-900 dark:text-zinc-100">
 								{@html searchQueryMarker(data.page.search, murid.nama)}
 								{#if murid.agamaLabel}
-									<div class="text-[11px] font-normal opacity-70">{murid.agamaLabel}</div>
+									<div class="mt-0.5 text-[11px] font-normal text-slate-500 dark:text-zinc-400">
+										{murid.agamaLabel}
+									</div>
 								{/if}
 							</td>
-							<td>
+							<td class="px-3 py-2.5">
 								{#if murid.diisiUserLain}
-									<span class="text-base-content/60 text-sm italic">Data diisi oleh user lain</span>
+									<span class="text-xs italic text-slate-500 dark:text-zinc-400">
+										Data diisi oleh user lain
+									</span>
 								{:else if murid.nilaiAkhirRts != null}
-									<p class="font-semibold">{formatScore(murid.nilaiAkhirRts)}</p>
-									<div class="text-base-content/70 mt-1 text-xs">
+									<p class="font-semibold text-slate-900 tabular-nums dark:text-zinc-100">
+										{formatScore(murid.nilaiAkhirRts)}
+									</p>
+									<div
+										class="mt-1 space-y-0.5 text-[11px] text-slate-500 tabular-nums dark:text-zinc-400"
+									>
 										{#if murid.naLingkup != null}
 											<p>Lingkup Materi: {formatScore(murid.naLingkup)}</p>
 										{/if}
@@ -937,15 +1000,22 @@
 										{/if}
 									</div>
 								{:else}
-									<span class="text-base-content/60 text-sm italic">Belum dinilai</span>
+									<span class="text-xs italic text-slate-500 dark:text-zinc-400">Belum dinilai</span
+									>
 								{/if}
 							</td>
-							<td>
+							<td class="px-3 py-2.5">
 								{#if murid.diisiUserLain}
-									<span class="text-base-content/60 text-sm italic">Data diisi oleh user lain</span>
+									<span class="text-xs italic text-slate-500 dark:text-zinc-400">
+										Data diisi oleh user lain
+									</span>
 								{:else if murid.nilaiAkhir != null}
-									<p class="font-semibold">{formatScore(murid.nilaiAkhir)}</p>
-									<div class="text-base-content/70 mt-1 text-xs">
+									<p class="font-semibold text-slate-900 tabular-nums dark:text-zinc-100">
+										{formatScore(murid.nilaiAkhir)}
+									</p>
+									<div
+										class="mt-1 space-y-0.5 text-[11px] text-slate-500 tabular-nums dark:text-zinc-400"
+									>
 										{#if murid.naLingkup != null}
 											<p>Lingkup Materi: {formatScore(murid.naLingkup)}</p>
 										{/if}
@@ -959,21 +1029,26 @@
 
 									<!-- modal moved to component -->
 								{:else}
-									<span class="text-base-content/60 text-sm italic">Belum dinilai</span>
+									<span class="text-xs italic text-slate-500 dark:text-zinc-400">Belum dinilai</span
+									>
 								{/if}
 							</td>
-							<td>
+							<td class="px-3 py-2.5">
 								{#if murid.nilaiHref && murid.canNilai && canEdit}
 									<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- intentional prebuilt href -->
-									<a class="btn btn-sm btn-soft shadow-none" href={murid.nilaiHref}>
-										<Icon name="edit" />
+									<a
+										class="inline-flex h-8 items-center gap-1 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+										href={murid.nilaiHref}
+									>
+										<Icon name="edit" class="h-3.5 w-3.5" />
 										Nilai
 									</a>
 								{:else}
 									<button
 										type="button"
-										class="btn btn-sm btn-disabled"
+										class="inline-flex h-8 cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 px-3 text-xs font-semibold text-slate-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500"
 										disabled
+										aria-disabled="true"
 										title={!canEdit
 											? 'Anda tidak memiliki izin untuk menilai'
 											: murid.canNilai
@@ -982,7 +1057,7 @@
 													? `Hanya untuk murid beragama ${data.allowedAgamaForUser.join(' / ')}`
 													: 'Anda tidak memiliki izin untuk menilai murid ini'}
 									>
-										<Icon name="edit" />
+										<Icon name="edit" class="h-3.5 w-3.5" />
 										Nilai
 									</button>
 								{/if}
@@ -992,27 +1067,37 @@
 				</tbody>
 			</table>
 		</div>
-		<div class="join mt-4 sm:mx-auto">
-			{#each pages as pageNumber (pageNumber)}
-				<button
-					type="button"
-					class="join-item btn"
-					class:btn-active={pageNumber === currentPage}
-					onclick={() => handlePageClick(pageNumber)}
-					aria-current={pageNumber === currentPage ? 'page' : undefined}
-				>
-					{pageNumber}
-				</button>
-			{/each}
-		</div>
+		{#if pages.length > 1}
+			<div class="mt-4 flex flex-wrap items-center justify-center gap-1">
+				{#each pages as pageNumber (pageNumber)}
+					<button
+						type="button"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors {pageNumber ===
+						currentPage
+							? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+							: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
+						onclick={() => handlePageClick(pageNumber)}
+						aria-current={pageNumber === currentPage ? 'page' : undefined}
+					>
+						{pageNumber}
+					</button>
+				{/each}
+			</div>
+		{/if}
 	{/if}
 </div>
 
 {#if massalTerbuka && muridTerpilih.length}
-	<dialog class="modal" open onclose={() => (massalTerbuka = false)}>
-		<div class="modal-box max-w-lg p-4">
+	<dialog
+		class="modal bg-slate-950/45 backdrop-blur-[2px]"
+		open
+		onclose={() => (massalTerbuka = false)}
+	>
+		<div
+			class="modal-box max-w-lg rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		>
 			<h3 class="mb-1 text-lg font-bold">Isi Nilai Sekaligus</h3>
-			<p class="text-base-content/70 mb-2 text-sm">
+			<p class="mb-3 text-xs text-slate-600 dark:text-zinc-400">
 				{muridTerpilih.length} murid terpilih
 				{#if selectedMapelLabel}
 					· {selectedMapelLabel}
@@ -1020,11 +1105,11 @@
 				· nilai yang sama diberikan ke semua murid terpilih.
 			</p>
 			<ul
-				class="border-base-300 bg-base-200/60 mb-3 max-h-24 overflow-y-auto rounded-md border p-2 text-sm"
+				class="mb-4 max-h-24 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs dark:border-zinc-800 dark:bg-zinc-800/50"
 			>
 				{#each muridTerpilih as murid (murid.id)}
-					<li class="flex items-center gap-1.5">
-						<Icon name="check" />
+					<li class="flex items-center gap-1.5 text-slate-800 dark:text-zinc-200">
+						<Icon name="check" class="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
 						<span class="truncate">{murid.nama}</span>
 					</li>
 				{/each}
@@ -1036,49 +1121,69 @@
 			>
 				{#snippet children({ submitting })}
 					<input type="hidden" name="items" value={itemsMassal} />
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend font-semibold">Komponen nilai</legend>
-						<select
-							name="komponen"
-							class="select bg-base-200 dark:bg-base-300 w-full dark:border-none"
-							bind:value={massalKomponen}
-							required
-							disabled={submitting}
-						>
-							{#each Object.entries(KOMPONEN_LABEL) as [value, label] (value)}
-								<option {value}>{label}</option>
-							{/each}
-						</select>
-					</fieldset>
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend font-semibold">Nilai (0-100)</legend>
-						<input
-							type="number"
-							name="nilai"
-							min="0"
-							max="100"
-							step="0.01"
-							class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
-							placeholder="Contoh: 85"
-							bind:value={massalNilai}
-							required
-							disabled={submitting}
-						/>
-						<p class="label text-base-content/60 text-xs">
-							Komponen lain (mis. STS/SAS) tidak diubah.
-						</p>
-					</fieldset>
-					<div class="modal-action">
+					<div class="space-y-3.5">
+						<div>
+							<span class="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+								Komponen nilai
+							</span>
+							<div class="relative flex items-center">
+								<select
+									name="komponen"
+									class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+									bind:value={massalKomponen}
+									required
+									disabled={submitting}
+								>
+									{#each Object.entries(KOMPONEN_LABEL) as [value, label] (value)}
+										<option {value}>{label}</option>
+									{/each}
+								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
+							</div>
+						</div>
+						<div>
+							<span class="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+								Nilai (0-100)
+							</span>
+							<input
+								type="number"
+								name="nilai"
+								min="0"
+								max="100"
+								step="0.01"
+								class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+								placeholder="Contoh: 85"
+								bind:value={massalNilai}
+								required
+								disabled={submitting}
+							/>
+							<p class="mt-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
+								Komponen lain (mis. STS/SAS) tidak diubah.
+							</p>
+						</div>
+					</div>
+					<div
+						class="mt-5 flex items-center justify-end gap-2 border-t border-slate-200 pt-3 dark:border-zinc-800"
+					>
 						<button
 							type="button"
-							class="btn btn-ghost"
+							class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							onclick={() => (massalTerbuka = false)}
 							disabled={submitting}
 						>
 							Batal
 						</button>
-						<button type="submit" class="btn btn-primary" disabled={submitting}>
-							<Icon name="save" />
+						<button
+							type="submit"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+							disabled={submitting}
+						>
+							<Icon name="save" class="h-4 w-4" />
 							Simpan ({muridTerpilih.length})
 						</button>
 					</div>
@@ -1088,7 +1193,7 @@
 		<button
 			type="button"
 			aria-label="Tutup"
-			class="modal-backdrop"
+			class="modal-backdrop bg-transparent"
 			onclick={() => (massalTerbuka = false)}
 		></button>
 	</dialog>

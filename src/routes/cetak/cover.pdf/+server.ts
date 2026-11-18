@@ -1,9 +1,11 @@
 import { getCoverPreviewPayload } from '../cover/preview-data';
+import { assertCanPreviewMuridPdf } from '$lib/server/route-utils';
 import { generatePDF } from '$lib/server/pdf/generate';
 import { buildUrl } from '$lib/server/pdf/request-params';
 import type { RequestHandler } from './$types';
 
 async function handle({ locals, url }: { locals: App.Locals; url: URL }) {
+	await assertCanPreviewMuridPdf(locals, url);
 	const payload = await getCoverPreviewPayload({ locals, url });
 	const pdfBuffer = await generatePDF(
 		'cover',
@@ -12,7 +14,8 @@ async function handle({ locals, url }: { locals: App.Locals; url: URL }) {
 
 	return new Response(new Blob([pdfBuffer as BlobPart], { type: 'application/pdf' }), {
 		headers: {
-			'Content-Disposition': `inline; filename="Cover_Rapor_${payload.coverData?.murid?.nama?.replace(/\s+/g, '_') || 'dokumen'}.pdf"`
+			'Content-Disposition': `inline; filename="Cover_Rapor_${payload.coverData?.murid?.nama?.replace(/\s+/g, '_') || 'dokumen'}.pdf"`,
+			'Cache-Control': 'no-store, no-cache, must-revalidate'
 		}
 	});
 }

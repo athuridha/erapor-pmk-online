@@ -167,26 +167,32 @@
 <div class="not-prose flex flex-col gap-4">
 	{#if existingPdf}
 		<div
-			class="border-base-200 dark:border-none bg-base-200 flex items-center justify-between gap-3 rounded-box border p-2.5"
+			class="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/50"
 			class:opacity-50={removedIds.includes(existingPdf.id)}
 		>
 			<span class="flex min-w-0 items-center gap-3">
 				<span
-					class="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+					class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400"
 				>
 					<Icon name="book" class="h-4 w-4" />
 				</span>
-				<span class="truncate text-sm font-medium">{existingPdf.namaFile.split('/').pop()}</span>
-				<span class="badge badge-soft badge-info shrink-0">PDF</span>
+				<span class="truncate text-xs font-medium text-slate-900 dark:text-zinc-100"
+					>{existingPdf.namaFile.split('/').pop()}</span
+				>
+				<span
+					class="inline-flex shrink-0 items-center rounded-full border border-blue-200/80 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300"
+					>PDF</span
+				>
 			</span>
 			<button
 				type="button"
-				class="btn btn-error btn-soft btn-xs shadow-none"
+				class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 				onclick={() => removeExisting(existingPdf.id)}
 				disabled={submitting}
+				aria-label={removedIds.includes(existingPdf.id) ? 'Batalkan penghapusan' : 'Hapus PDF ini'}
 				title={removedIds.includes(existingPdf.id) ? 'Batalkan penghapusan' : 'Hapus PDF ini'}
 			>
-				<Icon name={removedIds.includes(existingPdf.id) ? 'repeat' : 'del'} />
+				<Icon name={removedIds.includes(existingPdf.id) ? 'repeat' : 'del'} class="h-3.5 w-3.5" />
 			</button>
 		</div>
 	{/if}
@@ -195,7 +201,7 @@
 		<div class="grid grid-cols-3 gap-2">
 			{#each existingFotos as foto (foto.id)}
 				<div
-					class="border-base-300 relative overflow-hidden rounded-md border"
+					class="relative overflow-hidden rounded-xl border border-slate-200/80 dark:border-zinc-700"
 					class:opacity-50={removedIds.includes(foto.id)}
 				>
 					<img
@@ -205,69 +211,75 @@
 					/>
 					<button
 						type="button"
-						class="btn btn-error btn-xs absolute right-1 top-1 shadow-none"
+						class="absolute top-1 right-1 inline-flex h-6 w-6 items-center justify-center rounded-lg bg-red-600 text-white shadow-xs transition-colors hover:bg-red-700"
 						onclick={() => removeExisting(foto.id)}
 						disabled={submitting}
+						aria-label={removedIds.includes(foto.id) ? 'Batalkan penghapusan' : 'Hapus foto ini'}
 						title={removedIds.includes(foto.id) ? 'Batalkan penghapusan' : 'Hapus foto ini'}
 					>
-						<Icon name={removedIds.includes(foto.id) ? 'repeat' : 'del'} />
+						<Icon name={removedIds.includes(foto.id) ? 'repeat' : 'del'} class="h-3 w-3" />
 					</button>
 				</div>
 			{/each}
 		</div>
-		<p class="label-text-alt text-base-content/60">
+		<p class="text-[11px] text-slate-500 dark:text-zinc-400">
 			{removedIds.length > 0
 				? 'Item yang ditandai akan dihapus setelah disimpan.'
 				: 'Klik ikon hapus untuk menghapus bukti yang ada.'}
 		</p>
 	{/if}
 
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">
+	<div>
+		<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
 			{isEdit
 				? 'Ganti File PDF Bukti Perjalanan Dinas (opsional)'
 				: 'File PDF Bukti Perjalanan Dinas'}
-		</legend>
+		</span>
 		<input
 			type="file"
-			class="file-input bg-base-200 w-full dark:border-none"
+			class="file-input file-input-bordered w-full rounded-xl border-[#7e8b9b] bg-white text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 			accept=".pdf,application/pdf"
 			onchange={handlePdfChange}
 			disabled={submitting}
 		/>
-		<p class="label-text-alt text-base-content/60">Maksimal 1 file PDF.</p>
-	</fieldset>
+		<p class="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Maksimal 1 file PDF.</p>
+	</div>
 
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">
+	<div>
+		<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
 			{isEdit
 				? 'Tambah/Ganti Foto Bukti Perjalanan Dinas (opsional)'
 				: 'Foto Bukti Perjalanan Dinas'}
-		</legend>
+		</span>
 		<input
 			type="file"
-			class="file-input bg-base-200 w-full dark:border-none"
+			class="file-input file-input-bordered w-full rounded-xl border-[#7e8b9b] bg-white text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 			accept="image/jpeg,image/png,image/webp"
 			multiple
 			onchange={handleFotoChange}
 			disabled={submitting}
 		/>
-		<p class="label-text-alt text-base-content/60">Maksimal 3 foto (JPG, PNG, atau WebP).</p>
-	</fieldset>
+		<p class="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">
+			Maksimal 3 foto (JPG, PNG, atau WebP).
+		</p>
+	</div>
 
 	{#if fotoFiles.length > 0}
 		<div class="grid grid-cols-3 gap-2">
 			{#each fotoFiles as foto, index (foto.name + index)}
-				<div class="border-base-300 group relative overflow-hidden rounded-md border">
+				<div
+					class="group relative overflow-hidden rounded-xl border border-slate-200/80 dark:border-zinc-700"
+				>
 					<img src={previewUrl(foto, index)} alt={foto.name} class="h-20 w-full object-cover" />
 					<button
 						type="button"
-						class="btn btn-error btn-xs absolute right-1 top-1 shadow-none"
+						class="absolute top-1 right-1 inline-flex h-6 w-6 items-center justify-center rounded-lg bg-red-600 text-white shadow-xs transition-colors hover:bg-red-700"
 						onclick={() => removeFoto(index)}
 						disabled={submitting}
+						aria-label="Hapus foto"
 						title="Hapus foto"
 					>
-						<Icon name="del" />
+						<Icon name="del" class="h-3 w-3" />
 					</button>
 				</div>
 			{/each}

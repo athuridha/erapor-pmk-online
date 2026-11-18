@@ -44,14 +44,14 @@
 	);
 
 	const badgeColors = [
-		'badge-neutral',
-		'badge-primary',
-		'badge-secondary',
-		'badge-accent',
-		'badge-info',
-		'badge-success',
-		'badge-warning',
-		'badge-error'
+		'border-slate-200/80 bg-slate-100 text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200',
+		'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300',
+		'border-indigo-200/80 bg-indigo-50 text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/50 dark:text-indigo-300',
+		'border-violet-200/80 bg-violet-50 text-violet-700 dark:border-violet-900/50 dark:bg-violet-950/50 dark:text-violet-300',
+		'border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-900/50 dark:bg-sky-950/50 dark:text-sky-300',
+		'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300',
+		'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300',
+		'border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300'
 	];
 
 	const badgeColorMap: Record<string, string> = $derived.by(() => {
@@ -63,11 +63,14 @@
 		const map: Record<string, string> = {};
 		sorted.forEach((kode, i) => {
 			if (kode === 'UPB') {
-				map[kode] = 'badge-warning';
+				map[kode] =
+					'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300';
 			} else if (kode === 'IST') {
-				map[kode] = 'badge-success';
+				map[kode] =
+					'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300';
 			} else if (kode === 'PLG') {
-				map[kode] = 'badge-error';
+				map[kode] =
+					'border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300';
 			} else {
 				map[kode] = badgeColors[i % badgeColors.length];
 			}
@@ -226,41 +229,65 @@
 </svelte:head>
 
 <div class="mx-auto w-full max-w-7xl">
-	<section class="card bg-base-100 rounded-lg border border-none p-6 shadow-md">
-		<div class="space-y-6">
-			<div class="flex flex-col gap-1">
-				<h1 class="text-xl font-bold">Jadwal Pelajaran</h1>
+	<section
+		class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<div class="space-y-5">
+			<div class="border-b border-slate-100 pb-4 dark:border-zinc-800">
+				<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+					Jadwal Pelajaran
+				</h1>
 				{#if data.namaSekolah}
-					<p class="text-base-content/70 text-sm">{data.namaSekolah}</p>
+					<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">{data.namaSekolah}</p>
 				{/if}
 			</div>
 
 			{#if kelasTerurut.length === 0}
-				<div class="text-base-content/50 py-12 text-center">
-					<Icon name="info" class="mb-2 h-8 w-8" />
-					<p>Belum ada data jadwal pelajaran</p>
+				<div
+					class="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 py-12 text-center text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-400"
+				>
+					<Icon name="info" class="mb-2 h-7 w-7 text-slate-400 dark:text-zinc-500" />
+					<p class="text-xs font-medium">Belum ada data jadwal pelajaran</p>
 				</div>
 			{:else}
 				<div
-					class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+					class="overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 				>
-					<table class="border-base-200 dark:border-base-100 table border">
+					<table class="w-full border-collapse text-xs">
 						<thead class="sticky top-0 z-10">
-							<tr class="bg-base-200 dark:bg-base-300 text-left font-bold">
-								<th rowspan="2" class="w-0">Hari</th>
-								<th rowspan="2" class="w-0">Jam</th>
-								<th rowspan="2" class="w-0">Waktu</th>
-								<th colspan={kelasTerurut.length} class="text-center">Kelas</th>
+							<tr
+								class="border-b border-slate-200/80 bg-slate-50 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
+							>
+								<th
+									rowspan="2"
+									class="w-0 border-r border-slate-200/80 px-3 py-2.5 dark:border-zinc-700">Hari</th
+								>
+								<th
+									rowspan="2"
+									class="w-0 border-r border-slate-200/80 px-3 py-2.5 text-center dark:border-zinc-700"
+									>Jam</th
+								>
+								<th
+									rowspan="2"
+									class="w-0 border-r border-slate-200/80 px-3 py-2.5 dark:border-zinc-700"
+									>Waktu</th
+								>
+								<th colspan={kelasTerurut.length} class="px-3 py-2 text-center">Kelas</th>
 							</tr>
-							<tr class="bg-base-200 dark:bg-base-300 text-left font-bold">
+							<tr
+								class="border-b border-slate-200/80 bg-slate-50 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
+							>
 								{#each kelasTerurut as kelas (kelas.id)}
-									<th class="min-w-[70px] max-w-[15ch] truncate text-center" title={kelas.nama}>
+									<th
+										class="min-w-[70px] max-w-[15ch] truncate border-l border-slate-200/60 px-2.5 py-2 text-center dark:border-zinc-700/70"
+										title={kelas.nama}
+									>
 										{kelas.nama.slice(0, 15)}{kelas.nama.length > 15 ? '…' : ''}
 									</th>
 								{/each}
 							</tr>
 						</thead>
-						<tbody>
+						<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 							{#each hariList as hari (hari)}
 								{#each Array.from({ length: hariMaxJam[hari] }, (_, i) => i + 1) as jamKe (jamKe)}
 									{@const allSame = isAllSame(hari, jamKe)}
@@ -268,14 +295,23 @@
 										start: '--:--',
 										end: '--:--'
 									}}
-									<tr class="border-base-200 dark:border-base-100 border-b">
+									<tr class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
 										{#if jamKe === 1}
-											<td rowspan={hariMaxJam[hari]} class="align-top font-medium">
+											<td
+												rowspan={hariMaxJam[hari]}
+												class="border-r border-slate-200/70 px-3 py-2 align-top font-semibold text-slate-800 dark:border-zinc-800 dark:text-zinc-200"
+											>
 												{formatHari(hari)}
 											</td>
 										{/if}
-										<td class="text-center text-sm">{jamKe}</td>
-										<td class="text-xs whitespace-nowrap">
+										<td
+											class="border-r border-slate-200/60 px-3 py-2 text-center text-slate-600 dark:border-zinc-800 dark:text-zinc-300"
+										>
+											{jamKe}
+										</td>
+										<td
+											class="border-r border-slate-200/70 px-3 py-2 whitespace-nowrap text-slate-600 dark:border-zinc-800 dark:text-zinc-300"
+										>
 											{#if jamKe === hariMaxJam[hari]}
 												{waktu.start}
 											{:else}
@@ -283,11 +319,16 @@
 											{/if}
 										</td>
 										{#if allSame !== null && kodeMerged.has(allSame)}
-											<td colspan={kelasTerurut.length} class="text-center align-middle">
+											<td
+												colspan={kelasTerurut.length}
+												class="px-2.5 py-1.5 text-center align-middle"
+											>
 												<div class="flex h-full w-full items-center justify-center">
 													<span
-														class="badge {badgeColorMap[allSame] ??
-															'badge-primary'} badge-soft w-full"
+														class="inline-flex w-full items-center justify-center rounded-lg border px-2 py-1 text-[11px] font-semibold {badgeColorMap[
+															allSame
+														] ??
+															'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300'}"
 													>
 														{kodeNamaMap.get(allSame) ?? allSame}
 													</span>
@@ -296,15 +337,19 @@
 										{:else}
 											{#each kelasTerurut as kelas (kelas.id)}
 												{@const kode = getKode(hari, jamKe, kelas.id)}
-												<td class="text-center">
+												<td
+													class="border-l border-slate-100 px-2 py-1.5 text-center dark:border-zinc-800/80"
+												>
 													{#if kode}
 														<span
-															class="badge {badgeColorMap[kode] ??
-																'badge-primary'} badge-soft text-xs"
+															class="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold {badgeColorMap[
+																kode
+															] ??
+																'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300'}"
 															>{kodeNamaMap.get(kode) ?? kode}</span
 														>
 													{:else}
-														<span class="text-base-content/30 text-xs">—</span>
+														<span class="text-slate-300 dark:text-zinc-600">-</span>
 													{/if}
 												</td>
 											{/each}

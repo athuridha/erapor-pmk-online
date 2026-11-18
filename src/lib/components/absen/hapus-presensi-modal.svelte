@@ -34,14 +34,21 @@
 
 	onMount(() => {
 		updateModal({
-			onPositive: { label: 'Ya, Hapus', class: 'btn-soft btn-error', action: () => handleDelete() },
+			onPositive: {
+				label: 'Ya, Hapus',
+				class:
+					'border border-red-300 bg-red-600 text-white hover:bg-red-700 dark:border-red-800 dark:bg-red-600 dark:hover:bg-red-700',
+				action: () => handleDelete()
+			},
 			onNegative: { label: 'Batal' }
 		});
 	});
 </script>
 
 <div class="flex flex-col gap-4">
-	<p class="text-base-content text-base leading-relaxed">
-		Semua data presensi pada hari <strong>{labelTanggal}</strong> ini akan dihapus. Bapak/Ibu yakin?
+	<p class="text-sm leading-relaxed text-slate-700 dark:text-zinc-200">
+		Semua data presensi pada hari <strong class="font-semibold text-slate-900 dark:text-zinc-100"
+			>{labelTanggal}</strong
+		> ini akan dihapus. Bapak/Ibu yakin?
 	</p>
 </div>

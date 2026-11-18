@@ -10,7 +10,7 @@
 export type TipeField =
 	'teks' | 'textarea' | 'angka' | 'desimal' | 'toggle' | 'tanggal' | 'pilihan' | 'relasi';
 
-export type SumberRelasi = 'kelas' | 'mapel' | 'pegawai' | 'tahun_ajaran' | 'semester';
+export type SumberRelasi = 'kelas' | 'mapel' | 'pegawai' | 'tahun_ajaran' | 'semester' | 'pembina';
 
 export interface FieldMaster {
 	/** Nama kolom di database (snake_case). */
@@ -249,23 +249,41 @@ export const MASTER_DATA: MasterData[] = [
 				wajib: false,
 				opsiTambahan: [{ label: 'Semua Kelas', value: '' }],
 				bantu: 'Pilih "Semua Kelas" bila ekstrakurikuler berlaku untuk seluruh sekolah.'
+			},
+			{
+				key: 'pembina_user_id',
+				label: 'Akun Pembina (opsional)',
+				tipe: 'relasi',
+				relasi: 'pembina',
+				wajib: false,
+				opsiTambahan: [{ label: 'Tanpa akun login khusus', value: '' }],
+				bantu: 'Pilih akun Pembina Eskul (eksternal) atau guru bila pembina ikut mengisi nilai.'
+			},
+			{
+				key: 'pembina_nama',
+				label: 'Nama Pembina Eksternal (opsional)',
+				tipe: 'teks',
+				wajib: false,
+				placeholder: 'Contoh: Budi Santoso (Pelatih)',
+				bantu: 'Isi manual bila pembina eksternal tidak dibuatkan akun login.'
 			}
 		],
 		kolom: [
 			{ key: 'nama', label: 'Ekstrakurikuler' },
 			{ key: 'kelas', label: 'Kelas' },
+			{ key: 'pembina', label: 'Pembina' },
 			{ key: 'jumlah_anggota', label: 'Anggota' }
 		]
 	},
 	{
 		key: 'pengguna',
-		judul: 'Guru & Pegawai',
+		judul: 'Akun Pengguna',
 		deskripsi:
-			'Akun guru, kepala sekolah, dan wali kelas. CRUD memakai form yang sama dengan Manajemen Pengguna.',
+			'Akun guru, wali kelas, pembina eskul, kepala sekolah, dan operator/administrator sekolah.',
 		ikon: 'users',
 		tabel: 'auth_user',
-		/** Dikelompokkan jadi Data Pengguna: Guru & Operator. */
-		path: '/master-data/pengguna/guru',
+		/** Halaman terpadu Akun Pengguna (Semua, Guru, Operator, Pembina Eskul). */
+		path: '/master-data/pengguna',
 		/** Tambah/ubah memakai form pengguna (bukan form master data generik). */
 		formPengguna: true,
 		tambahPath: '/pengguna/form',

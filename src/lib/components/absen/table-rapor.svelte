@@ -48,41 +48,51 @@
 </script>
 
 <div
-	class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+	class="mt-4 overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 >
-	<table class="border-base-200 table border dark:border-none">
+	<table class="w-full border-collapse text-xs">
 		<thead>
-			<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-				<th style="width: 50px; min-width: 40px;">No</th>
-				<th class="w-full" style="min-width: 160px;">Nama</th>
-				<th class="text-center" style="min-width: 80px;">Hadir</th>
-				<th class="text-center" style="min-width: 80px;">Sakit</th>
-				<th class="text-center" style="min-width: 80px;">Izin</th>
-				<th class="text-center" style="min-width: 80px;">TK</th>
-				<th class="text-center" style="min-width: 160px;">
+			<tr
+				class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+			>
+				<th class="w-12 min-w-10 px-3.5 py-2.5">No</th>
+				<th class="w-full min-w-40 px-3.5 py-2.5">Nama</th>
+				<th class="min-w-20 px-3.5 py-2.5 text-center">Hadir</th>
+				<th class="min-w-20 px-3.5 py-2.5 text-center">Sakit</th>
+				<th class="min-w-20 px-3.5 py-2.5 text-center">Izin</th>
+				<th class="min-w-20 px-3.5 py-2.5 text-center">TK</th>
+				<th class="min-w-40 px-3.5 py-2.5 text-center">
 					Aksi
 					{#if totalHariBelajar}
-						<span class="text-base-content/60 block text-xs font-normal">
+						<span class="block text-[11px] font-normal text-slate-400 dark:text-zinc-400">
 							{totalHariBelajar} hari belajar
 						</span>
 					{/if}
 				</th>
 			</tr>
 		</thead>
-		<tbody>
+		<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 			{#each rows as row (row.id)}
 				{@const isEditing = editingRowId === row.id}
 				{@const updateFormId = `rapor-update-form-${row.id}`}
 				{@const resetFormId = `rapor-reset-form-${row.id}`}
-				<tr class={isEditing ? 'bg-base-200/40' : undefined}>
-					<td>{row.no}</td>
-					<td>{@html searchQueryMarker(search, row.nama)}</td>
-					<td class="text-center font-bold">{row.hadir || ''}</td>
-					<td class="text-center">
+				<tr
+					class="transition-colors {isEditing
+						? 'bg-blue-50/40 dark:bg-blue-950/20'
+						: 'hover:bg-slate-50/70 dark:hover:bg-zinc-800/40'}"
+				>
+					<td class="px-3.5 py-2.5 text-slate-500 dark:text-zinc-400">{row.no}</td>
+					<td class="px-3.5 py-2.5 font-medium text-slate-900 dark:text-zinc-100">
+						{@html searchQueryMarker(search, row.nama)}
+					</td>
+					<td class="px-3.5 py-2.5 text-center font-bold text-slate-900 dark:text-zinc-100">
+						{row.hadir || ''}
+					</td>
+					<td class="px-3.5 py-2.5 text-center text-slate-700 dark:text-zinc-200">
 						{#if isEditing}
 							<input
 								type="number"
-								class="input input-sm bg-base-200 dark:bg-base-300 w-16 text-center dark:border-none"
+								class="h-8 w-16 rounded-lg border border-[#7e8b9b] bg-white px-2 text-center text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 								value={editingValues.sakit}
 								onchange={(e) =>
 									onEditValueChange({
@@ -95,11 +105,11 @@
 							{row.sakit || ''}
 						{/if}
 					</td>
-					<td class="text-center">
+					<td class="px-3.5 py-2.5 text-center text-slate-700 dark:text-zinc-200">
 						{#if isEditing}
 							<input
 								type="number"
-								class="input input-sm bg-base-200 dark:bg-base-300 w-16 text-center dark:border-none"
+								class="h-8 w-16 rounded-lg border border-[#7e8b9b] bg-white px-2 text-center text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 								value={editingValues.izin}
 								onchange={(e) =>
 									onEditValueChange({
@@ -112,11 +122,11 @@
 							{row.izin || ''}
 						{/if}
 					</td>
-					<td class="text-center">
+					<td class="px-3.5 py-2.5 text-center text-slate-700 dark:text-zinc-200">
 						{#if isEditing}
 							<input
 								type="number"
-								class="input input-sm bg-base-200 dark:bg-base-300 w-16 text-center dark:border-none"
+								class="h-8 w-16 rounded-lg border border-[#7e8b9b] bg-white px-2 text-center text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 								value={editingValues.alfa}
 								onchange={(e) =>
 									onEditValueChange({
@@ -129,8 +139,8 @@
 							{row.alfa || ''}
 						{/if}
 					</td>
-					<td>
-						<div class="flex items-center justify-center gap-2">
+					<td class="px-3.5 py-2.5">
+						<div class="flex items-center justify-center gap-1.5">
 							{#if isEditing}
 								<FormEnhance
 									id={updateFormId}
@@ -153,37 +163,42 @@
 								</FormEnhance>
 								<button
 									type="button"
-									class="btn btn-soft btn-sm btn-error shadow-none"
+									class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
+									aria-label="Batalkan"
 									title="Batalkan"
 									onclick={onCancelEdit}
 									disabled={editingSubmitting}
 								>
-									<Icon name="close" />
+									<Icon name="close" class="h-3.5 w-3.5" />
 								</button>
 								<button
 									type="submit"
-									class="btn btn-primary btn-sm shadow-none"
+									class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+									aria-label="Simpan"
 									title="Simpan"
 									form={updateFormId}
 									disabled={editingSaveDisabled}
 								>
 									{#if editingSubmitting}
 										<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+									{:else}
+										<Icon name="save" class="h-3.5 w-3.5" />
 									{/if}
-									<Icon name="save" />
 								</button>
 							{:else}
-								<div class="flex flex-row">
+								<div class="flex items-center gap-1.5">
 									<button
 										type="button"
-										class="btn btn-soft btn-sm rounded-r-none shadow-none"
+										class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#7e8b9b] bg-white text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 										onclick={() => onStartEdit(row)}
 										disabled={!tableReady || !canEdit}
+										aria-disabled={!tableReady || !canEdit}
+										aria-label="Edit nilai ketidakhadiran"
 										title={!canEdit
 											? 'Anda tidak memiliki izin untuk mengedit'
 											: 'Edit nilai ketidakhadiran'}
 									>
-										<Icon name="edit" />
+										<Icon name="edit" class="h-3.5 w-3.5" />
 									</button>
 									<FormEnhance
 										id={resetFormId}
@@ -195,12 +210,14 @@
 									</FormEnhance>
 									<button
 										type="submit"
-										class="btn btn-soft btn-warning btn-sm rounded-l-none shadow-none"
+										class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-amber-200/80 bg-amber-50 text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-45 dark:border-amber-900/50 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-950"
+										aria-label="Reset ke nilai asli"
 										title="Reset ke nilai asli"
 										form={resetFormId}
 										disabled={!tableReady || !canEdit || !row.overridden}
+										aria-disabled={!tableReady || !canEdit || !row.overridden}
 									>
-										<Icon name="repeat" />
+										<Icon name="repeat" class="h-3.5 w-3.5" />
 									</button>
 								</div>
 							{/if}

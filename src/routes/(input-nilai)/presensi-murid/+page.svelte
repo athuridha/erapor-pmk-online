@@ -398,13 +398,11 @@
 
 	type PresensiMode = PageData['mode'];
 
-	// Pemilih mode/tanggal disimpan sebagai state writable (bukan `$derived`)
-	// supaya binding <select>/<input> selalu mengikuti pilihan pengguna; effect
-	// menyinkronkan ulang saat server mengembalikan mode/tanggal baru.
-	// svelte-ignore state_referenced_locally
-	let selectedMode = $state<PresensiMode>(data.mode);
-	// svelte-ignore state_referenced_locally
-	let selectedTanggal = $state(data.tanggal);
+	// Pemilih mode/tanggal memakai writable `$derived` supaya binding
+	// <select>/<input> mengikuti pilihan pengguna sekaligus tersinkron saat server
+	// mengembalikan nilai baru.
+	let selectedMode = $derived<PresensiMode>(data.mode);
+	let selectedTanggal = $derived(data.tanggal);
 	// svelte-ignore state_referenced_locally
 	let selectedBulan = $state<number>(
 		data.mode === 'bulanan' || data.mode === 'persentase_bulanan'
@@ -417,14 +415,6 @@
 			? data.tahun
 			: serverTime.now.getFullYear()
 	);
-
-	$effect(() => {
-		selectedMode = data.mode;
-	});
-
-	$effect(() => {
-		selectedTanggal = data.tanggal;
-	});
 
 	$effect(() => {
 		if (data.mode === 'bulanan' || data.mode === 'persentase_bulanan') {
@@ -624,8 +614,10 @@
 </script>
 
 {#if !data.tableReady}
-	<div class="alert alert-soft alert-warning mb-6 flex items-center gap-3">
-		<Icon name="alert" />
+	<div
+		class="mb-5 flex items-center gap-2.5 rounded-2xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+	>
+		<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 		<span>
 			Tabel ketidakhadiran harian belum tersedia. Jalankan <strong>pnpm db:push</strong> untuk menerapkan
 			migrasi terbaru.
@@ -633,63 +625,68 @@
 	</div>
 {/if}
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="mb-4 flex items-start justify-between gap-2 max-sm:flex-col sm:flex-row">
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div
+		class="mb-4 flex items-start justify-between gap-3 border-b border-slate-100 pb-4 max-sm:flex-col sm:flex-row dark:border-zinc-800"
+	>
 		<div>
-			<h2 class="text-xl font-bold">
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
 				{#if data.mode === 'bulanan'}
-					Kehadiran murid bulan -
-					<span class="text-primary">{bulanList[data.bulan - 1]} {data.tahun}</span>
+					Kehadiran murid bulan:
+					<span class="text-blue-600 dark:text-blue-400"
+						>{bulanList[data.bulan - 1]} {data.tahun}</span
+					>
 				{:else if data.mode === 'persentase_bulanan'}
-					Persentase Kehadiran bulan -
-					<span class="text-primary">{bulanList[data.bulan - 1]} {data.tahun}</span>
+					Persentase Kehadiran bulan:
+					<span class="text-blue-600 dark:text-blue-400"
+						>{bulanList[data.bulan - 1]} {data.tahun}</span
+					>
 				{:else if data.mode === 'persentase_semester'}
 					Persentase Kehadiran Semester
 					{#if data.tanggalMulaiRapor && data.tanggalAkhirRapor}
-						-
-						<span class="text-primary"
-							>{formatTanggal(data.tanggalMulaiRapor)} - {formatTanggal(
-								data.tanggalAkhirRapor
-							)}</span
-						>
+						:
+						<span class="text-blue-600 dark:text-blue-400">
+							{formatTanggal(data.tanggalMulaiRapor)} - {formatTanggal(data.tanggalAkhirRapor)}
+						</span>
 					{/if}
 				{:else if data.mode === 'rapor'}
 					Rekap Kehadiran Rapor
 					{#if data.tanggalMulaiRapor && data.tanggalAkhirRapor}
-						-
-						<span class="text-primary"
-							>{formatTanggal(data.tanggalMulaiRapor)} - {formatTanggal(
-								data.tanggalAkhirRapor
-							)}</span
-						>
+						:
+						<span class="text-blue-600 dark:text-blue-400">
+							{formatTanggal(data.tanggalMulaiRapor)} - {formatTanggal(data.tanggalAkhirRapor)}
+						</span>
 					{/if}
 				{:else if data.mode === 'persentase_harian'}
-					Persentase Kehadiran per Mapel -
-					<span class="text-primary">{formatTanggal(data.tanggal)}</span>
+					Persentase Kehadiran per Mapel:
+					<span class="text-blue-600 dark:text-blue-400">{formatTanggal(data.tanggal)}</span>
 				{:else if isToday}
-					Kehadiran murid hari Ini -
-					<span class="text-primary">{formatTanggal(data.tanggal)}</span>
+					Kehadiran murid hari ini:
+					<span class="text-blue-600 dark:text-blue-400">{formatTanggal(data.tanggal)}</span>
 				{:else}
-					Kehadiran murid -
-					<span class="text-primary">{formatTanggal(data.tanggal)}</span>
+					Kehadiran murid:
+					<span class="text-blue-600 dark:text-blue-400">{formatTanggal(data.tanggal)}</span>
 				{/if}
-			</h2>
+			</h1>
 			{#if kelasAktifLabel}
-				<p class="text-base-content/80 block text-sm">
+				<p class="mt-0.5 block text-xs text-slate-500 dark:text-zinc-400">
 					{kelasAktifLabel}
 					{#if data.mode === 'harian' || data.mode === 'persentase_harian'}
-						- {data.isLibur ? 'Libur' : 'Masuk'}
+						· {data.isLibur ? 'Libur' : 'Masuk'}
 					{/if}
 				</p>
 			{/if}
 		</div>
 		{#if data.mode === 'rapor' || data.mode === 'persentase_bulanan' || data.mode === 'persentase_semester' || data.mode === 'bulanan'}{:else}
 			{@const currentMapel = data.jadwalSaatIni}
-			<div class="flex max-sm:w-full">
+			<div class="inline-flex max-sm:w-full">
 				<button
 					type="button"
-					class="btn btn-primary btn-soft flex-1 rounded-r-none shadow-none max-sm:flex-1"
+					class="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-l-xl bg-blue-600 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
 					disabled={!canEdit && page.data.user?.type !== 'user'}
+					aria-disabled={!canEdit && page.data.user?.type !== 'user'}
 					title={!canEdit && page.data.user?.type !== 'user'
 						? 'Anda tidak memiliki izin untuk mengisi sekaligus'
 						: ''}
@@ -735,31 +732,34 @@
 						});
 					}}
 				>
-					<Icon name="copy" /> Isi Sekaligus
+					<Icon name="copy" class="h-4 w-4" /> Isi Sekaligus
 				</button>
 				<div class="dropdown dropdown-end max-sm:flex-none">
 					<button
 						type="button"
 						tabindex="0"
-						class="btn btn-primary btn-soft rounded-l-none shadow-none"
+						aria-label="Opsi simulasi"
+						class="inline-flex h-9 items-center justify-center rounded-r-xl border-l border-blue-700 bg-blue-600 px-2.5 text-white transition-colors hover:bg-blue-700 dark:border-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600"
 					>
-						<Icon name="down" />
+						<Icon name="down" class="h-3.5 w-3.5" />
 					</button>
 					<ul
 						tabindex="-1"
-						class="dropdown-content menu bg-base-100 border-base-300 z-50 mt-2 w-49 rounded-md border p-2 shadow-lg"
+						class="dropdown-content menu z-50 mt-2 w-48 rounded-2xl border border-slate-200 bg-white p-1.5 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
 					>
 						<li>
 							<button
 								type="button"
-								class="w-full text-left {simActive ? 'text-warning' : ''}"
+								class="w-full rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800 {simActive
+									? 'font-semibold text-amber-700 dark:text-amber-400'
+									: 'text-slate-700 dark:text-zinc-200'}"
 								aria-label="Simulasi hari & jam"
 								title={simActive
 									? `Simulasi: ${data.simulasiHari} ${data.simulasiJam}`
 									: 'Simulasi hari & jam'}
 								onclick={() => (showSimulasi = !showSimulasi)}
 							>
-								<Icon name={simActive ? 'pause' : 'play'} />
+								<Icon name={simActive ? 'pause' : 'play'} class="h-4 w-4" />
 								Simulasi
 							</button>
 						</li>
@@ -769,30 +769,38 @@
 		{/if}
 	</div>
 
-	<div class="mb-4 flex items-start justify-between gap-2 max-sm:flex-col sm:flex-row">
-		<div class="flex flex-wrap items-center gap-2 max-sm:w-full">
-			<div class="flex flex-row max-sm:w-full">
+	<div
+		class="mb-4 flex items-start justify-between gap-2 max-sm:flex-col sm:flex-row sm:items-center"
+	>
+		<div class="flex flex-wrap items-center gap-1.5 max-sm:w-full">
+			<div class="flex flex-wrap items-center gap-1.5 max-sm:w-full">
 				{#if data.mode === 'bulanan' || data.mode === 'persentase_bulanan'}
-					<div class="min-w-0 flex-1">
+					<div class="relative flex min-w-36 flex-1 items-center">
 						<select
-							class="select bg-base-200 dark:bg-base-300 w-full truncate rounded-r-none max-sm:w-full dark:border-none"
+							class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 							bind:value={selectedBulan}
 						>
 							{#each bulanList as nama, i (nama)}
 								<option value={i + 1}>{nama}</option>
 							{/each}
 						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
 					</div>
 					<input
 						type="number"
-						class="input bg-base-200 dark:bg-base-300 w-24 rounded-none max-sm:flex-1 dark:border-none"
+						class="h-9 w-24 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 tabular-nums focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						bind:value={selectedTahun}
 						min="2000"
 						max="2099"
 					/>
 				{:else if data.mode === 'rapor'}
 					<span
-						class="input bg-base-200 dark:bg-base-300 flex w-full items-center rounded-r-none text-sm dark:border-none"
+						class="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
 					>
 						{data.tanggalMulaiRapor && data.tanggalAkhirRapor
 							? `${formatTanggal(data.tanggalMulaiRapor)} - ${formatTanggal(data.tanggalAkhirRapor)}`
@@ -800,7 +808,7 @@
 					</span>
 				{:else if data.mode === 'persentase_semester'}
 					<span
-						class="input bg-base-200 dark:bg-base-300 flex w-full items-center rounded-r-none text-sm dark:border-none"
+						class="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
 					>
 						{data.tanggalMulaiRapor && data.tanggalAkhirRapor
 							? `${formatTanggal(data.tanggalMulaiRapor)} - ${formatTanggal(data.tanggalAkhirRapor)}`
@@ -809,29 +817,29 @@
 				{:else if data.mode === 'persentase_harian'}
 					<input
 						type="date"
-						class="input bg-base-200 dark:bg-base-300 w-full rounded-r-none max-sm:w-full dark:border-none"
+						class="h-9 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none max-sm:flex-1 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						bind:value={selectedTanggal}
 					/>
 				{:else}
 					<input
 						type="date"
-						class="input bg-base-200 dark:bg-base-300 w-full rounded-r-none max-sm:w-full dark:border-none"
+						class="h-9 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none max-sm:flex-1 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						bind:value={selectedTanggal}
 					/>
 				{/if}
 				<button
 					type="button"
-					class="btn btn-soft rounded-none shadow-none"
+					class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 					aria-label="Lihat presensi"
 					title="Lihat presensi"
 					onclick={viewDate}
 					disabled={data.mode === 'rapor' || data.mode === 'persentase_semester'}
 				>
-					<Icon name="eye" />
+					<Icon name="eye" class="h-4 w-4" />
 				</button>
 				<button
 					type="button"
-					class="btn btn-soft rounded-none shadow-none"
+					class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 					aria-label={data.mode === 'bulanan' || data.mode === 'persentase_bulanan'
 						? 'Kembali ke bulan ini'
 						: 'Kembali ke hari ini'}
@@ -847,12 +855,19 @@
 							? true
 							: isToday}
 				>
-					<Icon name="repeat" />
+					<Icon name="repeat" class="h-4 w-4" />
 				</button>
 				<button
 					type="button"
-					class="btn btn-soft btn-error rounded-l-none shadow-none"
+					class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-300 bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
 					aria-label="Hapus data presensi"
+					aria-disabled={data.mode === 'bulanan' ||
+						data.mode === 'persentase_bulanan' ||
+						data.mode === 'rapor' ||
+						data.mode === 'persentase_semester' ||
+						data.mode === 'persentase_harian' ||
+						!canEdit ||
+						isGuruMapelMode}
 					title={isGuruMapelMode
 						? 'Guru mapel tidak dapat menghapus presensi'
 						: data.mode === 'bulanan'
@@ -877,56 +892,74 @@
 						!canEdit ||
 						isGuruMapelMode}
 				>
-					<Icon name="del" />
+					<Icon name="del" class="h-4 w-4" />
 				</button>
 			</div>
 		</div>
 		<button
 			type="button"
-			class="btn btn-soft shadow-none max-sm:w-full sm:w-auto"
+			class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 max-sm:w-full sm:w-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 			onclick={openDownloadRekap}
 		>
-			<Icon name="download" />
+			<Icon name="download" class="h-4 w-4" />
 			Download Rekap (.xlsx)
 		</button>
 	</div>
 
 	{#if showSimulasi}
-		<div class="bg-base-200 rounded-box mb-4 p-3 shadow-md dark:shadow-none">
+		<div
+			class="mb-4 rounded-xl border border-slate-200 bg-slate-50/85 p-3.5 dark:border-zinc-800 dark:bg-zinc-800/50"
+		>
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-end">
 				<label class="flex flex-col gap-1 sm:flex-1">
-					<span class="text-sm font-semibold">Hari</span>
-					<select
-						class="select select-sm bg-base-100 w-full dark:border-none"
-						bind:value={simulasiHari}
-					>
-						{#each ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] as h (h)}
-							<option>{h}</option>
-						{/each}
-					</select>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Hari</span>
+					<div class="relative flex items-center">
+						<select
+							class="h-9 w-full appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+							bind:value={simulasiHari}
+						>
+							{#each ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] as h (h)}
+								<option>{h}</option>
+							{/each}
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
+					</div>
 				</label>
 				<label class="flex flex-col gap-1 sm:flex-1">
-					<span class="text-sm font-semibold">Jam</span>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Jam</span>
 					<input
 						type="text"
-						class="input input-sm bg-base-100 w-full dark:border-none"
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						bind:value={simulasiJam}
 						pattern="[0-9]{2}:[0-9]{2}"
 						inputmode="numeric"
 						placeholder="HH:mm"
 					/>
 				</label>
-				<button type="button" class="btn btn-primary btn-sm shadow-none" onclick={applySimulasi}>
-					<Icon name="play" /> Terapkan
+				<button
+					type="button"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+					onclick={applySimulasi}
+				>
+					<Icon name="play" class="h-3.5 w-3.5" /> Terapkan
 				</button>
 				{#if simActive}
-					<button type="button" class="btn btn-soft btn-sm shadow-none" onclick={resetSimulasi}>
+					<button
+						type="button"
+						class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+						onclick={resetSimulasi}
+					>
 						Reset
 					</button>
 				{:else}
 					<button
 						type="button"
-						class="btn btn-soft btn-sm shadow-none"
+						class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 						onclick={() => (showSimulasi = false)}
 					>
 						Tutup
@@ -937,27 +970,32 @@
 	{/if}
 
 	<form
-		class="flex flex-col gap-2 sm:flex-row"
+		class="flex flex-col gap-2 sm:flex-row sm:items-center"
 		data-sveltekit-keepfocus
 		data-sveltekit-replacestate
 		autocomplete="off"
 		spellcheck="false"
 		onsubmit={submitSearch}
 	>
-		<div class="join w-full">
-			<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
-				<Icon name="search" />
-				<input
-					type="search"
-					name="q"
-					value={searchTerm}
-					placeholder="Cari nama murid..."
-					oninput={handleSearchInput}
-					autocomplete="off"
-				/>
-			</label>
+		<div class="relative flex-1">
+			<span
+				class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 dark:text-zinc-500"
+			>
+				<Icon name="search" class="h-4 w-4" />
+			</span>
+			<input
+				type="search"
+				name="q"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+				value={searchTerm}
+				placeholder="Cari nama murid..."
+				oninput={handleSearchInput}
+				autocomplete="off"
+			/>
+		</div>
+		<div class="relative flex items-center sm:w-52">
 			<select
-				class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink truncate dark:border-none"
+				class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				bind:value={selectedMode}
 				title="Pilih mode presensi"
 				onchange={(event) =>
@@ -972,48 +1010,74 @@
 				<option value="persentase_semester">Persentase Semester</option>
 				<option value="rapor">Rapor</option>
 			</select>
+			<span
+				aria-hidden="true"
+				class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+			>
+				<Icon name="down" class="h-3.5 w-3.5" />
+			</span>
 		</div>
 	</form>
 
 	{#if canBulkSelect && bulkCount > 0}
 		<div
-			class="border-base-300 bg-base-200/70 mt-4 flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center"
+			class="mt-4 flex flex-col gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/70 p-3 sm:flex-row sm:items-center dark:border-blue-900/60 dark:bg-blue-950/30"
 		>
-			<span class="text-sm font-semibold">{bulkCount} murid dipilih</span>
-			<label class="flex items-center gap-2 text-sm">
+			<span class="text-xs font-semibold text-blue-950 tabular-nums dark:text-blue-200">
+				{bulkCount} murid dipilih
+			</span>
+			<label class="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-zinc-300">
 				<span>Masuk</span>
-				<select
-					class="select select-sm bg-base-100 w-28 dark:border-none"
-					bind:value={bulkMasuk}
-					disabled={bulkSubmitting}
-					title="Status masuk untuk murid terpilih"
-				>
-					<option value="">Hadir</option>
-					<option value="sakit">Sakit</option>
-					<option value="izin">Izin</option>
-					<option value="alfa">TK</option>
-				</select>
-			</label>
-			{#if showBulkPulang}
-				<label class="flex items-center gap-2 text-sm">
-					<span>Pulang</span>
+				<div class="relative flex items-center">
 					<select
-						class="select select-sm bg-base-100 w-28 dark:border-none"
-						bind:value={bulkPulang}
+						class="h-8 w-28 appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-7 pl-2.5 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						bind:value={bulkMasuk}
 						disabled={bulkSubmitting}
-						title="Status pulang untuk murid terpilih"
+						title="Status masuk untuk murid terpilih"
 					>
 						<option value="">Hadir</option>
 						<option value="sakit">Sakit</option>
 						<option value="izin">Izin</option>
 						<option value="alfa">TK</option>
 					</select>
+					<span
+						aria-hidden="true"
+						class="pointer-events-none absolute right-2 flex items-center text-slate-400 dark:text-zinc-400"
+					>
+						<Icon name="down" class="h-3 w-3" />
+					</span>
+				</div>
+			</label>
+			{#if showBulkPulang}
+				<label
+					class="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-zinc-300"
+				>
+					<span>Pulang</span>
+					<div class="relative flex items-center">
+						<select
+							class="h-8 w-28 appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-7 pl-2.5 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+							bind:value={bulkPulang}
+							disabled={bulkSubmitting}
+							title="Status pulang untuk murid terpilih"
+						>
+							<option value="">Hadir</option>
+							<option value="sakit">Sakit</option>
+							<option value="izin">Izin</option>
+							<option value="alfa">TK</option>
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2 flex items-center text-slate-400 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3 w-3" />
+						</span>
+					</div>
 				</label>
 			{/if}
 			<div class="flex gap-2 sm:ml-auto">
 				<button
 					type="button"
-					class="btn btn-soft btn-sm shadow-none"
+					class="inline-flex h-8 items-center rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 					onclick={clearSelection}
 					disabled={bulkSubmitting}
 				>
@@ -1026,19 +1090,17 @@
 					onsuccess={handleBulkSuccess}
 					showToast
 				>
-					{#snippet children({ submitting })}
-						<input type="hidden" name="tanggal" value={data.tanggal} />
-						<input type="hidden" name="kelasId" value={kelasAktif?.id ?? ''} />
-						<input type="hidden" name="mataPelajaranId" value={data.harianMapelId ?? ''} />
-						<input type="hidden" name="muridIds" value={muridIdsPayload} />
-						<input type="hidden" name="masuk" value={bulkMasuk} />
-						<input type="hidden" name="pulang" value={showBulkPulang ? bulkPulang : ''} />
-					{/snippet}
+					<input type="hidden" name="tanggal" value={data.tanggal} />
+					<input type="hidden" name="kelasId" value={kelasAktif?.id ?? ''} />
+					<input type="hidden" name="mataPelajaranId" value={data.harianMapelId ?? ''} />
+					<input type="hidden" name="muridIds" value={muridIdsPayload} />
+					<input type="hidden" name="masuk" value={bulkMasuk} />
+					<input type="hidden" name="pulang" value={showBulkPulang ? bulkPulang : ''} />
 				</FormEnhance>
 				<button
 					type="submit"
 					form={bulkFormId}
-					class="btn btn-primary btn-sm shadow-none"
+					class="inline-flex h-8 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
 					disabled={bulkSubmitting}
 				>
 					{#if bulkSubmitting}
@@ -1051,43 +1113,57 @@
 	{/if}
 
 	{#if !hasMurid}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>Belum ada murid di kelas ini. Tambahkan murid terlebih dahulu.</span>
 		</div>
 	{:else if (data.mode === 'persentase_harian' || data.mode === 'persentase_bulanan') && !data.presensiReady && data.presensiWarningMessage}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>{data.presensiWarningMessage}</span>
 		</div>
 	{:else if !hasFilteredMurid}
-		<div class="alert alert-soft alert-info mt-6">
-			<Icon name="info" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/80 px-4 py-3 text-xs text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/35 dark:text-blue-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 			<span>Tidak ada murid yang cocok dengan pencarian.</span>
 		</div>
 	{:else if data.mode === 'rapor' && !data.presensiReady && data.presensiWarningMessage}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>{data.presensiWarningMessage}</span>
 		</div>
 	{:else if data.mode === 'rapor' && (!data.tanggalMulaiRapor || !data.tanggalAkhirRapor)}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
-			<span
-				>Tanggal masuk semester atau tanggal bagi rapor belum diatur. Atur di halaman /akademik.</span
-			>
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+			<span>
+				Tanggal masuk semester atau tanggal bagi rapor belum diatur. Atur di halaman /akademik.
+			</span>
 		</div>
 	{:else if data.mode === 'persentase_semester' && !data.presensiReady && data.presensiWarningMessage}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>{data.presensiWarningMessage}</span>
 		</div>
 	{:else if data.mode === 'persentase_semester' && (!data.tanggalMulaiRapor || !data.tanggalAkhirRapor)}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
-			<span
-				>Tanggal masuk semester atau tanggal bagi rapor belum diatur. Atur di halaman /akademik.</span
-			>
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+			<span>
+				Tanggal masuk semester atau tanggal bagi rapor belum diatur. Atur di halaman /akademik.
+			</span>
 		</div>
 	{:else if data.mode === 'bulanan'}
 		<TableBulanan

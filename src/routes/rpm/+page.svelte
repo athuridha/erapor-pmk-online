@@ -659,38 +659,57 @@
 	}
 </script>
 
-<div class="space-y-4">
-	<div class="card bg-base-100 rounded-box w-full border border-none p-4 shadow-md">
-		<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-			<h2 class="text-lg font-bold">Generate RPM (Rencana Pembelajaran Mendalam)</h2>
+<div class="space-y-5">
+	<section
+		class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<div
+			class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 dark:border-zinc-800"
+		>
+			<div>
+				<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+					Generate RPM (Rencana Pembelajaran Mendalam)
+				</h1>
+				<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+					Buat RPM Kurikulum Merdeka terstruktur dengan bantuan AI, lalu periksa sebelum dicetak.
+				</p>
+			</div>
 			<button
-				class="btn btn-soft btn-sm shadow-none"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				type="button"
 				onclick={() => (importOpen = true)}
 			>
-				<Icon name="import" />
+				<Icon name="import" class="h-3.5 w-3.5" />
 				Import JSON
 			</button>
 		</div>
-		<p class="text-base-content/70 mb-4 text-sm">
+		<p class="mb-4 text-xs leading-relaxed text-slate-600 dark:text-zinc-300">
 			Buat Rencana Pembelajaran Mendalam (RPM) Kurikulum Merdeka berbasis Capaian Pembelajaran, mata
 			pelajaran, lingkup materi, tujuan pembelajaran, karakteristik murid, dan Dimensi Profil
 			Lulusan pilihan Anda. Teks dihasilkan AI dalam bahasa Indonesia sesuai EYD, terstruktur,
-			ringkas, dan jelas — hasilnya dapat diperiksa dan disunting sebelum dicetak ke PDF.
+			ringkas, dan jelas, serta hasilnya dapat diperiksa dan disunting sebelum dicetak ke PDF.
 		</p>
 
 		{#if aiStatus === 'checking'}
-			<div class="alert alert-info alert-soft mb-4">
-				<span class="loading loading-spinner loading-sm"></span>
-				<span>Memeriksa ketersediaan fitur AI…</span>
+			<div
+				class="mb-4 flex items-center gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/70 px-4 py-3 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200"
+			>
+				<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+				<span>Memeriksa ketersediaan fitur AI...</span>
 			</div>
 		{:else if aiStatus === 'unconfigured'}
-			<div class="alert alert-warning mb-4" role="alert">
-				<Icon name="warning" />
+			<div
+				class="mb-4 flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200"
+				role="alert"
+			>
+				<Icon name="warning" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 				<span>
 					Fitur AI belum aktif. Setel kunci API {isAdminUserState ? '' : 'pribadi Anda '}di
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- deep link to settings page AI key card -->
-					<a class="link" href="/pengaturan#ai-key">Pengaturan</a>.
+					<a
+						class="font-semibold underline hover:text-amber-700 dark:hover:text-amber-100"
+						href="/pengaturan#ai-key">Pengaturan</a
+					>.
 				</span>
 			</div>
 		{/if}
@@ -698,47 +717,69 @@
 		{#if !generated}
 			<div class="flex flex-col gap-4">
 				{#snippet mapel_and_agama()}
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend font-semibold">Mata Pelajaran di Kelas Aktif</legend>
+					<div>
+						<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							>Mata Pelajaran di Kelas Aktif</span
+						>
 						{#if data.mapelList.length === 0}
-							<p class="text-sm opacity-60">Belum ada mata pelajaran di kelas aktif ini.</p>
+							<p class="text-xs text-slate-500 dark:text-zinc-400">
+								Belum ada mata pelajaran di kelas aktif ini.
+							</p>
 						{:else}
-							<select
-								class="select bg-base-200 dark:bg-base-300 validator w-full dark:border-none"
-								value={mapelId}
-								onchange={handleMapelChange}
-							>
-								<option value={0} disabled>Pilih mata pelajaran…</option>
-								{#each data.mapelList as m (m.id)}
-									<option value={m.id}>{m.nama}</option>
-								{/each}
-							</select>
+							<div class="relative flex items-center">
+								<select
+									class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+									value={mapelId}
+									onchange={handleMapelChange}
+								>
+									<option value={0} disabled>Pilih mata pelajaran...</option>
+									{#each data.mapelList as m (m.id)}
+										<option value={m.id}>{m.nama}</option>
+									{/each}
+								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
+							</div>
 						{/if}
-					</fieldset>
+					</div>
 
 					{#if showAgamaSelect}
-						<fieldset class="fieldset">
-							<legend class="fieldset-legend font-semibold">Agama</legend>
+						<div>
+							<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Agama</span
+							>
 							{#if !agamaOptions.length}
-								<p class="text-sm opacity-60">
+								<p class="text-xs text-slate-500 dark:text-zinc-400">
 									Tidak ada varian agama untuk Pendidikan Agama dan Budi Pekerti di kelas ini.
 								</p>
 							{:else}
-								<select
-									class="select bg-base-200 dark:bg-base-300 validator w-full dark:border-none"
-									bind:value={agamaKey}
-									onchange={() => {
-										lingkupMateri = '';
-										tpIds = [];
-									}}
-								>
-									<option value="">Pilih agama…</option>
-									{#each agamaOptions as o (o.key)}
-										<option value={o.key}>{o.label}</option>
-									{/each}
-								</select>
+								<div class="relative flex items-center">
+									<select
+										class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+										bind:value={agamaKey}
+										onchange={() => {
+											lingkupMateri = '';
+											tpIds = [];
+										}}
+									>
+										<option value="">Pilih agama...</option>
+										{#each agamaOptions as o (o.key)}
+											<option value={o.key}>{o.label}</option>
+										{/each}
+									</select>
+									<span
+										aria-hidden="true"
+										class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+									>
+										<Icon name="down" class="h-3.5 w-3.5" />
+									</span>
+								</div>
 							{/if}
-						</fieldset>
+						</div>
 					{/if}
 				{/snippet}
 
@@ -750,20 +791,23 @@
 					{@render mapel_and_agama()}
 				{/if}
 
-				<div class="alert alert-info" role="note">
-					<Icon name="info" />
+				<div
+					class="flex items-start gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/70 px-4 py-3 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200"
+					role="note"
+				>
+					<Icon name="info" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 					<span>
 						Khusus sekolah negeri, pastikan menggunakan Capaian Pembelajaran dari
 						{#if isAgamaFamily}
 							<a
-								class="link"
+								class="font-semibold underline hover:text-blue-700 dark:hover:text-blue-100"
 								href="https://drive.google.com/file/d/1kZnNYVitjQQqHtqVHGhuiMTdNFDqF3v1/view"
 								target="_blank"
 								rel="noreferrer">Keputusan Kepala BKPDM Nomor 020 Tahun 2026</a
 							>
 						{:else}
 							<a
-								class="link"
+								class="font-semibold underline hover:text-blue-700 dark:hover:text-blue-100"
 								href="https://uploads.belajar.id/document/files/Kepka_BSKAP_No_01k17e8396ajn15j3hcw0k773b.pdf"
 								target="_blank"
 								rel="noreferrer">Keputusan Kepala BSKAP Nomor 046 tahun 2025</a
@@ -773,55 +817,75 @@
 					</span>
 				</div>
 
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend font-semibold">Capaian Pembelajaran</legend>
+				<div>
+					<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Capaian Pembelajaran</span
+					>
 					<textarea
-						class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 						bind:value={capaianPembelajaran}
 						placeholder="Tempel atau tulis Capaian Pembelajaran (CP) yang akan dijadikan dasar penyusunan RPM"
 						rows="6"></textarea>
-				</fieldset>
+				</div>
 
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend font-semibold">Lingkup Materi</legend>
-						<select
-							class="select bg-base-200 dark:bg-base-300 validator w-full dark:border-none"
-							value={lingkupMateri}
-							onchange={handleLingkupChange}
-							disabled={!selectedMapel || lingkupOptions.length === 0}
+					<div>
+						<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							>Lingkup Materi</span
 						>
-							<option value="">Pilih lingkup materi…</option>
-							{#each lingkupOptions as lm (lm)}
-								<option value={lm}>{lm}</option>
-							{/each}
-						</select>
-					</fieldset>
+						<div class="relative flex items-center">
+							<select
+								class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+								value={lingkupMateri}
+								onchange={handleLingkupChange}
+								disabled={!selectedMapel || lingkupOptions.length === 0}
+							>
+								<option value="">Pilih lingkup materi...</option>
+								{#each lingkupOptions as lm (lm)}
+									<option value={lm}>{lm}</option>
+								{/each}
+							</select>
+							<span
+								aria-hidden="true"
+								class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+							>
+								<Icon name="down" class="h-3.5 w-3.5" />
+							</span>
+						</div>
+					</div>
 
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend font-semibold">Karakteristik Murid (opsional)</legend>
+					<div>
+						<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							>Karakteristik Murid (opsional)</span
+						>
 						<textarea
-							class="textarea bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 							bind:value={karakteristikInput}
 							placeholder="Kosongkan untuk digenerate otomatis oleh AI, mis. siswa kelas aktif dengan latar belakang kemampuan beragam"
 							rows="4"></textarea>
-					</fieldset>
+					</div>
 				</div>
 
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend font-semibold">
+				<div>
+					<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
 						Tujuan Pembelajaran (bisa lebih dari satu)
-					</legend>
+					</span>
 					{#if !selectedMapel}
-						<p class="text-sm opacity-60">Pilih mata pelajaran terlebih dahulu.</p>
+						<p class="text-xs text-slate-500 dark:text-zinc-400">
+							Pilih mata pelajaran terlebih dahulu.
+						</p>
 					{:else if tpOptions.length === 0}
-						<p class="text-sm opacity-60">Belum ada tujuan pembelajaran pada lingkup materi ini.</p>
+						<p class="text-xs text-slate-500 dark:text-zinc-400">
+							Belum ada tujuan pembelajaran pada lingkup materi ini.
+						</p>
 					{:else}
 						<div
-							class="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-box border p-2 bg-base-200 dark:bg-base-300 border-base-300 dark:border-none"
+							class="flex max-h-56 flex-col gap-1.5 overflow-y-auto rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800/50"
 						>
 							{#each tpOptions as tp (tp.id)}
-								<label class="flex items-start gap-2 text-sm">
+								<label
+									class="flex cursor-pointer items-start gap-2.5 text-xs text-slate-700 dark:text-zinc-200"
+								>
 									<input
 										type="checkbox"
 										class="checkbox checkbox-sm mt-0.5"
@@ -834,17 +898,19 @@
 							{/each}
 						</div>
 					{/if}
-				</fieldset>
+				</div>
 
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend font-semibold">
+				<div>
+					<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
 						Dimensi Profil Lulusan (pilih satu atau lebih)
-					</legend>
+					</span>
 					<div
-						class="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-box border p-2 bg-base-200 dark:bg-base-300 border-base-300 dark:border-none"
+						class="flex max-h-56 flex-col gap-1.5 overflow-y-auto rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800/50"
 					>
 						{#each DIMENSI_PROFIL_LULUSAN_OPTIONS as opt (opt.key)}
-							<label class="flex items-start gap-2 text-sm">
+							<label
+								class="flex cursor-pointer items-start gap-2.5 text-xs text-slate-700 dark:text-zinc-200"
+							>
 								<input
 									type="checkbox"
 									class="checkbox checkbox-sm mt-0.5"
@@ -856,46 +922,53 @@
 							</label>
 						{/each}
 					</div>
-					<p class="mt-1 text-xs opacity-60">
+					<p class="mt-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
 						Pilih Dimensi Profil Lulusan yang relevan, sama seperti pada halaman Kokurikuler.
 					</p>
-				</fieldset>
+				</div>
 
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend font-semibold">Prompt Tambahan untuk AI (opsional)</legend>
+				<div>
+					<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Prompt Tambahan untuk AI (opsional)</span
+					>
 					<textarea
-						class="textarea bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 						bind:value={inputCustom}
 						placeholder="contoh: aku ingin ada kemitraan pembelajaran dengan pihak puskesmas dengan kegiatan wawancara antara murid dan nakes"
 						rows="3"></textarea>
-					<p class="mt-1 text-xs opacity-60">
+					<p class="mt-1.5 text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
 						Ketentuan/permintaan tambahan yang akan memengaruhi hasil generate, mis. "Saya ingin ada
 						kegiatan ice breaking yang menyenangkan", "gunakan model pembelajaran Problem Based
 						Learning", atau "perinci langkah pembelajarannya". Tidak dicetak langsung, hanya menjadi
 						acuan AI.
 					</p>
-				</fieldset>
+				</div>
 
 				{#if errorMessage}
-					<div class="alert alert-error alert-soft" role="alert" aria-live="polite">
-						<Icon name="error" />
+					<div
+						class="flex items-center gap-2.5 rounded-xl border border-red-200/80 bg-red-50/80 px-4 py-3 text-xs text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200"
+						role="alert"
+						aria-live="polite"
+					>
+						<Icon name="error" class="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
 						<span>{errorMessage}</span>
 					</div>
 				{/if}
 
 				<div class="flex justify-end gap-2">
 					<button
-						class="btn btn-primary shadow-none"
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
 						type="button"
 						onclick={handleGenerate}
 						disabled={generating || !canGenerate}
+						aria-disabled={generating || !canGenerate}
 						aria-busy={generating}
 						title={canGenerate ? undefined : generateTitle}
 					>
 						{#if generating}
-							<span class="loading loading-spinner loading-sm"></span>
+							<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
 						{:else}
-							<Icon name="sparkles" />
+							<Icon name="sparkles" class="h-3.5 w-3.5" />
 						{/if}
 						Generate RPM
 					</button>
@@ -904,10 +977,12 @@
 		{:else}
 			{@const g = generated}
 			{#snippet field_item(label: string, key: StringFieldKey, rows = 4)}
-				<div class="grid gap-1 sm:grid-cols-[10rem_1fr] sm:items-start">
-					<span class="text-sm font-semibold sm:pt-2">{label}</span>
+				<div class="grid gap-1.5 sm:grid-cols-[11rem_1fr] sm:items-start">
+					<span class="text-xs font-semibold text-slate-700 sm:pt-2 dark:text-zinc-300"
+						>{label}</span
+					>
 					<textarea
-						class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						{rows}
 						value={g[key] as string}
 						oninput={(event) =>
@@ -915,21 +990,27 @@
 				</div>
 			{/snippet}
 
-			<p class="text-base-content/70 mb-3 text-sm">
+			<p class="mb-3 text-xs text-slate-500 dark:text-zinc-400">
 				Hasil generate sementara. Silakan periksa dan perbaiki bagian yang diinginkan sebelum
 				mencetak PDF.
 			</p>
 
 			<div class="flex flex-col gap-4">
-				<div class="card bg-base-100 rounded-box border border-base-300 p-4">
-					<h3 class="mb-3 text-base font-bold">Identifikasi</h3>
+				<div
+					class="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-800/40"
+				>
+					<h2 class="mb-3 text-sm font-bold text-slate-900 dark:text-zinc-100">Identifikasi</h2>
 					<div class="flex flex-col gap-4">
-						<div class="grid gap-1 sm:grid-cols-[10rem_1fr] sm:items-start">
-							<span class="text-sm font-semibold sm:pt-2">Peserta Didik</span>
+						<div class="grid gap-1.5 sm:grid-cols-[11rem_1fr] sm:items-start">
+							<span class="text-xs font-semibold text-slate-700 sm:pt-2 dark:text-zinc-300"
+								>Peserta Didik</span
+							>
 							<div>
-								<p class="text-sm">{kelasLabelFase}</p>
+								<p class="text-xs font-medium text-slate-700 dark:text-zinc-200">
+									{kelasLabelFase}
+								</p>
 								<textarea
-									class="textarea validator bg-base-200 dark:bg-base-300 mt-2 w-full dark:border-none"
+									class="mt-2 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 									rows="2"
 									value={g.karakteristik}
 									oninput={(event) =>
@@ -941,18 +1022,24 @@
 							</div>
 						</div>
 
-						<div class="grid gap-1 sm:grid-cols-[10rem_1fr] sm:items-start">
-							<span class="text-sm font-semibold sm:pt-2">Materi Pelajaran</span>
-							<div class="pt-2 text-sm">{lingkupMateri}</div>
+						<div class="grid gap-1.5 sm:grid-cols-[11rem_1fr] sm:items-start">
+							<span class="text-xs font-semibold text-slate-700 sm:pt-1 dark:text-zinc-300"
+								>Materi Pelajaran</span
+							>
+							<div class="pt-1 text-xs text-slate-800 dark:text-zinc-200">{lingkupMateri}</div>
 						</div>
 
-						<div class="grid gap-1 sm:grid-cols-[10rem_1fr] sm:items-start">
-							<span class="text-sm font-semibold sm:pt-2">Dimensi Profil Lulusan</span>
+						<div class="grid gap-1.5 sm:grid-cols-[11rem_1fr] sm:items-start">
+							<span class="text-xs font-semibold text-slate-700 sm:pt-2 dark:text-zinc-300"
+								>Dimensi Profil Lulusan</span
+							>
 							<div
-								class="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-box border p-2 bg-base-200 dark:bg-base-300 border-base-300 dark:border-none"
+								class="flex max-h-48 flex-col gap-1.5 overflow-y-auto rounded-xl border border-slate-200/80 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900"
 							>
 								{#each DIMENSI_PROFIL_LULUSAN_OPTIONS as opt (opt.key)}
-									<label class="flex items-start gap-2 text-sm">
+									<label
+										class="flex cursor-pointer items-start gap-2.5 text-xs text-slate-700 dark:text-zinc-200"
+									>
 										<input
 											type="checkbox"
 											class="checkbox checkbox-sm mt-0.5"
@@ -968,13 +1055,19 @@
 					</div>
 				</div>
 
-				<div class="card bg-base-100 rounded-box border border-base-300 p-4">
-					<h3 class="mb-3 text-base font-bold">Desain Pembelajaran</h3>
+				<div
+					class="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-800/40"
+				>
+					<h2 class="mb-3 text-sm font-bold text-slate-900 dark:text-zinc-100">
+						Desain Pembelajaran
+					</h2>
 					<div class="flex flex-col gap-4">
-						<div class="grid gap-1 sm:grid-cols-[10rem_1fr] sm:items-start">
-							<span class="text-sm font-semibold sm:pt-2">Capaian Pembelajaran</span>
+						<div class="grid gap-1.5 sm:grid-cols-[11rem_1fr] sm:items-start">
+							<span class="text-xs font-semibold text-slate-700 sm:pt-2 dark:text-zinc-300"
+								>Capaian Pembelajaran</span
+							>
 							<textarea
-								class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 								rows="4"
 								value={capaianPembelajaran}
 								oninput={(event) =>
@@ -982,23 +1075,27 @@
 							></textarea>
 						</div>
 
-						<div class="grid gap-1 sm:grid-cols-[10rem_1fr] sm:items-start">
-							<span class="text-sm font-semibold sm:pt-2">Topik Pembelajaran</span>
-							<div class="pt-2 text-sm">{lingkupMateri}</div>
+						<div class="grid gap-1.5 sm:grid-cols-[11rem_1fr] sm:items-start">
+							<span class="text-xs font-semibold text-slate-700 sm:pt-1 dark:text-zinc-300"
+								>Topik Pembelajaran</span
+							>
+							<div class="pt-1 text-xs text-slate-800 dark:text-zinc-200">{lingkupMateri}</div>
 						</div>
 
-						<div class="grid gap-1 sm:grid-cols-[10rem_1fr] sm:items-start">
-							<span class="text-sm font-semibold sm:pt-2">Tujuan Pembelajaran</span>
-							<div class="flex flex-col gap-1 pt-1">
+						<div class="grid gap-1.5 sm:grid-cols-[11rem_1fr] sm:items-start">
+							<span class="text-xs font-semibold text-slate-700 sm:pt-1 dark:text-zinc-300"
+								>Tujuan Pembelajaran</span
+							>
+							<div class="flex flex-col gap-1 pt-1 text-xs text-slate-700 dark:text-zinc-200">
 								{#if g.tujuanPembelajaran?.length}
 									{#each g.tujuanPembelajaran as tp, idx (idx)}
-										<span class="text-sm">{idx + 1}. {tp}</span>
+										<span>{idx + 1}. {tp}</span>
 									{/each}
 								{:else}
 									{#each selectedTps as tp, idx (tp.id)}
-										<span class="text-sm">{idx + 1}. {tp.deskripsi}</span>
+										<span>{idx + 1}. {tp.deskripsi}</span>
 									{:else}
-										<span class="text-sm italic opacity-60"
+										<span class="text-slate-400 italic dark:text-zinc-500"
 											>Belum ada tujuan pembelajaran dipilih.</span
 										>
 									{/each}
@@ -1014,8 +1111,12 @@
 					</div>
 				</div>
 
-				<div class="card bg-base-100 rounded-box border border-base-300 p-4">
-					<h3 class="mb-3 text-base font-bold">Pengalaman Belajar</h3>
+				<div
+					class="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-800/40"
+				>
+					<h2 class="mb-3 text-sm font-bold text-slate-900 dark:text-zinc-100">
+						Pengalaman Belajar
+					</h2>
 					<div class="flex flex-col gap-4">
 						{@render field_item('Kegiatan Awal', 'kegiatanAwal', 5)}
 						{@render field_item('Memahami (Berkesadaran, Bermakna)', 'memahami', 5)}
@@ -1025,17 +1126,21 @@
 					</div>
 				</div>
 
-				<div class="card bg-base-100 rounded-box border border-base-300 p-4">
-					<h3 class="mb-3 text-base font-bold">Asesmen Pembelajaran</h3>
+				<div
+					class="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-800/40"
+				>
+					<h2 class="mb-3 text-sm font-bold text-slate-900 dark:text-zinc-100">
+						Asesmen Pembelajaran
+					</h2>
 					<div class="flex flex-col gap-4">
 						{#if g.asesmen.length}
 							{#each g.asesmen as a, i (i)}
-								<div class="grid gap-1 sm:grid-cols-[10rem_1fr] sm:items-start">
-									<span class="text-sm font-semibold sm:pt-2"
+								<div class="grid gap-1.5 sm:grid-cols-[11rem_1fr] sm:items-start">
+									<span class="text-xs font-semibold text-slate-700 sm:pt-2 dark:text-zinc-300"
 										>Assessment for Learning ({i + 1})</span
 									>
 									<textarea
-										class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+										class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 										rows="5"
 										value={a}
 										oninput={(event) => {
@@ -1046,15 +1151,19 @@
 								</div>
 							{/each}
 						{:else}
-							<p class="text-sm italic opacity-60">Belum ada assessment.</p>
+							<p class="text-xs text-slate-400 italic dark:text-zinc-500">Belum ada assessment.</p>
 						{/if}
 					</div>
 				</div>
 			</div>
 
 			{#if errorMessage}
-				<div class="alert alert-error alert-soft" role="alert" aria-live="polite">
-					<Icon name="error" />
+				<div
+					class="mt-4 flex items-center gap-2.5 rounded-xl border border-red-200/80 bg-red-50/80 px-4 py-3 text-xs text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200"
+					role="alert"
+					aria-live="polite"
+				>
+					<Icon name="error" class="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
 					<span>{errorMessage}</span>
 				</div>
 			{/if}
@@ -1062,110 +1171,127 @@
 			<div
 				class="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
 			>
-				<div class="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex sm:flex-wrap">
+				<div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
 					<button
-						class="btn btn-soft btn-sm w-full shadow-none sm:btn-md sm:w-auto"
+						class="inline-flex h-9 w-full items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 sm:w-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 						type="button"
 						onclick={handleBack}
 					>
 						Kembali ke Form
 					</button>
 					<button
-						class="btn btn-soft btn-sm w-full shadow-none sm:btn-md sm:w-auto"
+						class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 sm:w-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 						type="button"
 						onclick={handleDownloadJson}
 					>
-						<Icon name="download" />
+						<Icon name="download" class="h-3.5 w-3.5" />
 						Unduh JSON
 					</button>
 				</div>
 				<button
-					class="btn btn-primary btn-sm w-full shadow-none sm:btn-md sm:w-auto"
+					class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto dark:bg-blue-500 dark:hover:bg-blue-600"
 					type="button"
 					onclick={handlePrintPdf}
 					disabled={printing}
 					aria-busy={printing}
 				>
 					{#if printing}
-						<span class="loading loading-spinner loading-sm"></span>
+						<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
 					{:else}
-						<Icon name="print" />
+						<Icon name="print" class="h-3.5 w-3.5" />
 					{/if}
 					Cetak PDF
 				</button>
 			</div>
 		{/if}
-	</div>
+	</section>
 
 	{#if generated}
 		{#if !lampiran}
-			<div class="card bg-base-100 rounded-box w-full border border-none p-4 shadow-md">
+			<section
+				class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+			>
 				<div
-					class="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+					class="mb-3 flex flex-col gap-2 border-b border-slate-100 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between dark:border-zinc-800"
 				>
-					<h2 class="text-lg font-bold">Lampiran RPM</h2>
+					<h2 class="text-base font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+						Lampiran RPM
+					</h2>
 					<div class="flex flex-wrap gap-2 sm:justify-end">
 						<button
-							class="btn btn-primary btn-sm shadow-none"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
 							type="button"
 							onclick={handleGenerateLampiran}
 							disabled={lampiranGenerating}
 							aria-busy={lampiranGenerating}
 						>
 							{#if lampiranGenerating}
-								<span class="loading loading-spinner loading-sm"></span>
+								<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
 							{:else}
-								<Icon name="sparkles" />
+								<Icon name="sparkles" class="h-3.5 w-3.5" />
 							{/if}
 							Generate Lampiran
 						</button>
 						<button
-							class="btn btn-soft btn-sm shadow-none"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							type="button"
 							onclick={handleLampiranImport}
 						>
-							<Icon name="import" />
+							<Icon name="import" class="h-3.5 w-3.5" />
 							Import JSON
 						</button>
 					</div>
 				</div>
-				<p class="mb-3 text-sm opacity-70">
-					Penilaian Formatif &amp; Sumatif (beserta rubrik) serta Lembar Kerja Murid — disusun
+				<p class="mb-3 text-xs text-slate-500 dark:text-zinc-400">
+					Penilaian Formatif &amp; Sumatif (beserta rubrik) serta Lembar Kerja Murid yang disusun
 					terkait tujuan pembelajaran dan langkah kegiatan pada RPM.
 				</p>
 
 				{#if lampiranError}
-					<div class="alert alert-error alert-soft mb-4" role="alert">
-						<Icon name="error" />
+					<div
+						class="mb-4 flex items-center gap-2.5 rounded-xl border border-red-200/80 bg-red-50/80 px-4 py-3 text-xs text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200"
+						role="alert"
+					>
+						<Icon name="error" class="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
 						<span>{lampiranError}</span>
 					</div>
 				{/if}
 
-				<fieldset class="fieldset mb-3">
-					<legend class="fieldset-legend font-semibold">Prompt Tambahan untuk AI (opsional)</legend>
+				<div>
+					<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Prompt Tambahan untuk AI (opsional)</span
+					>
 					<textarea
-						class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 						rows="2"
 						placeholder="contoh: instrumen sumatif menggunakan soal jawaban ganda sebanyak 10 soal"
 						value={lampiranCustom}
 						oninput={(event) =>
 							(lampiranCustom = (event.currentTarget as HTMLTextAreaElement).value)}></textarea>
-				</fieldset>
-			</div>
+				</div>
+			</section>
 		{/if}
 
 		{#if lampiran}
-			<div class="card bg-base-100 rounded-box w-full border border-none p-4 shadow-md">
-				<h2 class="mb-3 text-lg font-bold">Hasil Lampiran</h2>
-				<p class="mb-3 text-sm opacity-70">
+			<section
+				class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+			>
+				<h2 class="mb-1 text-base font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+					Hasil Lampiran
+				</h2>
+				<p class="mb-4 text-xs text-slate-500 dark:text-zinc-400">
 					Hasil lampiran dapat disunting sebelum dicetak. Rubrik otomatis menjadi tabel di PDF.
 				</p>
 				<div class="flex flex-col gap-4">
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend font-semibold">Penilaian Formatif</legend>
-						<span class="fieldset-label">Uraian Teknik &amp; Pelaksanaan</span>
+					<div
+						class="space-y-2.5 rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-800/40"
+					>
+						<h3 class="text-xs font-bold text-slate-900 dark:text-zinc-100">Penilaian Formatif</h3>
+						<span class="block text-[11px] font-medium text-slate-500 dark:text-zinc-400"
+							>Uraian Teknik &amp; Pelaksanaan</span
+						>
 						<textarea
-							class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 							rows="3"
 							value={lampiran.formatif.uraian}
 							oninput={(event) => {
@@ -1178,9 +1304,11 @@
 									}
 								};
 							}}></textarea>
-						<span class="fieldset-label">Instrumen Asesmen</span>
+						<span class="block text-[11px] font-medium text-slate-500 dark:text-zinc-400"
+							>Instrumen Asesmen</span
+						>
 						<textarea
-							class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 							rows="6"
 							value={lampiran.formatif.instrumen}
 							oninput={(event) => {
@@ -1194,16 +1322,20 @@
 								};
 							}}></textarea>
 						{#if lampiran.formatif.rubrik.length}
-							<p class="ml-1 text-xs opacity-60">
+							<p class="text-[11px] text-slate-500 dark:text-zinc-400">
 								Rubrik ({lampiran.formatif.rubrik.length} aspek) ditampilkan sebagai tabel di PDF.
 							</p>
 						{/if}
-					</fieldset>
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend font-semibold">Penilaian Sumatif</legend>
-						<span class="fieldset-label">Uraian Teknik &amp; Pelaksanaan</span>
+					</div>
+					<div
+						class="space-y-2.5 rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-800/40"
+					>
+						<h3 class="text-xs font-bold text-slate-900 dark:text-zinc-100">Penilaian Sumatif</h3>
+						<span class="block text-[11px] font-medium text-slate-500 dark:text-zinc-400"
+							>Uraian Teknik &amp; Pelaksanaan</span
+						>
 						<textarea
-							class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 							rows="3"
 							value={lampiran.sumatif.uraian}
 							oninput={(event) => {
@@ -1216,9 +1348,11 @@
 									}
 								};
 							}}></textarea>
-						<span class="fieldset-label">Instrumen Asesmen</span>
+						<span class="block text-[11px] font-medium text-slate-500 dark:text-zinc-400"
+							>Instrumen Asesmen</span
+						>
 						<textarea
-							class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 							rows="6"
 							value={lampiran.sumatif.instrumen}
 							oninput={(event) => {
@@ -1232,105 +1366,122 @@
 								};
 							}}></textarea>
 						{#if lampiran.sumatif.rubrik.length}
-							<p class="ml-1 text-xs opacity-60">
+							<p class="text-[11px] text-slate-500 dark:text-zinc-400">
 								Rubrik ({lampiran.sumatif.rubrik.length} aspek) ditampilkan sebagai tabel di PDF.
 							</p>
 						{/if}
-					</fieldset>
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend font-semibold">Lembar Kerja Murid (LKPD)</legend>
+					</div>
+					<div>
+						<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							>Lembar Kerja Murid (LKPD)</span
+						>
 						<textarea
-							class="textarea validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 							rows="8"
 							value={lampiran.lkpd}
 							oninput={(event) => {
 								const cur = lampiran as Lampiran;
 								lampiran = { ...cur, lkpd: (event.currentTarget as HTMLTextAreaElement).value };
 							}}></textarea>
-					</fieldset>
+					</div>
 				</div>
 				<div
 					class="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
 				>
-					<div class="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex sm:flex-wrap">
+					<div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
 						<button
-							class="btn btn-soft btn-sm w-full shadow-none sm:btn-md sm:w-auto"
+							class="inline-flex h-9 w-full items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 sm:w-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							type="button"
 							onclick={handleLampiranBack}
 						>
 							Kembali ke Form
 						</button>
 						<button
-							class="btn btn-soft btn-sm w-full shadow-none sm:btn-md sm:w-auto"
+							class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 sm:w-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							type="button"
 							onclick={handleLampiranJson}
 						>
-							<Icon name="download" />
+							<Icon name="download" class="h-3.5 w-3.5" />
 							Unduh JSON
 						</button>
 					</div>
-					<div class="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex sm:flex-wrap">
+					<div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
 						<button
-							class="btn btn-primary btn-sm w-full shadow-none sm:btn-md sm:w-auto"
+							class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto dark:bg-blue-500 dark:hover:bg-blue-600"
 							type="button"
 							onclick={handleLampiranPdf}
 							disabled={printing}
 							aria-busy={printing}
 						>
 							{#if printing}
-								<span class="loading loading-spinner loading-sm"></span>
+								<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
 							{:else}
-								<Icon name="print" />
+								<Icon name="print" class="h-3.5 w-3.5" />
 							{/if}
 							Cetak PDF
 						</button>
 						<button
-							class="btn btn-soft btn-sm w-full shadow-none sm:btn-md sm:w-auto"
+							class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							type="button"
 							onclick={handleCombinePdf}
 							disabled={combiningPdf}
 							aria-busy={combiningPdf}
 						>
 							{#if combiningPdf}
-								<span class="loading loading-spinner loading-sm"></span>
+								<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
 							{:else}
-								<Icon name="download" />
+								<Icon name="download" class="h-3.5 w-3.5" />
 							{/if}
 							Combine PDF
 						</button>
 					</div>
 				</div>
-			</div>
+			</section>
 		{/if}
 	{/if}
 </div>
 
-<dialog class="modal" open={importOpen} onclose={() => (importOpen = false)}>
-	<div class="modal-box">
-		<h3 class="mb-2 text-lg font-bold">Import Hasil Generate (JSON)</h3>
-		<p class="mb-3 text-sm opacity-70">
-			Pilih file <code>.json</code> hasil unduhan untuk mengembalikan hasil generate, lalu periksa dan
-			cetak ke PDF.
+<dialog
+	class="modal bg-slate-950/45 backdrop-blur-[2px]"
+	open={importOpen}
+	onclose={() => (importOpen = false)}
+>
+	<div
+		class="modal-box max-w-md rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+	>
+		<h3 class="mb-2 text-base font-bold text-slate-900 dark:text-zinc-100">
+			Import Hasil Generate (JSON)
+		</h3>
+		<p class="mb-3 text-xs text-slate-500 dark:text-zinc-400">
+			Pilih file <code class="font-mono font-semibold">.json</code> hasil unduhan untuk mengembalikan
+			hasil generate, lalu periksa dan cetak ke PDF.
 		</p>
 		<input
 			type="file"
 			accept="application/json,.json"
-			class="file-input file-input-ghost"
+			class="file-input file-input-bordered w-full rounded-xl border-[#7e8b9b] bg-white text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 			onchange={handleImportFile}
 		/>
 		{#if importError}
-			<div class="alert alert-error alert-soft mt-3" role="alert">
-				<Icon name="error" />
+			<div
+				class="mt-3 flex items-center gap-2 rounded-xl border border-red-200/80 bg-red-50/80 px-3.5 py-2.5 text-xs text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200"
+				role="alert"
+			>
+				<Icon name="error" class="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
 				<span>{importError}</span>
 			</div>
 		{/if}
-		<div class="modal-action">
-			<button class="btn btn-soft shadow-none" type="button" onclick={() => (importOpen = false)}>
+		<div class="mt-5 flex justify-end border-t border-slate-100 pt-4 dark:border-zinc-800">
+			<button
+				class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+				type="button"
+				onclick={() => (importOpen = false)}
+			>
 				Batal
 			</button>
 		</div>
 	</div>
-	<form method="dialog" class="modal-backdrop">
+	<form method="dialog" class="modal-backdrop bg-transparent">
 		<button aria-label="Tutup">close</button>
 	</form>
 </dialog>

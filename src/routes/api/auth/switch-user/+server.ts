@@ -69,6 +69,7 @@ export const POST: RequestHandler = async ({ request, locals, cookies }) => {
 
 		cookies.delete(cookieNames.IMPERSONATOR_SESSION, { path: '/', secure });
 		cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure });
+		cookies.delete(cookieNames.ACTIVE_MODUL, { path: '/', secure });
 
 		return json({
 			success: true,
@@ -101,6 +102,7 @@ export const POST: RequestHandler = async ({ request, locals, cookies }) => {
 
 	applySessionCookie(cookies, token, expiresAt, secure);
 	cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure });
+	cookies.delete(cookieNames.ACTIVE_MODUL, { path: '/', secure });
 
 	return json({
 		success: true,

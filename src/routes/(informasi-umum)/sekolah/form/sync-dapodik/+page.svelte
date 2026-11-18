@@ -86,9 +86,13 @@
 	onfailure={handleFailure}
 >
 	{#snippet children({ submitting })}
-		<h3 class="mb-3 text-lg font-bold">Sinkronisasi Dapodik</h3>
+		<h2
+			class="mb-3 border-b border-slate-200 pb-3 text-lg font-bold tracking-tight text-slate-900 dark:border-zinc-800 dark:text-zinc-100"
+		>
+			Sinkronisasi Dapodik
+		</h2>
 		<div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-1">
-			<p class="text-sm opacity-70">
+			<p class="text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
 				Ambil data dari aplikasi Dapodik melalui Web Service (Bearer token). Data Dapodik akan
 				menimpa data yang sudah ada di sistem.
 			</p>
@@ -96,76 +100,100 @@
 			{#if notif}
 				<div
 					role="alert"
-					class="alert {notif.type === 'success' ? 'alert-success' : 'alert-error'} alert-soft"
+					class="flex items-start gap-2 rounded-xl border px-3.5 py-2.5 text-xs {notif.type ===
+					'success'
+						? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200'
+						: 'border-red-200 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200'}"
 				>
-					<Icon name={notif.type === 'success' ? 'success' : 'error'} />
+					<Icon
+						name={notif.type === 'success' ? 'success' : 'error'}
+						class="mt-0.5 h-4 w-4 shrink-0"
+					/>
 					<span class="text-wrap">{notif.message}</span>
 				</div>
 			{/if}
 
-			<div class="grid grid-cols-1 gap-2">
-				<div class="fieldset">
-					<legend class="fieldset-legend">Token</legend>
+			<div class="grid grid-cols-1 gap-3">
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Token</span>
 					<input
 						required
 						type="text"
 						name="token"
 						placeholder="Masukkan token web service dapodik"
-						class="input bg-base-200 dark:bg-base-300 validator w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 					/>
-					<p class="label text-wrap">Token didapat dari menu Web Service pada aplikasi Dapodik.</p>
-				</div>
+					<span class="text-xs text-slate-500 dark:text-zinc-400"
+						>Token didapat dari menu Web Service pada aplikasi Dapodik.</span
+					>
+				</label>
 
-				<div class="fieldset">
-					<legend class="fieldset-legend">URL Dapodik</legend>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">URL Dapodik</span>
 					<input
 						required
 						type="text"
 						name="url"
 						placeholder="Contoh: 192.168.8.114:5774"
-						class="input bg-base-200 dark:bg-base-300 validator w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 					/>
-				</div>
+				</label>
 
-				<div class="fieldset">
-					<legend class="fieldset-legend">NPSN</legend>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">NPSN</span>
 					<input
 						required
 						type="text"
 						name="npsn"
 						placeholder="Contoh: 69856875"
-						class="input bg-base-200 dark:bg-base-300 validator w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 					/>
-				</div>
+				</label>
 
-				<div class="fieldset">
-					<legend class="fieldset-legend">Mode Sinkronisasi</legend>
-					<select
-						bind:value={selectedMode}
-						name="mode"
-						class="select w-full truncate bg-base-200 dark:bg-base-300 validator dark:border-none"
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Mode Sinkronisasi</span
 					>
-						{#each modes as item (item.value)}
-							<option value={item.value}>{item.label}</option>
-						{/each}
-					</select>
-					<p class="label text-wrap">{modeDescription[selectedMode]}</p>
-				</div>
+					<div class="relative flex items-center">
+						<select
+							bind:value={selectedMode}
+							name="mode"
+							class="validator h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+						>
+							{#each modes as item (item.value)}
+								<option value={item.value}>{item.label}</option>
+							{/each}
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
+					</div>
+					<span class="text-xs text-slate-500 dark:text-zinc-400"
+						>{modeDescription[selectedMode]}</span
+					>
+				</label>
 			</div>
 
 			{#if sections.length > 0}
-				<div class="bg-base-200 dark:bg-base-300 rounded-md p-3">
+				<div
+					class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-zinc-800 dark:bg-zinc-800/70"
+				>
 					{#if resultMessage}
-						<p class="mb-2 font-semibold">{resultMessage}</p>
+						<p class="mb-2 text-xs font-semibold text-slate-900 dark:text-zinc-100">
+							{resultMessage}
+						</p>
 					{/if}
-					<ul class="flex flex-col gap-1">
+					<ul class="flex flex-col gap-1.5">
 						{#each sections as section (section.label)}
-							<li class="flex items-start gap-2 text-sm">
+							<li class="flex items-start gap-2 text-xs text-slate-700 dark:text-zinc-300">
 								<span class="{statusClass(section.status)} mt-0.5 shrink-0">
-									<Icon name={statusIcon(section.status)} />
+									<Icon name={statusIcon(section.status)} class="h-3.5 w-3.5" />
 								</span>
 								<span>
-									<b>{section.label}:</b>
+									<b class="text-slate-900 dark:text-zinc-100">{section.label}:</b>
 									{section.detail}
 								</span>
 							</li>
@@ -175,24 +203,24 @@
 			{/if}
 		</div>
 		<div
-			class="modal-action grid grid-cols-2 justify-between gap-2 sm:flex sm:flex-row sm:items-center"
+			class="modal-action mt-4 grid grid-cols-2 justify-between gap-2 border-t border-slate-200 pt-3 sm:flex sm:flex-row sm:items-center dark:border-zinc-800"
 		>
 			<button
 				type="button"
-				class="btn btn-soft w-full shadow-none sm:w-auto sm:flex-none"
+				class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 sm:w-auto sm:flex-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				onclick={() => history.back()}
 			>
-				<Icon name="close" />
+				<Icon name="close" class="h-3.5 w-3.5" />
 				Tutup
 			</button>
 			<button
-				class="btn btn-primary w-full shadow-none sm:w-auto sm:flex-none"
+				class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:flex-none"
 				disabled={submitting}
 			>
 				{#if submitting}
-					<span class="loading loading-spinner"></span>
+					<span class="loading loading-spinner loading-sm"></span>
 				{:else}
-					<Icon name="play" />
+					<Icon name="play" class="h-3.5 w-3.5" />
 				{/if}
 				Proses
 			</button>

@@ -1,10 +1,15 @@
 import db from '$lib/server/db';
+import { ensureEkstrakurikulerSchema } from '$lib/server/db/ensure-ekstrakurikuler';
 import { ensureAsesmenEkstrakurikulerSchema } from '$lib/server/db/ensure-asesmen-ekstrakurikuler';
 import {
 	tableAsesmenEkstrakurikuler,
+	tableAuthUser,
 	tableEkstrakurikuler,
 	tableEkstrakurikulerTujuan,
-	tableMurid
+	tableKelas,
+	tableMurid,
+	tableMuridEkstrakurikuler,
+	tablePegawai
 } from '$lib/server/db/schema';
 import {
 	ekstrakurikulerNilaiLabelByValue,
@@ -13,7 +18,8 @@ import {
 	isEkstrakurikulerNilaiKategori
 } from '$lib/ekstrakurikuler';
 import { redirect, error } from '@sveltejs/kit';
-import { asc, eq, or } from 'drizzle-orm';
+import { and, asc, eq, inArray, or } from 'drizzle-orm';
+import { isAuthorizedUser } from '../../pengguna/permissions';
 
 const PER_PAGE = 20;
 
@@ -51,29 +57,88 @@ function mapNilaiRecords(records: NilaiRecord[]) {
 	return nilaiByMurid;
 }
 
-export async function load({ parent, url, depends }) {
+export async function load({ parent, url, depends, locals }) {
 	depends('app:nilai-ekstrakurikuler');
+	await ensureEkstrakurikulerSchema();
 	const { kelasAktif } = await parent();
 	const meta: PageMeta = { title: 'Nilai Ekstrakurikuler' };
+	const user = locals.user;
+	const sekolahId = locals.sekolah?.id ?? null;
+	const pembinaMode = user?.type === 'pembina_eskul';
 
-	if (!kelasAktif?.id) {
-		return emptyPayload(meta);
+	if (pembinaMode) {
+		if (!isAuthorizedUser(['input_nilai_nilai_ekstrakurikuler'], user)) {
+			throw error(403, 'Anda tidak memiliki izin membuka nilai ekstrakurikuler.');
+		}
+		if (!sekolahId || !user?.id) {
+			return emptyPayload(meta, true);
+		}
+	} else if (!kelasAktif?.id) {
+		return emptyPayload(meta, false);
+	}
+
+	const sekolahKelasIds =
+		pembinaMode && sekolahId
+			? (
+					await db
+						.select({ id: tableKelas.id })
+						.from(tableKelas)
+						.where(eq(tableKelas.sekolahId, sekolahId))
+				).map((k) => k.id)
+			: [];
+
+	if (pembinaMode && sekolahKelasIds.length === 0) {
+		return emptyPayload(meta, true);
 	}
 
 	const ekstrakRecords = await db.query.tableEkstrakurikuler.findMany({
-		columns: { id: true, nama: true },
+		columns: {
+			id: true,
+			nama: true,
+			kelasId: true,
+			semuaKelas: true,
+			pembinaUserId: true,
+			pembinaNama: true
+		},
 		with: { tujuan: { columns: { id: true } } },
-		where: or(
-			eq(tableEkstrakurikuler.kelasId, kelasAktif.id),
-			eq(tableEkstrakurikuler.semuaKelas, 1)
-		),
+		where: pembinaMode
+			? and(
+					inArray(tableEkstrakurikuler.kelasId, sekolahKelasIds),
+					eq(tableEkstrakurikuler.pembinaUserId, user!.id)
+				)
+			: or(
+					eq(tableEkstrakurikuler.kelasId, kelasAktif!.id),
+					eq(tableEkstrakurikuler.semuaKelas, 1)
+				),
 		orderBy: asc(tableEkstrakurikuler.createdAt)
 	});
+
+	const pembinaUserIds = [
+		...new Set(ekstrakRecords.map((e) => e.pembinaUserId).filter((v): v is number => v != null))
+	];
+	const pembinaUserRows = pembinaUserIds.length
+		? await db
+				.select({
+					id: tableAuthUser.id,
+					username: tableAuthUser.username,
+					namaLengkap: tableAuthUser.namaLengkap,
+					pegawaiNama: tablePegawai.nama
+				})
+				.from(tableAuthUser)
+				.leftJoin(tablePegawai, eq(tableAuthUser.pegawaiId, tablePegawai.id))
+				.where(inArray(tableAuthUser.id, pembinaUserIds))
+		: [];
+	const pembinaMap = new Map(
+		pembinaUserRows.map((u) => [u.id, (u.namaLengkap || u.pegawaiNama || u.username).trim()])
+	);
 
 	const ekstrakurikulerList = ekstrakRecords.map((record) => ({
 		id: record.id,
 		nama: record.nama,
-		tujuanCount: record.tujuan.length
+		tujuanCount: record.tujuan.length,
+		pembina:
+			record.pembinaNama?.trim() ||
+			(record.pembinaUserId ? (pembinaMap.get(record.pembinaUserId) ?? null) : null)
 	}));
 
 	const requestedIdRaw = url.searchParams.get('ekstrakurikuler_id');
@@ -88,11 +153,49 @@ export async function load({ parent, url, depends }) {
 		selectedEkstrakurikulerId = ekstrakurikulerList[0].id;
 	}
 
-	const muridRecords = await db.query.tableMurid.findMany({
-		columns: { id: true, nama: true },
-		where: eq(tableMurid.kelasId, kelasAktif.id),
-		orderBy: asc(tableMurid.nama)
-	});
+	const selectedEkstrak = selectedEkstrakurikulerId
+		? (ekstrakRecords.find((item) => item.id === selectedEkstrakurikulerId) ?? null)
+		: null;
+
+	let muridRecords: Array<{ id: number; nama: string; kelasNama: string | null }> = [];
+	if (pembinaMode) {
+		if (selectedEkstrak) {
+			const anggota = await db
+				.select({
+					id: tableMurid.id,
+					nama: tableMurid.nama,
+					kelasNama: tableKelas.nama
+				})
+				.from(tableMuridEkstrakurikuler)
+				.innerJoin(tableMurid, eq(tableMuridEkstrakurikuler.muridId, tableMurid.id))
+				.innerJoin(tableKelas, eq(tableMurid.kelasId, tableKelas.id))
+				.where(eq(tableMuridEkstrakurikuler.ekstrakurikulerId, selectedEkstrak.id))
+				.orderBy(asc(tableKelas.nama), asc(tableMurid.nama));
+
+			if (anggota.length > 0 || selectedEkstrak.semuaKelas === 1) {
+				muridRecords = anggota;
+			} else {
+				const fallback = await db
+					.select({
+						id: tableMurid.id,
+						nama: tableMurid.nama,
+						kelasNama: tableKelas.nama
+					})
+					.from(tableMurid)
+					.innerJoin(tableKelas, eq(tableMurid.kelasId, tableKelas.id))
+					.where(eq(tableMurid.kelasId, selectedEkstrak.kelasId))
+					.orderBy(asc(tableMurid.nama));
+				muridRecords = fallback;
+			}
+		}
+	} else {
+		const rows = await db.query.tableMurid.findMany({
+			columns: { id: true, nama: true },
+			where: eq(tableMurid.kelasId, kelasAktif!.id),
+			orderBy: asc(tableMurid.nama)
+		});
+		muridRecords = rows.map((r) => ({ id: r.id, nama: r.nama, kelasNama: null }));
+	}
 
 	const rawSearch = url.searchParams.get('q')?.trim() ?? '';
 	const searchTerm = rawSearch || null;
@@ -119,15 +222,17 @@ export async function load({ parent, url, depends }) {
 	const offset = (currentPage - 1) * PER_PAGE;
 	const paginatedMurid = filteredMurid.slice(offset, offset + PER_PAGE);
 
-	if (!selectedEkstrakurikulerId) {
+	if (!selectedEkstrakurikulerId || !selectedEkstrak) {
 		return {
 			meta,
+			pembinaMode,
 			ekstrakurikulerList,
 			selectedEkstrakurikulerId: null,
 			selectedEkstrakurikuler: null,
 			daftarMurid: paginatedMurid.map((murid, index) => ({
 				id: murid.id,
 				nama: murid.nama,
+				kelasNama: murid.kelasNama,
 				no: offset + index + 1,
 				deskripsi: null,
 				hasNilai: false,
@@ -145,12 +250,6 @@ export async function load({ parent, url, depends }) {
 				search: searchTerm
 			}
 		};
-	}
-
-	const selectedEkstrak = ekstrakRecords.find((item) => item.id === selectedEkstrakurikulerId);
-
-	if (!selectedEkstrak) {
-		throw error(404, 'Ekstrakurikuler tidak ditemukan');
 	}
 
 	const tujuanRecords = await db.query.tableEkstrakurikulerTujuan.findMany({
@@ -206,6 +305,7 @@ export async function load({ parent, url, depends }) {
 		return {
 			id: murid.id,
 			nama: murid.nama,
+			kelasNama: murid.kelasNama,
 			no: offset + index + 1,
 			nilai,
 			deskripsi,
@@ -214,13 +314,21 @@ export async function load({ parent, url, depends }) {
 		};
 	});
 
+	const selectedPembina =
+		selectedEkstrak.pembinaNama?.trim() ||
+		(selectedEkstrak.pembinaUserId
+			? (pembinaMap.get(selectedEkstrak.pembinaUserId) ?? null)
+			: null);
+
 	return {
 		meta,
+		pembinaMode,
 		ekstrakurikulerList,
 		selectedEkstrakurikulerId: selectedEkstrak.id,
 		selectedEkstrakurikuler: {
 			id: selectedEkstrak.id,
 			nama: selectedEkstrak.nama,
+			pembina: selectedPembina,
 			tujuan: tujuanRecords.map((tujuan) => ({
 				id: tujuan.id,
 				deskripsi: tujuan.deskripsi
@@ -240,15 +348,17 @@ export async function load({ parent, url, depends }) {
 	};
 }
 
-function emptyPayload(meta: PageMeta) {
+function emptyPayload(meta: PageMeta, pembinaMode = false) {
 	return {
 		meta,
+		pembinaMode,
 		ekstrakurikulerList: [],
 		selectedEkstrakurikulerId: null,
 		selectedEkstrakurikuler: null,
 		daftarMurid: [] as Array<{
 			id: number;
 			nama: string;
+			kelasNama: string | null;
 			no: number;
 			nilai: unknown[];
 			deskripsi: string | null;

@@ -32,6 +32,8 @@ export async function ensurePortalOrangtuaSchema() {
 			CONSTRAINT "portal_orangtua_murid_murid_id_murid_id_fk" FOREIGN KEY ("murid_id") REFERENCES "murid" ("id") ON UPDATE NO ACTION ON DELETE CASCADE
 		)`,
 		`CREATE INDEX IF NOT EXISTS "portal_orangtua_murid_murid_idx" ON "portal_orangtua_murid" ("murid_id")`,
-		`CREATE INDEX IF NOT EXISTS "portal_orangtua_murid_orangtua_idx" ON "portal_orangtua_murid" ("orangtua_id")`
+		`CREATE INDEX IF NOT EXISTS "portal_orangtua_murid_orangtua_idx" ON "portal_orangtua_murid" ("orangtua_id")`,
+		`DELETE FROM "portal_orangtua_murid" WHERE rowid NOT IN (SELECT MIN(rowid) FROM "portal_orangtua_murid" GROUP BY "orangtua_id", "murid_id")`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS "portal_orangtua_murid_pair_idx" ON "portal_orangtua_murid" ("orangtua_id", "murid_id")`
 	]);
 }

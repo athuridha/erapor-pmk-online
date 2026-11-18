@@ -174,6 +174,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 			event.locals.user = {
 				id: resolved.user.id,
 				username: resolved.user.username,
+				namaLengkap: resolved.user.namaLengkap ?? null,
 				permissions: resolved.user.permissions,
 				type: resolved.user.type,
 				operatorLevel: resolved.user.operatorLevel ?? null,

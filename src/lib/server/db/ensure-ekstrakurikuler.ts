@@ -21,6 +21,8 @@ export async function ensureEkstrakurikulerSchema() {
 			"nama" text NOT NULL,
 			"kelas_id" integer NOT NULL,
 			"semua_kelas" integer DEFAULT 0 NOT NULL,
+			"pembina_user_id" integer REFERENCES "auth_user" ("id") ON DELETE SET NULL,
+			"pembina_nama" text,
 			"created_at" text NOT NULL,
 			"updated_at" text,
 			CONSTRAINT "ekstrakurikuler_kelas_id_kelas_id_fk" FOREIGN KEY ("kelas_id") REFERENCES "kelas" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
@@ -32,5 +34,13 @@ export async function ensureEkstrakurikulerSchema() {
 		await db.$client.execute(
 			`ALTER TABLE "ekstrakurikuler" ADD COLUMN "semua_kelas" integer NOT NULL DEFAULT 0`
 		);
+	}
+	if (!(await columnExists('ekstrakurikuler', 'pembina_user_id'))) {
+		await db.$client.execute(
+			`ALTER TABLE "ekstrakurikuler" ADD COLUMN "pembina_user_id" integer REFERENCES "auth_user" ("id") ON DELETE SET NULL`
+		);
+	}
+	if (!(await columnExists('ekstrakurikuler', 'pembina_nama'))) {
+		await db.$client.execute(`ALTER TABLE "ekstrakurikuler" ADD COLUMN "pembina_nama" text`);
 	}
 }

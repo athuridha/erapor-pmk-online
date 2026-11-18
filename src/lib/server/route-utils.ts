@@ -1,4 +1,5 @@
 import db from '$lib/server/db';
+import { redirect } from '@sveltejs/kit';
 import { resolveSekolahAcademicContext, type AcademicContext } from '$lib/server/db/academic';
 import { tableMurid, tablePegawai, tableAuthUserKelas, tableKelas } from '$lib/server/db/schema';
 import { and, asc, eq, inArray } from 'drizzle-orm';
@@ -155,4 +156,22 @@ export async function fetchMuridList(
 			waliAsuhNama: string | null;
 		}>
 	>;
+}
+
+/**
+ * Enforce authenticated access and class/student ownership for direct PDF preview endpoints.
+ */
+export async function assertCanPreviewMuridPdf(locals: App.Locals, url: URL): Promise<void> {
+	if (!locals.user) {
+		throw redirect(303, '/login');
+	}
+	if (!isAdminUser(locals.user)) {
+		const muridIdParam = url.searchParams.get('murid_id');
+		if (muridIdParam) {
+			const { hasAccess } = await getKelasContextForUser(locals, url, muridIdParam);
+			if (!hasAccess) {
+				throw redirect(303, '/forbidden?required=kelas_id');
+			}
+		}
+	}
 }

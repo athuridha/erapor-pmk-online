@@ -113,10 +113,10 @@
 
 <button
 	type="button"
-	class="btn btn-soft shadow-none"
+	class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 	onclick={openCheatModal}
 	disabled={!hasTujuan || isDisabled}
 >
-	<Icon name="copy" />
+	<Icon name="copy" class="h-3.5 w-3.5" />
 	Isi Sekaligus
 </button>

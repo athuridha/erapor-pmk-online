@@ -13,10 +13,12 @@ import {
 	tableJadwalPelajaran,
 	tableMataPelajaran,
 	tableMurid,
+	tableMuridEkstrakurikuler,
 	tablePresensiSettings,
 	tableUserFavorites
 } from '$lib/server/db/schema';
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { queryInChunks } from '$lib/server/db/chunk';
 import { getRingkasanKelas } from '$lib/server/statistik-kelas';
 
 const AGAMA_BASE_SUBJECT = 'Pendidikan Agama dan Budi Pekerti';
@@ -82,42 +84,146 @@ export async function load(event) {
 
 	const academicContext = await resolveSekolahAcademicContext(sekolahId);
 	const activeSemesterId = academicContext?.activeSemesterId ?? null;
+	const activeModul = parentData.activeModul ?? 'guru';
 
-	const kelasFilter = activeSemesterId
-		? and(eq(tableKelas.sekolahId, sekolahId), eq(tableKelas.semesterId, activeSemesterId))
-		: eq(tableKelas.sekolahId, sekolahId);
+	let daftarKelas: Array<{ id: number; fase: string | null }> = [];
+	if (activeModul === 'pembina_eskul' && event.locals.user?.id) {
+		const eskulBinaan = await db
+			.select({
+				id: tableEkstrakurikuler.id,
+				kelasId: tableEkstrakurikuler.kelasId,
+				semuaKelas: tableEkstrakurikuler.semuaKelas
+			})
+			.from(tableEkstrakurikuler)
+			.innerJoin(tableKelas, eq(tableEkstrakurikuler.kelasId, tableKelas.id))
+			.where(
+				and(
+					eq(tableKelas.sekolahId, sekolahId),
+					eq(tableEkstrakurikuler.pembinaUserId, event.locals.user.id)
+				)
+			);
+		statistikDashboard.ekstrakurikuler.total = eskulBinaan.length;
+		statistikDashboard.rombel.total = eskulBinaan.length;
+		const umumCount = eskulBinaan.filter((e) => e.semuaKelas === 1).length;
+		const kelasCount = eskulBinaan.length - umumCount;
+		statistikDashboard.rombel.perFase = [
+			...(umumCount > 0 ? [{ fase: 'Umum', label: 'Lintas Kelas', jumlah: umumCount }] : []),
+			...(kelasCount > 0 ? [{ fase: 'Kelas', label: 'Per Kelas', jumlah: kelasCount }] : [])
+		];
 
-	const daftarKelas = await db.query.tableKelas.findMany({
-		columns: { id: true, fase: true },
-		where: kelasFilter
-	});
+		const eskulIds = eskulBinaan.map((e) => e.id);
+		if (eskulIds.length > 0) {
+			const anggotaRows = await queryInChunks(eskulIds, (ids) =>
+				db
+					.select({
+						muridId: tableMuridEkstrakurikuler.muridId,
+						ekstrakurikulerId: tableMuridEkstrakurikuler.ekstrakurikulerId
+					})
+					.from(tableMuridEkstrakurikuler)
+					.where(inArray(tableMuridEkstrakurikuler.ekstrakurikulerId, ids))
+			);
+			const uniqueMuridIds = new Set(anggotaRows.map((a) => a.muridId));
+			// Fallback for class-scoped eskul without explicit member rows.
+			const extraIdsWithMembers = new Set(anggotaRows.map((a) => a.ekstrakurikulerId));
+			const fallbackKelasIds = [
+				...new Set(
+					eskulBinaan
+						.filter((e) => e.semuaKelas !== 1 && !extraIdsWithMembers.has(e.id))
+						.map((e) => e.kelasId)
+				)
+			];
+			if (fallbackKelasIds.length > 0) {
+				const fallbackMurid = await queryInChunks(fallbackKelasIds, (ids) =>
+					db.query.tableMurid.findMany({
+						columns: { id: true },
+						where: and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.kelasId, ids))
+					})
+				);
+				for (const m of fallbackMurid) uniqueMuridIds.add(m.id);
+			}
 
-	statistikDashboard.rombel.total = daftarKelas.length;
+			const memberIdList = [...uniqueMuridIds];
+			statistikDashboard.murid.total = memberIdList.length;
 
-	const perFaseMap = new Map<string | null, number>();
-	for (const kelas of daftarKelas) {
-		const key = kelas.fase ?? null;
-		perFaseMap.set(key, (perFaseMap.get(key) ?? 0) + 1);
+			if (memberIdList.length > 0) {
+				const dinilaiRows = await queryInChunks(memberIdList, (ids) =>
+					db
+						.select({ muridId: tableAsesmenEkstrakurikuler.muridId })
+						.from(tableAsesmenEkstrakurikuler)
+						.where(
+							and(
+								inArray(tableAsesmenEkstrakurikuler.ekstrakurikulerId, eskulIds),
+								inArray(tableAsesmenEkstrakurikuler.muridId, ids)
+							)
+						)
+				);
+				const dinilaiCount = new Set(dinilaiRows.map((r) => r.muridId)).size;
+				statistikDashboard.progress.ekstrakurikuler = {
+					completed: dinilaiCount,
+					total: memberIdList.length,
+					percentage: calculatePercentage(dinilaiCount, memberIdList.length)
+				};
+			}
+		}
+	} else {
+		if (activeModul === 'admin') {
+			const kelasFilter = activeSemesterId
+				? and(eq(tableKelas.sekolahId, sekolahId), eq(tableKelas.semesterId, activeSemesterId))
+				: eq(tableKelas.sekolahId, sekolahId);
+
+			daftarKelas = await db.query.tableKelas.findMany({
+				columns: { id: true, fase: true },
+				where: kelasFilter
+			});
+		} else {
+			daftarKelas = (parentData.daftarKelas ?? []).map((kelas) => ({
+				id: kelas.id,
+				fase: kelas.fase ?? null
+			}));
+		}
+
+		statistikDashboard.rombel.total = daftarKelas.length;
+
+		const perFaseMap = new Map<string | null, number>();
+		for (const kelas of daftarKelas) {
+			const key = kelas.fase ?? null;
+			perFaseMap.set(key, (perFaseMap.get(key) ?? 0) + 1);
+		}
+
+		statistikDashboard.rombel.perFase = Array.from(perFaseMap.entries())
+			.map(([fase, jumlah]) => ({
+				fase,
+				label: fase ?? 'Belum diatur',
+				jumlah
+			}))
+			.sort((a, b) => a.label.localeCompare(b.label, 'id'));
+
+		if (activeModul === 'admin') {
+			const muridFilter = activeSemesterId
+				? and(eq(tableMurid.sekolahId, sekolahId), eq(tableMurid.semesterId, activeSemesterId))
+				: eq(tableMurid.sekolahId, sekolahId);
+
+			const muridCountRows = await db
+				.select({ totalMurid: sql<number>`count(*)` })
+				.from(tableMurid)
+				.where(muridFilter);
+
+			statistikDashboard.murid.total = muridCountRows[0]?.totalMurid ?? 0;
+		} else {
+			const scopedKelasIds = daftarKelas.map((k) => k.id);
+			if (scopedKelasIds.length > 0) {
+				const scopedMuridRows = await queryInChunks(scopedKelasIds, (ids) =>
+					db.query.tableMurid.findMany({
+						columns: { id: true },
+						where: and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.kelasId, ids))
+					})
+				);
+				statistikDashboard.murid.total = scopedMuridRows.length;
+			} else {
+				statistikDashboard.murid.total = 0;
+			}
+		}
 	}
-
-	statistikDashboard.rombel.perFase = Array.from(perFaseMap.entries())
-		.map(([fase, jumlah]) => ({
-			fase,
-			label: fase ?? 'Belum diatur',
-			jumlah
-		}))
-		.sort((a, b) => a.label.localeCompare(b.label, 'id'));
-
-	const muridFilter = activeSemesterId
-		? and(eq(tableMurid.sekolahId, sekolahId), eq(tableMurid.semesterId, activeSemesterId))
-		: eq(tableMurid.sekolahId, sekolahId);
-
-	const muridCountRows = await db
-		.select({ totalMurid: sql<number>`count(*)` })
-		.from(tableMurid)
-		.where(muridFilter);
-
-	statistikDashboard.murid.total = muridCountRows[0]?.totalMurid ?? 0;
 
 	const kelasAktifId = (parentData.kelasAktif ?? null)?.id ?? null;
 
@@ -286,7 +392,7 @@ export async function load(event) {
 				percentage: calculatePercentage(kokurCompleted, totalStudents)
 			}
 		};
-	} else if (sekolahId) {
+	} else if (sekolahId && activeModul !== 'pembina_eskul') {
 		// Mode "Semua Kelas" (admin/kepala sekolah di luar kelas): statistik mapel
 		// dihitung lintas rombel semester aktif agar kartu tidak lagi menulis 0
 		// padahal tabel per kelas berisi mapel.
@@ -407,9 +513,10 @@ export async function load(event) {
 			})
 		: [];
 
-	// Ringkasan seluruh kelas untuk monitoring admin/kepala sekolah.
+	// Ringkasan seluruh kelas hanya tampil pada Mode Admin / Operator.
 	const userType = event.locals.user?.type;
-	const canSeeRingkasanKelas = userType === 'admin' || userType === 'kepala_sekolah';
+	const canSeeRingkasanKelas =
+		(userType === 'admin' || userType === 'kepala_sekolah') && activeModul === 'admin';
 	let ringkasanKelas: {
 		ringkasan: Awaited<ReturnType<typeof getRingkasanKelas>>['ringkasan'];
 		daftarKelas: Awaited<ReturnType<typeof getRingkasanKelas>>['daftarKelas'];

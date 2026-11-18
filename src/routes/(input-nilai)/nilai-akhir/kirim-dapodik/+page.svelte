@@ -75,9 +75,9 @@
 	onfailure={handleFailure}
 >
 	{#snippet children({ submitting })}
-		<h3 class="mb-3 text-lg font-bold">Kirim Nilai ke Dapodik</h3>
-		<div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-1">
-			<p class="text-sm opacity-70">
+		<h3 class="mb-3 text-lg font-bold text-slate-900 dark:text-zinc-100">Kirim Nilai ke Dapodik</h3>
+		<div class="min-h-0 flex-1 space-y-3.5 overflow-y-auto px-0.5">
+			<p class="text-xs text-slate-600 dark:text-zinc-400">
 				Mengirim nilai akhir kelas {data.kelasNama ?? '-'} ke aplikasi Dapodik melalui Web Service (Bearer
 				token).
 			</p>
@@ -85,75 +85,121 @@
 			{#if notif}
 				<div
 					role="alert"
-					class="alert {notif.type === 'success' ? 'alert-success' : 'alert-error'} alert-soft"
+					class="flex items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs {notif.type ===
+					'success'
+						? 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/35 dark:text-emerald-200'
+						: 'border-red-200 bg-red-50 text-red-950 dark:border-red-900/60 dark:bg-red-950/35 dark:text-red-200'}"
 				>
-					<Icon name={notif.type === 'success' ? 'success' : 'error'} />
+					<Icon
+						name={notif.type === 'success' ? 'success' : 'error'}
+						class="mt-0.5 h-4 w-4 shrink-0"
+					/>
 					<span class="text-wrap">{notif.message}</span>
 				</div>
 			{/if}
 
-			<div class="grid grid-cols-1 gap-2">
+			<div class="grid grid-cols-1 gap-3">
 				<input type="hidden" name="kelas_id" value={data.kelasId ?? ''} />
 
-				<div class="fieldset">
-					<legend class="fieldset-legend">Token</legend>
+				<div>
+					<label
+						for="dapodik-token"
+						class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300"
+					>
+						Token
+					</label>
 					<input
+						id="dapodik-token"
 						required
 						type="text"
 						name="token"
 						placeholder="Masukkan token web service dapodik"
-						class="input bg-base-200 dark:bg-base-300 validator w-full dark:border-none"
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 					/>
-					<p class="label text-wrap">Token didapat dari menu Web Service pada aplikasi Dapodik.</p>
+					<p class="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">
+						Token didapat dari menu Web Service pada aplikasi Dapodik.
+					</p>
 				</div>
 
-				<div class="fieldset">
-					<legend class="fieldset-legend">URL Dapodik</legend>
+				<div>
+					<label
+						for="dapodik-url"
+						class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300"
+					>
+						URL Dapodik
+					</label>
 					<input
+						id="dapodik-url"
 						required
 						type="text"
 						name="url"
 						placeholder="Contoh: 192.168.8.114:5774"
-						class="input bg-base-200 dark:bg-base-300 validator w-full dark:border-none"
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 					/>
 				</div>
 
-				<div class="fieldset">
-					<legend class="fieldset-legend">NPSN</legend>
+				<div>
+					<label
+						for="dapodik-npsn"
+						class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300"
+					>
+						NPSN
+					</label>
 					<input
+						id="dapodik-npsn"
 						required
 						type="text"
 						name="npsn"
 						placeholder="Contoh: 69856875"
-						class="input bg-base-200 dark:bg-base-300 validator w-full dark:border-none"
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 					/>
 				</div>
 
-				<div class="fieldset">
-					<legend class="fieldset-legend">Mode Pengiriman</legend>
-					<select
-						bind:value={selectedMode}
-						name="mode"
-						class="select w-full truncate bg-base-200 dark:bg-base-300 validator dark:border-none"
+				<div>
+					<label
+						for="dapodik-mode"
+						class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300"
 					>
-						{#each modes as item (item.value)}
-							<option value={item.value}>{item.label}</option>
-						{/each}
-					</select>
-					<p class="label text-wrap">{modeDescription[selectedMode]}</p>
+						Mode Pengiriman
+					</label>
+					<div class="relative flex items-center">
+						<select
+							id="dapodik-mode"
+							bind:value={selectedMode}
+							name="mode"
+							class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						>
+							{#each modes as item (item.value)}
+								<option value={item.value}>{item.label}</option>
+							{/each}
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
+					</div>
+					<p class="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">
+						{modeDescription[selectedMode]}
+					</p>
 				</div>
 			</div>
 
 			{#if sections.length > 0}
-				<div class="bg-base-200 dark:bg-base-300 rounded-md p-3">
+				<div
+					class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-zinc-800 dark:bg-zinc-800/50"
+				>
 					{#if resultMessage}
-						<p class="mb-2 font-semibold">{resultMessage}</p>
+						<p class="mb-2 text-xs font-semibold text-slate-900 dark:text-zinc-100">
+							{resultMessage}
+						</p>
 					{/if}
-					<ul class="flex flex-col gap-1">
+					<ul class="flex flex-col gap-1.5">
 						{#each sections as section (section.label)}
-							<li class="flex items-start gap-2 text-sm">
+							<li class="flex items-start gap-2 text-xs text-slate-700 dark:text-zinc-300">
 								<span class="{statusClass(section.status)} mt-0.5 shrink-0">
-									<Icon name={statusIcon(section.status)} />
+									<Icon name={statusIcon(section.status)} class="h-3.5 w-3.5" />
 								</span>
 								<span>
 									<b>{section.label}:</b>
@@ -165,20 +211,25 @@
 				</div>
 			{/if}
 		</div>
-		<div class="modal-action grid grid-cols-2 gap-2 md:flex md:items-center">
+		<div
+			class="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 md:flex md:items-center dark:border-zinc-800"
+		>
 			<button
 				type="button"
-				class="btn btn-soft shadow-none md:w-auto md:mr-auto"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 md:mr-auto md:w-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				onclick={() => history.back()}
 			>
-				<Icon name="close" />
+				<Icon name="close" class="h-4 w-4" />
 				Tutup
 			</button>
-			<button class="btn btn-primary shadow-none md:w-auto" disabled={submitting}>
+			<button
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto dark:bg-blue-500 dark:hover:bg-blue-600"
+				disabled={submitting}
+			>
 				{#if submitting}
-					<span class="loading loading-spinner"></span>
+					<span class="loading loading-spinner loading-xs"></span>
 				{:else}
-					<Icon name="play" />
+					<Icon name="play" class="h-4 w-4" />
 				{/if}
 				Proses
 			</button>

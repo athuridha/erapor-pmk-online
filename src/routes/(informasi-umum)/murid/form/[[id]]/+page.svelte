@@ -35,194 +35,244 @@
 	}}
 >
 	{#snippet children({ submitting, invalid })}
-		<p class="mb-6 text-xl font-bold">
+		<h2 class="mb-4 text-lg font-bold tracking-tight text-slate-900 dark:text-zinc-100">
 			{data.murid?.id ? 'Formulir Edit Murid Manual' : 'Formulir Tambah Murid Manual'}
-		</p>
+		</h2>
 		<div class="max-h-[60vh] overflow-y-auto sm:max-h-none sm:overflow-y-visible">
 			<!-- Tab Isian -->
-			<div class="tabs tabs-box">
+			<div class="tabs tabs-box bg-slate-100/80 p-1 dark:bg-zinc-800/70">
 				<!-- data Murid -->
-				<input type="radio" bind:group={activeTab} value={0} class="tab" aria-label="Data Murid" />
-				<div class="tab-content bg-base-100 p-4">
-					<div class="flex flex-col gap-2 sm:flex-row">
+				<input
+					type="radio"
+					bind:group={activeTab}
+					value={0}
+					class="tab text-xs font-semibold"
+					aria-label="Data Murid"
+				/>
+				<div
+					class="tab-content mt-2 space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+				>
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- NIS -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">NIS</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">NIS</span>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: 0030"
 								name="nis"
 							/>
-						</fieldset>
+						</label>
 						<!-- NISN -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">NISN</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">NISN</span>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: 8371612"
 								name="nisn"
 							/>
-						</fieldset>
+						</label>
 					</div>
 
-					<div class="flex flex-col gap-2 sm:flex-row">
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Nama Murid -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Nama Murid</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Nama Murid</span>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Chairil Anwar"
 								name="nama"
 							/>
-						</fieldset>
+						</label>
 
 						<!-- Kelas -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Kelas</legend>
-							<select
-								class="select bg-base-200 dark:bg-base-300 w-full truncate dark:border-none"
-								title="Pilih kelas"
-								name="kelasId"
-								required
-							>
-								<option value="" disabled selected> Pilih Kelas </option>
-								{#each data.daftarKelas as kelas (kelas.id)}
-									<option value={kelas.id}>
-										{kelas.nama} &bullet; {kelas.fase}
-									</option>
-								{:else}
-									<option value="" disabled selected> Belum ada data kelas </option>
-								{/each}
-							</select>
-						</fieldset>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Kelas</span>
+							<div class="relative flex items-center">
+								<select
+									class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+									title="Pilih kelas"
+									name="kelasId"
+									required
+								>
+									<option value="" disabled selected>Pilih Kelas</option>
+									{#each data.daftarKelas as kelas (kelas.id)}
+										<option value={kelas.id}>
+											{kelas.nama} &bullet; {kelas.fase}
+										</option>
+									{:else}
+										<option value="" disabled selected>Belum ada data kelas</option>
+									{/each}
+								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
+							</div>
+						</label>
 					</div>
 
-					<div class="flex flex-col gap-2 sm:flex-row">
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Tempat lahir -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Tempat Lahir</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Tempat Lahir</span
+							>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Kembayan"
 								name="tempatLahir"
 							/>
-						</fieldset>
+						</label>
 						<!-- Tanggal Lahir -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Tanggal Lahir</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Tanggal Lahir</span
+							>
 							<input
 								type="date"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 								name="tanggalLahir"
 								required
 							/>
-						</fieldset>
+						</label>
 					</div>
-					<div class="flex flex-col gap-2 sm:flex-row">
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Jenis Kelamin -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Jenis Kelamin</legend>
-							<select
-								class="select validator bg-base-200 dark:bg-base-300 w-full truncate dark:border-none"
-								name="jenisKelamin"
-								required
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Jenis Kelamin</span
 							>
-								<option value="" disabled selected>Pilih Jenis Kelamin</option>
-								{#each Object.entries(jenisKelamin) as [value, label] (value)}
-									<option {value}>{label}</option>
-								{/each}
-							</select>
-						</fieldset>
+							<div class="relative flex items-center">
+								<select
+									class="validator h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+									name="jenisKelamin"
+									required
+								>
+									<option value="" disabled selected>Pilih Jenis Kelamin</option>
+									{#each Object.entries(jenisKelamin) as [value, label] (value)}
+										<option {value}>{label}</option>
+									{/each}
+								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
+							</div>
+						</label>
 						<!-- Agama -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Agama</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Agama</span>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Islam"
 								name="agama"
 							/>
-						</fieldset>
+						</label>
 					</div>
-					<div class="flex flex-col gap-2 sm:flex-row">
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Pendidikan Sebelumnya -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Pendidikan Sebelumnya</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Pendidikan Sebelumnya</span
+							>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: TK Kencana Pertiwi"
 								name="pendidikanSebelumnya"
 							/>
-						</fieldset>
+						</label>
 						<!-- Tanggal Masuk Sekolah Ini -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Tanggal masuk sekolah ini</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Tanggal masuk sekolah ini</span
+							>
 							<input
 								type="date"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 								name="tanggalMasuk"
 								required
 							/>
-						</fieldset>
+						</label>
 					</div>
-					<div class="flex flex-col gap-2 sm:flex-row">
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Status Murid -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Status Murid</legend>
-							<select
-								class="select bg-base-200 dark:bg-base-300 w-full dark:border-none"
-								name="status"
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Status Murid</span
 							>
-								<option value="aktif">Aktif</option>
-								<option value="lulus">Lulus</option>
-								<option value="pindah">Pindah</option>
-								<option value="keluar">Keluar</option>
-							</select>
-							<p class="label text-wrap">
+							<div class="relative flex items-center">
+								<select
+									class="h-9 w-full appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+									name="status"
+								>
+									<option value="aktif">Aktif</option>
+									<option value="lulus">Lulus</option>
+									<option value="pindah">Pindah</option>
+									<option value="keluar">Keluar</option>
+								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
+							</div>
+							<span class="text-xs text-slate-500 dark:text-zinc-400">
 								Status Lulus membuka unggahan Ijazah Sekolah di tab Arsip.
-							</p>
-						</fieldset>
+							</span>
+						</label>
 						<!-- Tanggal Lulus -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Tanggal Lulus</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Tanggal Lulus</span
+							>
 							<input
 								type="date"
-								class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 								name="tanggalLulus"
 							/>
-						</fieldset>
+						</label>
 					</div>
-					<div class="flex flex-col gap-2 sm:flex-row">
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Tanggal Keluar -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Tanggal Keluar (Jika Keluar/Pindah)</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Tanggal Keluar (Jika Keluar/Pindah)</span
+							>
 							<input
 								type="date"
-								class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 								name="tanggalKeluar"
 							/>
-						</fieldset>
+						</label>
 						<!-- Alasan Keluar -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Alasan Keluar</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Alasan Keluar</span
+							>
 							<input
 								type="text"
-								class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								name="alasanKeluar"
 								placeholder="Contoh: Dikeluarkan, Mengundurkan diri, Pindah..."
 							/>
-						</fieldset>
+						</label>
 					</div>
 				</div>
 
@@ -231,69 +281,75 @@
 					type="radio"
 					bind:group={activeTab}
 					value={1}
-					class="tab"
+					class="tab text-xs font-semibold"
 					aria-label="Data Orang Tua"
 				/>
-				<div class="tab-content bg-base-100 p-4">
-					<div class="flex flex-col gap-2 sm:flex-row">
+				<div
+					class="tab-content mt-2 space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+				>
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Nama Ayah -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Nama Ayah</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Nama Ayah</span>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Agus"
 								name="ayah.nama"
 							/>
-						</fieldset>
+						</label>
 						<!-- Nama Ibu -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Nama Ibu</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Nama Ibu</span>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Ratih"
 								name="ibu.nama"
 							/>
-						</fieldset>
+						</label>
 					</div>
-					<div class="flex flex-col gap-2 sm:flex-row">
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Pekerjaan Ayah -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Pekerjaan Ayah</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Pekerjaan Ayah</span
+							>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Tani"
 								name="ayah.pekerjaan"
 							/>
-						</fieldset>
+						</label>
 						<!-- Pekerjaan Ibu -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Pekerjaan Ibu</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Pekerjaan Ibu</span
+							>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: IRT"
 								name="ibu.pekerjaan"
 							/>
-						</fieldset>
+						</label>
 					</div>
 					<!-- Kontak -->
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Kontak</legend>
+					<label class="flex flex-col gap-1.5">
+						<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Kontak</span>
 						<input
 							required
 							type="text"
-							class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 							placeholder="Nomor telepon atau WhatsApp"
 							name="ayah.kontak"
 						/>
-					</fieldset>
+					</label>
 				</div>
 
 				<!-- data Alamat Murid -->
@@ -301,68 +357,72 @@
 					type="radio"
 					bind:group={activeTab}
 					value={2}
-					class="tab"
+					class="tab text-xs font-semibold"
 					aria-label="Data Alamat Murid"
 				/>
-				<div class="tab-content bg-base-100 p-4">
+				<div
+					class="tab-content mt-2 space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+				>
 					<!-- Alamat Jalan -->
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Jalan</legend>
+					<label class="flex flex-col gap-1.5">
+						<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Jalan</span>
 						<input
 							required
 							type="text"
-							class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 							placeholder="Contoh: Jalan Raya Noyan, Dusun Periji"
 							name="alamat.jalan"
 						/>
-					</fieldset>
-					<div class="flex flex-col gap-2 sm:flex-row">
+					</label>
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Kelurahan/Desa -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Kelurahan/Desa</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Kelurahan/Desa</span
+							>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Sungai Dangin"
 								name="alamat.desa"
 							/>
-						</fieldset>
+						</label>
 						<!-- Kecamatan -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Kecamatan</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Kecamatan</span>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Noyan"
 								name="alamat.kecamatan"
 							/>
-						</fieldset>
+						</label>
 					</div>
-					<div class="flex flex-col gap-2 sm:flex-row">
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Kabupaten -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Kabupaten</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Kabupaten</span>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Sanggau"
 								name="alamat.kabupaten"
 							/>
-						</fieldset>
+						</label>
 						<!-- Provinsi -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Provinsi</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Provinsi</span>
 							<input
 								required
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Kalimantan Barat"
 								name="alamat.provinsi"
 							/>
-						</fieldset>
+						</label>
 					</div>
 				</div>
 
@@ -371,53 +431,59 @@
 					type="radio"
 					bind:group={activeTab}
 					value={3}
-					class="tab"
+					class="tab text-xs font-semibold"
 					aria-label="Data Wali (Opsional)"
 				/>
-				<div class="tab-content bg-base-100 p-4">
-					<div class="flex flex-col gap-2 sm:flex-row">
+				<div
+					class="tab-content mt-2 space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+				>
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Nama Wali -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Nama Wali</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Nama Wali</span>
 							<input
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Hendra"
 								name="wali.nama"
 							/>
-						</fieldset>
+						</label>
 						<!-- Pekerjaan Wali -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Pekerjaan Wali</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Pekerjaan Wali</span
+							>
 							<input
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: PNS"
 								name="wali.pekerjaan"
 							/>
-						</fieldset>
+						</label>
 					</div>
-					<div class="flex flex-col gap-2 sm:flex-row">
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<!-- Alamat Wali -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Alamat Wali</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Alamat Wali</span
+							>
 							<input
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: Jalan Raya Noyan, Dusun Periji"
 								name="wali.alamat"
 							/>
-						</fieldset>
+						</label>
 						<!-- Kontak Wali -->
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Kontak</legend>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Kontak</span>
 							<input
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Nomor telepon atau WhatsApp"
 								name="wali.kontak"
 							/>
-						</fieldset>
+						</label>
 					</div>
 				</div>
 
@@ -426,50 +492,56 @@
 					type="radio"
 					bind:group={activeTab}
 					value={4}
-					class="tab"
+					class="tab text-xs font-semibold"
 					aria-label="Wali Asuh (Opsional)"
 				/>
-				<div class="tab-content bg-base-100 p-4">
-					<div class="flex flex-col gap-2 sm:flex-row">
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend">Nama Wali Asuh</legend>
-							<input
-								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
-								placeholder="Contoh: Budi Santoso"
-								name="waliAsuhNama"
-							/>
-						</fieldset>
-						<fieldset class="fieldset flex-1">
-							<legend class="fieldset-legend"
-								>NIP Wali Asuh <span class="text-xs text-gray-500">(Opsional)</span></legend
+				<div
+					class="tab-content mt-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+				>
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Nama Wali Asuh</span
 							>
 							<input
 								type="text"
-								class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+								placeholder="Contoh: Budi Santoso"
+								name="waliAsuhNama"
+							/>
+						</label>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>NIP Wali Asuh
+								<span class="font-normal text-slate-500 dark:text-zinc-400">(Opsional)</span
+								></span
+							>
+							<input
+								type="text"
+								class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: NIP 19940505 201803 1 008"
 								name="waliAsuhNip"
 							/>
-						</fieldset>
+						</label>
 					</div>
 				</div>
 			</div>
 		</div>
 		<div
-			class="border-base-200 mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end"
+			class="mt-4 flex flex-col gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-end dark:border-zinc-800"
 		>
 			<button
-				class="btn btn-soft shadow-none hidden md:inline-flex md:mr-auto"
+				class="hidden h-9 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 md:mr-auto md:inline-flex dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				type="button"
 				onclick={() => history.back()}
 			>
-				<Icon name="close-sm" />
+				<Icon name="close-sm" class="h-3.5 w-3.5" />
 				Batal
 			</button>
 
 			{#if invalid}
 				<button
-					class="btn btn-primary shadow-none max-sm:w-full"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 max-sm:w-full dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950"
 					type="button"
 					onclick={() => (activeTab = (activeTab + 1) % totalTabs)}
 				>
@@ -480,11 +552,11 @@
 
 			<div class="flex flex-row justify-between gap-2 max-sm:w-full sm:ml-2 md:contents">
 				<button
-					class="btn btn-soft shadow-none md:hidden"
+					class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 md:hidden dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					type="button"
 					onclick={() => history.back()}
 				>
-					<Icon name="close-sm" />
+					<Icon name="close-sm" class="h-3.5 w-3.5" />
 					Batal
 				</button>
 
@@ -495,14 +567,14 @@
 						: ''}
 				>
 					<button
-						class="btn shadow-none {data.murid?.id ? 'btn-secondary' : 'btn-primary'}"
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 						type="submit"
 						disabled={submitting || invalid}
 					>
 						{#if submitting}
-							<span class="loading loading-spinner"></span>
+							<span class="loading loading-spinner loading-sm"></span>
 						{:else}
-							<Icon name="save" />
+							<Icon name="save" class="h-3.5 w-3.5" />
 						{/if}
 						Simpan
 					</button>

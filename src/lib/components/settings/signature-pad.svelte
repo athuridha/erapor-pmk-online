@@ -177,7 +177,9 @@
 </script>
 
 <div class="space-y-3">
-	<div class="relative overflow-hidden rounded-box border border-base-300 bg-white">
+	<div
+		class="relative overflow-hidden rounded-xl border border-[#7e8b9b] bg-white dark:border-zinc-600"
+	>
 		<canvas
 			bind:this={canvasEl}
 			width={CANVAS_W}
@@ -201,7 +203,9 @@
 			/>
 		{/if}
 		{#if !canEdit}
-			<div class="absolute inset-0 flex items-center justify-center bg-base-100/60 text-xs">
+			<div
+				class="absolute inset-0 flex items-center justify-center bg-slate-900/50 text-xs font-medium text-white backdrop-blur-[1px]"
+			>
 				Hanya admin atau wali kelas yang bisa mengunggah.
 			</div>
 		{/if}
@@ -209,55 +213,55 @@
 
 	{#if existingSrc && !pendingSrc}
 		<div class="flex items-center gap-2 text-xs">
-			<span class="text-base-content/60">Tersimpan:</span>
+			<span class="text-slate-500 dark:text-zinc-400">Tersimpan:</span>
 			<img
 				src={existingSrc}
 				alt="Tanda tangan tersimpan"
-				class="h-10 rounded border border-base-300 bg-white"
+				class="h-10 rounded-lg border border-slate-200 bg-white dark:border-zinc-700"
 			/>
 		</div>
 	{/if}
 
 	<div class="flex flex-wrap gap-2">
 		<button
-			class="btn btn-primary btn-sm shadow-none"
+			class="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
 			type="button"
 			onclick={simpan}
 			disabled={submitting || !canEdit}
 		>
 			{#if submitting}
-				<span class="loading loading-spinner loading-xs"></span>
-				Menyimpan…
+				<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+				Menyimpan...
 			{:else}
-				<Icon name="save" />
+				<Icon name="save" class="h-3.5 w-3.5" />
 				Simpan Tanda Tangan
 			{/if}
 		</button>
 		<button
-			class="btn btn-outline btn-sm shadow-none"
+			class="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 			type="button"
 			onclick={bersihkan}
 			disabled={submitting || !canEdit}
 		>
-			<Icon name="repeat" />
+			<Icon name="repeat" class="h-3.5 w-3.5" />
 			Bersihkan
 		</button>
 		<button
-			class="btn btn-outline btn-sm shadow-none"
+			class="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 			type="button"
 			onclick={() => fileInput?.click()}
 			disabled={submitting || !canEdit}
 		>
-			<Icon name="image" />
+			<Icon name="image" class="h-3.5 w-3.5" />
 			Unggah Gambar
 		</button>
 		<button
-			class="btn btn-ghost btn-sm shadow-none"
+			class="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-red-200/80 bg-red-50 px-3 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 			type="button"
 			onclick={hapus}
 			disabled={submitting || !canEdit}
 		>
-			<Icon name="del" />
+			<Icon name="del" class="h-3.5 w-3.5" />
 			Hapus
 		</button>
 		<input

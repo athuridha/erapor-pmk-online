@@ -6,8 +6,8 @@
 	const LIGHT_THEME = 'emerald';
 	const DARK_THEME = 'dark';
 
-	let isDark = false;
-	let hasStoredPreference = false;
+	let isDark = $state(false);
+	let hasStoredPreference = $state(false);
 	let mediaQuery: MediaQueryList | null = null;
 
 	function resolveStoredTheme(raw: string | null) {
@@ -36,8 +36,8 @@
 		applyTheme(theme, false);
 	}
 
-	function handleToggle(event: Event) {
-		isDark = (event.currentTarget as HTMLInputElement).checked;
+	function toggleTheme() {
+		isDark = !isDark;
 		hasStoredPreference = true;
 		applyTheme(isDark ? DARK_THEME : LIGHT_THEME, true);
 	}
@@ -59,22 +59,15 @@
 	});
 </script>
 
-<label
-	class="btn btn-ghost btn-circle swap swap-rotate shadow-none"
-	title={isDark ? 'Mode terang' : 'Mode gelap'}
-	aria-label="Ganti tema warna"
+<button
+	type="button"
+	onclick={toggleTheme}
+	aria-pressed={isDark}
+	title={isDark ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'}
+	aria-label={isDark ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'}
+	class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 >
-	<input
-		type="checkbox"
-		class="theme-controller"
-		value={DARK_THEME}
-		bind:checked={isDark}
-		on:change={handleToggle}
-	/>
-	<span class="swap-on text-xl">
-		<Icon name="sun" />
+	<span aria-hidden="true">
+		<Icon name={isDark ? 'sun' : 'moon'} class="h-4 w-4" />
 	</span>
-	<span class="swap-off text-xl">
-		<Icon name="moon" />
-	</span>
-</label>
+</button>

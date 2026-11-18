@@ -32,9 +32,12 @@ export const tableAuthUser = sqliteTable(
 		mustChangePassword: int({ mode: 'boolean' }).default(false).notNull(),
 		permissions: text({ mode: 'json' }).notNull().default('[]').$type<UserPermission[]>(),
 		// tipe user menentukan template izin bawaan: admin (penuh), kepala_sekolah
-		// (penuh, per sekolah aktif), wali_kelas (kelas_id-nya), wali_asuh, atau user
-		// (guru mapel). Izin tiap akun tetap bisa disesuaikan admin satu per satu.
-		type: text({ enum: ['admin', 'kepala_sekolah', 'wali_kelas', 'wali_asuh', 'user'] })
+		// (penuh, per sekolah aktif), wali_kelas (kelas_id-nya), wali_asuh,
+		// pembina_eskul (pembina ekstrakurikuler eksternal), atau user (guru mapel).
+		// Izin tiap akun tetap bisa disesuaikan admin satu per satu.
+		type: text({
+			enum: ['admin', 'kepala_sekolah', 'wali_kelas', 'wali_asuh', 'pembina_eskul', 'user']
+		})
 			.notNull()
 			.default('admin'),
 		// Multi-role: level operator opsional untuk akun guru (wali_kelas/wali_asuh/
@@ -845,6 +848,10 @@ export const tableEkstrakurikuler = sqliteTable(
 			.notNull(),
 		// 1 = ekstrakurikuler berlaku untuk semua kelas (kelasId hanya menjadi acuan).
 		semuaKelas: int().notNull().default(0),
+		// Pembina eskul berakun (pembina eksternal maupun guru internal).
+		pembinaUserId: int().references(() => tableAuthUser.id, { onDelete: 'set null' }),
+		// Nama pembina eksternal manual (fallback bila pelatih tidak dibuatkan akun).
+		pembinaNama: text(),
 		...audit
 	},
 	(table) => [unique().on(table.kelasId, table.nama)]
@@ -939,6 +946,10 @@ export const tableEkstrakurikulerRelations = relations(tableEkstrakurikuler, ({ 
 	kelas: one(tableKelas, {
 		fields: [tableEkstrakurikuler.kelasId],
 		references: [tableKelas.id]
+	}),
+	pembinaUser: one(tableAuthUser, {
+		fields: [tableEkstrakurikuler.pembinaUserId],
+		references: [tableAuthUser.id]
 	}),
 	tujuan: many(tableEkstrakurikulerTujuan),
 	asesmen: many(tableAsesmenEkstrakurikuler),
@@ -1680,6 +1691,7 @@ export const tablePortalOrangtuaMurid = sqliteTable(
 			.notNull()
 	},
 	(table) => [
+		uniqueIndex('portal_orangtua_murid_pair_idx').on(table.orangtuaId, table.muridId),
 		index('portal_orangtua_murid_murid_idx').on(table.muridId),
 		index('portal_orangtua_murid_orangtua_idx').on(table.orangtuaId)
 	]

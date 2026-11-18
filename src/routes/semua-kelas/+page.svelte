@@ -34,9 +34,7 @@
 	}
 
 	/**
-	 * Samakan variasi penulisan fase dari data lama ("F", "Fase F", "fase f")
-	 * menjadi satu label kanonik "Fase F". Nilai kanonik baru dari database
-	 * juga "Fase E"/"Fase F", jadi opsi filter tidak lagi dobel.
+	 * Normalize legacy fase variants ("F", "Fase F", "fase f") into canonical "Fase F".
 	 */
 	function normFase(value: string | null | undefined): string {
 		const teks = (value ?? '').trim();
@@ -71,9 +69,22 @@
 	});
 
 	function statusNilai(persen: number) {
-		if (persen >= 90) return { label: 'Lengkap', badge: 'badge-success' };
-		if (persen >= 70) return { label: 'Baik', badge: 'badge-warning' };
-		return { label: 'Perlu dilengkapi', badge: 'badge-error' };
+		if (persen >= 90) {
+			return {
+				label: 'Lengkap',
+				cls: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+			};
+		}
+		if (persen >= 70) {
+			return {
+				label: 'Baik',
+				cls: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+			};
+		}
+		return {
+			label: 'Perlu dilengkapi',
+			cls: 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800'
+		};
 	}
 
 	function gantiFilterFase(value: string) {
@@ -85,343 +96,346 @@
 	}
 </script>
 
-<!-- Halaman Semua Kelas — style seragam login (glass card, emerald, statis) -->
-<div class="login-bg relative flex min-h-screen w-full items-center justify-center py-8">
-	<!-- Static glow blobs -->
-	<div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-		<div class="blob-a absolute -top-32 -right-32 h-96 w-96 rounded-full"></div>
-		<div class="blob-b absolute -bottom-32 -left-32 h-80 w-80 rounded-full"></div>
-	</div>
-
-	<!-- Konten -->
-	<main class="relative z-10 w-full max-w-2xl mx-auto">
-		<div class="login-card rounded-3xl p-8 shadow-2xl">
-			<!-- Header -->
-			<div class="mb-6 flex flex-col items-center gap-3 text-center">
-				<div
-					class="flex h-20 w-20 items-center justify-center rounded-2xl border border-emerald-200/60 bg-white p-2 shadow-lg"
+<div class="space-y-5">
+	<section
+		class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+			<div>
+				<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+					Semua Kelas
+				</h1>
+				<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">
+					Ringkasan rombel, wali kelas, pengampu mapel, presensi, dan kelengkapan nilai sumatif.
+				</p>
+			</div>
+			{#if semesterTerpilih}
+				<span
+					class="inline-flex h-8 w-fit items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
 				>
-					<img src="/logo.png" alt="Logo SMK Pratama Mulya" class="h-full w-full object-contain" />
+					<span aria-hidden="true" class="text-blue-600 dark:text-blue-400">
+						<Icon name="calendar" class="h-3.5 w-3.5" />
+					</span>
+					<span>{semesterTerpilih.nama}</span>
+				</span>
+			{/if}
+		</div>
+
+		{#if !semesterTerpilih}
+			<div
+				class="mt-4 flex items-center gap-2.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+				role="alert"
+			>
+				<span aria-hidden="true" class="shrink-0 text-amber-700 dark:text-amber-400">
+					<Icon name="warning" class="h-4 w-4" />
+				</span>
+				<span>
+					Belum ada semester yang bisa ditampilkan. Setel tahun ajaran dan semester terlebih dahulu
+					di menu Akademik &amp; Jadwal.
+				</span>
+			</div>
+		{/if}
+
+		<div
+			class="mt-4 grid grid-cols-2 divide-y divide-slate-200 rounded-xl border border-slate-200/80 bg-slate-50/70 sm:grid-cols-3 lg:grid-cols-6 lg:divide-x lg:divide-y-0 dark:border-zinc-800 dark:bg-zinc-800/40 dark:divide-zinc-800"
+		>
+			<div class="px-3.5 py-2.5">
+				<div class="text-[11px] font-medium text-slate-600 dark:text-zinc-400">Kelas</div>
+				<div class="mt-0.5 text-lg font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+					{ringkasan?.totalKelas ?? 0}
 				</div>
-				<div>
-					<h1 class="text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-200">
-						e-Rapor SMK Pratama Mulya
-					</h1>
-					<p class="mt-1 text-sm font-medium text-emerald-700/80 dark:text-emerald-400/80">
-						Semua Kelas — Sistem Administrasi dan Pelaporan Hasil Belajar
-					</p>
+				<div class="text-[11px] text-slate-500 dark:text-zinc-400">rombel aktif</div>
+			</div>
+			<div class="px-3.5 py-2.5">
+				<div class="text-[11px] font-medium text-slate-600 dark:text-zinc-400">Murid</div>
+				<div class="mt-0.5 text-lg font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+					{ringkasan?.totalMurid ?? 0}
+				</div>
+				<div class="text-[11px] text-slate-500 tabular-nums dark:text-zinc-400">
+					{ringkasan?.totalLakiLaki ?? 0} L / {ringkasan?.totalPerempuan ?? 0} P
 				</div>
 			</div>
-
-			<!-- Filter & Ringkasan -->
-			<div class="space-y-4">
-				{#if !semesterTerpilih}
-					<div class="alert alert-warning">
-						<Icon name="warning" />
-						<span>
-							Belum ada semester yang bisa ditampilkan. Setel tahun ajaran dan semester terlebih
-							dahulu di menu Akademik.
-						</span>
-					</div>
-				{/if}
-
-				<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-					<!-- Ringkasan kelas -->
-					<div
-						class="rounded-3xl border border-emerald-200/60 bg-base-100/80 p-6 shadow-sm backdrop-blur-md dark:border-emerald-200/40"
-					>
-						<h2 class="mb-2 text-lg font-bold text-emerald-950 dark:text-emerald-200">
-							Ringkasan Kelas
-						</h2>
-						<div class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-							<div>
-								<div class="text-base-content/60 text-xs">Kelas</div>
-								<div class="font-bold">{ringkasan?.totalKelas ?? 0}</div>
-							</div>
-							<div>
-								<div class="text-base-content/60 text-xs">Murid</div>
-								<div class="font-bold">{ringkasan?.totalMurid ?? 0}</div>
-								<div class="text-base-content/60 text-xs">
-									{ringkasan?.totalLakiLaki ?? 0} L · {ringkasan?.totalPerempuan ?? 0} P
-								</div>
-							</div>
-							<div>
-								<div class="text-base-content/60 text-xs">Guru</div>
-								<div class="font-bold">{ringkasan?.totalGuru ?? 0}</div>
-							</div>
-							<div>
-								<div class="text-base-content/60 text-xs">Mapel</div>
-								<div class="font-bold">{ringkasan?.totalMapel ?? 0}</div>
-								<div class="text-base-content/60 text-xs">baris mapel × kelas</div>
-							</div>
-							<div>
-								<div class="text-base-content/60 text-xs">Sakit</div>
-								<div class="font-bold">{ringkasan?.sakit ?? 0}</div>
-							</div>
-							<div>
-								<div class="text-base-content/60 text-xs">Izin / Alfa</div>
-								<div class="font-bold">
-									{ringkasan?.izin ?? 0} / {ringkasan?.alfa ?? 0}
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<!-- Filter & Cari -->
-					<div
-						class="rounded-3xl border border-emerald-200/60 bg-base-100/80 p-4 backdrop-blur-md dark:border-emerald-200/40"
-					>
-						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-							<div class="min-w-0">
-								<label for="filter-semester" class="text-base-content/60 text-sm">Semester</label>
-								<select
-									id="filter-semester"
-									class="select select-bordered w-full"
-									value={semesterTerpilih?.id ?? ''}
-									onchange={(e) => {
-										const val = (e.currentTarget as HTMLSelectElement).value;
-										goto(val ? `/semua-kelas?semester=${val}` : '/semua-kelas', {
-											invalidateAll: true
-										});
-									}}
-								>
-									<option value="">-- Pilih Semester --</option>
-									{#each semesterOptions as semester (semester.id)}
-										<option value={semester.id}>{semester.nama} — {semester.tahunAjaran}</option>
-									{/each}
-								</select>
-							</div>
-							<div class="min-w-0">
-								<label for="filter-fase" class="text-base-content/60 text-sm">Fase</label>
-								<select
-									id="filter-fase"
-									class="select select-bordered w-full"
-									value={filterFase || 'semua'}
-									onchange={(e) => gantiFilterFase((e.currentTarget as HTMLSelectElement).value)}
-								>
-									<option value="semua">Semua fase</option>
-									{#each faseOptions as fase (fase)}
-										<option value={fase}>{fase}</option>
-									{/each}
-								</select>
-							</div>
-							<div class="min-w-0">
-								<label for="filter-cari" class="text-base-content/60 text-sm">Cari</label>
-								<div class="relative">
-									<Icon
-										name="search"
-										class="text-base-content/40 pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
-									/>
-									<input
-										id="filter-cari"
-										type="search"
-										placeholder="Nama kelas, wali kelas, atau guru…"
-										class="select-input select-input-sm w-full border-0 bg-transparent pr-8 pl-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40 focus:outline-none"
-										bind:value={cariKelas}
-									/>
-								</div>
-							</div>
-						</div>
-					</div>
+			<div class="px-3.5 py-2.5">
+				<div class="text-[11px] font-medium text-slate-600 dark:text-zinc-400">Guru</div>
+				<div class="mt-0.5 text-lg font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+					{ringkasan?.totalGuru ?? 0}
 				</div>
-
-				{#if kelasTersaring.length > 0 || !semesterTerpilih}
-					<div class="mt-6">
-						{#if kelasTersaring.length === 0}
-							<div class="alert alert-info mb-3">
-								<Icon name="info" />
-								<span>Tidak ada kelas yang cocok dengan filter Fase/pencarian.</span>
-							</div>
-						{/if}
-						<div class="overflow-x-auto">
-							<table class="table table-sm">
-								<thead>
-									<tr>
-										<th>Kelas</th>
-										<th>Wali Kelas</th>
-										<th class="text-right">Murid</th>
-										<th class="text-right">Guru</th>
-										<th class="text-right">Mapel</th>
-										<th class="min-w-44">Kelengkapan Nilai</th>
-										<th class="text-right">Rata-rata</th>
-										<th class="text-right">Sakit/Izin/Alfa</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each kelasTersaring as kelas (kelas.id)}
-										{@const status = statusNilai(kelas.persenNilai)}
-										{@const faseLabel = normFase(kelas.fase)}
-										<tr class="hover:bg-emerald-50/30 transition-colors">
-											<td>
-												<a class="link link-hover font-semibold" href="/semua-kelas/{kelas.id}">
-													{kelas.nama}
-												</a>
-												{#if faseLabel}
-													<span class={`badge badge-soft badge-sm ${faseBadgeClass(faseLabel)}`}>
-														{faseLabel}
-													</span>
-												{/if}
-											</td>
-											<td>
-												{#if kelas.waliKelas}
-													<div>{kelas.waliKelas}</div>
-													{#if kelas.waliAsuh}
-														<div class="text-base-content/60 text-xs">
-															Wali asuh: {kelas.waliAsuh}
-														</div>
-													{/if}
-												{:else}
-													<span class="text-base-content/50 text-xs">Belum ditentukan</span>
-												{/if}
-											</td>
-											<td class="text-right">
-												<div class="font-semibold">{kelas.jumlahMurid}</div>
-												<div class="text-base-content/60 text-xs">
-													{kelas.jumlahLakiLaki} L / {kelas.jumlahPerempuan} P
-												</div>
-											</td>
-											<td class="text-right">
-												<div class="font-semibold">{kelas.jumlahGuru}</div>
-												{#if kelas.guru.length > 0}
-													<div class="text-base-content/60 max-w-40 truncate text-xs">
-														{kelas.guru.join(', ')}
-													</div>
-												{/if}
-											</td>
-											<td class="text-right">{kelas.jumlahMapel}</td>
-											<td>
-												<div class="flex items-center gap-2">
-													<progress
-														class="progress progress-primary w-24"
-														max="100"
-														value={kelas.persenNilai}
-													></progress>
-													<span class="text-xs font-semibold">{kelas.persenNilai}%</span>
-												</div>
-												<div class="text-base-content/60 text-xs">
-													{kelas.nilaiTerisi}/{kelas.nilaiDiharapkan} nilai
-												</div>
-												<span class={`badge badge-soft badge-xs ${status.badge}`}>
-													{status.label}
-												</span>
-											</td>
-											<td class="text-right">
-												{#if kelas.rataNilai != null}
-													<span class="font-semibold">{kelas.rataNilai}</span>
-												{:else}
-													<span class="text-base-content/50 text-xs">-</span>
-												{/if}
-											</td>
-											<td class="text-right">
-												<span class="text-xs">
-													{kelas.sakit} / {kelas.izin} / {kelas.alfa}
-												</span>
-												<div class="text-base-content/60 text-xs">
-													{kelas.muridDenganPresensi} murid punya data
-												</div>
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					</div>
-				{/if}
+				<div class="text-[11px] text-slate-500 dark:text-zinc-400">pengampu unik</div>
+			</div>
+			<div class="px-3.5 py-2.5">
+				<div class="text-[11px] font-medium text-slate-600 dark:text-zinc-400">Mapel</div>
+				<div class="mt-0.5 text-lg font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+					{ringkasan?.totalMapel ?? 0}
+				</div>
+				<div class="text-[11px] text-slate-500 dark:text-zinc-400">baris mapel x kelas</div>
+			</div>
+			<div class="px-3.5 py-2.5">
+				<div class="text-[11px] font-medium text-slate-600 dark:text-zinc-400">Sakit</div>
+				<div class="mt-0.5 text-lg font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+					{ringkasan?.sakit ?? 0}
+				</div>
+				<div class="text-[11px] text-slate-500 dark:text-zinc-400">total catatan</div>
+			</div>
+			<div class="px-3.5 py-2.5">
+				<div class="text-[11px] font-medium text-slate-600 dark:text-zinc-400">Izin / Alfa</div>
+				<div class="mt-0.5 text-lg font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+					{ringkasan?.izin ?? 0} / {ringkasan?.alfa ?? 0}
+				</div>
+				<div class="text-[11px] text-slate-500 dark:text-zinc-400">total catatan</div>
 			</div>
 		</div>
-	</main>
+	</section>
+
+	<section
+		class="rounded-2xl border border-slate-200/75 bg-white shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<div class="border-b border-slate-200 p-4 sm:p-5 dark:border-zinc-800">
+			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+				<div class="min-w-0">
+					<label
+						for="filter-semester"
+						class="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					>
+						Semester
+					</label>
+					<div class="relative">
+						<select
+							id="filter-semester"
+							class="h-9 w-full appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+							value={semesterTerpilih?.id ?? ''}
+							onchange={(e) => {
+								const val = (e.currentTarget as HTMLSelectElement).value;
+								goto(val ? `/semua-kelas?semester=${val}` : '/semua-kelas', {
+									invalidateAll: true
+								});
+							}}
+						>
+							<option value="">Pilih Semester</option>
+							{#each semesterOptions as semester (semester.id)}
+								<option value={semester.id}>{semester.nama} ({semester.tahunAjaran})</option>
+							{/each}
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
+					</div>
+				</div>
+
+				<div class="min-w-0">
+					<label
+						for="filter-fase"
+						class="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					>
+						Fase
+					</label>
+					<div class="relative">
+						<select
+							id="filter-fase"
+							class="h-9 w-full appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+							value={filterFase || 'semua'}
+							onchange={(e) => gantiFilterFase((e.currentTarget as HTMLSelectElement).value)}
+						>
+							<option value="semua">Semua fase</option>
+							{#each faseOptions as fase (fase)}
+								<option value={fase}>{fase}</option>
+							{/each}
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
+					</div>
+				</div>
+
+				<div class="min-w-0 sm:col-span-2 lg:col-span-1">
+					<label
+						for="filter-cari"
+						class="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					>
+						Cari Kelas / Guru
+					</label>
+					<div
+						class="flex h-9 items-center gap-2 rounded-xl border border-[#7e8b9b] bg-white px-2.5 transition-colors focus-within:border-blue-600 dark:border-zinc-600 dark:bg-zinc-900 dark:focus-within:border-blue-400"
+					>
+						<span aria-hidden="true" class="shrink-0 text-slate-500 dark:text-zinc-400">
+							<Icon name="search" class="h-3.5 w-3.5" />
+						</span>
+						<input
+							id="filter-cari"
+							type="search"
+							placeholder="Nama kelas, wali kelas, atau guru..."
+							class="min-w-0 flex-1 bg-transparent text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-400"
+							bind:value={cariKelas}
+						/>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="p-4 sm:p-5">
+			{#if kelasTersaring.length === 0}
+				<div
+					class="rounded-xl border border-dashed border-slate-300 p-8 text-center dark:border-zinc-700"
+				>
+					<p class="text-sm font-semibold text-slate-800 dark:text-zinc-200">
+						Tidak ada kelas yang cocok
+					</p>
+					<p class="mt-1 text-xs text-slate-600 dark:text-zinc-400">
+						{#if cariKelas || filterFase}
+							Ubah filter fase atau kata kunci pencarian untuk menampilkan rombel.
+						{:else}
+							Belum ada kelas terdaftar pada semester ini.
+						{/if}
+					</p>
+				</div>
+			{:else}
+				<div class="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-zinc-800">
+					<table class="w-full min-w-[760px] border-collapse text-left text-sm">
+						<thead
+							class="border-b border-slate-200 bg-slate-50/75 text-xs font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+						>
+							<tr>
+								<th class="px-3.5 py-2.5">Kelas</th>
+								<th class="px-3.5 py-2.5">Wali Kelas</th>
+								<th class="px-3.5 py-2.5 text-right">Murid</th>
+								<th class="px-3.5 py-2.5 text-right">Guru</th>
+								<th class="px-3.5 py-2.5 text-right">Mapel</th>
+								<th class="min-w-44 px-3.5 py-2.5">Kelengkapan Nilai</th>
+								<th class="px-3.5 py-2.5 text-right">Rata-rata</th>
+								<th class="px-3.5 py-2.5 text-right">Sakit / Izin / Alfa</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-slate-200/70 dark:divide-zinc-800">
+							{#each kelasTersaring as kelas (kelas.id)}
+								{@const status = statusNilai(kelas.persenNilai)}
+								{@const faseLabel = normFase(kelas.fase)}
+								<tr class="transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40">
+									<td class="px-3.5 py-3">
+										<div class="flex flex-wrap items-center gap-1.5">
+											<a
+												class="font-semibold text-blue-600 hover:underline dark:text-blue-400"
+												href="/semua-kelas/{kelas.id}"
+											>
+												{kelas.nama}
+											</a>
+											{#if faseLabel}
+												<span
+													class={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${faseBadgeClass(faseLabel)}`}
+												>
+													{faseLabel}
+												</span>
+											{/if}
+										</div>
+									</td>
+									<td class="px-3.5 py-3">
+										{#if kelas.waliKelas}
+											<div class="text-xs font-medium text-slate-900 dark:text-zinc-100">
+												{kelas.waliKelas}
+											</div>
+											{#if kelas.waliAsuh}
+												<div class="text-[11px] text-slate-500 dark:text-zinc-400">
+													Wali asuh: {kelas.waliAsuh}
+												</div>
+											{/if}
+										{:else}
+											<span class="text-xs text-slate-500 dark:text-zinc-400">Belum ditentukan</span
+											>
+										{/if}
+									</td>
+									<td class="px-3.5 py-3 text-right">
+										<div
+											class="text-xs font-semibold text-slate-900 tabular-nums dark:text-zinc-100"
+										>
+											{kelas.jumlahMurid}
+										</div>
+										<div
+											class="text-[11px] whitespace-nowrap text-slate-500 tabular-nums dark:text-zinc-400"
+										>
+											{kelas.jumlahLakiLaki} L / {kelas.jumlahPerempuan} P
+										</div>
+									</td>
+									<td class="px-3.5 py-3 text-right">
+										<div
+											class="text-xs font-semibold text-slate-900 tabular-nums dark:text-zinc-100"
+										>
+											{kelas.jumlahGuru}
+										</div>
+										{#if kelas.guru.length > 0}
+											<div
+												class="ml-auto max-w-44 truncate text-[11px] text-slate-500 dark:text-zinc-400"
+												title={kelas.guru.join(', ')}
+											>
+												{kelas.guru.join(', ')}
+											</div>
+										{/if}
+									</td>
+									<td
+										class="px-3.5 py-3 text-right text-xs font-medium text-slate-800 tabular-nums dark:text-zinc-200"
+									>
+										{kelas.jumlahMapel}
+									</td>
+									<td class="px-3.5 py-3">
+										<div class="flex items-center gap-2">
+											<div
+												class="h-2 w-24 overflow-hidden rounded-full bg-slate-200 dark:bg-zinc-700"
+												role="progressbar"
+												aria-label={`Kelengkapan nilai ${kelas.nama}`}
+												aria-valuenow={kelas.persenNilai}
+												aria-valuemin={0}
+												aria-valuemax={100}
+											>
+												<div
+													class="h-full rounded-full transition-all {kelas.persenNilai < 50
+														? 'bg-amber-600 dark:bg-amber-500'
+														: 'bg-blue-600 dark:bg-blue-500'}"
+													style="width: {kelas.persenNilai}%"
+												></div>
+											</div>
+											<span
+												class="text-xs font-semibold text-slate-800 tabular-nums dark:text-zinc-200"
+											>
+												{kelas.persenNilai}%
+											</span>
+										</div>
+										<div class="mt-1 flex flex-wrap items-center gap-1.5">
+											<span class="text-[11px] text-slate-500 tabular-nums dark:text-zinc-400">
+												{kelas.nilaiTerisi}/{kelas.nilaiDiharapkan} nilai
+											</span>
+											<span
+												class="inline-flex rounded border px-1.5 py-0.5 text-[10px] font-semibold {status.cls}"
+											>
+												{status.label}
+											</span>
+										</div>
+									</td>
+									<td class="px-3.5 py-3 text-right text-xs tabular-nums">
+										{#if kelas.rataNilai != null}
+											<span class="font-semibold text-slate-900 dark:text-zinc-100">
+												{kelas.rataNilai}
+											</span>
+										{:else}
+											<span class="text-slate-500 dark:text-zinc-400">-</span>
+										{/if}
+									</td>
+									<td class="px-3.5 py-3 text-right">
+										<div class="text-xs font-medium text-slate-800 tabular-nums dark:text-zinc-200">
+											{kelas.sakit} / {kelas.izin} / {kelas.alfa}
+										</div>
+										<div class="text-[11px] text-slate-500 tabular-nums dark:text-zinc-400">
+											{kelas.muridDenganPresensi} murid punya data
+										</div>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
+		</div>
+	</section>
 </div>
-
-<style>
-	/* ============================================================
-	   Global gaya login — diterapkan ke halaman Semua Kelas
-	   (glass card, border emerald, rounded-3xl, statis, tanpa animasi)
-	   ============================================================ */
-
-	/* Latar belakang halaman */
-	.login-bg {
-		background: linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 45%, #d1fae5 100%);
-	}
-	:global(.dark) .login-bg,
-	:global([data-theme='dark']) .login-bg {
-		background: linear-gradient(135deg, #064e3b 0%, #0f172a 60%, #134e4a 100%);
-	}
-
-	/* Kartu */
-	.login-card {
-		background: rgba(255, 255, 255, 0.85);
-		backdrop-filter: blur(16px);
-		border: 1px solid rgba(16, 185, 129, 0.15);
-	}
-	:global(.dark) .login-card,
-	:global([data-theme='dark']) .login-card {
-		background: rgba(15, 23, 42, 0.75);
-		border-color: rgba(16, 185, 129, 0.2);
-	}
-
-	/* Statik — tidak ada hover/transition */
-	.progress {
-		height: 0.75rem !important;
-		border-radius: 9999px !important;
-		background: color-mix(in srgb, var(--color-base-content, #0f172a) 6%, transparent) !important;
-	}
-	.progress::-webkit-progress-value {
-		border-radius: 9999px !important;
-		background-image: linear-gradient(90deg, #059669, #34d399) !important;
-		border-radius: 9999px !important;
-	}
-
-	/* Tabel */
-	.table > tbody > tr:hover {
-		background: rgba(16, 185, 129, 0.04);
-	}
-
-	/* Input & Select */
-	.input {
-		background: rgba(255, 255, 255, 0.9) !important;
-		border: 1px solid rgba(16, 185, 129, 0.2) !important;
-		color: var(--color-base-content, #1f2937) !important;
-	}
-	.input:focus {
-		border-color: #059669 !important;
-		box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
-	}
-	:global(.dark) .input {
-		background: rgba(30, 41, 59, 0.85) !important;
-		border-color: rgba(16, 185, 129, 0.25) !important;
-	}
-
-	.select {
-		border-radius: 1rem !important;
-		border-color: rgba(16, 185, 129, 0.2) !important;
-		background: color-mix(in srgb, var(--color-base-100, #ffffff) 0.85, transparent) !important;
-	}
-	.select:focus-within {
-		border-color: #059669 !important;
-		box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
-	}
-	:global(.dark) .select {
-		background: rgba(30, 41, 59, 0.85) !important;
-		border-color: rgba(16, 185, 129, 0.25) !important;
-	}
-
-	/* Badge */
-	.badge {
-		border-radius: 9999px !important;
-		border-width: 1px !important;
-		font-weight: 600 !important;
-	}
-
-	/* Alert */
-	.alert {
-		border-radius: 1.1rem !important;
-		border: 1px solid rgba(16, 185, 129, 0.15) !important;
-		backdrop-filter: blur(10px);
-	}
-
-	/* Focus-visible */
-	:focus-visible {
-		outline: 2px solid #059669 !important;
-		outline-offset: 2px !important;
-	}
-</style>

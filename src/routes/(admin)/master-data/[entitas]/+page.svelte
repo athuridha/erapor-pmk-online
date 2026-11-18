@@ -67,7 +67,7 @@
 
 	/** Nilai field untuk ringkasan baca-saja (label pilihan, bukan nilai mentah). */
 	function formatField(field: FieldMaster, nilai: string | number | null | undefined): string {
-		if (nilai == null || nilai === '') return '—';
+		if (nilai == null || nilai === '') return '-';
 		if (field.key === 'jenjang_pendidikan') {
 			// Data menyimpan base "sma" + varian "smk" → tampilkan label varian.
 			const varian = labelVarianJenjang(String(baris[0]?.jenjang_variant ?? ''));
@@ -84,7 +84,7 @@
 
 	/** Nilai kolom tabel generik (kolom bisa bukan field, mis. nama/gabungan). */
 	function formatNilai(kolomKey: string, nilai: string | number | null | undefined): string {
-		if (nilai == null || nilai === '') return '—';
+		if (nilai == null || nilai === '') return '-';
 		if (kolomKey === 'fase') return normalisasiFase(String(nilai));
 		if (kolomKey === 'jk')
 			return nilai === 'L' ? 'Laki-laki' : nilai === 'P' ? 'Perempuan' : String(nilai);
@@ -229,19 +229,28 @@
 	}
 </script>
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="mb-4 flex items-start justify-between gap-2 max-sm:flex-col sm:flex-row">
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div
+		class="mb-4 flex items-start justify-between gap-3 border-b border-slate-200 pb-4 max-sm:flex-col sm:flex-row dark:border-zinc-800"
+	>
 		<div>
-			<h2 class="text-xl font-bold">{entitas?.judul ?? 'Master Data'}</h2>
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+				{entitas?.judul ?? 'Master Data'}
+			</h1>
 			{#if entitas}
-				<p class="text-base-content/80 block text-sm">{entitas.deskripsi}</p>
+				<p class="mt-0.5 block text-xs text-slate-600 dark:text-zinc-400">{entitas.deskripsi}</p>
 			{/if}
 		</div>
 		{#if entitas}
 			<div class="flex flex-wrap items-center gap-2 max-sm:w-full">
 				{#if ringkas && entitas.editorPath}
-					<a class="btn btn-primary btn-soft shadow-none max-sm:w-full" href={entitas.editorPath}>
-						<Icon name="edit" />
+					<a
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 max-sm:w-full"
+						href={entitas.editorPath}
+					>
+						<Icon name="edit" class="h-4 w-4" />
 						Ubah di {entitas.editorPath}
 					</a>
 				{:else}
@@ -256,10 +265,10 @@
 								<input type="hidden" name="ids" value={JSON.stringify(terpilih)} />
 								<button
 									type="submit"
-									class="btn btn-error btn-soft shadow-none"
+									class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-3.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/50"
 									disabled={submitting}
 								>
-									<Icon name="del" />
+									<Icon name="del" class="h-4 w-4" />
 									Hapus {terpilih.length} Terpilih
 								</button>
 							{/snippet}
@@ -267,42 +276,42 @@
 					{/if}
 					{#if entitas.formPengguna}
 						<a
-							class="btn btn-primary btn-soft shadow-none max-sm:w-full"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 max-sm:w-full"
 							href={entitas.tambahPath ?? '/pengguna/form'}
 						>
-							<Icon name="plus" />
+							<Icon name="plus" class="h-4 w-4" />
 							Tambah Akun
 						</a>
 					{:else}
 						<button
 							type="button"
-							class="btn btn-primary btn-soft shadow-none max-sm:w-full"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 max-sm:w-full"
 							onclick={bukaTambah}
 						>
-							<Icon name="plus" />
+							<Icon name="plus" class="h-4 w-4" />
 							Tambah
 						</button>
 					{/if}
 					{#if entitas.key === 'mata_pelajaran'}
 						<button
 							type="button"
-							class="btn btn-soft shadow-none max-sm:w-full"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 max-sm:w-full dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							onclick={() => {
 								kelasTerpilihMassal = [];
 								bulkTerbuka = true;
 							}}
 						>
-							<Icon name="layers" />
+							<Icon name="layers" class="h-4 w-4" />
 							Tambah Massal
 						</button>
 					{/if}
 					{#if entitas.key === 'kelas'}
 						<button
 							type="button"
-							class="btn btn-soft shadow-none max-sm:w-full"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 max-sm:w-full dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							onclick={() => (pindahMuridTerbuka = true)}
 						>
-							<Icon name="move" />
+							<Icon name="move" class="h-4 w-4" />
 							Pindah Murid
 						</button>
 					{/if}
@@ -312,23 +321,36 @@
 	</div>
 
 	{#if ringkas && entitas?.editorPath}
-		<div class="alert alert-info alert-soft mb-4 text-sm">
-			<Icon name="info" />
+		<div
+			class="mb-4 flex items-start gap-2.5 rounded-xl border border-sky-200 bg-sky-50/90 px-3.5 py-2.5 text-xs text-sky-950 dark:border-sky-900/60 dark:bg-sky-950/35 dark:text-sky-200"
+		>
+			<Icon name="info" class="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
 			<span>
 				Halaman ini hanya <strong>ringkasan baca-saja</strong> agar tidak ada dua editor untuk data
 				yang sama. Semua penambahan, perubahan, dan penghapusan dilakukan di
-				<a class="link font-semibold" href={entitas.editorPath}>{entitas.editorPath}</a>.
+				<a
+					class="font-semibold text-blue-600 underline hover:text-blue-700 dark:text-blue-400"
+					href={entitas.editorPath}
+				>
+					{entitas.editorPath}
+				</a>.
 			</span>
 		</div>
 	{/if}
 
 	{#if ringkas && entitas?.key === 'sekolah' && baris[0]}
-		<div class="border-base-300 bg-base-100 rounded-md border p-4">
+		<div
+			class="rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-800/40"
+		>
 			<dl class="grid gap-4 sm:grid-cols-2">
 				{#each entitas.fields.filter((field) => field.key !== 'jenjang_variant') as field (field.key)}
 					<div>
-						<dt class="text-base-content/60 text-xs font-semibold">{field.label}</dt>
-						<dd class="text-sm font-medium">{formatField(field, baris[0][field.key])}</dd>
+						<dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-zinc-400">
+							{field.label}
+						</dt>
+						<dd class="mt-0.5 text-xs font-medium text-slate-900 dark:text-zinc-100">
+							{formatField(field, baris[0][field.key])}
+						</dd>
 					</div>
 				{/each}
 			</dl>
@@ -340,12 +362,17 @@
 			data-sveltekit-replacestate
 			onsubmit={(event) => event.preventDefault()}
 		>
-			<div class="join w-full">
-				<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
-					<Icon name="search" />
+			<div class="flex w-full items-center gap-2 sm:max-w-md">
+				<div class="relative flex-1">
+					<span
+						class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 dark:text-zinc-500"
+					>
+						<Icon name="search" class="h-4 w-4" />
+					</span>
 					<input
 						type="search"
 						name="q"
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 						bind:value={searchTerm}
 						spellcheck="false"
 						placeholder={`Cari ${entitas?.judul.toLowerCase() ?? 'data'}... (Enter untuk mencari)`}
@@ -353,27 +380,39 @@
 						oninput={(event) => onSearchInput((event.currentTarget as HTMLInputElement).value)}
 						onkeydown={onSearchKeydown}
 					/>
-				</label>
-				<select
-					class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink dark:border-none"
-					value={perHalaman}
-					title="Baris per halaman"
-					onchange={(event) =>
-						gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
-				>
-					{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
-						<option value={jumlah}>{jumlah} / hal</option>
-					{/each}
-				</select>
+				</div>
+				<div class="relative flex shrink-0 items-center">
+					<select
+						class="h-9 appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+						value={perHalaman}
+						title="Baris per halaman"
+						onchange={(event) =>
+							gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
+					>
+						{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
+							<option value={jumlah}>{jumlah} / hal</option>
+						{/each}
+					</select>
+					<span
+						aria-hidden="true"
+						class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+					>
+						<Icon name="down" class="h-3.5 w-3.5" />
+					</span>
+				</div>
 			</div>
 		</form>
 
-		<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
-			<table class="border-base-200 table border dark:border-none">
+		<div
+			class="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+		>
+			<table class="w-full border-collapse text-xs">
 				<thead>
-					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
+					<tr
+						class="border-b border-slate-200 bg-slate-50 text-left font-semibold text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+					>
 						{#if !ringkas}
-							<th style="width: 50px; min-width: 40px;" class="text-center">
+							<th style="width: 48px; min-width: 40px;" class="px-3 py-2.5 text-center">
 								<input
 									type="checkbox"
 									class="checkbox checkbox-sm"
@@ -387,18 +426,22 @@
 							</th>
 						{/if}
 						{#each entitas?.kolom ?? [] as kolom (kolom.key)}
-							<th style="min-width: 140px;">{kolom.label}</th>
+							<th style="min-width: 140px;" class="px-3 py-2.5">{kolom.label}</th>
 						{/each}
 						{#if !ringkas}
-							<th class="text-center" style="width: 150px;">Aksi</th>
+							<th class="px-3 py-2.5 text-center" style="width: 150px;">Aksi</th>
 						{/if}
 					</tr>
 				</thead>
-				<tbody>
+				<tbody class="divide-y divide-slate-200 dark:divide-zinc-800">
 					{#each baris as row (row.id)}
-						<tr class={terpilih.includes(Number(row.id)) ? 'bg-base-200/40' : undefined}>
+						<tr
+							class={terpilih.includes(Number(row.id))
+								? 'bg-blue-50/70 dark:bg-blue-950/30'
+								: 'transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50'}
+						>
 							{#if !ringkas}
-								<td class="text-center">
+								<td class="px-3 py-2.5 text-center">
 									<input
 										type="checkbox"
 										class="checkbox checkbox-sm"
@@ -413,11 +456,13 @@
 								</td>
 							{/if}
 							{#each entitas?.kolom ?? [] as kolom (kolom.key)}
-								<td>{formatNilai(kolom.key, row[kolom.key])}</td>
+								<td class="px-3 py-2.5 text-slate-800 dark:text-zinc-200">
+									{formatNilai(kolom.key, row[kolom.key])}
+								</td>
 							{/each}
 							{#if !ringkas}
-								<td>
-									<div class="flex items-center justify-center gap-1">
+								<td class="px-3 py-2.5">
+									<div class="flex items-center justify-center gap-1.5">
 										{#if hapusId === row.id}
 											<FormEnhance
 												action="?/hapus"
@@ -427,17 +472,17 @@
 											>
 												{#snippet children({ submitting })}
 													<input type="hidden" name="id" value={row.id} />
-													<div class="flex items-center justify-center gap-1">
+													<div class="flex items-center justify-center gap-1.5">
 														<button
 															type="submit"
-															class="btn btn-error btn-soft btn-sm shadow-none"
+															class="inline-flex h-7 items-center rounded-md bg-red-600 px-2.5 text-[11px] font-semibold text-white hover:bg-red-700 disabled:opacity-50"
 															disabled={submitting}
 														>
 															Ya
 														</button>
 														<button
 															type="button"
-															class="btn btn-soft btn-sm shadow-none"
+															class="inline-flex h-7 items-center rounded-md border border-[#7e8b9b] bg-white px-2.5 text-[11px] font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 															onclick={() => (hapusId = null)}
 														>
 															Batal
@@ -449,47 +494,48 @@
 											{#if entitas?.key === 'ekstrakurikuler'}
 												<button
 													type="button"
-													class="btn btn-soft btn-sm shadow-none"
+													class="inline-flex h-8 items-center gap-1 rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium whitespace-nowrap text-slate-800 transition-colors hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 													title="Kelola anggota ekstrakurikuler"
 													onclick={() =>
 														(anggotaEkstra = { id: Number(row.id), nama: String(row.nama ?? '') })}
 												>
-													<Icon name="users" />
+													<Icon name="users" class="h-3.5 w-3.5" />
 													Anggota
 												</button>
 												<a
-													class="btn btn-soft btn-sm shadow-none"
+													class="inline-flex h-8 items-center gap-1 rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium whitespace-nowrap text-slate-800 transition-colors hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 													title="Atur Tujuan Pembelajaran ekstrakurikuler"
 													href={`/ekstrakurikuler/tp-ekstra?ekstrakurikulerId=${row.id}`}
 												>
-													<Icon name="book" />
+													<Icon name="book" class="h-3.5 w-3.5" />
 													Edit TP
 												</a>
 											{/if}
 											{#if entitas?.formPengguna}
 												<a
-													class="btn btn-soft btn-sm shadow-none"
+													class="inline-flex h-8 items-center gap-1 rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium whitespace-nowrap text-slate-800 transition-colors hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 													href={`/pengguna/form/${row.id}`}
 												>
-													<Icon name="edit" />
+													<Icon name="edit" class="h-3.5 w-3.5" />
 													Ubah
 												</a>
 											{:else}
 												<button
 													type="button"
-													class="btn btn-soft btn-sm shadow-none"
+													class="inline-flex h-8 items-center gap-1 rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium whitespace-nowrap text-slate-800 transition-colors hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 													onclick={() => bukaUbah(row)}
 												>
-													<Icon name="edit" />
+													<Icon name="edit" class="h-3.5 w-3.5" />
 													Ubah
 												</button>
 											{/if}
 											<button
 												type="button"
-												class="btn btn-soft btn-error btn-sm shadow-none"
+												class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-300 bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/50"
+												title="Hapus data"
 												onclick={() => (hapusId = row.id)}
 											>
-												<Icon name="del" />
+												<Icon name="del" class="h-3.5 w-3.5" />
 											</button>
 										{/if}
 									</div>
@@ -499,10 +545,10 @@
 					{:else}
 						<tr>
 							<td
-								class="p-6 text-center"
+								class="p-8 text-center text-xs italic text-slate-500 dark:text-zinc-400"
 								colspan={(entitas?.kolom.length ?? 0) + (ringkas ? 0 : 2)}
 							>
-								<em class="opacity-60">Belum ada data untuk ditampilkan.</em>
+								Belum ada data untuk ditampilkan.
 							</td>
 						</tr>
 					{/each}
@@ -511,51 +557,53 @@
 		</div>
 
 		{#if totalHalaman > 1}
-			<div class="mt-4 flex justify-center">
-				<div class="join">
-					<button
-						type="button"
-						class="join-item btn"
-						disabled={halamanSekarang <= 1}
-						onclick={() => gotoPage(halamanSekarang - 1)}
-					>
-						«
-					</button>
-					{#each nomorHalaman as nomor, index (index)}
-						{#if nomor === '…'}
-							<button type="button" class="join-item btn" disabled>…</button>
-						{:else}
-							<button
-								type="button"
-								class="join-item btn"
-								class:btn-active={nomor === halamanSekarang}
-								onclick={() => gotoPage(nomor)}
-							>
-								{nomor}
-							</button>
-						{/if}
-					{/each}
-					<button
-						type="button"
-						class="join-item btn"
-						disabled={halamanSekarang >= totalHalaman}
-						onclick={() => gotoPage(halamanSekarang + 1)}
-					>
-						»
-					</button>
-				</div>
+			<div class="mt-4 flex flex-wrap items-center justify-center gap-1">
+				<button
+					type="button"
+					class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+					disabled={halamanSekarang <= 1}
+					onclick={() => gotoPage(halamanSekarang - 1)}
+				>
+					&laquo;
+				</button>
+				{#each nomorHalaman as nomor, index (index)}
+					{#if nomor === '…'}
+						<span class="inline-flex h-8 items-center px-1.5 text-xs text-slate-500">...</span>
+					{:else}
+						<button
+							type="button"
+							class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2.5 text-xs font-semibold tabular-nums transition-colors {nomor ===
+							halamanSekarang
+								? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+								: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
+							onclick={() => gotoPage(nomor)}
+						>
+							{nomor}
+						</button>
+					{/if}
+				{/each}
+				<button
+					type="button"
+					class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+					disabled={halamanSekarang >= totalHalaman}
+					onclick={() => gotoPage(halamanSekarang + 1)}
+				>
+					&raquo;
+				</button>
 			</div>
 		{/if}
 
-		<p class="mt-3 text-center text-sm opacity-70">
+		<p class="mt-3 text-center text-xs text-slate-500 tabular-nums dark:text-zinc-400">
 			Menampilkan {barisTampil} dari {total} data
 		</p>
 	{/if}
 </div>
 
 {#if entitas && formTerbuka}
-	<dialog class="modal" open>
-		<div class="modal-box max-w-2xl">
+	<dialog class="modal bg-slate-950/45 backdrop-blur-[2px]" open>
+		<div
+			class="modal-box max-w-2xl rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		>
 			<h3 class="mb-4 text-lg font-bold">
 				{barisEdit ? 'Ubah' : 'Tambah'}
 				{entitas.judul}
@@ -572,16 +620,16 @@
 						<input type="hidden" name="id" value={barisEdit.id} />
 					{/if}
 
-					<div class="grid gap-3 sm:grid-cols-2">
+					<div class="grid gap-3.5 sm:grid-cols-2">
 						{#each entitas.fields as field (field.key)}
 							<div
-								class="form-control {entitas.key === 'mata_pelajaran' && field.key === 'kelas_id'
+								class={entitas.key === 'mata_pelajaran' && field.key === 'kelas_id'
 									? 'sm:col-span-2'
-									: ''}"
+									: ''}
 							>
-								<span class="label-text mb-1 text-sm font-medium">
+								<span class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300">
 									{field.label}
-									{#if field.wajib}<span class="text-error">*</span>{/if}
+									{#if field.wajib}<span class="text-red-600 dark:text-red-400">*</span>{/if}
 								</span>
 								{#if field.tipe === 'toggle'}
 									<input
@@ -592,26 +640,36 @@
 										disabled={submitting}
 									/>
 								{:else if field.tipe === 'pilihan'}
-									<select
-										name={field.key}
-										class="select select-bordered w-full rounded-xl"
-										required={field.wajib}
-										disabled={submitting}
-									>
-										{#if !field.wajib}<option value="">—</option>{/if}
-										{#each field.opsi ?? [] as opsi (opsi.value)}
-											<option value={opsi.value} selected={nilaiField(field.key) === opsi.value}>
-												{opsi.label}
-											</option>
-										{/each}
-									</select>
+									<div class="relative flex items-center">
+										<select
+											name={field.key}
+											class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+											required={field.wajib}
+											disabled={submitting}
+										>
+											{#if !field.wajib}<option value="">Tidak dipilih</option>{/if}
+											{#each field.opsi ?? [] as opsi (opsi.value)}
+												<option value={opsi.value} selected={nilaiField(field.key) === opsi.value}>
+													{opsi.label}
+												</option>
+											{/each}
+										</select>
+										<span
+											aria-hidden="true"
+											class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+										>
+											<Icon name="down" class="h-3.5 w-3.5" />
+										</span>
+									</div>
 								{:else if field.tipe === 'relasi'}
 									{#if entitas.key === 'mata_pelajaran' && field.key === 'kelas_id'}
 										{@const semuaOpsiKelas = relasi[field.relasi ?? 'kelas'] ?? []}
 										<div
-											class="border-base-300 dark:border-base-200 bg-base-200/50 space-y-2 rounded-xl border p-3"
+											class="space-y-2.5 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
 										>
-											<div class="flex items-center justify-between border-b pb-2">
+											<div
+												class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2 dark:border-zinc-700"
+											>
 												<label class="flex cursor-pointer items-center gap-2 text-xs font-semibold">
 													<input
 														type="checkbox"
@@ -630,10 +688,10 @@
 													/>
 													<span>Pilih Semua Kelas ({semuaOpsiKelas.length} kelas)</span>
 												</label>
-												<div class="flex items-center gap-1.5">
+												<div class="flex items-center gap-2">
 													<button
 														type="button"
-														class="btn btn-ghost btn-xs text-primary text-xs"
+														class="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
 														onclick={() => {
 															mapelKelasTerpilih = semuaOpsiKelas.map((k) => Number(k.value));
 															sinkronValiditasForm();
@@ -641,10 +699,9 @@
 													>
 														Pilih Semua
 													</button>
-													<span class="opacity-30">•</span>
 													<button
 														type="button"
-														class="btn btn-ghost btn-xs text-xs text-error"
+														class="text-xs font-semibold text-red-600 hover:underline dark:text-red-400"
 														onclick={() => {
 															mapelKelasTerpilih = [];
 															sinkronValiditasForm();
@@ -657,11 +714,11 @@
 
 											<!-- Daftar Pilihan Kelas Selalu Ditampilkan -->
 											<div
-												class="border-base-300 bg-base-100 grid max-h-48 grid-cols-2 gap-1.5 overflow-y-auto rounded-lg border p-2 sm:grid-cols-4"
+												class="grid max-h-48 grid-cols-2 gap-1.5 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 sm:grid-cols-4 dark:border-zinc-700 dark:bg-zinc-900"
 											>
 												{#each semuaOpsiKelas as k (k.value)}
 													<label
-														class="hover:bg-base-200 flex cursor-pointer items-center gap-1.5 rounded p-1 text-xs"
+														class="flex cursor-pointer items-center gap-1.5 rounded-md p-1.5 text-xs transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800"
 													>
 														<input
 															type="checkbox"
@@ -684,29 +741,37 @@
 													</label>
 												{/each}
 											</div>
-											<div class="flex items-center justify-between text-xs opacity-70">
-												<span
-													>Terpilih: <strong>{mapelKelasTerpilih.length}</strong> dari {semuaOpsiKelas.length}
-													kelas</span
-												>
-												{#if semuaOpsiKelas.length > 0 && mapelKelasTerpilih.length === semuaOpsiKelas.length}
-													<span class="badge badge-success badge-xs font-semibold"
-														>Semua Kelas Terpilih</span
+											<div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+												<span class="text-slate-600 tabular-nums dark:text-zinc-400">
+													Terpilih: <strong class="text-slate-900 dark:text-zinc-100"
+														>{mapelKelasTerpilih.length}</strong
 													>
+													dari {semuaOpsiKelas.length} kelas
+												</span>
+												{#if semuaOpsiKelas.length > 0 && mapelKelasTerpilih.length === semuaOpsiKelas.length}
+													<span
+														class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+													>
+														Semua Kelas Terpilih
+													</span>
 												{:else if mapelKelasTerpilih.length === 0}
 													{#if barisEdit}
-														<span class="badge badge-warning badge-xs font-semibold"
-															>Tanpa kelas — simpan untuk melepas mapel dari semua kelas</span
+														<span
+															class="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
 														>
+															Tanpa kelas: simpan untuk melepas mapel dari semua kelas
+														</span>
 													{:else}
-														<span class="badge badge-warning badge-xs font-semibold"
-															>Pilih minimal 1 kelas tujuan</span
+														<span
+															class="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
 														>
+															Pilih minimal 1 kelas tujuan
+														</span>
 													{/if}
 												{/if}
 											</div>
 											{#if barisEdit}
-												<p class="text-base-content/60 text-xs">
+												<p class="text-[11px] text-slate-500 dark:text-zinc-400">
 													Menghapus centang semua kelas lalu menekan Simpan akan melepas mapel ini
 													dari seluruh kelas. Baris mapel dihapus; bila kelas tersebut sudah punya
 													nilai/relasi, penyimpanan dibatalkan dengan rincian alasannya.
@@ -714,36 +779,44 @@
 											{/if}
 										</div>
 									{:else}
-										<select
-											name={field.key}
-											class="select select-bordered w-full rounded-xl"
-											required={field.wajib}
-											disabled={submitting}
-										>
-											{#if field.opsiTambahan}
-												{#each field.opsiTambahan as opsi (opsi.value)}
+										<div class="relative flex items-center">
+											<select
+												name={field.key}
+												class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+												required={field.wajib}
+												disabled={submitting}
+											>
+												{#if field.opsiTambahan}
+													{#each field.opsiTambahan as opsi (opsi.value)}
+														<option
+															value={opsi.value}
+															selected={nilaiField(field.key) === opsi.value}
+														>
+															{opsi.label}
+														</option>
+													{/each}
+												{:else if !field.wajib}<option value="">Tidak dipilih</option>{/if}
+												{#each relasi[field.relasi ?? 'kelas'] ?? [] as opsi (opsi.value)}
 													<option
 														value={opsi.value}
-														selected={nilaiField(field.key) === opsi.value}
+														selected={nilaiField(field.key) === String(opsi.value)}
 													>
 														{opsi.label}
 													</option>
 												{/each}
-											{:else if !field.wajib}<option value="">—</option>{/if}
-											{#each relasi[field.relasi ?? 'kelas'] ?? [] as opsi (opsi.value)}
-												<option
-													value={opsi.value}
-													selected={nilaiField(field.key) === String(opsi.value)}
-												>
-													{opsi.label}
-												</option>
-											{/each}
-										</select>
+											</select>
+											<span
+												aria-hidden="true"
+												class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+											>
+												<Icon name="down" class="h-3.5 w-3.5" />
+											</span>
+										</div>
 									{/if}
 								{:else if field.tipe === 'textarea'}
 									<textarea
 										name={field.key}
-										class="textarea textarea-bordered w-full rounded-xl"
+										class="w-full rounded-xl border border-[#7e8b9b] bg-white p-2.5 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 										rows="3"
 										required={field.wajib}
 										placeholder={field.placeholder ?? ''}
@@ -757,7 +830,7 @@
 											: field.tipe === 'angka' || field.tipe === 'desimal'
 												? 'number'
 												: 'text'}
-										class="input input-bordered w-full rounded-xl"
+										class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 										value={nilaiField(field.key)}
 										required={field.wajib}
 										placeholder={field.placeholder ?? ''}
@@ -765,31 +838,35 @@
 									/>
 								{/if}
 								{#if field.bantu}
-									<span class="label-text-alt mt-1 text-xs opacity-70">{field.bantu}</span>
+									<span class="mt-1 block text-[11px] text-slate-500 dark:text-zinc-400">
+										{field.bantu}
+									</span>
 								{/if}
 							</div>
 						{/each}
 					</div>
 
-					<div class="modal-action">
+					<div
+						class="mt-5 flex items-center justify-end gap-2 border-t border-slate-200 pt-3 dark:border-zinc-800"
+					>
 						<button
 							type="button"
-							class="btn btn-ghost rounded-xl"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							onclick={tutupForm}
 							disabled={submitting}
 						>
-							<Icon name="close" />
+							<Icon name="close" class="h-4 w-4" />
 							Batal
 						</button>
 						<button
 							type="submit"
-							class="btn btn-primary btn-soft rounded-xl shadow-none"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 							disabled={submitting || invalid}
 						>
 							{#if submitting}
-								<span class="loading loading-spinner loading-sm"></span>
+								<span class="loading loading-spinner loading-xs"></span>
 							{:else}
-								<Icon name="save" />
+								<Icon name="save" class="h-4 w-4" />
 							{/if}
 							Simpan
 						</button>
@@ -797,17 +874,19 @@
 				{/snippet}
 			</FormEnhance>
 		</div>
-		<form method="dialog" class="modal-backdrop">
+		<form method="dialog" class="modal-backdrop bg-transparent">
 			<button>close</button>
 		</form>
 	</dialog>
 {/if}
 
 {#if entitas && bulkTerbuka}
-	<dialog class="modal" open>
-		<div class="modal-box max-w-3xl">
+	<dialog class="modal bg-slate-950/45 backdrop-blur-[2px]" open>
+		<div
+			class="modal-box max-w-3xl rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		>
 			<h3 class="mb-1 text-lg font-bold">Tambah {entitas.judul} Massal</h3>
-			<p class="mb-4 text-sm opacity-70">
+			<p class="mb-4 text-xs text-slate-600 dark:text-zinc-400">
 				Satu mata pelajaran ditambahkan ke beberapa kelas sekaligus. Kelas yang sudah punya mapel
 				dengan nama sama otomatis dilewati.
 			</p>
@@ -819,86 +898,112 @@
 				onfailure={handleGagalSimpan}
 			>
 				{#snippet children({ submitting, invalid })}
-					<div class="grid gap-3 sm:grid-cols-2">
-						<label class="form-control">
-							<span class="label-text mb-1 text-sm">
-								Nama Mata Pelajaran <span class="text-error">*</span>
+					<div class="grid gap-3.5 sm:grid-cols-2">
+						<label class="block">
+							<span class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300">
+								Nama Mata Pelajaran <span class="text-red-600 dark:text-red-400">*</span>
 							</span>
 							<input
 								name="nama"
 								type="text"
-								class="input input-bordered w-full rounded-xl"
+								class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								required
 								placeholder="Matematika"
 								disabled={submitting}
 							/>
 						</label>
-						<label class="form-control">
-							<span class="label-text mb-1 text-sm">Jenis</span>
-							<select
-								name="jenis"
-								class="select select-bordered w-full rounded-xl"
-								disabled={submitting}
-							>
-								<option value="wajib">Wajib</option>
-								<option value="pilihan">Pilihan</option>
-								<option value="mulok">Mulok</option>
-								<option value="kejuruan">Kejuruan</option>
-								<option value="pemberdayaan">Pemberdayaan</option>
-							</select>
+						<label class="block">
+							<span class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300">
+								Jenis
+							</span>
+							<div class="relative flex items-center">
+								<select
+									name="jenis"
+									class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+									disabled={submitting}
+								>
+									<option value="wajib">Wajib</option>
+									<option value="pilihan">Pilihan</option>
+									<option value="mulok">Mulok</option>
+									<option value="kejuruan">Kejuruan</option>
+									<option value="pemberdayaan">Pemberdayaan</option>
+								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
+							</div>
 						</label>
-						<label class="form-control">
-							<span class="label-text mb-1 text-sm">Kode</span>
+						<label class="block">
+							<span class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300">
+								Kode
+							</span>
 							<input
 								name="kode"
 								type="text"
-								class="input input-bordered w-full rounded-xl"
+								class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 								disabled={submitting}
 							/>
 						</label>
-						<label class="form-control">
-							<span class="label-text mb-1 text-sm">KKM</span>
+						<label class="block">
+							<span class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300">
+								KKM
+							</span>
 							<input
 								name="kkm"
 								type="number"
-								class="input input-bordered w-full rounded-xl"
+								class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 								value="0"
 								disabled={submitting}
 							/>
 						</label>
-						<label class="form-control">
-							<span class="label-text mb-1 text-sm">Guru Pengampu</span>
-							<select
-								name="pengampu_id"
-								class="select select-bordered w-full rounded-xl"
-								disabled={submitting}
-							>
-								<option value="">—</option>
-								{#each relasi.pegawai ?? [] as opsi (opsi.value)}
-									<option value={opsi.value}>{opsi.label}</option>
-								{/each}
-							</select>
+						<label class="block sm:col-span-2">
+							<span class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300">
+								Guru Pengampu
+							</span>
+							<div class="relative flex items-center">
+								<select
+									name="pengampu_id"
+									class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+									disabled={submitting}
+								>
+									<option value="">Tidak ditentukan</option>
+									{#each relasi.pegawai ?? [] as opsi (opsi.value)}
+										<option value={opsi.value}>{opsi.label}</option>
+									{/each}
+								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
+							</div>
 						</label>
 					</div>
 
 					<div class="mt-4">
-						<div class="mb-1 flex items-center justify-between">
-							<span class="label-text text-sm">
+						<div class="mb-1.5 flex items-center justify-between">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">
 								Pilih Kelas ({kelasTerpilihMassal.length} dipilih)
 							</span>
 							<button
 								type="button"
-								class="btn btn-ghost btn-xs rounded-lg"
+								class="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
 								onclick={() =>
 									(kelasTerpilihMassal = (relasi.kelas ?? []).map((opsi) => opsi.value))}
 							>
 								Pilih semua
 							</button>
 						</div>
-						<div class="bg-base-200 max-h-56 overflow-y-auto rounded-box p-2">
+						<div
+							class="max-h-56 space-y-0.5 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2 dark:border-zinc-800 dark:bg-zinc-800/40"
+						>
 							{#each relasi.kelas ?? [] as opsi (opsi.value)}
 								<label
-									class="hover:bg-base-300 flex cursor-pointer items-center gap-2 rounded px-2 py-1"
+									class="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors hover:bg-white dark:hover:bg-zinc-800"
 								>
 									<input
 										type="checkbox"
@@ -910,31 +1015,33 @@
 												(event.currentTarget as HTMLInputElement).checked
 											)}
 									/>
-									<span class="text-sm">{opsi.label}</span>
+									<span>{opsi.label}</span>
 								</label>
 							{/each}
 						</div>
 					</div>
 
-					<div class="modal-action">
+					<div
+						class="mt-5 flex items-center justify-end gap-2 border-t border-slate-200 pt-3 dark:border-zinc-800"
+					>
 						<button
 							type="button"
-							class="btn btn-ghost rounded-xl"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							onclick={() => (bulkTerbuka = false)}
 							disabled={submitting}
 						>
-							<Icon name="close" />
+							<Icon name="close" class="h-4 w-4" />
 							Batal
 						</button>
 						<button
 							type="submit"
-							class="btn btn-primary btn-soft rounded-xl shadow-none"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 							disabled={submitting || invalid || kelasTerpilihMassal.length === 0}
 						>
 							{#if submitting}
-								<span class="loading loading-spinner loading-sm"></span>
+								<span class="loading loading-spinner loading-xs"></span>
 							{:else}
-								<Icon name="save" />
+								<Icon name="save" class="h-4 w-4" />
 							{/if}
 							Tambah ke {kelasTerpilihMassal.length} Kelas
 						</button>
@@ -942,7 +1049,7 @@
 				{/snippet}
 			</FormEnhance>
 		</div>
-		<form method="dialog" class="modal-backdrop">
+		<form method="dialog" class="modal-backdrop bg-transparent">
 			<button>close</button>
 		</form>
 	</dialog>

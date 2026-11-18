@@ -125,7 +125,7 @@
 	});
 
 	function formatKkm(kkm: number | null | undefined) {
-		return typeof kkm === 'number' && Number.isFinite(kkm) ? kkm : '—';
+		return typeof kkm === 'number' && Number.isFinite(kkm) ? kkm : '-';
 	}
 
 	// ── Edit Urutan (drag-and-drop) ──
@@ -211,14 +211,22 @@
 	}
 </script>
 
-<div class="card bg-base-100 rounded-box border border-none p-4 shadow-md">
-	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div
+		class="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800"
+	>
 		<div>
-			<h2 class="text-xl font-bold">Daftar Mata Pelajaran Intrakurikuler</h2>
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+				Daftar Mata Pelajaran Intrakurikuler
+			</h1>
 			{#if kelasAktifLabel}
-				<p class="text-base-content/70 text-sm">Kelas aktif: {kelasAktifLabel}</p>
+				<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">
+					Kelas aktif: {kelasAktifLabel}
+				</p>
 			{:else}
-				<p class="text-base-content/60 text-sm">
+				<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
 					Pilih kelas di navbar untuk melihat mata pelajaran intrakurikuler.
 				</p>
 			{/if}
@@ -227,9 +235,9 @@
 			{@const listKelas =
 				(page.data as { daftarKelas?: Array<{ id: number; nama: string; fase?: string | null }> })
 					.daftarKelas ?? []}
-			<div class="w-full sm:w-64">
+			<div class="relative flex w-full items-center sm:w-64">
 				<select
-					class="select select-sm bg-base-200 border-base-300 w-full truncate font-semibold rounded-xl"
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-semibold text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					title="Ganti Kelas"
 					value={String(page.data.kelasAktif?.id ?? '')}
 					onchange={(e) => {
@@ -241,50 +249,89 @@
 						}
 					}}
 				>
+					{#if page.data.kelasAktif?.id == null}
+						<option value="" disabled selected>Pilih Kelas...</option>
+					{/if}
 					{#each listKelas as k (k.id)}
 						<option value={String(k.id)}>{k.nama}{k.fase ? ` - ${k.fase}` : ''}</option>
 					{/each}
 				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
 			</div>
 		{/if}
 	</div>
 
-	<div
-		class="stats stats-horizontal border-base-200 bg-base-100 dark:bg-base-200 text-base-content mt-4 w-full border shadow-md dark:shadow-none"
-	>
-		<div class="stat place-items-start">
-			<div class="stat-title">Mapel {getWajibLabel()}</div>
-			<div class="stat-value text-2xl">{hitunganJenis.wajib}</div>
+	<div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+		<div
+			class="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800/50"
+		>
+			<div class="text-xs font-medium text-slate-500 dark:text-zinc-400">
+				Mapel {getWajibLabel()}
+			</div>
+			<div class="mt-1 text-xl font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+				{hitunganJenis.wajib}
+			</div>
 		</div>
 		{#if hitunganJenis.belum_dipetakan > 0}
-			<div class="stat place-items-start">
-				<div class="stat-title text-warning">Belum Dipetakan</div>
-				<div class="stat-value text-2xl">{hitunganJenis.belum_dipetakan}</div>
+			<div
+				class="rounded-xl border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900/60 dark:bg-amber-950/30"
+			>
+				<div class="text-xs font-medium text-amber-800 dark:text-amber-300">Belum Dipetakan</div>
+				<div class="mt-1 text-xl font-bold text-amber-900 tabular-nums dark:text-amber-200">
+					{hitunganJenis.belum_dipetakan}
+				</div>
 			</div>
 		{/if}
-		<div class="stat place-items-start">
-			<div class="stat-title">Mapel Pilihan</div>
-			<div class="stat-value text-2xl">{hitunganJenis.pilihan}</div>
+		<div
+			class="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800/50"
+		>
+			<div class="text-xs font-medium text-slate-500 dark:text-zinc-400">Mapel Pilihan</div>
+			<div class="mt-1 text-xl font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+				{hitunganJenis.pilihan}
+			</div>
 		</div>
-		<div class="stat place-items-start">
-			<div class="stat-title">Muatan Lokal</div>
-			<div class="stat-value text-2xl">{hitunganJenis.mulok}</div>
+		<div
+			class="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800/50"
+		>
+			<div class="text-xs font-medium text-slate-500 dark:text-zinc-400">Muatan Lokal</div>
+			<div class="mt-1 text-xl font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+				{hitunganJenis.mulok}
+			</div>
 		</div>
 		{#if shouldShowKejuruan()}
-			<div class="stat place-items-start">
-				<div class="stat-title">Kejuruan</div>
-				<div class="stat-value text-2xl">{hitunganJenis.kejuruan}</div>
+			<div
+				class="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800/50"
+			>
+				<div class="text-xs font-medium text-slate-500 dark:text-zinc-400">Kejuruan</div>
+				<div class="mt-1 text-xl font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+					{hitunganJenis.kejuruan}
+				</div>
 			</div>
 		{/if}
 		{#if shouldShowPemberdayaan()}
-			<div class="stat place-items-start">
-				<div class="stat-title">Pemberdayaan & Keterampilan</div>
-				<div class="stat-value text-2xl">{hitunganJenis.pemberdayaan}</div>
+			<div
+				class="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800/50"
+			>
+				<div class="text-xs font-medium text-slate-500 dark:text-zinc-400">
+					Pemberdayaan &amp; Keterampilan
+				</div>
+				<div class="mt-1 text-xl font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+					{hitunganJenis.pemberdayaan}
+				</div>
 			</div>
 		{/if}
-		<div class="stat place-items-start">
-			<div class="stat-title">Total Mapel</div>
-			<div class="stat-value text-2xl">{totalMapel}</div>
+		<div
+			class="rounded-xl border border-blue-200/80 bg-blue-50/75 p-3 dark:border-blue-900/50 dark:bg-blue-950/35"
+		>
+			<div class="text-xs font-medium text-blue-700 dark:text-blue-300">Total Mapel</div>
+			<div class="mt-1 text-xl font-bold text-blue-900 tabular-nums dark:text-blue-100">
+				{totalMapel}
+			</div>
 		</div>
 	</div>
 
@@ -292,10 +339,10 @@
 		{#if canEditUrutan && hasKelasAktif && !editUrutan}
 			<button
 				type="button"
-				class="btn btn-soft shadow-none order-2 w-full sm:order-1 sm:w-auto"
+				class="order-2 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 sm:order-1 sm:w-auto dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				onclick={mulaiEditUrutan}
 			>
-				<Icon name="menu-drawer" />
+				<Icon name="menu-drawer" class="h-4 w-4" />
 				Edit Urutan
 			</button>
 		{:else if editUrutan}
@@ -331,19 +378,19 @@
 				<input type="hidden" name="urutan" value={JSON.stringify(urutanList.map((m) => m.id))} />
 				<button
 					type="submit"
-					class="btn btn-primary btn-soft flex-1 rounded-r-none shadow-none"
+					class="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-l-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
 					disabled={simpanUrutanPending}
 				>
-					<Icon name="save" />
+					<Icon name="save" class="h-3.5 w-3.5" />
 					Simpan
 				</button>
 				<button
 					type="button"
-					class="btn btn-error btn-soft flex-1 rounded-l-none shadow-none"
+					class="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-r-xl border border-red-300 bg-red-50 px-3.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
 					disabled={simpanUrutanPending}
 					onclick={batalEditUrutan}
 				>
-					<Icon name="close-sm" />
+					<Icon name="close-sm" class="h-3.5 w-3.5" />
 					Batal
 				</button>
 			</form>
@@ -352,33 +399,34 @@
 		<div class="order-1 max-sm:w-full sm:order-2 sm:ml-auto">
 			<div class="flex">
 				<a
-					class={`btn btn-soft rounded-r-none shadow-none max-sm:flex-1 ${!canAddImportMapel ? 'pointer-events-none opacity-50' : ''}`}
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-l-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 max-sm:flex-1 {!canAddImportMapel
+						? 'pointer-events-none opacity-50'
+						: ''}"
 					href={canAddImportMapel ? '/intrakurikuler/form' : '#'}
 					use:modalRoute={canAddImportMapel ? 'add-mapel' : ''}
 					aria-disabled={!canAddImportMapel}
 				>
-					<Icon name="plus" />
+					<Icon name="plus" class="h-4 w-4" />
 					Tambah Mapel
 				</a>
 
-				<!-- dropdown yang tergabung (perhatikan join-item dan hilangkan margin m-1) -->
+				<!-- dropdown yang tergabung -->
 				<div class="dropdown dropdown-end">
-					<!-- trigger: gunakan button bertipe btn supaya tampil seperti item lain -->
 					<button
 						title="Export dan Import mata pelajaran"
 						type="button"
 						tabindex="0"
-						class={`btn btn-soft rounded-l-none shadow-none ${!canAddImportMapel ? 'opacity-50' : ''}`}
+						class="inline-flex h-9 items-center justify-center rounded-r-xl border-l border-blue-500 bg-blue-600 px-2.5 text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
 						disabled={!canAddImportMapel}
 						aria-disabled={!canAddImportMapel}
 					>
-						<Icon name="down" />
+						<Icon name="down" class="h-3.5 w-3.5" />
 					</button>
 
 					<!-- menu dropdown -->
 					<ul
 						tabindex="-1"
-						class="dropdown-content menu bg-base-100 border-base-300 z-50 mt-2 w-49 rounded-md border p-2 shadow-lg"
+						class="dropdown-content menu z-50 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-1.5 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
 					>
 						<li>
 							<button
@@ -552,7 +600,7 @@
 							>
 								<button
 									type="submit"
-									class="flex w-full items-center gap-2 text-primary font-medium"
+									class="flex w-full items-center gap-2 font-semibold text-blue-600 dark:text-blue-400"
 									title="Terapkan 13 mata pelajaran umum standar ke kelas / semua kelas"
 								>
 									<Icon name="layers" />
@@ -568,51 +616,55 @@
 
 	{#if !hasKelasAktif}
 		<div
-			class="alert border-warning/60 bg-warning/10 text-warning-content mt-6 border border-dashed"
+			class="mt-4 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
 		>
-			<Icon name="info" />
+			<Icon name="info" class="h-4 w-4 shrink-0" />
 			<span>Pilih kelas aktif agar daftar mata pelajaran dapat ditampilkan.</span>
 		</div>
 	{/if}
 
 	{#if hasKelasAktif && totalMapel === 0}
-		<div class="alert border-info/60 bg-info/10 mt-6 border border-dashed">
-			<Icon name="info" />
+		<div
+			class="mt-4 flex items-center gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/75 px-3.5 py-3 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/35 dark:text-blue-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0" />
 			<span
-				>Belum ada data mata pelajaran untuk kelas ini. Gunakan tombol &ldquo;Tambah Mata
-				Pelajaran&rdquo; di atas.</span
+				>Belum ada data mata pelajaran untuk kelas ini. Gunakan tombol &ldquo;Tambah Mapel&rdquo; di
+				atas.</span
 			>
 		</div>
 	{/if}
 
 	<div
-		class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+		class="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 	>
-		<table class="border-base-200 table border dark:border-none">
+		<table class="w-full border-collapse text-xs">
 			<thead>
-				<tr class="bg-base-200 dark:bg-base-300 text-left font-bold">
+				<tr
+					class="border-b border-slate-200 bg-slate-50 text-left font-semibold text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+				>
 					{#if editUrutan}
-						<th style="width: 48px;" title="Urutkan">
-							<Icon name="menu-drawer" />
+						<th class="px-3 py-2.5 text-center" style="width: 48px;" title="Urutkan">
+							<Icon name="menu-drawer" class="h-4 w-4" />
 						</th>
 					{/if}
-					<th style="width: 60px;">No</th>
-					<th style="min-width: 240px;">Mata Pelajaran</th>
-					<th style="min-width: 150px;">Jenis Mapel</th>
-					<th style="width: 120px;">Kode</th>
-					<th style="width: 100px;">KKM</th>
-					<th style="width: 180px;">Tujuan Pembelajaran</th>
-					<th>Aksi</th>
+					<th class="px-3 py-2.5" style="width: 60px;">No</th>
+					<th class="px-3 py-2.5" style="min-width: 240px;">Mata Pelajaran</th>
+					<th class="px-3 py-2.5" style="min-width: 150px;">Jenis Mapel</th>
+					<th class="px-3 py-2.5" style="width: 120px;">Kode</th>
+					<th class="px-3 py-2.5" style="width: 100px;">KKM</th>
+					<th class="px-3 py-2.5" style="width: 180px;">Tujuan Pembelajaran</th>
+					<th class="px-3 py-2.5 text-center">Aksi</th>
 				</tr>
 			</thead>
-			<tbody>
+			<tbody class="divide-y divide-slate-200 dark:divide-zinc-800">
 				{#each barisTampil as mapel, index (mapel.id)}
 					<tr
 						draggable={editUrutan}
 						data-mapel-id={editUrutan ? mapel.id : undefined}
-						class={editUrutan
+						class="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 {editUrutan
 							? `${dragIndex === index ? 'opacity-40' : 'cursor-grab'} active:cursor-grabbing`
-							: undefined}
+							: ''}"
 						animate:flip={{ duration: 200 }}
 						ondragstart={(e) => handleDragStart(index, e)}
 						ondragover={handleDragOver}
@@ -630,108 +682,121 @@
 						use:dropTarget={{ enabled: editUrutan }}
 					>
 						{#if editUrutan}
-							<td class="text-center">
+							<td class="px-3 py-2.5 text-center">
 								<span
-									class="inline-flex cursor-grab items-center justify-center"
+									class="inline-flex cursor-grab items-center justify-center text-slate-500 dark:text-zinc-400"
 									title="Tarik untuk mengurutkan"
 								>
-									<Icon name="chevron-up-down" class="text-sm" />
+									<Icon name="chevron-up-down" class="h-4 w-4" />
 								</span>
 							</td>
 						{/if}
-						<td>{index + 1}</td>
-						<td class="font-medium">
+						<td class="px-3 py-2.5 text-slate-600 tabular-nums dark:text-zinc-400">{index + 1}</td>
+						<td class="px-3 py-2.5 font-semibold text-slate-900 dark:text-zinc-100">
 							{mapel.namaLokal || mapel.nama}
 							{#if mapel.keteranganDapodik}
-								<p class="text-[11px] font-normal opacity-70">{mapel.keteranganDapodik}</p>
+								<p class="mt-0.5 text-[11px] font-normal text-slate-500 dark:text-zinc-400">
+									{mapel.keteranganDapodik}
+								</p>
 							{/if}
 						</td>
-						<td class="whitespace-nowrap">{jenisMapel[mapel.jenis ?? 'wajib']}</td>
-						<td class="font-mono text-sm"
-							>{mapel.kode ?? (mapel.nama === agamaParentName ? 'PAPB' : '—')}</td
+						<td class="px-3 py-2.5 whitespace-nowrap text-slate-700 dark:text-zinc-300"
+							>{jenisMapel[mapel.jenis ?? 'wajib']}</td
 						>
-						<td>{formatKkm(mapel.kkm)}</td>
-						<td>
-							<div class="indicator">
-								<span
-									class="indicator-item indicator-start indicator-top badge badge-xs"
-									class:badge-success={mapel.tpCount > 0}
-									class:badge-error={mapel.tpCount === 0}
-									title={mapel.tpCount > 0 ? 'TP sudah diisi' : 'Masih ada TP yang belum diisi'}
-									aria-label={`Status tujuan pembelajaran: ${
-										mapel.tpCount > 0 ? 'sudah terisi' : 'belum terisi'
-									}`}
-									role="status"
-								></span>
+						<td class="px-3 py-2.5 font-mono text-xs text-slate-700 dark:text-zinc-300"
+							>{mapel.kode ?? (mapel.nama === agamaParentName ? 'PAPB' : '-')}</td
+						>
+						<td class="px-3 py-2.5 text-slate-700 tabular-nums dark:text-zinc-300"
+							>{formatKkm(mapel.kkm)}</td
+						>
+						<td class="px-3 py-2.5">
+							{#if canManageMapel}
+								<a
+									class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+									href={`/intrakurikuler/${mapel.editTpMapelId ?? mapel.id}/tp-rl`}
+								>
+									<span
+										class="h-2 w-2 rounded-full {mapel.tpCount > 0
+											? 'bg-emerald-600'
+											: 'bg-red-500'}"
+										title={mapel.tpCount > 0 ? 'TP sudah diisi' : 'Masih ada TP yang belum diisi'}
+										aria-label={`Status tujuan pembelajaran: ${
+											mapel.tpCount > 0 ? 'sudah terisi' : 'belum terisi'
+										}`}
+										role="status"
+									></span>
+									<Icon name="edit" class="h-3.5 w-3.5" />
+									Edit TP
+								</a>
+							{:else}
+								<button
+									type="button"
+									class="inline-flex h-8 cursor-not-allowed items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 px-2.5 text-xs font-semibold text-slate-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500"
+									disabled
+									aria-disabled="true"
+									title="Anda tidak memiliki izin untuk mengedit"
+								>
+									<span
+										class="h-2 w-2 rounded-full {mapel.tpCount > 0
+											? 'bg-emerald-600'
+											: 'bg-red-500'}"
+										aria-hidden="true"
+									></span>
+									<Icon name="edit" class="h-3.5 w-3.5" />
+									Edit TP
+								</button>
+							{/if}
+						</td>
+						<td class="px-3 py-2.5">
+							<div class="flex flex-row items-center justify-center">
 								{#if canManageMapel}
 									<a
-										class="btn btn-sm btn-soft shadow-none"
-										href={`/intrakurikuler/${mapel.editTpMapelId ?? mapel.id}/tp-rl`}
+										class="inline-flex h-8 items-center gap-1 rounded-l-lg border border-slate-200 bg-white px-2.5 text-slate-700 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+										href={`/intrakurikuler/${mapel.id}/edit`}
+										title={data.adaDataDapodik && agamaMapelNameSet.has(mapel.nama)
+											? mapel.dapodikIndukPembelajaranId
+												? 'Edit data mata pelajaran (Mata Pelajaran Induk sudah disetel)'
+												: 'Edit data mata pelajaran (Mata Pelajaran Induk belum disetel)'
+											: 'Edit data mata pelajaran'}
+										use:modalRoute={'edit-mapel'}
 									>
-										<Icon name="edit" />
-										Edit TP
-									</a>
-								{:else}
-									<button
-										type="button"
-										class="btn btn-sm btn-disabled shadow-none"
-										disabled
-										title="Anda tidak memiliki izin untuk mengedit"
-									>
-										<Icon name="edit" />
-										Edit TP
-									</button>
-								{/if}
-							</div>
-						</td>
-						<td>
-							<div class="flex flex-row">
-								{#if canManageMapel}
-									<div class="indicator">
 										{#if data.adaDataDapodik && agamaMapelNameSet.has(mapel.nama)}
 											<span
-												class="indicator-item indicator-start indicator-top badge badge-xs"
-												class:badge-success={!!mapel.dapodikIndukPembelajaranId}
-												class:badge-error={!mapel.dapodikIndukPembelajaranId}
-												title={mapel.dapodikIndukPembelajaranId
-													? 'Mata Pelajaran Induk sudah disetel'
-													: 'Mata Pelajaran Induk belum disetel'}
+												class="h-2 w-2 rounded-full {mapel.dapodikIndukPembelajaranId
+													? 'bg-emerald-600'
+													: 'bg-red-500'}"
+												aria-hidden="true"
 											></span>
 										{/if}
-										<a
-											class="btn btn-sm btn-soft rounded-r-none shadow-none"
-											href={`/intrakurikuler/${mapel.id}/edit`}
-											title="Edit data mata pelajaran"
-											use:modalRoute={'edit-mapel'}
-										>
-											<Icon name="edit" />
-										</a>
-									</div>
+										<Icon name="edit" class="h-3.5 w-3.5" />
+									</a>
 									<a
-										class="btn btn-sm btn-error btn-soft rounded-l-none shadow-none"
+										class="inline-flex h-8 w-8 items-center justify-center rounded-r-lg border-y border-r border-slate-200 bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:border-zinc-700 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 										href={`/intrakurikuler/${mapel.id}/delete`}
 										title="Hapus mata pelajaran"
 										use:modalRoute={'delete-mapel'}
 										onclick={(event) => handleDeleteClick(event, mapel)}
 									>
-										<Icon name="del" />
+										<Icon name="del" class="h-3.5 w-3.5" />
 									</a>
 								{:else}
 									<button
 										type="button"
-										class="btn btn-sm btn-disabled rounded-r-none shadow-none"
+										class="inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-l-lg border border-slate-200 bg-slate-100 text-slate-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500"
 										disabled
+										aria-disabled="true"
 										title="Anda tidak memiliki izin untuk mengedit"
 									>
-										<Icon name="edit" />
+										<Icon name="edit" class="h-3.5 w-3.5" />
 									</button>
 									<button
 										type="button"
-										class="btn btn-sm btn-disabled rounded-l-none shadow-none"
+										class="inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-r-lg border-y border-r border-slate-200 bg-slate-100 text-slate-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500"
 										disabled
+										aria-disabled="true"
 										title="Anda tidak memiliki izin untuk menghapus"
 									>
-										<Icon name="del" />
+										<Icon name="del" class="h-3.5 w-3.5" />
 									</button>
 								{/if}
 							</div>
@@ -739,7 +804,10 @@
 					</tr>
 				{:else}
 					<tr>
-						<td class="py-6 text-center italic opacity-60" colspan={editUrutan ? 8 : 7}>
+						<td
+							class="px-3 py-8 text-center text-slate-500 dark:text-zinc-400"
+							colspan={editUrutan ? 8 : 7}
+						>
 							{emptyStateMessage}
 						</td>
 					</tr>

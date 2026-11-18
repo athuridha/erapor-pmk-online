@@ -1,48 +1,64 @@
 <script lang="ts">
+	import { onNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import DarkMode from '$lib/components/dark-mode.svelte';
 	import Icon from '$lib/components/icon.svelte';
+	import KelasPickerLokal from '$lib/components/kelas-picker-lokal.svelte';
 	import TasksModal from '$lib/components/modal-tasks.svelte';
 	import SwitchUserModal from '$lib/components/switch-user-modal.svelte';
 	import { toast } from '$lib/components/toast.svelte';
 	import { showModal } from '$lib/components/global-modal.svelte';
 	import { favoritesStore } from '$lib/stores/favorites.svelte';
 	import { isAdminUser } from '../../routes/pengguna/permissions';
+	import { resolveHelpFile } from '$lib/help-maps';
 	import { onMount } from 'svelte';
 	import type { Component } from 'svelte';
 
 	type NavbarProps = {
 		logout?: () => void;
 		loggingOut?: boolean;
+		onOpenMobileMenu?: () => void;
 	};
 
-	// Minimal local type for the user object shape we reference here.
 	type UserLike = {
 		id?: number;
 		pegawaiName?: string;
+		namaLengkap?: string | null;
 		username?: string;
 		permissions?: string[];
-		type?: 'admin' | 'kepala_sekolah' | 'user' | 'wali_kelas';
+		type?: 'admin' | 'kepala_sekolah' | 'user' | 'wali_kelas' | 'wali_asuh' | 'pembina_eskul';
 		operatorLevel?: 'admin' | 'kepala_sekolah' | null;
 		kelasId?: number | null;
 		ownKelasIds?: number[] | null;
 	};
 
-	let { logout = () => {}, loggingOut = false }: NavbarProps = $props();
+	let {
+		logout = () => {},
+		loggingOut = false,
+		onOpenMobileMenu = () => {}
+	}: NavbarProps = $props();
 
 	let tasksModalRef: { open: () => void } | null = null;
 	let showSwitchModal = $state(false);
 	let profileDropdownOpen = $state(false);
+	let favoritesOpen = $state(false);
+	let editingFavorites = $state(false);
 
 	const kelasAktif = $derived(page.data.kelasAktif ?? null);
 	const user = $derived(page.data.user ?? null);
 	const impersonator = $derived(page.data.impersonator ?? null);
+	const kelasPicker = $derived(
+		(page.data as { kelasPicker?: { tampil?: boolean; pilihan?: unknown[] } | null })
+			?.kelasPicker ?? null
+	);
+	const hasLocalPicker = $derived(
+		Boolean(kelasPicker?.tampil && (kelasPicker.pilihan?.length ?? 0) > 0)
+	);
 
 	const canSwitchUser = $derived.by(() => {
 		if (!user) return false;
 		if (impersonator) return true;
-		const u = user as UserLike;
-		return isAdminUser(u);
+		return isAdminUser(user as UserLike);
 	});
 
 	const bolehSemuaKelas = $derived(isAdminUser(user as UserLike | null));
@@ -52,13 +68,33 @@
 		return kelasAktif.fase ? `${kelasAktif.nama} - ${kelasAktif.fase}` : kelasAktif.nama;
 	});
 
-	// Human-readable display name for current user (prefer pegawaiName if available)
 	const displayUserName = $derived.by(() => {
 		if (!user) return 'Pengguna';
-		return (user as UserLike)?.pegawaiName ?? (user as UserLike)?.username ?? 'Pengguna';
+		return (
+			(user as UserLike)?.pegawaiName ??
+			(user as UserLike)?.namaLengkap ??
+			(user as UserLike)?.username ??
+			'Pengguna'
+		);
 	});
 
-	import { resolveHelpFile } from '$lib/help-maps';
+	const roleLabel = $derived.by(() => {
+		const u = user as UserLike | null;
+		if (u?.type === 'admin') return 'Administrator';
+		if (u?.type === 'kepala_sekolah') return 'Kepala Sekolah';
+		if (u?.type === 'wali_kelas') {
+			return kelasAktif?.nama ? `Wali Kelas (${kelasAktif.nama})` : 'Wali Kelas';
+		}
+		if (u?.type === 'wali_asuh') return 'Wali Asuh';
+		if (u?.type === 'pembina_eskul') return 'Pembina Eskul';
+		return 'Guru Mapel';
+	});
+
+	onNavigate(() => {
+		profileDropdownOpen = false;
+		favoritesOpen = false;
+		editingFavorites = false;
+	});
 
 	async function stopImpersonation() {
 		profileDropdownOpen = false;
@@ -71,10 +107,10 @@
 	}
 
 	async function getHelpPage(fileName: string) {
-		const page = await import(`../../docs/help/${fileName}.md`);
+		const helpModule = await import(`../../docs/help/${fileName}.md`);
 		return {
-			meta: page.metadata as { title: string },
-			ContentPage: page.default as Component
+			meta: helpModule.metadata as { title: string },
+			ContentPage: helpModule.default as Component
 		};
 	}
 
@@ -103,13 +139,31 @@
 			if (!target?.closest('.navbar-profile-dropdown')) {
 				profileDropdownOpen = false;
 			}
+			if (!target?.closest('.navbar-favorites-dropdown')) {
+				favoritesOpen = false;
+				editingFavorites = false;
+			}
 		};
+
+		const handleKeydown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				profileDropdownOpen = false;
+				favoritesOpen = false;
+				editingFavorites = false;
+			}
+		};
+
 		window.addEventListener('click', handleDocumentClick);
-		return () => window.removeEventListener('click', handleDocumentClick);
+		window.addEventListener('keydown', handleKeydown);
+		return () => {
+			window.removeEventListener('click', handleDocumentClick);
+			window.removeEventListener('keydown', handleKeydown);
+		};
 	});
 
 	const isFavorited = $derived(favoritesStore.items.some((f) => f.path === page.url.pathname));
 	const currentTitle = $derived(page.data.meta?.title || '');
+	const navbarTitle = $derived(page.url.pathname === '/' ? 'Beranda' : currentTitle);
 
 	async function toggleFavorite() {
 		if (loadingFav) return;
@@ -117,6 +171,7 @@
 		const title = currentTitle;
 		if (!title) return;
 
+		loadingFav = true;
 		try {
 			if (isFavorited) {
 				const res = await fetch('/api/favorites', {
@@ -135,8 +190,35 @@
 				});
 				if (res.ok) {
 					const data = await res.json();
-					favoritesStore.items = [...favoritesStore.items, data.favorite];
+					if (data?.favorite) {
+						favoritesStore.items = [...favoritesStore.items, data.favorite];
+					}
+				} else if (res.status === 409) {
+					const listRes = await fetch('/api/favorites');
+					if (listRes.ok) {
+						const listJson = await listRes.json().catch(() => null);
+						if (listJson?.favorites) favoritesStore.items = listJson.favorites;
+					}
 				}
+			}
+		} catch {
+			// ignore
+		} finally {
+			loadingFav = false;
+		}
+	}
+
+	async function removeFavorite(id: number) {
+		const fav = favoritesStore.items.find((f) => f.id === id);
+		if (!fav) return;
+		try {
+			const res = await fetch('/api/favorites', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ path: fav.path })
+			});
+			if (res.ok) {
+				favoritesStore.items = favoritesStore.items.filter((f) => f.id !== id);
 			}
 		} catch {
 			// ignore
@@ -144,12 +226,12 @@
 	}
 
 	async function showHelp() {
+		profileDropdownOpen = false;
 		const pathname = page.url.pathname.replace(/\/+$/, '') || '/';
 		const fileName = resolveHelpFile(pathname);
 		if (!fileName) {
 			toast(
-				`Tombol ini berfungsi untuk menampilkan petunjuk penggunaan.<br />` +
-					`Silakan klik salah satu menu lalu klik lagi tombol ini.`
+				'Tombol ini menampilkan petunjuk halaman aktif.<br />Buka salah satu menu terlebih dahulu lalu tekan Petunjuk.'
 			);
 			return;
 		}
@@ -163,195 +245,327 @@
 	}
 </script>
 
-<div
-	class="navbar bg-base-100/95 backdrop-blur border-b border-emerald-100 dark:border-base-200 sticky top-0 z-30 shadow-xs"
+<header
+	class="sticky top-0 z-30 border-b border-slate-200/70 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/85"
 >
-	<div class="flex-none lg:hidden">
-		<label
-			for="my-drawer-2"
-			class="btn btn-square btn-ghost text-emerald-800 dark:text-emerald-300 drawer-button"
-		>
-			<span class="text-lg">
-				<Icon name="menu-drawer" />
-			</span>
-		</label>
-	</div>
-
-	{#if currentTitle && page.url.pathname !== '/'}
+	<div class="flex h-13 items-center gap-2 px-3 sm:px-6">
 		<button
-			class="btn btn-ghost btn-circle shadow-none text-emerald-800 dark:text-emerald-300"
-			title={isFavorited ? 'Hapus dari favorit' : 'Tambah ke favorit'}
-			onclick={toggleFavorite}
-			disabled={loadingFav}
+			type="button"
+			onclick={onOpenMobileMenu}
+			aria-label="Buka menu navigasi"
+			class="app-mobile-menu-trigger inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 		>
-			<span class="text-xl">
-				<Icon name="star" class={isFavorited ? 'text-success fill-current' : ''} />
-			</span>
+			<span aria-hidden="true"><Icon name="menu-drawer" class="h-4 w-4" /></span>
+			<span>Menu</span>
 		</button>
-	{/if}
-	<span
-		class="mx-2 flex-1 truncate px-2 text-lg font-black tracking-tight text-emerald-950 dark:text-emerald-300"
-		>{currentTitle}</span
-	>
-	<div class="ml-auto flex-none">
-		<ul class="flex items-center px-1">
-			<!-- tasks modal for mobile -->
-			<li>
+
+		<div class="flex min-w-0 flex-1 items-center gap-1.5">
+			{#if currentTitle && page.url.pathname !== '/'}
 				<button
-					class="btn btn-ghost btn-circle shadow-none xl:hidden text-emerald-800 dark:text-emerald-300"
-					aria-label="Daftar Tugas"
-					title="Daftar Tugas"
-					onclick={() => tasksModalRef?.open()}
+					type="button"
+					class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-zinc-800 {isFavorited
+						? 'text-blue-600 dark:text-blue-400'
+						: 'text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100'}"
+					title={isFavorited ? 'Hapus halaman dari favorit' : 'Simpan halaman ke favorit'}
+					aria-label={isFavorited ? 'Hapus halaman dari favorit' : 'Simpan halaman ke favorit'}
+					aria-pressed={isFavorited}
+					onclick={toggleFavorite}
+					disabled={loadingFav}
 				>
-					<Icon name="check" class="text-lg" />
-				</button>
-			</li>
-
-			<!-- Dark Mode -->
-			<li>
-				<DarkMode />
-			</li>
-
-			<!-- Switch User Button (Admin only) -->
-			{#if canSwitchUser}
-				<li>
-					<button
-						class="btn btn-ghost btn-circle shadow-none text-emerald-800 dark:text-emerald-300"
-						aria-label="Beralih Akun"
-						title="Beralih Akun (Switch User)"
-						onclick={() => (showSwitchModal = true)}
-					>
-						<span class="text-xl">
-							<Icon name="repeat" />
-						</span>
-					</button>
-				</li>
-			{/if}
-
-			<!-- Help -->
-			<li>
-				<button
-					class="btn btn-ghost btn-circle shadow-none text-emerald-800 dark:text-emerald-300"
-					aria-label="Bantuan"
-					title="Petunjuk"
-					onclick={showHelp}
-				>
-					<span class="text-xl">
-						<Icon name="question" />
+					<span aria-hidden="true">
+						<Icon name="star" class="h-4 w-4 {isFavorited ? 'fill-current' : ''}" />
 					</span>
 				</button>
-			</li>
-
-			<!-- Badge statis konteks kelas (pemilihan kelas dilakukan per halaman) -->
-			{#if kelasAktif || bolehSemuaKelas}
-				<li class="ml-2">
-					<div
-						class="btn btn-sm rounded-full shadow-none bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-base-200 dark:text-emerald-200 dark:border-emerald-700 font-bold gap-1.5 px-3 h-9 cursor-default pointer-events-none"
-						title={kelasAktif
-							? `Konteks kelas saat ini: ${kelasAktifLabel}. Ganti kelas lewat pemilih di halaman.`
-							: 'Mode Semua Kelas — pilih kelas lewat pemilih di halaman bila perlu.'}
-					>
-						<Icon name="users" class="text-emerald-600 dark:text-emerald-400 text-sm" />
-						<span class="max-w-[130px] truncate">{kelasAktifLabel}</span>
-					</div>
-				</li>
 			{/if}
+			{#if page.url.pathname !== '/'}
+				<span
+					class="truncate text-sm font-semibold tracking-tight text-slate-900 sm:text-base dark:text-zinc-100"
+				>
+					{navbarTitle}
+				</span>
+			{/if}
+		</div>
 
-			<!-- Dropdown Profil & Akun Pengguna -->
-			<li class="ml-1 navbar-profile-dropdown relative">
-				<div class="dropdown dropdown-end {profileDropdownOpen ? 'dropdown-open' : ''}">
-					<button
-						type="button"
-						title="Profil & Akun Pengguna"
-						class="btn btn-ghost btn-circle shadow-none text-emerald-800 dark:text-emerald-300"
-						onclick={(e) => {
-							e.stopPropagation();
-							profileDropdownOpen = !profileDropdownOpen;
-						}}
+		<div class="flex shrink-0 items-center gap-1 sm:gap-1.5">
+			<!-- Unified Class Context on >= sm (hidden on / where hero banner shows active class) -->
+			<div class="hidden items-center sm:flex">
+				{#if hasLocalPicker}
+					<KelasPickerLokal variant="navbar" />
+				{:else if (kelasAktif || bolehSemuaKelas) && page.url.pathname !== '/'}
+					<div
+						class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-2xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+						title={kelasAktif
+							? `Konteks kelas aktif: ${kelasAktifLabel}`
+							: 'Mode Semua Kelas aktif'}
+					>
+						<span aria-hidden="true" class="text-blue-600 dark:text-blue-400">
+							<Icon name="users" class="h-3.5 w-3.5" />
+						</span>
+						<span class="max-w-[140px] truncate">{kelasAktifLabel}</span>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Menu Favorit Popover -->
+			<div class="navbar-favorites-dropdown relative">
+				<button
+					type="button"
+					class="inline-flex h-8.5 items-center gap-1.5 rounded-xl px-2 text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+					title="Menu Favorit"
+					aria-label="Menu Favorit"
+					aria-expanded={favoritesOpen}
+					onclick={(e) => {
+						e.stopPropagation();
+						profileDropdownOpen = false;
+						favoritesOpen = !favoritesOpen;
+					}}
+				>
+					<span aria-hidden="true">
+						<Icon
+							name="star"
+							class="h-4 w-4 {favoritesStore.items.length > 0
+								? 'text-blue-600 dark:text-blue-400'
+								: ''}"
+						/>
+					</span>
+					<span class="hidden text-xs font-medium md:inline">Favorit</span>
+					{#if favoritesStore.items.length > 0}
+						<span
+							class="rounded-md bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700 tabular-nums dark:bg-blue-950/60 dark:text-blue-300"
+						>
+							{favoritesStore.items.length}
+						</span>
+					{/if}
+				</button>
+
+				{#if favoritesOpen}
+					<div
+						class="absolute right-0 z-50 mt-2 w-72 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
+						role="region"
+						aria-label="Daftar menu favorit"
 					>
 						<div
-							class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 flex items-center justify-center font-bold text-sm border border-emerald-300 dark:border-emerald-700"
+							class="flex items-center justify-between border-b border-slate-200 px-3.5 py-2.5 dark:border-zinc-800"
 						>
-							{displayUserName.charAt(0).toUpperCase()}
-						</div>
-					</button>
-					{#if profileDropdownOpen}
-						<ul
-							class="dropdown-content menu bg-base-100 dark:bg-base-200 rounded-2xl z-50 w-72 p-3 shadow-2xl border border-base-200 dark:border-base-300 mt-2 flex flex-col gap-2"
-						>
-							<!-- Info user card -->
-							<div
-								class="flex items-center gap-3 p-2.5 bg-base-200/60 dark:bg-base-300/60 rounded-xl"
-							>
-								<div
-									class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-base shrink-0"
+							<span class="text-xs font-semibold text-slate-900 dark:text-zinc-100">
+								Menu Favorit
+							</span>
+							{#if favoritesStore.items.length > 0}
+								<button
+									type="button"
+									class="rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+									onclick={() => (editingFavorites = !editingFavorites)}
 								>
-									{displayUserName.charAt(0).toUpperCase()}
-								</div>
-								<div class="flex flex-col min-w-0">
-									<p class="font-bold text-sm text-base-content truncate" title={displayUserName}>
-										{displayUserName}
-									</p>
-									<p class="text-xs text-base-content/70 capitalize">
-										{#if user?.type === 'admin'}
-											Administrator
-										{:else if user?.type === 'kepala_sekolah'}
-											Kepala Sekolah
-										{:else if user?.type === 'wali_kelas'}
-											Wali Kelas {kelasAktif?.nama ? `• ${kelasAktif.nama}` : ''}
-										{:else}
-											Guru Mapel
-										{/if}
-									</p>
-								</div>
-							</div>
+									{editingFavorites ? 'Selesai' : 'Ubah'}
+								</button>
+							{/if}
+						</div>
 
+						{#if favoritesStore.items.length === 0}
+							<div class="p-4 text-center">
+								<p class="text-xs font-semibold text-slate-900 dark:text-zinc-100">
+									Belum ada menu favorit
+								</p>
+								<p class="mt-1 text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
+									Klik ikon bintang di sebelah judul halaman untuk menyematkan jalan pintas ke sini.
+								</p>
+							</div>
+						{:else}
+							<ul
+								class="max-h-64 divide-y divide-slate-200 overflow-y-auto py-1 dark:divide-zinc-800"
+							>
+								{#each favoritesStore.items as fav (fav.id)}
+									<li
+										class="flex items-center gap-2 px-3.5 py-2 transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/60"
+									>
+										<span aria-hidden="true" class="shrink-0 text-blue-600 dark:text-blue-400">
+											<Icon name="star" class="h-3.5 w-3.5 fill-current" />
+										</span>
+										<a
+											href={fav.path}
+											class="min-w-0 flex-1 truncate text-xs font-medium text-slate-800 hover:text-blue-700 dark:text-zinc-200 dark:hover:text-blue-400"
+											onclick={() => {
+												favoritesOpen = false;
+												editingFavorites = false;
+											}}
+										>
+											{fav.title}
+										</a>
+										{#if editingFavorites}
+											<button
+												type="button"
+												class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-red-700 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50"
+												title={`Hapus ${fav.title} dari favorit`}
+												aria-label={`Hapus ${fav.title} dari favorit`}
+												onclick={() => removeFavorite(fav.id)}
+											>
+												<span aria-hidden="true"><Icon name="del" class="h-3.5 w-3.5" /></span>
+											</button>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+				{/if}
+			</div>
+
+			<!-- Daftar Tugas Slide-over Drawer Trigger -->
+			<button
+				type="button"
+				class="inline-flex h-8.5 items-center gap-1.5 rounded-xl px-2 text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+				aria-label="Buka panel daftar tugas"
+				title="Daftar Tugas"
+				onclick={() => tasksModalRef?.open()}
+			>
+				<span aria-hidden="true"><Icon name="check-square" class="h-4 w-4" /></span>
+				<span class="hidden text-xs font-medium md:inline">Tugas</span>
+			</button>
+
+			<!-- Petunjuk Penggunaan (Desktop) -->
+			<button
+				type="button"
+				class="hidden h-8.5 w-8.5 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 sm:inline-flex dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+				aria-label="Petunjuk penggunaan"
+				title="Petunjuk penggunaan"
+				onclick={showHelp}
+			>
+				<span aria-hidden="true"><Icon name="question" class="h-4 w-4" /></span>
+			</button>
+
+			<!-- Dark / Light Mode -->
+			<DarkMode />
+
+			<!-- Profil & Akun Pengguna -->
+			<div class="navbar-profile-dropdown relative ml-0.5">
+				<button
+					type="button"
+					title="Profil dan akun pengguna"
+					aria-label="Menu akun pengguna"
+					aria-expanded={profileDropdownOpen}
+					class="inline-flex h-8.5 items-center gap-2 rounded-full border border-slate-200/80 bg-white pr-2.5 pl-1 shadow-2xs transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700/70"
+					onclick={(e) => {
+						e.stopPropagation();
+						favoritesOpen = false;
+						profileDropdownOpen = !profileDropdownOpen;
+					}}
+				>
+					<div
+						class="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white"
+					>
+						{displayUserName.charAt(0).toUpperCase()}
+					</div>
+					<span
+						class="hidden max-w-[110px] truncate text-xs font-semibold text-slate-800 lg:inline dark:text-zinc-200"
+					>
+						{displayUserName}
+					</span>
+					<span aria-hidden="true" class="hidden text-slate-400 lg:inline dark:text-zinc-400">
+						<Icon name="down" class="h-3.5 w-3.5" />
+					</span>
+				</button>
+
+				{#if profileDropdownOpen}
+					<div
+						class="absolute right-0 z-50 mt-2 w-72 max-w-[calc(100vw-1.5rem)] rounded-xl border border-slate-200 bg-white p-2 shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
+						role="region"
+						aria-label="Menu akun"
+					>
+						<div
+							class="mb-2 flex items-center gap-3 rounded-lg bg-slate-100/80 p-2.5 dark:bg-zinc-800"
+						>
+							<div
+								class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white"
+							>
+								{displayUserName.charAt(0).toUpperCase()}
+							</div>
+							<div class="min-w-0 flex-1">
+								<p
+									class="truncate text-sm font-semibold text-slate-900 dark:text-zinc-100"
+									title={displayUserName}
+								>
+									{displayUserName}
+								</p>
+								<p class="truncate text-xs text-slate-600 dark:text-zinc-400" title={roleLabel}>
+									{roleLabel}
+								</p>
+							</div>
+						</div>
+
+						<ul class="w-full space-y-0.5 text-xs">
 							{#if impersonator}
 								<li>
 									<button
 										type="button"
-										class="btn btn-sm btn-warning w-full shadow-none font-bold justify-start rounded-xl"
+										class="flex w-full items-center gap-2.5 rounded-lg bg-amber-50 px-2.5 py-2 text-left font-semibold text-amber-900 transition-colors hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-200 dark:hover:bg-amber-950"
 										onclick={stopImpersonation}
 									>
-										<Icon name="repeat" />
-										Kembali ke Admin (@{impersonator.username})
-									</button>
-								</li>
-							{/if}
-
-							{#if canSwitchUser}
-								<li>
-									<button
-										type="button"
-										class="btn btn-sm btn-soft btn-primary w-full shadow-none justify-start rounded-xl font-medium"
-										onclick={() => {
-											profileDropdownOpen = false;
-											showSwitchModal = true;
-										}}
-									>
-										<Icon name="repeat" />
-										Switch Akun (Beralih User)
+										<span aria-hidden="true"><Icon name="repeat" class="h-4 w-4" /></span>
+										<span>Kembali ke Admin (@{impersonator.username})</span>
 									</button>
 								</li>
 							{/if}
 
 							<li>
 								<a
-									class="flex items-center gap-2 py-2 rounded-xl font-medium"
-									href="/tentang"
+									class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+									href="/pengaturan/profil"
 									onclick={() => (profileDropdownOpen = false)}
 								>
-									<Icon name="info" />
-									Tentang Aplikasi
+									<span aria-hidden="true" class="text-slate-500 dark:text-zinc-400">
+										<Icon name="user" class="h-4 w-4" />
+									</span>
+									<span>Profil Saya</span>
 								</a>
 							</li>
 
-							<div class="divider my-0.5"></div>
+							{#if canSwitchUser}
+								<li>
+									<button
+										type="button"
+										class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+										onclick={() => {
+											profileDropdownOpen = false;
+											showSwitchModal = true;
+										}}
+									>
+										<span aria-hidden="true" class="text-slate-500 dark:text-zinc-400">
+											<Icon name="repeat" class="h-4 w-4" />
+										</span>
+										<span>Beralih Akun</span>
+									</button>
+								</li>
+							{/if}
 
-							<!-- Tombol Keluar (Logout) saja tanpa Stop Server -->
-							<li>
+							<li class="sm:hidden">
 								<button
-									class="btn btn-sm btn-error btn-soft w-full shadow-none justify-start font-semibold rounded-xl text-error hover:bg-error hover:text-white"
+									type="button"
+									class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+									onclick={showHelp}
+								>
+									<span aria-hidden="true" class="text-slate-500 dark:text-zinc-400">
+										<Icon name="question" class="h-4 w-4" />
+									</span>
+									<span>Petunjuk Halaman</span>
+								</button>
+							</li>
+
+							<li>
+								<a
+									class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+									href="/tentang"
+									onclick={() => (profileDropdownOpen = false)}
+								>
+									<span aria-hidden="true" class="text-slate-500 dark:text-zinc-400">
+										<Icon name="info" class="h-4 w-4" />
+									</span>
+									<span>Tentang Aplikasi</span>
+								</a>
+							</li>
+
+							<li class="mt-1 border-t border-slate-200 pt-1 dark:border-zinc-800">
+								<button
+									class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/50"
 									type="button"
 									onclick={() => {
 										profileDropdownOpen = false;
@@ -359,18 +573,25 @@
 									}}
 									disabled={loggingOut}
 								>
-									<Icon name="export" />
-									{loggingOut ? 'Keluar…' : 'Keluar'}
+									<span aria-hidden="true"><Icon name="export" class="h-4 w-4" /></span>
+									<span>{loggingOut ? 'Keluar...' : 'Keluar'}</span>
 								</button>
 							</li>
 						</ul>
-					{/if}
-				</div>
-			</li>
-		</ul>
+					</div>
+				{/if}
+			</div>
+		</div>
 	</div>
-</div>
 
-<!-- Tempel instance modal di bawah navbar dan bind ref -->
+	{#if hasLocalPicker}
+		<div
+			class="border-t border-slate-200 bg-slate-50 px-3 py-2 sm:hidden dark:border-zinc-800 dark:bg-zinc-800/60"
+		>
+			<KelasPickerLokal variant="mobile" />
+		</div>
+	{/if}
+</header>
+
 <TasksModal bind:this={tasksModalRef} />
 <SwitchUserModal bind:open={showSwitchModal} currentUserId={user?.id} {impersonator} />

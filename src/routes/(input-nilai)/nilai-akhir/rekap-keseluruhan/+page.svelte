@@ -76,7 +76,7 @@
 	}
 
 	function formatScore(value: number | null | undefined) {
-		if (value == null) return '—';
+		if (value == null) return '-';
 		return value.toLocaleString('id-ID', {
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2
@@ -94,7 +94,7 @@
 			case 'Perlu Bimbingan':
 				return 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200';
 			default:
-				return 'bg-base-200 text-base-content/60 dark:bg-base-300';
+				return 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400';
 		}
 	}
 
@@ -112,337 +112,480 @@
 	);
 </script>
 
-<div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-	<div>
-		<h2 class="text-xl font-bold">Rekap Nilai Keseluruhan</h2>
-		<p class="text-base-content/80 block text-sm">
-			Nilai murid dari semester pertama hingga semester terakhir, lengkap dengan filter kelas,
-			mapel, dan guru.
-		</p>
-	</div>
-	<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-		{#if selectedIds.length}
-			<button
-				type="button"
-				class="btn btn-soft btn-primary shadow-none"
-				onclick={() => (moveModalOpen = true)}
-			>
-				<Icon name="move" />
-				Pindahkan {selectedIds.length} Murid
-			</button>
-		{/if}
-		<a class="btn btn-outline shadow-none max-sm:w-full" href={exportUrl}>
-			<Icon name="download" />
-			Unduh Excel
-		</a>
-	</div>
-</div>
-
-<div class="stats dark:bg-base-200 shadow-md">
-	<div class="stat">
-		<div class="stat-title">Murid</div>
-		<div class="stat-value text-lg">{statistik?.totalMurid ?? 0}</div>
-		<div class="stat-desc">{statistik?.muridSudahNilai ?? 0} punya nilai</div>
-	</div>
-	<div class="stat">
-		<div class="stat-title">Kelas</div>
-		<div class="stat-value text-lg">{statistik?.totalKelas ?? 0}</div>
-		<div class="stat-desc text-wrap">{statistik?.totalSemester ?? 0} semester tercatat</div>
-	</div>
-	<div class="stat">
-		<div class="stat-title">Mata Pelajaran</div>
-		<div class="stat-value text-lg">{statistik?.totalMapel ?? 0}</div>
-		<div class="stat-desc text-wrap">{statistik?.totalGuru ?? 0} guru pengampu</div>
-	</div>
-	<div class="stat">
-		<div class="stat-title">Nilai Terinput</div>
-		<div class="stat-value text-lg">{statistik?.jumlahNilai ?? 0}</div>
-		<div class="stat-desc">{statistik?.muridBelumNilai ?? 0} murid belum ada nilai</div>
-	</div>
-	<div class="stat">
-		<div class="stat-title">Rata-rata Sekolah</div>
-		<div class="stat-value text-lg">{formatScore(statistik?.rataRataKeseluruhan)}</div>
-		<div class="stat-desc text-wrap">Semua mapel & semester</div>
-	</div>
-</div>
-
-<div class="mt-4 grid gap-3 md:grid-cols-4">
-	<label class="form-control">
-		<span class="label-text mb-1 text-sm">Kelas</span>
-		<select
-			class="select select-bordered w-full"
-			value={filter.kelasId ?? ''}
-			onchange={(event) =>
-				setFilter('kelas_id', (event.currentTarget as HTMLSelectElement).value || null)}
-		>
-			<option value="">Semua Kelas</option>
-			{#each daftarKelas as kelas (kelas.id)}
-				<option value={kelas.id}>{kelas.nama} — {kelas.semesterLabel}</option>
-			{/each}
-		</select>
-	</label>
-
-	<label class="form-control">
-		<span class="label-text mb-1 text-sm">Mata Pelajaran</span>
-		<select
-			class="select select-bordered w-full"
-			value={filter.mapel ?? ''}
-			onchange={(event) =>
-				setFilter('mapel', (event.currentTarget as HTMLSelectElement).value || null)}
-		>
-			<option value="">Semua Mata Pelajaran</option>
-			{#each daftarMapel as mapel (mapel.nama)}
-				<option value={mapel.nama}>{mapel.nama}</option>
-			{/each}
-		</select>
-	</label>
-
-	<label class="form-control">
-		<span class="label-text mb-1 text-sm">Guru Pengampu</span>
-		<select
-			class="select select-bordered w-full"
-			value={filter.pengampuId ?? ''}
-			onchange={(event) =>
-				setFilter('pengampu_id', (event.currentTarget as HTMLSelectElement).value || null)}
-		>
-			<option value="">Semua Guru</option>
-			{#each daftarGuru as guru (guru.id)}
-				<option value={guru.id}>{guru.nama}</option>
-			{/each}
-		</select>
-	</label>
-
-	<label class="form-control">
-		<span class="label-text mb-1 text-sm">Cari Murid</span>
-		<label class="input input-bordered flex w-full items-center gap-2">
-			<Icon name="search" />
-			<input
-				type="search"
-				bind:value={searchTerm}
-				spellcheck="false"
-				placeholder="Nama / NIS..."
-				autocomplete="off"
-				onchange={(event) => applySearch((event.currentTarget as HTMLInputElement).value)}
-			/>
-		</label>
-	</label>
-</div>
-
-<div class="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-	<h3 class="text-lg font-bold">Rekap Nilai Murid</h3>
-</div>
-
-{#if !semester.length}
-	<div class="alert alert-warning alert-soft mt-3 flex items-center gap-3">
-		<Icon name="warning" />
-		<span
-			>Belum ada data nilai. Data muncul setelah semester berjalan dan nilai akhir terinput.</span
-		>
-	</div>
-{:else}
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
 	<div
-		class="bg-base-100 dark:bg-base-200 mt-3 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+		class="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800"
 	>
-		<table class="border-base-200 table border dark:border-none">
-			<thead>
-				<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-					<th class="w-10 text-center">
-						<input
-							type="checkbox"
-							class="checkbox checkbox-sm"
-							checked={semuaTerpilih(idsHalaman, selectedIds)}
-							onchange={(event) =>
-								(selectedIds = selectAll(
-									idsHalaman,
-									(event.currentTarget as HTMLInputElement).checked
-								))}
-						/>
-					</th>
-					<th style="min-width: 200px;">Nama Murid</th>
-					{#each semester as sem (sem.semesterId)}
-						<th class="text-center" style="min-width: 130px;">
-							{sem.label}
-							<span class="block text-xs font-normal opacity-70">{selKelas(sem.semesterId)}</span>
-						</th>
-					{/each}
-					<th class="text-center" style="min-width: 130px;">Rata-rata Kumulatif</th>
-					<th class="text-center" style="min-width: 90px;">Peringkat</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each baris as row (row.key)}
-					<tr class={selectedIds.includes(row.muridId) ? 'bg-primary/5' : ''}>
-						<td class="text-center">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-sm"
-								checked={selectedIds.includes(row.muridId)}
-								onchange={(event) =>
-									(selectedIds = toggleId(
-										selectedIds,
-										row.muridId,
-										(event.currentTarget as HTMLInputElement).checked
-									))}
-							/>
-						</td>
-						<td>
-							<div class="font-medium">{row.nama}</div>
-							<div class="text-xs opacity-60">
-								{row.kelasSekarang ?? '-'} · NIS {row.nis || '-'}
-							</div>
-						</td>
-						{#each row.perSemester as sel (sel.semesterId)}
-							<td class="text-center">
-								<span
-									class={`badge badge-sm ${badgeClass(sel.kriteria)}`}
-									title={sel.kelasNama ? `Kelas: ${sel.kelasNama}` : 'Tidak ada data kelas'}
-								>
-									{formatScore(sel.nilai)}
-								</span>
-								<span class="block text-xs opacity-60">{sel.dinilai}/{sel.total} mapel</span>
-							</td>
-						{/each}
-						<td class="text-center">
-							<span class={`badge badge-sm ${badgeClass(row.kriteriaKumulatif)}`}>
-								{formatScore(row.rataKumulatif)}
-							</span>
-						</td>
-						<td class="text-center font-semibold">{row.peringkat}</td>
-					</tr>
-				{:else}
-					<tr>
-						<td colspan={semester.length + 5} class="py-6 text-center opacity-70">
-							Tidak ada murid yang cocok.
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-			<tfoot>
-				<tr class="bg-base-200 dark:bg-base-300 font-semibold">
-					<td></td>
-					<td>Rata-rata Kelas</td>
-					{#each ringkasan as item (item.semesterId)}
-						<td class="text-center">
-							{formatScore(item.nilai)}
-							<span class="block text-xs font-normal opacity-70">{item.dinilai} nilai</span>
-						</td>
-					{/each}
-					<td colspan="2"></td>
-				</tr>
-			</tfoot>
-		</table>
+		<div>
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+				Rekap Nilai Keseluruhan
+			</h1>
+			<p class="mt-0.5 block text-xs text-slate-500 dark:text-zinc-400">
+				Nilai murid dari semester pertama hingga semester terakhir, lengkap dengan filter kelas,
+				mapel, dan guru.
+			</p>
+		</div>
+		<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+			{#if selectedIds.length}
+				<button
+					type="button"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+					onclick={() => (moveModalOpen = true)}
+				>
+					<Icon name="move" class="h-4 w-4" />
+					Pindahkan {selectedIds.length} Murid
+				</button>
+			{/if}
+			<a
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 max-sm:w-full dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+				href={exportUrl}
+			>
+				<Icon name="download" class="h-4 w-4" />
+				Unduh Excel
+			</a>
+		</div>
 	</div>
 
-	<div class="mt-3 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-		<p class="text-base-content/60 text-xs">
-			Menampilkan {Math.min(perPage, Math.max(0, totalItems - (currentPage - 1) * perPage))} dari
-			{totalItems} murid
-		</p>
-		<div class="flex flex-col items-center gap-2 sm:flex-row sm:items-center">
-			<label class="flex items-center gap-2 text-xs">
-				Baris per halaman
-				<select
-					class="select select-bordered select-sm"
-					value={perPage}
-					onchange={(event) =>
-						gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
-				>
-					{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
-						<option value={jumlah}>{jumlah}</option>
-					{/each}
-				</select>
-			</label>
-			<div class="join">
-				<button
-					type="button"
-					class="btn btn-sm join-item"
-					disabled={currentPage <= 1}
-					onclick={() => gotoPage(currentPage - 1)}
-				>
-					&laquo;
-				</button>
-				{#each nomorHalaman as nomor, index (index)}
-					{#if nomor === '…'}
-						<button type="button" class="btn btn-sm join-item pointer-events-none">…</button>
-					{:else}
-						<button
-							type="button"
-							class="btn btn-sm join-item"
-							class:btn-active={nomor === currentPage}
-							onclick={() => gotoPage(nomor)}
-						>
-							{nomor}
-						</button>
-					{/if}
-				{/each}
-				<button
-					type="button"
-					class="btn btn-sm join-item"
-					disabled={currentPage >= totalPages}
-					onclick={() => gotoPage(currentPage + 1)}
-				>
-					&raquo;
-				</button>
+	<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+		<div
+			class="rounded-xl border border-slate-200/70 bg-slate-50/75 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/45"
+		>
+			<div class="text-[11px] font-medium text-slate-500 dark:text-zinc-400">Murid</div>
+			<div class="mt-0.5 text-xl font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+				{statistik?.totalMurid ?? 0}
+			</div>
+			<div class="mt-0.5 text-[11px] text-slate-500 tabular-nums dark:text-zinc-400">
+				{statistik?.muridSudahNilai ?? 0} punya nilai
+			</div>
+		</div>
+		<div
+			class="rounded-xl border border-slate-200/70 bg-slate-50/75 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/45"
+		>
+			<div class="text-[11px] font-medium text-slate-500 dark:text-zinc-400">Kelas</div>
+			<div class="mt-0.5 text-xl font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+				{statistik?.totalKelas ?? 0}
+			</div>
+			<div class="mt-0.5 text-[11px] text-slate-500 tabular-nums dark:text-zinc-400">
+				{statistik?.totalSemester ?? 0} semester tercatat
+			</div>
+		</div>
+		<div
+			class="rounded-xl border border-slate-200/70 bg-slate-50/75 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/45"
+		>
+			<div class="text-[11px] font-medium text-slate-500 dark:text-zinc-400">Mata Pelajaran</div>
+			<div class="mt-0.5 text-xl font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+				{statistik?.totalMapel ?? 0}
+			</div>
+			<div class="mt-0.5 text-[11px] text-slate-500 tabular-nums dark:text-zinc-400">
+				{statistik?.totalGuru ?? 0} guru pengampu
+			</div>
+		</div>
+		<div
+			class="rounded-xl border border-slate-200/70 bg-slate-50/75 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/45"
+		>
+			<div class="text-[11px] font-medium text-slate-500 dark:text-zinc-400">Nilai Terinput</div>
+			<div class="mt-0.5 text-xl font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+				{statistik?.jumlahNilai ?? 0}
+			</div>
+			<div class="mt-0.5 text-[11px] text-slate-500 tabular-nums dark:text-zinc-400">
+				{statistik?.muridBelumNilai ?? 0} murid belum ada nilai
+			</div>
+		</div>
+		<div
+			class="col-span-2 rounded-xl border border-slate-200/70 bg-slate-50/75 px-3.5 py-2.5 sm:col-span-1 dark:border-zinc-800 dark:bg-zinc-800/45"
+		>
+			<div class="text-[11px] font-medium text-slate-500 dark:text-zinc-400">Rata-rata Sekolah</div>
+			<div class="mt-0.5 text-xl font-bold text-blue-700 tabular-nums dark:text-blue-400">
+				{formatScore(statistik?.rataRataKeseluruhan)}
+			</div>
+			<div class="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
+				Semua mapel &amp; semester
 			</div>
 		</div>
 	</div>
-{/if}
 
-<div class="mt-8 grid gap-4 lg:grid-cols-2">
-	<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
-		<h3 class="px-4 pt-4 text-lg font-bold">Rekap per Mata Pelajaran</h3>
-		<table class="border-base-200 table-sm table border dark:border-none">
+	<div class="mt-4 grid gap-3 md:grid-cols-4">
+		<label class="block">
+			<span class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300">Kelas</span>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					value={filter.kelasId ?? ''}
+					onchange={(event) =>
+						setFilter('kelas_id', (event.currentTarget as HTMLSelectElement).value || null)}
+				>
+					<option value="">Semua Kelas</option>
+					{#each daftarKelas as kelas (kelas.id)}
+						<option value={kelas.id}>{kelas.nama} - {kelas.semesterLabel}</option>
+					{/each}
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
+		</label>
+
+		<label class="block">
+			<span class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300">
+				Mata Pelajaran
+			</span>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					value={filter.mapel ?? ''}
+					onchange={(event) =>
+						setFilter('mapel', (event.currentTarget as HTMLSelectElement).value || null)}
+				>
+					<option value="">Semua Mata Pelajaran</option>
+					{#each daftarMapel as mapel (mapel.nama)}
+						<option value={mapel.nama}>{mapel.nama}</option>
+					{/each}
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
+		</label>
+
+		<label class="block">
+			<span class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300">
+				Guru Pengampu
+			</span>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					value={filter.pengampuId ?? ''}
+					onchange={(event) =>
+						setFilter('pengampu_id', (event.currentTarget as HTMLSelectElement).value || null)}
+				>
+					<option value="">Semua Guru</option>
+					{#each daftarGuru as guru (guru.id)}
+						<option value={guru.id}>{guru.nama}</option>
+					{/each}
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
+		</label>
+
+		<label class="block">
+			<span class="mb-1 block text-xs font-medium text-slate-700 dark:text-zinc-300">
+				Cari Murid
+			</span>
+			<div class="relative">
+				<span
+					class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 dark:text-zinc-500"
+				>
+					<Icon name="search" class="h-4 w-4" />
+				</span>
+				<input
+					type="search"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+					bind:value={searchTerm}
+					spellcheck="false"
+					placeholder="Nama / NIS..."
+					autocomplete="off"
+					onchange={(event) => applySearch((event.currentTarget as HTMLInputElement).value)}
+				/>
+			</div>
+		</label>
+	</div>
+
+	<div class="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+		<h2 class="text-base font-bold text-slate-900 dark:text-zinc-100">Rekap Nilai Murid</h2>
+	</div>
+
+	{#if !semester.length}
+		<div
+			class="mt-3 flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="warning" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+			<span>
+				Belum ada data nilai. Data muncul setelah semester berjalan dan nilai akhir terinput.
+			</span>
+		</div>
+	{:else}
+		<div
+			class="mt-3 overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+		>
+			<table class="w-full border-collapse text-xs">
+				<thead>
+					<tr
+						class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+					>
+						<th class="w-10 px-3 py-2.5 text-center">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								checked={semuaTerpilih(idsHalaman, selectedIds)}
+								onchange={(event) =>
+									(selectedIds = selectAll(
+										idsHalaman,
+										(event.currentTarget as HTMLInputElement).checked
+									))}
+							/>
+						</th>
+						<th style="min-width: 200px;" class="px-3 py-2.5">Nama Murid</th>
+						{#each semester as sem (sem.semesterId)}
+							<th class="px-3 py-2.5 text-center" style="min-width: 130px;">
+								{sem.label}
+								<span class="block text-[11px] font-normal text-slate-500 dark:text-zinc-400">
+									{selKelas(sem.semesterId)}
+								</span>
+							</th>
+						{/each}
+						<th class="px-3 py-2.5 text-center" style="min-width: 130px;">Rata-rata Kumulatif</th>
+						<th class="px-3 py-2.5 text-center" style="min-width: 90px;">Peringkat</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
+					{#each baris as row (row.key)}
+						<tr
+							class={selectedIds.includes(row.muridId)
+								? 'bg-blue-50/60 dark:bg-blue-950/30'
+								: 'transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40'}
+						>
+							<td class="px-3 py-2.5 text-center">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-sm"
+									checked={selectedIds.includes(row.muridId)}
+									onchange={(event) =>
+										(selectedIds = toggleId(
+											selectedIds,
+											row.muridId,
+											(event.currentTarget as HTMLInputElement).checked
+										))}
+								/>
+							</td>
+							<td class="px-3 py-2.5">
+								<div class="font-medium text-slate-900 dark:text-zinc-100">{row.nama}</div>
+								<div class="text-[11px] text-slate-500 tabular-nums dark:text-zinc-400">
+									{row.kelasSekarang ?? '-'} · NIS {row.nis || '-'}
+								</div>
+							</td>
+							{#each row.perSemester as sel (sel.semesterId)}
+								<td class="px-3 py-2.5 text-center">
+									<span
+										class={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold tabular-nums ${badgeClass(sel.kriteria)}`}
+										title={sel.kelasNama ? `Kelas: ${sel.kelasNama}` : 'Tidak ada data kelas'}
+									>
+										{formatScore(sel.nilai)}
+									</span>
+									<span
+										class="mt-0.5 block text-[11px] text-slate-500 tabular-nums dark:text-zinc-400"
+									>
+										{sel.dinilai}/{sel.total} mapel
+									</span>
+								</td>
+							{/each}
+							<td class="px-3 py-2.5 text-center">
+								<span
+									class={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold tabular-nums ${badgeClass(row.kriteriaKumulatif)}`}
+								>
+									{formatScore(row.rataKumulatif)}
+								</span>
+							</td>
+							<td class="px-3 py-2.5 text-center font-semibold tabular-nums">{row.peringkat}</td>
+						</tr>
+					{:else}
+						<tr>
+							<td
+								colspan={semester.length + 5}
+								class="p-8 text-center text-xs italic text-slate-500 dark:text-zinc-400"
+							>
+								Tidak ada murid yang cocok.
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+				<tfoot>
+					<tr
+						class="border-t border-slate-200 bg-slate-50 font-semibold text-slate-800 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-200"
+					>
+						<td class="px-3 py-2.5"></td>
+						<td class="px-3 py-2.5">Rata-rata Kelas</td>
+						{#each ringkasan as item (item.semesterId)}
+							<td class="px-3 py-2.5 text-center tabular-nums">
+								{formatScore(item.nilai)}
+								<span class="block text-[11px] font-normal text-slate-500 dark:text-zinc-400">
+									{item.dinilai} nilai
+								</span>
+							</td>
+						{/each}
+						<td colspan="2" class="px-3 py-2.5"></td>
+					</tr>
+				</tfoot>
+			</table>
+		</div>
+
+		<div class="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+			<p class="text-xs text-slate-500 tabular-nums dark:text-zinc-400">
+				Menampilkan {Math.min(perPage, Math.max(0, totalItems - (currentPage - 1) * perPage))} dari
+				{totalItems} murid
+			</p>
+			<div class="flex flex-col items-center gap-2 sm:flex-row sm:items-center">
+				<label class="flex items-center gap-2 text-xs text-slate-600 dark:text-zinc-400">
+					<span>Baris per halaman</span>
+					<div class="relative flex items-center">
+						<select
+							class="h-8 appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-7 pl-2.5 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+							value={perPage}
+							onchange={(event) =>
+								gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
+						>
+							{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
+								<option value={jumlah}>{jumlah}</option>
+							{/each}
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2 flex items-center text-slate-400 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3 w-3" />
+						</span>
+					</div>
+				</label>
+				<div class="flex flex-wrap items-center gap-1">
+					<button
+						type="button"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+						disabled={currentPage <= 1}
+						onclick={() => gotoPage(currentPage - 1)}
+					>
+						&laquo;
+					</button>
+					{#each nomorHalaman as nomor, index (index)}
+						{#if nomor === '…'}
+							<span class="inline-flex h-8 items-center px-1.5 text-xs text-slate-400">...</span>
+						{:else}
+							<button
+								type="button"
+								class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors {nomor ===
+								currentPage
+									? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
+									: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
+								onclick={() => gotoPage(nomor)}
+							>
+								{nomor}
+							</button>
+						{/if}
+					{/each}
+					<button
+						type="button"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+						disabled={currentPage >= totalPages}
+						onclick={() => gotoPage(currentPage + 1)}
+					>
+						&raquo;
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+</div>
+
+<div class="mt-5 grid gap-5 lg:grid-cols-2">
+	<div
+		class="overflow-x-auto rounded-2xl border border-slate-200/75 bg-white shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<h2
+			class="border-b border-slate-100 px-4 py-3.5 text-sm font-bold text-slate-900 dark:border-zinc-800 dark:text-zinc-100"
+		>
+			Rekap per Mata Pelajaran
+		</h2>
+		<table class="w-full border-collapse text-xs">
 			<thead>
-				<tr class="bg-base-200 dark:bg-base-300 text-left font-bold">
-					<th>Mata Pelajaran</th>
-					<th>Guru</th>
-					<th class="text-center">Kelas</th>
-					<th class="text-center">Nilai</th>
-					<th class="text-center">Rata-rata</th>
+				<tr
+					class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+				>
+					<th class="px-3 py-2.5">Mata Pelajaran</th>
+					<th class="px-3 py-2.5">Guru</th>
+					<th class="px-3 py-2.5 text-center">Kelas</th>
+					<th class="px-3 py-2.5 text-center">Nilai</th>
+					<th class="px-3 py-2.5 text-center">Rata-rata</th>
 				</tr>
 			</thead>
-			<tbody>
+			<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 				{#each rekapMapel as item (item.nama)}
-					<tr>
-						<td>{item.nama}</td>
-						<td class="text-xs opacity-70">{item.guru.join(', ') || '-'}</td>
-						<td class="text-center">{item.kelas}</td>
-						<td class="text-center">{item.jumlahNilai}</td>
-						<td class="text-center font-semibold">{formatScore(item.rataRata)}</td>
+					<tr class="transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40">
+						<td class="px-3 py-2 font-medium text-slate-900 dark:text-zinc-100">{item.nama}</td>
+						<td class="px-3 py-2 text-[11px] text-slate-500 dark:text-zinc-400">
+							{item.guru.join(', ') || '-'}
+						</td>
+						<td class="px-3 py-2 text-center tabular-nums">{item.kelas}</td>
+						<td class="px-3 py-2 text-center tabular-nums">{item.jumlahNilai}</td>
+						<td class="px-3 py-2 text-center font-semibold tabular-nums">
+							{formatScore(item.rataRata)}
+						</td>
 					</tr>
 				{:else}
 					<tr>
-						<td colspan="5" class="py-4 text-center opacity-70">Belum ada nilai.</td>
+						<td
+							colspan="5"
+							class="p-6 text-center text-xs italic text-slate-500 dark:text-zinc-400"
+						>
+							Belum ada nilai.
+						</td>
 					</tr>
 				{/each}
 			</tbody>
 		</table>
 	</div>
 
-	<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
-		<h3 class="px-4 pt-4 text-lg font-bold">Rekap per Guru</h3>
-		<table class="border-base-200 table-sm table border dark:border-none">
+	<div
+		class="overflow-x-auto rounded-2xl border border-slate-200/75 bg-white shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<h2
+			class="border-b border-slate-100 px-4 py-3.5 text-sm font-bold text-slate-900 dark:border-zinc-800 dark:text-zinc-100"
+		>
+			Rekap per Guru
+		</h2>
+		<table class="w-full border-collapse text-xs">
 			<thead>
-				<tr class="bg-base-200 dark:bg-base-300 text-left font-bold">
-					<th>Guru Pengampu</th>
-					<th>Mata Pelajaran</th>
-					<th class="text-center">Murid</th>
-					<th class="text-center">Nilai</th>
-					<th class="text-center">Rata-rata</th>
+				<tr
+					class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+				>
+					<th class="px-3 py-2.5">Guru Pengampu</th>
+					<th class="px-3 py-2.5">Mata Pelajaran</th>
+					<th class="px-3 py-2.5 text-center">Murid</th>
+					<th class="px-3 py-2.5 text-center">Nilai</th>
+					<th class="px-3 py-2.5 text-center">Rata-rata</th>
 				</tr>
 			</thead>
-			<tbody>
+			<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 				{#each rekapGuru as item (item.id)}
-					<tr>
-						<td>{item.nama}</td>
-						<td class="text-xs opacity-70">{item.mapel.join(', ')}</td>
-						<td class="text-center">{item.jumlahMurid}</td>
-						<td class="text-center">{item.jumlahNilai}</td>
-						<td class="text-center font-semibold">{formatScore(item.rataRata)}</td>
+					<tr class="transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40">
+						<td class="px-3 py-2 font-medium text-slate-900 dark:text-zinc-100">{item.nama}</td>
+						<td class="px-3 py-2 text-[11px] text-slate-500 dark:text-zinc-400">
+							{item.mapel.join(', ')}
+						</td>
+						<td class="px-3 py-2 text-center tabular-nums">{item.jumlahMurid}</td>
+						<td class="px-3 py-2 text-center tabular-nums">{item.jumlahNilai}</td>
+						<td class="px-3 py-2 text-center font-semibold tabular-nums">
+							{formatScore(item.rataRata)}
+						</td>
 					</tr>
 				{:else}
 					<tr>
-						<td colspan="5" class="py-4 text-center opacity-70">Belum ada nilai.</td>
+						<td
+							colspan="5"
+							class="p-6 text-center text-xs italic text-slate-500 dark:text-zinc-400"
+						>
+							Belum ada nilai.
+						</td>
 					</tr>
 				{/each}
 			</tbody>

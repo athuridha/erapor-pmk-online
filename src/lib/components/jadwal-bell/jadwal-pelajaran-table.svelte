@@ -52,39 +52,63 @@
 
 <div
 	bind:this={scrollEl}
-	class="bg-base-100 dark:bg-base-200 overflow-y-auto rounded-md shadow-md dark:shadow-none"
+	class="overflow-x-auto overflow-y-auto rounded-2xl border border-slate-200/75 bg-white shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-900"
 >
-	<table class="border-base-200 dark:border-base-100 table border">
-		<thead class="sticky top-0 z-10">
-			<tr class="bg-base-200 dark:bg-base-300 text-left font-bold">
-				<th rowspan="2" class="w-0">Hari</th>
-				<th rowspan="2" class="w-0">Jam</th>
-				<th rowspan="2" class="w-0">Waktu</th>
-				<th colspan={kelasTerurut.length} class="text-center">
+	<table class="w-full border-collapse text-left text-xs">
+		<thead class="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm dark:bg-zinc-800/95">
+			<tr
+				class="border-b border-slate-200/80 text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:border-zinc-700 dark:text-zinc-400"
+			>
+				<th rowspan="2" class="w-0 border-r border-slate-200/70 px-3 py-2.5 dark:border-zinc-700"
+					>Hari</th
+				>
+				<th
+					rowspan="2"
+					class="w-0 border-r border-slate-200/70 px-2.5 py-2.5 text-center dark:border-zinc-700"
+					>Jam</th
+				>
+				<th rowspan="2" class="w-0 border-r border-slate-200/70 px-3 py-2.5 dark:border-zinc-700"
+					>Waktu</th
+				>
+				<th
+					colspan={kelasTerurut.length}
+					class="border-b border-slate-200/70 px-3 py-1.5 text-center dark:border-zinc-700"
+				>
 					{kelasTerurut.length > 0 ? 'Kelas' : ''}
 				</th>
 			</tr>
-			<tr class="bg-base-200 dark:bg-base-300 text-left font-bold">
+			<tr
+				class="border-b border-slate-200/80 text-[11px] font-semibold text-slate-600 dark:border-zinc-700 dark:text-zinc-300"
+			>
 				{#each kelasTerurut as kelas (kelas.id)}
-					<th class="min-w-[70px] max-w-[15ch] truncate text-center" title={kelas.nama}
-						>{kelas.nama.slice(0, 15)}{kelas.nama.length > 15 ? '…' : ''}</th
+					<th
+						class="min-w-[70px] max-w-[15ch] truncate border-r border-slate-200/60 px-2 py-2 text-center last:border-r-0 dark:border-zinc-700/70"
+						title={kelas.nama}>{kelas.nama.slice(0, 15)}{kelas.nama.length > 15 ? '…' : ''}</th
 					>
 				{/each}
 			</tr>
 		</thead>
-		<tbody>
+		<tbody class="divide-y divide-slate-200/70 dark:divide-zinc-800">
 			{#each hariList as hari (hari)}
 				{#each Array.from({ length: hariMaxJam[hari] }, (_, i) => i + 1) as jamKe (jamKe)}
 					{@const allSame = isAllSame(hari, jamKe)}
 					{@const waktu = waktuMatrix[hari]?.[jamKe] ?? { start: '--:--', end: '--:--' }}
-					<tr class="border-base-200 dark:border-base-100 border-b">
+					<tr class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/35">
 						{#if jamKe === 1}
-							<td rowspan={hariMaxJam[hari]} class="align-top font-medium">
+							<td
+								rowspan={hariMaxJam[hari]}
+								class="border-r border-slate-200/70 px-3 py-2 align-top font-semibold text-slate-800 dark:border-zinc-800 dark:text-zinc-200"
+							>
 								{formatHari(hari)}
 							</td>
 						{/if}
-						<td class="text-center text-sm">{jamKe}</td>
-						<td class="text-xs whitespace-nowrap">
+						<td
+							class="border-r border-slate-200/70 px-2.5 py-2 text-center font-medium text-slate-600 dark:border-zinc-800 dark:text-zinc-300"
+							>{jamKe}</td
+						>
+						<td
+							class="border-r border-slate-200/70 px-3 py-2 text-[11px] whitespace-nowrap text-slate-500 tabular-nums dark:border-zinc-800 dark:text-zinc-400"
+						>
 							{#if jamKe === hariMaxJam[hari]}
 								{waktu.start}
 							{:else}
@@ -94,18 +118,18 @@
 						{#if kodeMerged.has(allSame ?? '') || (!canManage && allSame)}
 							<td
 								colspan={kelasTerurut.length}
-								class="h-full text-center align-middle"
+								class="h-full px-2 py-1.5 text-center align-middle"
 								ondragover={(e) => e.preventDefault()}
 								ondrop={(e) => onDrop(e, hari, jamKe)}
 								use:dropTarget={{ enabled: canManage && isEditing }}
 							>
 								<div class="flex h-full w-full items-center justify-center">
 									{#if canManage && isEditing}
-										<div class="join w-full">
+										<div class="flex w-full items-center gap-1">
 											{#if jamKe < hariMaxJam[hari] && allSame}
 												<button
 													type="button"
-													class="btn btn-xs join-item btn-soft btn-info shrink-0 px-1 shadow-none"
+													class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-sky-200/80 bg-sky-50 text-sky-700 transition-colors hover:bg-sky-100 dark:border-sky-900/50 dark:bg-sky-950/50 dark:text-sky-300 dark:hover:bg-sky-950"
 													onclick={() => onCopyBelow(hari, jamKe)}
 													aria-label="Salin ke bawah"
 												>
@@ -115,8 +139,10 @@
 											<span
 												role="button"
 												tabindex="-1"
-												class="badge {badgeColorMap[allSame ?? ''] ??
-													'badge-primary'} join-item badge-soft grow cursor-grab"
+												class="inline-flex grow cursor-grab items-center justify-center rounded-lg border px-2 py-0.5 text-[11px] font-semibold {badgeColorMap[
+													allSame ?? ''
+												] ??
+													'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300'}"
 												draggable="true"
 												ondragstart={(e) => {
 													if (!canManage || !isEditing) return;
@@ -134,7 +160,7 @@
 											</span>
 											<button
 												type="button"
-												class="btn btn-xs join-item btn-soft btn-error shrink-0 px-1 shadow-none"
+												class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 												onclick={() => onClearCell(hari, jamKe)}
 												aria-label="Hapus {allSame}"
 											>
@@ -143,8 +169,10 @@
 										</div>
 									{:else}
 										<span
-											class="badge {badgeColorMap[allSame ?? ''] ??
-												'badge-primary'} badge-soft w-full"
+											class="inline-flex w-full items-center justify-center rounded-lg border px-2 py-0.5 text-[11px] font-semibold {badgeColorMap[
+												allSame ?? ''
+											] ??
+												'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300'}"
 										>
 											{kodeNamaMap.get(allSame!) ?? allSame}
 										</span>
@@ -155,18 +183,18 @@
 							{#each kelasTerurut as kelas (kelas.id)}
 								{@const kode = getKode(hari, jamKe, kelas.id)}
 								<td
-									class="text-center"
+									class="border-r border-slate-200/60 px-1.5 py-1.5 text-center last:border-r-0 dark:border-zinc-800/70"
 									ondragover={(e) => e.preventDefault()}
 									ondrop={(e) => onDrop(e, hari, jamKe, kelas.id)}
 									use:dropTarget={{ enabled: canManage && isEditing }}
 								>
 									{#if canManage && isEditing}
 										{#if kode}
-											<div class="join">
+											<div class="inline-flex items-center gap-0.5">
 												{#if jamKe < hariMaxJam[hari]}
 													<button
 														type="button"
-														class="btn btn-xs join-item btn-soft btn-info px-1 shadow-none"
+														class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-sky-200/80 bg-sky-50 text-sky-700 transition-colors hover:bg-sky-100 dark:border-sky-900/50 dark:bg-sky-950/50 dark:text-sky-300 dark:hover:bg-sky-950"
 														onclick={() => onCopyBelow(hari, jamKe, kelas.id)}
 														aria-label="Salin ke bawah"
 													>
@@ -176,8 +204,10 @@
 												<span
 													role="button"
 													tabindex="-1"
-													class="badge {badgeColorMap[kode] ??
-														'badge-primary'} join-item badge-soft text-xs cursor-grab"
+													class="inline-flex cursor-grab items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold {badgeColorMap[
+														kode
+													] ??
+														'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300'}"
 													draggable="true"
 													ondragstart={(e) => {
 														if (!canManage || !isEditing || !kode) return;
@@ -195,7 +225,7 @@
 												</span>
 												<button
 													type="button"
-													class="btn btn-xs join-item btn-soft btn-error px-1 shadow-none"
+													class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 													onclick={() => onClearCell(hari, jamKe, kelas.id)}
 													aria-label="Hapus {kode}"
 												>
@@ -203,14 +233,19 @@
 												</button>
 											</div>
 										{:else}
-											<span class="text-base-content/30 cursor-default text-xs"> — </span>
+											<span class="cursor-default text-xs text-slate-300 dark:text-zinc-600">-</span
+											>
 										{/if}
 									{:else if kode}
-										<span class="badge {badgeColorMap[kode] ?? 'badge-primary'} badge-soft text-xs"
+										<span
+											class="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold {badgeColorMap[
+												kode
+											] ??
+												'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300'}"
 											>{kodeNamaMap.get(kode) ?? kode}</span
 										>
 									{:else}
-										<span class="text-base-content/30 text-xs">—</span>
+										<span class="text-xs text-slate-300 dark:text-zinc-600">-</span>
 									{/if}
 								</td>
 							{/each}

@@ -248,7 +248,8 @@
 			onNegative: {
 				label: 'Edit',
 				icon: 'edit',
-				class: 'btn-warning btn-soft',
+				class:
+					'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/50 dark:text-amber-300',
 				action: () => openEditModal(sppd)
 			},
 			...(hasBukti
@@ -256,7 +257,8 @@
 						onExtra: {
 							label: 'Cetak Gabungan',
 							icon: 'print',
-							class: 'btn-primary btn-soft',
+							class:
+								'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-300',
 							href: `/api/dinas-luar/bukti/cetak?sppdId=${sppd.id}`
 						}
 					}
@@ -378,21 +380,25 @@
 	const hasFiltered = $derived(data.page.totalItems > 0);
 </script>
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="mb-4 flex items-start justify-between">
+<section
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div
+		class="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800"
+	>
 		<div>
-			<h2 class="text-xl font-bold">Dinas Luar</h2>
-			<p class="text-base-content/80 block text-sm">
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">Dinas Luar</h1>
+			<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
 				{data.permohonanCount} pengajuan, {data.sppdCount} perjalanan dinas disetujui
 			</p>
 		</div>
 		<button
 			type="button"
-			class="btn btn-primary btn-soft shadow-none"
+			class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
 			onclick={openTambahModal}
 			title="Tambah perjalanan dinas"
 		>
-			<Icon name="plus" />
+			<Icon name="plus" class="h-3.5 w-3.5" />
 			Tambah
 		</button>
 	</div>
@@ -405,110 +411,141 @@
 		spellcheck="false"
 		onsubmit={submitSearch}
 	>
-		<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
-			<Icon name="search" />
+		<div class="relative flex w-full items-center">
+			<span
+				aria-hidden="true"
+				class="pointer-events-none absolute left-3 flex items-center text-slate-400 dark:text-zinc-400"
+			>
+				<Icon name="search" class="h-3.5 w-3.5" />
+			</span>
 			<input
 				type="search"
 				name="q"
 				value={searchTerm}
 				placeholder="Cari keterangan/tujuan perjalanan..."
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-8 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				oninput={handleSearchInput}
 				autocomplete="off"
 			/>
-		</label>
+		</div>
 	</form>
 
 	{#if !hasData}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>Belum ada data dinas luar.</span>
 		</div>
 	{:else if !hasFiltered}
-		<div class="alert alert-soft alert-info mt-6">
-			<Icon name="info" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/70 px-4 py-3 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 			<span>Tidak ada data yang cocok dengan pencarian.</span>
 		</div>
 	{:else}
 		<div
-			class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+			class="mt-4 overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 		>
-			<table class="border-base-200 table border dark:border-none">
+			<table class="w-full border-collapse text-xs">
 				<thead>
-					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-						<th style="width: 50px; min-width: 40px;">No</th>
-						<th style="min-width: 110px;">Status</th>
-						<th style="min-width: 110px;">Tanggal</th>
-						<th style="min-width: 180px;">Nama Lengkap</th>
-						<th class="text-center" style="min-width: 70px;">Jumlah</th>
-						<th style="min-width: 200px;">Keterangan</th>
-						<th class="text-center" style="min-width: 100px;">Aksi</th>
+					<tr
+						class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+					>
+						<th class="w-12 px-3.5 py-2.5">No</th>
+						<th class="min-w-28 px-3.5 py-2.5">Status</th>
+						<th class="min-w-28 px-3.5 py-2.5">Tanggal</th>
+						<th class="min-w-44 px-3.5 py-2.5">Nama Lengkap</th>
+						<th class="min-w-18 px-3.5 py-2.5 text-center">Jumlah</th>
+						<th class="min-w-48 px-3.5 py-2.5">Keterangan</th>
+						<th class="w-28 px-3.5 py-2.5 text-center">Aksi</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 					{#each data.daftarItem as item (item.status === 'pengajuan' ? `p-${item.permohonan.id}` : `s-${item.sppd.id}`)}
-						<tr>
-							<td>{item.no}</td>
-							<td>
+						<tr class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
+							<td class="px-3.5 py-2.5 text-slate-500 dark:text-zinc-400">{item.no}</td>
+							<td class="px-3.5 py-2.5">
 								{#if item.status === 'pengajuan'}
-									<span class="badge badge-soft badge-warning">Pengajuan</span>
+									<span
+										class="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300"
+									>
+										Pengajuan
+									</span>
 								{:else}
-									<span class="badge badge-soft badge-success">Disetujui</span>
+									<span
+										class="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300"
+									>
+										Disetujui
+									</span>
 								{/if}
 							</td>
-							<td class="whitespace-nowrap">
+							<td class="px-3.5 py-2.5 whitespace-nowrap text-slate-600 dark:text-zinc-300">
 								{item.status === 'pengajuan'
 									? formatTanggalWaktu(item.tanggal)
 									: formatTanggalShort(item.tanggal)}
 							</td>
-							<td class="whitespace-nowrap">{item.nama}</td>
-							<td class="text-center">{item.jumlah}</td>
-							<td class="max-w-60 truncate">
+							<td
+								class="px-3.5 py-2.5 font-medium whitespace-nowrap text-slate-900 dark:text-zinc-100"
+							>
+								{item.nama}
+							</td>
+							<td class="px-3.5 py-2.5 text-center text-slate-700 dark:text-zinc-300">
+								{item.jumlah}
+							</td>
+							<td class="max-w-60 truncate px-3.5 py-2.5 text-slate-600 dark:text-zinc-300">
 								{@html searchQueryMarker(data.page.search, item.maksud)}
 							</td>
-							<td class="text-center">
-								<div class="flex items-center justify-center gap-1">
+							<td class="px-3.5 py-2.5 text-center">
+								<div class="flex items-center justify-center gap-1.5">
 									{#if item.status === 'pengajuan'}
 										<button
 											type="button"
-											class="btn btn-primary btn-soft btn-sm shadow-none"
+											class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-blue-200/80 bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950"
 											onclick={() => viewPermohonan(item.permohonan)}
+											aria-label="Lihat detail pengajuan"
 											title="Lihat detail pengajuan"
 										>
-											<Icon name="eye" />
+											<Icon name="eye" class="h-3.5 w-3.5" />
 										</button>
 										<button
 											type="button"
-											class="btn btn-error btn-soft btn-sm shadow-none"
+											class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 											onclick={() => handleDeletePermohonan(item.permohonan)}
+											aria-label="Hapus pengajuan"
 											title="Hapus pengajuan"
 										>
-											<Icon name="del" />
+											<Icon name="del" class="h-3.5 w-3.5" />
 										</button>
 									{:else}
 										<button
 											type="button"
-											class="btn btn-primary btn-soft btn-sm shadow-none"
+											class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-blue-200/80 bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950"
 											onclick={() => viewDetail(item.sppd)}
+											aria-label="Lihat detail"
 											title="Lihat detail"
 										>
-											<Icon name="eye" />
+											<Icon name="eye" class="h-3.5 w-3.5" />
 										</button>
 										<button
 											type="button"
-											class="btn btn-success btn-soft btn-sm shadow-none"
+											class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200/80 bg-emerald-50 text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900/50 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-950"
 											onclick={() => handlePrint(item.sppd)}
 											disabled={downloadLoading}
+											aria-label="Cetak surat perintah perjalanan dinas"
 											title="Cetak surat perintah perjalanan dinas"
 										>
-											<Icon name="print" />
+											<Icon name="print" class="h-3.5 w-3.5" />
 										</button>
 										<button
 											type="button"
-											class="btn btn-error btn-soft btn-sm shadow-none"
+											class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 											onclick={() => handleDelete(item.sppd)}
+											aria-label="Hapus"
 											title="Hapus"
 										>
-											<Icon name="del" />
+											<Icon name="del" class="h-3.5 w-3.5" />
 										</button>
 									{/if}
 								</div>
@@ -519,21 +556,25 @@
 			</table>
 		</div>
 
-		<div class="join mx-auto mt-4">
-			{#each pages as pageNumber (pageNumber)}
-				<button
-					type="button"
-					class="join-item btn pointer-events-auto"
-					class:btn-active={pageNumber === currentPage}
-					onclick={() => handlePageClick(pageNumber)}
-					aria-current={pageNumber === currentPage ? 'page' : undefined}
-				>
-					{pageNumber}
-				</button>
-			{/each}
-		</div>
+		{#if pages.length > 1}
+			<div class="mt-4 flex flex-wrap items-center justify-center gap-1.5">
+				{#each pages as pageNumber (pageNumber)}
+					<button
+						type="button"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2.5 text-xs font-semibold transition-colors {pageNumber ===
+						currentPage
+							? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
+							: 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
+						onclick={() => handlePageClick(pageNumber)}
+						aria-current={pageNumber === currentPage ? 'page' : undefined}
+					>
+						{pageNumber}
+					</button>
+				{/each}
+			</div>
+		{/if}
 	{/if}
-</div>
+</section>
 
 <PdfPreviewModal
 	bind:open={pdfModalOpen}

@@ -181,18 +181,20 @@
 
 <div class="not-prose flex flex-col gap-4">
 	{#if simulasiLabel}
-		<div class="alert alert-soft alert-warning flex items-center gap-2">
-			<Icon name="alert" class="h-5 w-5 shrink-0" />
-			<span class="text-sm"
-				>Mode simulasi: waktu dicatat sebagai: <strong>{simulasiLabel}</strong></span
-			>
+		<div
+			class="flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-3.5 py-2.5 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+			<span>Mode simulasi: waktu dicatat sebagai: <strong>{simulasiLabel}</strong></span>
 		</div>
 	{/if}
 	{#if step === 'pilih'}
-		<div class="space-y-3">
-			<div class="alert alert-soft alert-info flex items-start gap-2">
-				<Icon name="info" class="mt-0.5 h-5 w-5 shrink-0" />
-				<span class="text-sm">
+		<div class="space-y-4">
+			<div
+				class="flex items-start gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/80 px-3.5 py-2.5 text-xs leading-relaxed text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200"
+			>
+				<Icon name="info" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+				<span>
 					Bapak/Ibu belum melakukan presensi hari ini. Silakan lakukan presensi sebelum jam pulang.
 					{#if windowLabel}
 						<br />
@@ -201,38 +203,51 @@
 				</span>
 			</div>
 			<div class="space-y-4">
-				<label class="flex flex-col gap-1">
-					<span class="text-sm font-semibold">Status Kehadiran</span>
-					<select
-						class="select bg-base-200 w-full dark:border-none"
-						bind:value={selectedStatus}
-						disabled={submitting}
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Status Kehadiran</span
 					>
-						{#each STATUS_OPTIONS as opt (opt.value)}
-							<option value={opt.value}>{opt.label}</option>
-						{/each}
-					</select>
+					<div class="relative flex items-center">
+						<select
+							class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+							bind:value={selectedStatus}
+							disabled={submitting}
+						>
+							{#each STATUS_OPTIONS as opt (opt.value)}
+								<option value={opt.value}>{opt.label}</option>
+							{/each}
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
+					</div>
 				</label>
 				<button
 					type="button"
-					class="btn btn-primary w-full shadow-none"
+					class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 					disabled={submitting}
 					onclick={handleSimpan}
 				>
-					<Icon name={selectedStatus === 'hadir' ? 'pen' : 'save'} />
+					<Icon name={selectedStatus === 'hadir' ? 'pen' : 'save'} class="h-3.5 w-3.5" />
 					{selectedStatus === 'hadir' ? 'Paraf' : 'Simpan'}
 				</button>
 			</div>
 		</div>
 	{:else}
 		<div class="space-y-3">
-			<p class="text-base-content/80 text-sm">Buat paraf Bapak/Ibu pada kotak di bawah ini.</p>
-			<div class="border-base-300 overflow-hidden rounded-md border bg-base-300">
+			<p class="text-xs text-slate-600 dark:text-zinc-400">
+				Buat paraf Bapak/Ibu pada kotak di bawah ini.
+			</p>
+			<div
+				class="overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100 p-2 dark:border-zinc-800 dark:bg-zinc-800"
+			>
 				<canvas
 					use:initCanvas
 					width={CANVAS_W}
 					height={CANVAS_H}
-					class="bg-white mx-auto w-full max-w-52 cursor-crosshair touch-none"
+					class="mx-auto w-full max-w-52 cursor-crosshair touch-none rounded-lg bg-white"
 					style="aspect-ratio: {CANVAS_W}/{CANVAS_H}; min-height: 180px;"
 					onmousedown={startDraw}
 					onmousemove={draw}
@@ -244,15 +259,17 @@
 				></canvas>
 			</div>
 			<div class="flex items-center justify-between gap-2">
-				<p class="text-base-content/50 text-xs">Hanya paraf, bukan tanda tangan.</p>
+				<p class="text-[11px] text-slate-400 dark:text-zinc-500">
+					Hanya paraf, bukan tanda tangan.
+				</p>
 				{#if hasSignature}
 					<button
 						type="button"
-						class="btn btn-soft btn-error btn-sm shadow-none"
+						class="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-red-200/80 bg-red-50 px-3 text-xs font-medium text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 						onclick={clearSignature}
 						disabled={submitting}
 					>
-						<Icon name="del" />
+						<Icon name="del" class="h-3.5 w-3.5" />
 						Hapus
 					</button>
 				{/if}

@@ -43,18 +43,27 @@
 			<embed src={pdfUrl} type="application/pdf" class="h-full w-full" />
 		</object>
 	{:else if loadError}
-		<div class="flex h-full items-center justify-center p-8">
-			<div class="text-center">
-				<p class="text-error mb-4 text-lg font-semibold">Gagal memuat PDF</p>
-				<p class="text-base-content/70 mb-6">Token tidak valid atau sudah kedaluwarsa.</p>
-				<button onclick={() => window.close()} class="btn btn-primary">Tutup</button>
+		<div class="flex h-full items-center justify-center bg-slate-50 p-8 dark:bg-zinc-950">
+			<div
+				class="max-w-sm rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+			>
+				<p class="mb-2 text-lg font-bold text-red-700 dark:text-red-400">Gagal memuat PDF</p>
+				<p class="mb-5 text-sm text-slate-600 dark:text-zinc-400">
+					Token tidak valid atau sudah kedaluwarsa.
+				</p>
+				<button
+					onclick={() => window.close()}
+					class="inline-flex h-9 items-center justify-center rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+					>Tutup</button
+				>
 			</div>
 		</div>
 	{:else}
-		<div class="flex h-full items-center justify-center">
+		<div class="flex h-full items-center justify-center bg-slate-50 dark:bg-zinc-950">
 			<div class="text-center">
-				<span class="loading loading-spinner loading-lg mb-4"></span>
-				<p class="text-base-content/70">Memuat PDF...</p>
+				<span class="loading loading-spinner loading-lg mb-4 text-blue-600 dark:text-blue-400"
+				></span>
+				<p class="text-sm text-slate-600 dark:text-zinc-400">Memuat PDF...</p>
 			</div>
 		</div>
 	{/if}

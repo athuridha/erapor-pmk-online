@@ -300,23 +300,27 @@
 </script>
 
 <div class="grid grid-cols-1 gap-6">
-	<section class="card bg-base-100 rounded-lg border border-none p-6 shadow-md">
-		<div class="space-y-6">
-			<header>
-				<h1 class="text-2xl font-bold">Manajemen Akademik</h1>
-				<p class="text-base-content/70 text-sm">
+	<section
+		class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<div class="space-y-5">
+			<header class="border-b border-slate-200 pb-4 dark:border-zinc-800">
+				<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+					Manajemen Akademik
+				</h1>
+				<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">
 					Kelola sekolah aktif, tahun ajaran, semester, presensi, dan jadwal pelajaran.
 				</p>
 			</header>
 
-			<fieldset class="fieldset">
-				<legend class="fieldset-legend">Ganti sekolah</legend>
+			<div class="flex flex-col gap-1.5">
+				<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Ganti sekolah</span>
 				<FormEnhance action="?/switch" init={formInitSekolah} onsuccess={handleSwitchSuccess}>
 					{#snippet children({ submitting })}
-						<div class="flex flex-row">
-							<div class="min-w-0 flex-1 overflow-hidden">
+						<div class="flex flex-col gap-2 sm:flex-row">
+							<div class="relative flex min-w-0 flex-1 items-center">
 								<select
-									class="select bg-base-200 dark:bg-base-300 w-full truncate rounded-r-none dark:border-none"
+									class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
 									name="sekolahId"
 									bind:value={selectedSekolahId}
 									required
@@ -331,9 +335,15 @@
 										{/each}
 									{/if}
 								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
 							</div>
 							<button
-								class="btn btn-primary rounded-l-none shadow-none"
+								class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 								type="submit"
 								disabled={submitting ||
 									disabledSekolahActions ||
@@ -346,16 +356,16 @@
 										? 'Sekolah ini sudah aktif'
 										: ''}
 							>
-								<Icon name="repeat" />
+								<Icon name="repeat" class="h-4 w-4" />
 								{submitting ? 'Menyimpan…' : 'Ganti'}
 							</button>
 						</div>
 					{/snippet}
 				</FormEnhance>
-				<p class="text-base-content/70 mt-1 text-xs">
+				<p class="text-xs text-slate-500 dark:text-zinc-400">
 					Operator dapat memilih sekolah aktif di sini.
 				</p>
-			</fieldset>
+			</div>
 
 			<FormEnhance
 				action="?/save"
@@ -385,138 +395,168 @@
 						value={semesterGanjil ? String(semesterGanjil.id) : ''}
 					/>
 					<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-						<fieldset class="fieldset">
-							<legend class="fieldset-legend">Tahun Ajaran</legend>
-							<select
-								class="select bg-base-200 dark:bg-base-300 w-full truncate dark:border-none"
-								name="tahunAjaranId"
-								bind:value={selectedTahunAjaranId}
-								required
-								disabled={!canRaporManage}
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Tahun Ajaran</span
 							>
-								<option value="" disabled>Pilih Tahun Ajaran</option>
-								{#each tahunAjaranOptions as item (item.id)}
-									<option value={String(item.id)}>
-										{item.nama}
-										{item.isAktif ? ' (aktif)' : ''}
-									</option>
-								{/each}
-							</select>
-						</fieldset>
+							<div class="relative flex items-center">
+								<select
+									class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
+									name="tahunAjaranId"
+									bind:value={selectedTahunAjaranId}
+									required
+									disabled={!canRaporManage}
+								>
+									<option value="" disabled>Pilih Tahun Ajaran</option>
+									{#each tahunAjaranOptions as item (item.id)}
+										<option value={String(item.id)}>
+											{item.nama}
+											{item.isAktif ? ' (aktif)' : ''}
+										</option>
+									{/each}
+								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
+							</div>
+						</label>
 
-						<fieldset class="fieldset">
-							<legend class="fieldset-legend">Semester</legend>
-							<select
-								class="select bg-base-200 dark:bg-base-300 w-full truncate dark:border-none"
-								name="semesterId"
-								bind:value={selectedSemesterId}
-								required
-								disabled={semesterOptions.length === 0 || !canRaporManage}
-							>
-								<option value="" disabled>Pilih Semester</option>
-								{#each semesterOptions as item (item.id)}
-									<option value={String(item.id)}>
-										{item.nama}
-										{item.isAktif ? ' (aktif)' : ''}
-									</option>
-								{/each}
-							</select>
-						</fieldset>
+						<label class="flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Semester</span>
+							<div class="relative flex items-center">
+								<select
+									class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
+									name="semesterId"
+									bind:value={selectedSemesterId}
+									required
+									disabled={semesterOptions.length === 0 || !canRaporManage}
+								>
+									<option value="" disabled>Pilih Semester</option>
+									{#each semesterOptions as item (item.id)}
+										<option value={String(item.id)}>
+											{item.nama}
+											{item.isAktif ? ' (aktif)' : ''}
+										</option>
+									{/each}
+								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
+							</div>
+						</label>
 
 						{#if showGanjil}
-							<fieldset class="fieldset">
-								<legend class="fieldset-legend">Tanggal masuk semester ganjil</legend>
+							<label class="flex flex-col gap-1.5">
+								<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+									>Tanggal masuk semester ganjil</span
+								>
 								<input
-									class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+									class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
 									type="date"
 									name="ganjil.tanggalMasuk"
 									bind:value={tanggalMasukGanjil}
 									disabled={!canRaporManage}
 								/>
-								<p class="text-base-content/70 mt-2 text-xs">
+								<span class="text-xs text-slate-500 dark:text-zinc-400">
 									Tanggal ini akan menjadi acuan mulai presensi semester ganjil.
-								</p>
-							</fieldset>
+								</span>
+							</label>
 						{:else}
 							<input type="hidden" name="ganjil.tanggalMasuk" value={tanggalMasukGanjil} />
 						{/if}
 
 						{#if showGenap}
-							<fieldset class="fieldset">
-								<legend class="fieldset-legend">Tanggal masuk semester genap</legend>
+							<label class="flex flex-col gap-1.5">
+								<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+									>Tanggal masuk semester genap</span
+								>
 								<input
-									class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+									class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
 									type="date"
 									name="genap.tanggalMasuk"
 									bind:value={tanggalMasukGenap}
 									disabled={!canRaporManage}
 								/>
-								<p class="text-base-content/70 mt-2 text-xs">
+								<span class="text-xs text-slate-500 dark:text-zinc-400">
 									Tanggal ini akan menjadi acuan mulai presensi semester genap.
-								</p>
-							</fieldset>
+								</span>
+							</label>
 						{:else}
 							<input type="hidden" name="genap.tanggalMasuk" value={tanggalMasukGenap} />
 						{/if}
 
 						{#if showGanjil}
-							<fieldset class="fieldset">
-								<legend class="fieldset-legend">Tanggal bagi rapor semester ganjil</legend>
+							<label class="flex flex-col gap-1.5">
+								<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+									>Tanggal bagi rapor semester ganjil</span
+								>
 								<input
-									class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+									class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
 									type="date"
 									name="ganjil.tanggalBagiRaport"
 									bind:value={tanggalRaporGanjil}
 									disabled={!canRaporManage}
 								/>
-								<p class="text-base-content/70 mt-2 text-xs">
+								<span class="text-xs text-slate-500 dark:text-zinc-400">
 									Tanggal ini akan muncul di catatan rapor semester ganjil.
-								</p>
-							</fieldset>
+								</span>
+							</label>
 						{:else}
 							<input type="hidden" name="ganjil.tanggalBagiRaport" value={tanggalRaporGanjil} />
 						{/if}
 
 						{#if showGenap}
-							<fieldset class="fieldset">
-								<legend class="fieldset-legend">Tanggal bagi rapor semester genap</legend>
+							<label class="flex flex-col gap-1.5">
+								<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+									>Tanggal bagi rapor semester genap</span
+								>
 								<input
-									class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+									class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
 									type="date"
 									name="genap.tanggalBagiRaport"
 									bind:value={tanggalRaporGenap}
 									disabled={!canRaporManage}
 								/>
-								<p class="text-base-content/70 mt-2 text-xs">
+								<span class="text-xs text-slate-500 dark:text-zinc-400">
 									Tanggal ini akan muncul di catatan rapor semester genap.
-								</p>
-							</fieldset>
+								</span>
+							</label>
 						{:else}
 							<input type="hidden" name="genap.tanggalBagiRaport" value={tanggalRaporGenap} />
 						{/if}
 
-						<fieldset class="fieldset md:col-span-2">
-							<legend class="fieldset-legend">Import data siswa dan kelas</legend>
+						<div class="flex flex-col gap-1.5 md:col-span-2">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Import data siswa dan kelas</span
+							>
 							<input
 								type="file"
-								class="file-input file-input-ghost"
+								class="block w-full text-xs text-slate-600 file:mr-3 file:h-9 file:cursor-pointer file:rounded-xl file:border file:border-[#7e8b9b] file:bg-white file:px-3.5 file:text-xs file:font-semibold file:text-slate-800 hover:file:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-400 dark:file:border-zinc-700 dark:file:bg-zinc-900 dark:file:text-zinc-100 dark:hover:file:bg-zinc-800"
 								accept=".xlsx, .xls"
 								name="data"
 								disabled={!canRaporManage}
 								aria-disabled={!canRaporManage}
 								title={!canRaporManage ? 'Anda tidak memiliki izin untuk mengimpor data siswa' : ''}
 							/>
-							<p class="text-base-content/70 mt-1 text-xs">
-								File daftar siswa dengan format excel dari dapodik. Pastikan file dapat dibuka
+							<p class="text-xs text-slate-500 dark:text-zinc-400">
+								File daftar siswa dengan format Excel dari Dapodik. Pastikan file dapat dibuka
 								sebelum import.
 							</p>
-						</fieldset>
+						</div>
 					</div>
 
-					<div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-between">
+					<div
+						class="mt-6 flex flex-col gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-between dark:border-zinc-800"
+					>
 						<div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
 							<button
-								class="btn btn-soft shadow-none max-sm:w-full"
+								class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 								type="submit"
 								formaction="?/copy-semester"
 								disabled={submitting || !canCopySemester || !canRaporManage}
@@ -525,30 +565,29 @@
 									? 'Anda tidak memiliki izin untuk menyalin semester'
 									: (copyButtonTooltip ?? undefined)}
 							>
-								<Icon name="copy" />
+								<Icon name="copy" class="h-4 w-4" />
 								Salin Semester Ganjil
 							</button>
-							<div class="indicator max-sm:w-full">
-								<span
-									class="indicator-item indicator-start badge badge-xs {hasPresensiSettings
-										? 'badge-success'
-										: 'badge-error'}"
-								></span>
-								<button
-									type="button"
-									class="btn btn-soft shadow-none max-sm:w-full"
-									onclick={openPresensiSettings}
-									disabled={!selectedTahunAjaranId || !canRaporManage}
-									aria-disabled={!canRaporManage}
-									title={!canRaporManage ? 'Anda tidak memiliki izin untuk mengatur presensi' : ''}
-								>
-									<Icon name="gear" />
-									Pengaturan Presensi
-								</button>
-							</div>
 							<button
 								type="button"
-								class="btn btn-soft shadow-none max-sm:w-full"
+								class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+								onclick={openPresensiSettings}
+								disabled={!selectedTahunAjaranId || !canRaporManage}
+								aria-disabled={!canRaporManage}
+								title={!canRaporManage ? 'Anda tidak memiliki izin untuk mengatur presensi' : ''}
+							>
+								<span
+									class="h-2 w-2 rounded-full {hasPresensiSettings
+										? 'bg-emerald-600'
+										: 'bg-red-500'}"
+									aria-hidden="true"
+								></span>
+								<Icon name="gear" class="h-4 w-4" />
+								Pengaturan Presensi
+							</button>
+							<button
+								type="button"
+								class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 								onclick={openJadwalBell}
 								disabled={jadwalBellDisabled}
 								aria-disabled={jadwalBellDisabled}
@@ -558,12 +597,12 @@
 										? 'Anda tidak memiliki izin'
 										: ''}
 							>
-								<Icon name="table" />
+								<Icon name="table" class="h-4 w-4" />
 								Jadwal dan Bell
 							</button>
 						</div>
 						<button
-							class="btn btn-primary shadow-none max-sm:w-full"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full"
 							type="submit"
 							disabled={submitting || invalid || disabledSave || !canRaporManage}
 							aria-disabled={!canRaporManage}
@@ -571,7 +610,7 @@
 								? 'Anda tidak memiliki izin untuk menyimpan pengaturan rapor'
 								: ''}
 						>
-							<Icon name="save" />
+							<Icon name="save" class="h-4 w-4" />
 							{submitting ? 'Menyimpan…' : 'Simpan'}
 						</button>
 					</div>

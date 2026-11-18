@@ -266,108 +266,152 @@
 	}
 </script>
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div
+		class="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between dark:border-zinc-800"
+	>
 		<div>
-			<h2 class="text-xl font-bold">Rekapitulasi Catatan Wali Kelas</h2>
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+				Rekapitulasi Catatan Wali Kelas
+			</h1>
 			{#if kelasAktifLabel}
-				<p class="text-base-content/80 block text-sm">{kelasAktifLabel}</p>
+				<p class="mt-0.5 block text-xs text-slate-500 dark:text-zinc-400">{kelasAktifLabel}</p>
 			{/if}
 		</div>
 		<button
 			type="button"
-			class="btn btn-primary btn-soft gap-2 self-start shadow-none max-sm:w-full sm:self-center"
+			class="inline-flex h-9 items-center justify-center gap-2 self-start rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full sm:self-center dark:bg-blue-500 dark:hover:bg-blue-600"
 			onclick={openBulkDialog}
 			disabled={!bulkTargetCount || editingRowId !== null || !canEdit}
+			aria-disabled={!bulkTargetCount || editingRowId !== null || !canEdit}
 			title={!canEdit
 				? 'Anda tidak memiliki izin untuk mengedit'
 				: 'Isi catatan yang sama untuk seluruh murid pada halaman ini'}
 		>
-			<Icon name="copy" />
+			<Icon name="copy" class="h-4 w-4" />
 			<span>Isi Sekaligus</span>
 		</button>
 	</div>
 
 	<!-- Filter Status Catatan -->
-	<div class="tabs tabs-box bg-base-200/50 mb-4 flex flex-wrap gap-1 p-1">
-		{#each [{ key: 'all', label: 'Semua Murid', count: data.statusCounts?.all ?? 0, badge: 'badge-ghost' }, { key: 'filled', label: 'Sudah Diisi', count: data.statusCounts?.filled ?? 0, badge: 'badge-success' }, { key: 'empty', label: 'Belum Diisi', count: data.statusCounts?.empty ?? 0, badge: 'badge-warning' }] as tab (tab.key)}
+	<div
+		class="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-slate-200/75 bg-slate-50/80 p-1.5 dark:border-zinc-800 dark:bg-zinc-800/50"
+	>
+		{#each [{ key: 'all', label: 'Semua Murid', count: data.statusCounts?.all ?? 0, pill: 'bg-slate-200/80 text-slate-800 dark:bg-zinc-700 dark:text-zinc-200' }, { key: 'filled', label: 'Sudah Diisi', count: data.statusCounts?.filled ?? 0, pill: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' }, { key: 'empty', label: 'Belum Diisi', count: data.statusCounts?.empty ?? 0, pill: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' }] as tab (tab.key)}
+			{@const isActive = (data.page.status ?? 'all') === tab.key}
 			<button
 				type="button"
-				class="tab text-xs font-medium"
-				class:tab-active={(data.page.status ?? 'all') === tab.key}
+				class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors {isActive
+					? 'bg-white text-blue-700 shadow-xs dark:bg-zinc-900 dark:text-blue-300'
+					: 'text-slate-600 hover:bg-white/60 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800'}"
 				onclick={() => setStatusFilter(tab.key)}
 			>
-				{tab.label}
-				<span class="badge {tab.badge} badge-sm ml-1.5">{tab.count}</span>
+				<span>{tab.label}</span>
+				<span class="rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums {tab.pill}">
+					{tab.count}
+				</span>
 			</button>
 		{/each}
 	</div>
 
 	<form
-		class="flex flex-col items-center gap-2 sm:flex-row"
+		class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center"
 		data-sveltekit-keepfocus
 		data-sveltekit-replacestate
 		onsubmit={submitSearch}
 	>
-		<div class="join w-full">
-			<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
-				<Icon name="search" />
-				<input
-					type="search"
-					name="q"
-					value={searchTerm}
-					spellcheck="false"
-					placeholder="Cari nama murid..."
-					autocomplete="name"
-					oninput={handleSearchInput}
-				/>
-			</label>
-			<select
-				class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink truncate dark:border-none"
-				title="Filter kelas"
-				aria-label="Filter kelas"
-				onchange={(event) => setKelasFilter((event.currentTarget as HTMLSelectElement).value)}
+		<div class="relative flex-1">
+			<span
+				class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 dark:text-zinc-500"
 			>
-				<option value="" selected={(data.page.kelasId ?? '') === ''}>Semua kelas</option>
-				{#each data.daftarKelas ?? [] as kelas (kelas.id)}
-					<option value={kelas.id} selected={String(kelas.id) === (data.page.kelasId ?? '')}
-						>{kelas.nama}{kelas.fase ? ` - ${kelas.fase}` : ''}</option
-					>
-				{/each}
-			</select>
-			<select
-				class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink dark:border-none"
-				value={data.page.perPage}
-				title="Baris per halaman"
-				onchange={(event) =>
-					gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
-			>
-				{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
-					<option value={jumlah}>{jumlah} / hal</option>
-				{/each}
-			</select>
+				<Icon name="search" class="h-4 w-4" />
+			</span>
+			<input
+				type="search"
+				name="q"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+				value={searchTerm}
+				spellcheck="false"
+				placeholder="Cari nama murid..."
+				autocomplete="name"
+				oninput={handleSearchInput}
+			/>
+		</div>
+		<div class="flex flex-wrap items-center gap-2">
+			<div class="relative flex items-center">
+				<select
+					class="h-9 appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					title="Filter kelas"
+					aria-label="Filter kelas"
+					onchange={(event) => setKelasFilter((event.currentTarget as HTMLSelectElement).value)}
+				>
+					<option value="" selected={(data.page.kelasId ?? '') === ''}>Semua kelas</option>
+					{#each data.daftarKelas ?? [] as kelas (kelas.id)}
+						<option value={kelas.id} selected={String(kelas.id) === (data.page.kelasId ?? '')}>
+							{kelas.nama}{kelas.fase ? ` - ${kelas.fase}` : ''}
+						</option>
+					{/each}
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					value={data.page.perPage}
+					title="Baris per halaman"
+					onchange={(event) =>
+						gotoPerHalaman(Number((event.currentTarget as HTMLSelectElement).value))}
+				>
+					{#each OPSI_BARIS_PER_HALAMAN as jumlah (jumlah)}
+						<option value={jumlah}>{jumlah} / hal</option>
+					{/each}
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
 		</div>
 	</form>
 
 	<div
-		class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+		class="mt-4 overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 	>
-		<table class="border-base-200 table min-w-[720px] border dark:border-none">
+		<table class="w-full min-w-[720px] border-collapse text-xs">
 			<thead>
-				<tr class="bg-base-200 dark:bg-base-300 text-left font-bold">
-					<th style="width: 60px;">No</th>
-					<th style="width: 30%;">Nama</th>
-					<th class="w-full">Catatan</th>
-					<th style="width: 160px; min-width: 120px;">Aksi</th>
+				<tr
+					class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+				>
+					<th style="width: 56px;" class="px-3 py-2.5">No</th>
+					<th style="width: 30%;" class="px-3 py-2.5">Nama</th>
+					<th class="w-full px-3 py-2.5">Catatan</th>
+					<th style="width: 140px; min-width: 120px;" class="px-3 py-2.5 text-right">Aksi</th>
 				</tr>
 			</thead>
-			<tbody>
+			<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 				{#each data.daftarCatatan as item (item.id)}
 					{@const formId = `edit-catatan-form-${item.id}`}
-					<tr class={editingRowId === item.id ? 'bg-base-200/40' : undefined}>
-						<td class="align-top">{item.no}</td>
-						<td class="align-top">{@html searchQueryMarker(data.page.search, item.nama)}</td>
-						<td class="align-top">
+					<tr
+						class={editingRowId === item.id
+							? 'bg-blue-50/50 dark:bg-blue-950/20'
+							: 'transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40'}
+					>
+						<td class="px-3 py-2.5 align-top tabular-nums text-slate-600 dark:text-zinc-400">
+							{item.no}
+						</td>
+						<td class="px-3 py-2.5 align-top font-medium text-slate-900 dark:text-zinc-100">
+							{@html searchQueryMarker(data.page.search, item.nama)}
+						</td>
+						<td class="px-3 py-2.5 align-top">
 							{#if editingRowId === item.id}
 								<FormEnhance
 									id={formId}
@@ -379,42 +423,42 @@
 								>
 									{#snippet children({ submitting, invalid })}
 										<input name="muridId" value={item.id} hidden />
-										<label class="flex flex-col gap-2" aria-busy={submitting}>
+										<label class="flex flex-col gap-1.5" aria-busy={submitting}>
 											<textarea
 												bind:this={editingTextarea}
-												class="textarea textarea-bordered bg-base-200 dark:bg-base-300 w-full dark:border-none"
+												class="w-full rounded-xl border border-[#7e8b9b] bg-white p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 												name="catatan"
 												rows="4"
 												bind:value={editingCatatan}
 												placeholder={`Tuliskan catatan untuk ${item.nama}`}
 												spellcheck="false"
 												aria-invalid={invalid}></textarea>
-											<small class="text-base-content/60 text-xs">
+											<small class="text-[11px] text-slate-500 dark:text-zinc-400">
 												Kosongkan catatan dan simpan untuk menghapus.
 											</small>
 										</label>
 									{/snippet}
 								</FormEnhance>
 							{:else if item.catatan}
-								<p class="whitespace-pre-line">{item.catatan}</p>
+								<p class="whitespace-pre-line text-slate-800 dark:text-zinc-200">{item.catatan}</p>
 							{:else}
-								<span class="italic opacity-60">Belum ada catatan</span>
+								<span class="italic text-slate-400 dark:text-zinc-500">Belum ada catatan</span>
 							{/if}
 						</td>
-						<td class="align-top">
+						<td class="px-3 py-2.5 align-top text-right">
 							{#if editingRowId === item.id}
-								<div class="flex justify-end gap-2">
+								<div class="inline-flex items-center justify-end gap-1.5">
 									<button
 										type="button"
-										class="btn btn-soft btn-sm btn-error shadow-none"
+										class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-red-300 bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
 										onclick={cancelEdit}
 										disabled={editingSubmitting}
 										title="Batalkan edit catatan"
 									>
-										<Icon name="close" />
+										<Icon name="close" class="h-3.5 w-3.5" />
 									</button>
 									<button
-										class="btn btn-sm btn-primary shadow-none"
+										class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
 										form={formId}
 										type="submit"
 										disabled={editingSaveDisabled}
@@ -422,20 +466,22 @@
 									>
 										{#if editingSubmitting}
 											<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+										{:else}
+											<Icon name="save" class="h-3.5 w-3.5" />
 										{/if}
-										<Icon name="save" />
 									</button>
 								</div>
 							{:else}
 								<div class="flex justify-end">
 									<button
 										type="button"
-										class="btn btn-sm btn-soft shadow-none"
+										class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 										onclick={() => startEdit(item)}
 										disabled={editingRowId !== null || !canEdit}
+										aria-disabled={editingRowId !== null || !canEdit}
 										title={!canEdit ? 'Anda tidak memiliki izin untuk mengedit' : ''}
 									>
-										<Icon name="edit" />
+										<Icon name="edit" class="h-3.5 w-3.5" />
 										Edit
 									</button>
 								</div>
@@ -444,9 +490,12 @@
 					</tr>
 				{:else}
 					<tr>
-						<td class="p-7 text-center italic opacity-60" colspan="4"
-							>Belum ada murid pada kelas ini</td
+						<td
+							class="p-8 text-center text-xs italic text-slate-500 dark:text-zinc-400"
+							colspan="4"
 						>
+							Belum ada murid pada kelas ini
+						</td>
 					</tr>
 				{/each}
 			</tbody>
@@ -454,44 +503,44 @@
 	</div>
 
 	{#if totalPages > 1}
-		<div class="mt-4 flex justify-center">
-			<div class="join">
-				<button
-					type="button"
-					class="join-item btn"
-					disabled={currentPage <= 1}
-					onclick={() => handlePageClick(currentPage - 1)}
-				>
-					«
-				</button>
-				{#each nomorHalaman as nomor, index (index)}
-					{#if nomor === '…'}
-						<button type="button" class="join-item btn" disabled>…</button>
-					{:else}
-						<button
-							type="button"
-							class="join-item btn pointer-events-auto"
-							class:btn-active={nomor === currentPage}
-							onclick={() => handlePageClick(nomor)}
-							aria-current={nomor === currentPage ? 'page' : undefined}
-						>
-							{nomor}
-						</button>
-					{/if}
-				{/each}
-				<button
-					type="button"
-					class="join-item btn"
-					disabled={currentPage >= totalPages}
-					onclick={() => handlePageClick(currentPage + 1)}
-				>
-					»
-				</button>
-			</div>
+		<div class="mt-4 flex flex-wrap items-center justify-center gap-1">
+			<button
+				type="button"
+				class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+				disabled={currentPage <= 1}
+				onclick={() => handlePageClick(currentPage - 1)}
+			>
+				&laquo;
+			</button>
+			{#each nomorHalaman as nomor, index (index)}
+				{#if nomor === '…'}
+					<span class="inline-flex h-8 items-center px-1.5 text-xs text-slate-400">...</span>
+				{:else}
+					<button
+						type="button"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors {nomor ===
+						currentPage
+							? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
+							: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
+						onclick={() => handlePageClick(nomor)}
+						aria-current={nomor === currentPage ? 'page' : undefined}
+					>
+						{nomor}
+					</button>
+				{/if}
+			{/each}
+			<button
+				type="button"
+				class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+				disabled={currentPage >= totalPages}
+				onclick={() => handlePageClick(currentPage + 1)}
+			>
+				&raquo;
+			</button>
 		</div>
 	{/if}
 
-	<p class="mt-3 text-center text-sm opacity-70">
+	<p class="mt-3 text-center text-xs text-slate-500 tabular-nums dark:text-zinc-400">
 		Menampilkan {data.daftarCatatan.length} dari {data.page.totalItems ?? 0} data
 	</p>
 </div>

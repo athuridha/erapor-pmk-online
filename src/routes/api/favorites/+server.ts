@@ -23,7 +23,15 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		return json({ message: 'Unauthorized' }, { status: 401 });
 	}
 
-	const { path, title } = await request.json();
+	let body: { path?: unknown; title?: unknown };
+	try {
+		body = await request.json();
+	} catch {
+		return json({ message: 'Invalid JSON body' }, { status: 400 });
+	}
+
+	const path = typeof body.path === 'string' ? body.path.trim() : '';
+	const title = typeof body.title === 'string' ? body.title.trim() : '';
 	if (!path || !title) {
 		return json({ message: 'path and title are required' }, { status: 400 });
 	}
@@ -33,14 +41,20 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 	});
 
 	if (existing) {
-		return json({ message: 'Already favorited' }, { status: 409 });
+		return json({ message: 'Already favorited', favorite: existing }, { status: 409 });
 	}
 
 	const now = new Date().toISOString();
-	const [favorite] = await db
+	const inserted = await db
 		.insert(tableUserFavorites)
-		.values({ userId, path, title, updatedAt: now })
+		.values({ userId, path, title, createdAt: now, updatedAt: now })
 		.returning();
+
+	const favorite =
+		inserted[0] ??
+		(await db.query.tableUserFavorites.findFirst({
+			where: and(eq(tableUserFavorites.userId, userId), eq(tableUserFavorites.path, path))
+		}));
 
 	return json({ favorite }, { status: 201 });
 };

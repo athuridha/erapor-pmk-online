@@ -786,7 +786,11 @@
 </script>
 
 <button
-	class="btn btn-primary btn-soft shadow-none max-sm:w-full"
+	type="button"
+	class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-blue-200/80 bg-blue-50 px-3.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100 max-sm:w-full dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950"
 	on:click={downloadLeger}
-	title="Unduh Leger (Excel)"><Icon name="download" />Unduh Leger (.xlsx)</button
+	title="Unduh Leger (Excel)"
 >
+	<Icon name="download" class="h-3.5 w-3.5" />
+	Unduh Leger (.xlsx)
+</button>

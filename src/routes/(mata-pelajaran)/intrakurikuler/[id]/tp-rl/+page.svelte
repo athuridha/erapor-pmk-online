@@ -957,7 +957,9 @@
 {/if}
 
 <!-- Data Mapel Wajib -->
-<div class="card bg-base-100 rounded-box w-full border border-none p-4 shadow-md">
+<div
+	class="w-full rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
 	<Header
 		{mapelDisplayName}
 		mapelKelasNama={data.mapel.kelas.nama}
@@ -993,19 +995,25 @@
 		onOpenSyncModal={() => (syncModalOpen = true)}
 	/>
 	{#if requiresAgamaSelection && !hasActiveAgamaSelection}
-		<div class="alert alert-warning alert-soft my-2 flex items-center gap-2 text-sm">
-			<Icon name="warning" />
+		<div
+			class="my-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/90 px-3.5 py-2.5 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="warning" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>Pilih agama terlebih dahulu sebelum menambahkan tujuan pembelajaran.</span>
 		</div>
 	{/if}
-	<div class="bg-base-100 dark:bg-base-200 overflow-x-auto rounded-md shadow-md dark:shadow-none">
-		<table class="border-base-200 table border dark:border-none">
+	<div
+		class="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<table class="w-full border-collapse text-xs">
 			<thead>
-				<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-					<th style="width: 50px; min-width: 40px;">
+				<tr
+					class="border-b border-slate-200 bg-slate-50 text-left font-semibold text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+				>
+					<th style="width: 48px; min-width: 40px;" class="px-3 py-2.5">
 						<input
 							type="checkbox"
-							class="checkbox"
+							class="checkbox checkbox-sm"
 							aria-label="Pilih semua lingkup materi"
 							bind:this={selectAllCheckbox}
 							checked={allSelected}
@@ -1014,14 +1022,14 @@
 							disabled={selectableGroups.length === 0 || isInteractionLocked}
 						/>
 					</th>
-					<th style="width: 50px; min-width: 40px;">No</th>
-					<th style="width: 30%;">Lingkup Materi</th>
-					<th style="width: 13%">Bobot</th>
-					<th style="width: 60%">Tujuan Pembelajaran</th>
-					<th>Aksi</th>
+					<th style="width: 50px; min-width: 40px;" class="px-3 py-2.5">No</th>
+					<th style="width: 30%;" class="px-3 py-2.5">Lingkup Materi</th>
+					<th style="width: 13%;" class="px-3 py-2.5">Bobot</th>
+					<th style="width: 60%;" class="px-3 py-2.5">Tujuan Pembelajaran</th>
+					<th class="px-3 py-2.5">Aksi</th>
 				</tr>
 			</thead>
-			<tbody>
+			<tbody class="divide-y divide-slate-200 dark:divide-zinc-800">
 				{#if groupForm && groupForm.mode === 'create'}
 					{@const currentForm = groupForm}
 					<GroupFormRow
@@ -1075,7 +1083,9 @@
 					{/each}
 				{:else if !(groupForm && groupForm.mode === 'create')}
 					<tr>
-						<td class="text-center italic opacity-50" colspan="5">Belum ada data</td>
+						<td class="p-8 text-center text-xs italic text-slate-500 dark:text-zinc-400" colspan="6">
+							Belum ada data
+						</td>
 					</tr>
 				{/if}
 			</tbody>

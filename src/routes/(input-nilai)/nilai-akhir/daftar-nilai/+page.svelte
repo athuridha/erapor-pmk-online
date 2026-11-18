@@ -116,16 +116,22 @@
 	}
 </script>
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="mb-2 flex flex-col gap-2 sm:flex-row">
-		<a href="/nilai-akhir/" class="btn btn-soft shadow-none">
-			<Icon name="left" />
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div class="mb-4 flex flex-col gap-2 sm:flex-row">
+		<a
+			href="/nilai-akhir/"
+			class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+		>
+			<Icon name="left" class="h-4 w-4" />
 			Kembali
 		</a>
 		<button
-			class="btn btn-soft shadow-none sm:ml-auto"
-			class:loading={exporting}
+			type="button"
+			class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 			disabled={!hasNilai || exporting}
+			aria-disabled={!hasNilai || exporting}
 			title={exporting
 				? 'Sedang menyiapkan file Excel'
 				: hasNilai
@@ -133,67 +139,99 @@
 					: 'Belum ada nilai untuk diexport'}
 			onclick={handleExport}
 		>
-			<Icon name="export" />
+			{#if exporting}
+				<span class="loading loading-spinner loading-xs"></span>
+			{:else}
+				<Icon name="export" class="h-4 w-4" />
+			{/if}
 			Export
 		</button>
 	</div>
 
 	{#if status === 'ready' && murid}
-		<div class="border-base-200 flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-center">
+		<div
+			class="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800"
+		>
 			<div>
-				<h2 class="text-xl font-bold">Rekap Nilai Akhir Murid</h2>
-				<p class="text-base-content/80">{murid.nama}</p>
+				<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+					Rekap Nilai Akhir Murid
+				</h1>
+				<p class="mt-0.5 text-sm font-medium text-slate-700 dark:text-zinc-300">{murid.nama}</p>
 				{#if kelasAktifLabel}
-					<p class="text-base-content/60 text-sm">Kelas {kelasAktifLabel}</p>
+					<p class="text-xs text-slate-500 dark:text-zinc-400">Kelas {kelasAktifLabel}</p>
 				{/if}
 			</div>
-			<div class="divider sm:divider-horizontal"></div>
-			<div class="flex flex-wrap gap-4">
-				<div>
-					<p class="text-base-content/60 text-sm tracking-wide uppercase">Rata-rata</p>
-					<p class="text-3xl font-semibold">{@html rataRataDisplay}</p>
+			<div class="flex flex-wrap gap-3">
+				<div
+					class="rounded-xl border border-slate-200/70 bg-slate-50/80 px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/50"
+				>
+					<p
+						class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase dark:text-zinc-400"
+					>
+						Rata-rata
+					</p>
+					<p class="mt-0.5 text-2xl font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+						{@html rataRataDisplay}
+					</p>
 				</div>
-				<div>
-					<p class="text-base-content/60 text-sm tracking-wide uppercase">Mapel Dinilai</p>
-					<p class="text-xl font-semibold">{coverageDisplay}</p>
+				<div
+					class="rounded-xl border border-slate-200/70 bg-slate-50/80 px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/50"
+				>
+					<p
+						class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase dark:text-zinc-400"
+					>
+						Mapel Dinilai
+					</p>
+					<p class="mt-0.5 text-xl font-bold text-slate-900 tabular-nums dark:text-zinc-100">
+						{coverageDisplay}
+					</p>
 				</div>
 			</div>
-		</div>
-
-		<div role="alert" class="alert rounded-box alert-soft alert-info mt-4">
-			<span class="text-2xl">
-				<Icon name="info" />
-			</span>
-			<span>
-				<p class="text-lg">
-					Nilai rata-rata ananda <b>{murid.nama}</b>
-				</p>
-				<p class="text-2xl font-bold">{@html rataRataDisplay}</p>
-				<p class="text-base-content/70 text-sm">
-					Menggunakan nilai akhir seluruh mata pelajaran yang tersedia.
-				</p>
-			</span>
 		</div>
 
 		<div
-			class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+			role="alert"
+			class="mt-4 flex items-start gap-3 rounded-xl border border-blue-200/80 bg-blue-50/80 p-3.5 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/35 dark:text-blue-200"
 		>
-			<table class="border-base-200 table border dark:border-none">
+			<Icon name="info" class="mt-0.5 h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+			<div>
+				<p class="text-xs">
+					Nilai rata-rata ananda <b>{murid.nama}</b>
+				</p>
+				<p class="mt-0.5 text-xl font-bold tabular-nums">{@html rataRataDisplay}</p>
+				<p class="mt-0.5 text-[11px] text-blue-800/80 dark:text-blue-300/80">
+					Menggunakan nilai akhir seluruh mata pelajaran yang tersedia.
+				</p>
+			</div>
+		</div>
+
+		<div
+			class="mt-4 overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+		>
+			<table class="w-full border-collapse text-xs">
 				<thead>
-					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-						<th style="width: 50px; min-width: 40px;">No</th>
-						<th class="w-full" style="min-width: 150px;">Mata Pelajaran</th>
-						<th style="min-width: 120px;">Nilai Akhir</th>
+					<tr
+						class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+					>
+						<th style="width: 50px; min-width: 40px;" class="px-3 py-2.5">No</th>
+						<th class="w-full px-3 py-2.5" style="min-width: 150px;">Mata Pelajaran</th>
+						<th style="min-width: 120px;" class="px-3 py-2.5">Nilai Akhir</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 					{#if hasNilai}
 						{#each daftarNilai as nilai (nilai.mataPelajaranId)}
-							<tr>
-								<td>{nilai.no}</td>
-								<td>{nilai.mataPelajaran}</td>
+							<tr class="transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40">
+								<td class="px-3 py-2.5 tabular-nums text-slate-600 dark:text-zinc-400"
+									>{nilai.no}</td
+								>
+								<td class="px-3 py-2.5 font-medium text-slate-900 dark:text-zinc-100">
+									{nilai.mataPelajaran}
+								</td>
 								<td
-									class={`font-semibold${nilai.sudahDinilai ? '' : ' text-base-content/60 italic'}`}
+									class="px-3 py-2.5 font-semibold tabular-nums {nilai.sudahDinilai
+										? 'text-slate-900 dark:text-zinc-100'
+										: 'italic text-slate-500 dark:text-zinc-400'}"
 								>
 									{@html formatScore(nilai.nilaiAkhir)}
 								</td>
@@ -201,8 +239,11 @@
 						{/each}
 					{:else}
 						<tr>
-							<td colspan="3" class="p-8 text-center">
-								<em class="opacity-60">Belum ada nilai akhir yang terinput untuk murid ini.</em>
+							<td
+								colspan="3"
+								class="p-8 text-center text-xs italic text-slate-500 dark:text-zinc-400"
+							>
+								Belum ada nilai akhir yang terinput untuk murid ini.
 							</td>
 						</tr>
 					{/if}
@@ -210,17 +251,19 @@
 			</table>
 		</div>
 	{:else}
-		<div class="alert alert-soft alert-warning mt-4 flex items-start gap-3">
-			<Icon name="warning" class="text-xl" />
+		<div
+			class="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="warning" class="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>
 				{#if status === 'not-found'}
 					<p class="font-semibold">Murid tidak ditemukan.</p>
-					<p class="text-base-content/70 text-sm">
+					<p class="mt-0.5 text-amber-900/80 dark:text-amber-200/80">
 						Pastikan Anda memilih murid dari daftar rekap yang sama.
 					</p>
 				{:else}
 					<p class="font-semibold">Pilih murid terlebih dahulu.</p>
-					<p class="text-base-content/70 text-sm">
+					<p class="mt-0.5 text-amber-900/80 dark:text-amber-200/80">
 						Gunakan tombol "Lihat" pada halaman Rekap Nilai Akhir untuk membuka rincian.
 					</p>
 				{/if}

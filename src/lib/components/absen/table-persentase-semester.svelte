@@ -34,21 +34,23 @@
 </script>
 
 <div
-	class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+	class="mt-4 overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 >
-	<table class="border-base-200 table border text-xs sm:text-sm dark:border-none">
+	<table class="w-full border-collapse text-xs">
 		<thead>
-			<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-				<th class="text-center" style="width: 50px; min-width: 40px;">No</th>
-				<th class="w-full" style="min-width: 160px;">Nama</th>
-				<th class="text-right" style="width: 50px; min-width: 40px;">H</th>
-				<th class="text-right" style="width: 50px; min-width: 40px;">S</th>
-				<th class="text-right" style="width: 50px; min-width: 40px;">I</th>
-				<th class="text-right" style="width: 50px; min-width: 40px;">TK</th>
-				<th class="text-right" style="min-width: 180px;">
+			<tr
+				class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+			>
+				<th class="w-12 min-w-10 px-3 py-2.5 text-center">No</th>
+				<th class="w-full min-w-40 px-3.5 py-2.5">Nama</th>
+				<th class="w-12 min-w-10 px-3 py-2.5 text-right">H</th>
+				<th class="w-12 min-w-10 px-3 py-2.5 text-right">S</th>
+				<th class="w-12 min-w-10 px-3 py-2.5 text-right">I</th>
+				<th class="w-12 min-w-10 px-3 py-2.5 text-right">TK</th>
+				<th class="min-w-44 px-3.5 py-2.5 text-right">
 					Persentase Semester
 					{#if totalHariBelajar > 0}
-						<span class="text-base-content/60 block text-xs font-normal">
+						<span class="block text-[11px] font-normal text-slate-400 dark:text-zinc-400">
 							({totalHariBelajar} hari belajar{jenisPresensi === 'tiap_mapel' && totalPertemuan > 0
 								? ` ${totalPertemuan} ${tipePresensi === 'awal_akhir_mapel' ? 'presensi' : 'mapel'}`
 								: totalPresensi != null
@@ -59,22 +61,24 @@
 				</th>
 			</tr>
 		</thead>
-		<tbody>
+		<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 			{#each rows as row (row.no)}
-				<tr>
-					<td class="text-center">{row.no}</td>
-					<td>{row.nama}</td>
-					<td class="text-right">{row.hadir || ''}</td>
-					<td class="text-right">{row.sakit || ''}</td>
-					<td class="text-right">{row.izin || ''}</td>
-					<td class="text-right">{row.alfa || ''}</td>
-					<td class="text-right">
+				<tr class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
+					<td class="px-3 py-2.5 text-center text-slate-500 dark:text-zinc-400">{row.no}</td>
+					<td class="px-3.5 py-2.5 font-medium text-slate-900 dark:text-zinc-100">{row.nama}</td>
+					<td class="px-3 py-2.5 text-right text-slate-700 dark:text-zinc-300">{row.hadir || ''}</td
+					>
+					<td class="px-3 py-2.5 text-right text-slate-700 dark:text-zinc-300">{row.sakit || ''}</td
+					>
+					<td class="px-3 py-2.5 text-right text-slate-700 dark:text-zinc-300">{row.izin || ''}</td>
+					<td class="px-3 py-2.5 text-right text-slate-700 dark:text-zinc-300">{row.alfa || ''}</td>
+					<td class="px-3.5 py-2.5 text-right font-bold">
 						{#if row.persentase >= 80}
-							<span class="text-success font-bold">{row.persentase}%</span>
+							<span class="text-emerald-600 dark:text-emerald-400">{row.persentase}%</span>
 						{:else if row.persentase >= 60}
-							<span class="text-warning font-bold">{row.persentase}%</span>
+							<span class="text-amber-600 dark:text-amber-400">{row.persentase}%</span>
 						{:else}
-							<span class="text-error font-bold">{row.persentase}%</span>
+							<span class="text-red-600 dark:text-red-400">{row.persentase}%</span>
 						{/if}
 					</td>
 				</tr>

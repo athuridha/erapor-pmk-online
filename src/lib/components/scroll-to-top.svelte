@@ -1,40 +1,33 @@
 <script lang="ts">
 	import Icon from './icon.svelte';
 
-	// The main content area is the element that actually scrolls (layout shell).
-	const SELECTOR = '.max-h-\\[calc\\(100vh-4\\.2rem\\)\\]';
-
 	let isVisible = $state(false);
 
 	function scrollToTop() {
-		const scrollContainer = document.querySelector(SELECTOR) as HTMLElement | null;
-		scrollContainer?.scrollTo({ top: 0, behavior: 'smooth' });
+		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
 	function handleScroll() {
-		const scrollContainer = document.querySelector(SELECTOR) as HTMLElement | null;
-		isVisible = (scrollContainer?.scrollTop ?? 0) > 300;
+		isVisible = window.scrollY > 320;
 	}
 
-	// $effect (not $effect.pre): guaranteed to run after the layout DOM exists,
-	// so the scroll container is always found on initial mount.
 	$effect(() => {
-		const scrollContainer = document.querySelector(SELECTOR);
-		if (!scrollContainer) return;
-		scrollContainer.addEventListener('scroll', handleScroll);
-		return () => scrollContainer.removeEventListener('scroll', handleScroll);
+		handleScroll();
+		window.addEventListener('scroll', handleScroll, { passive: true });
+		return () => window.removeEventListener('scroll', handleScroll);
 	});
 </script>
 
 {#if isVisible}
-	<div class="fab end-6 md:end-12 bottom-24 xl:bottom-6">
+	<div class="fixed end-5 bottom-5 z-40">
 		<button
 			type="button"
-			class="btn btn-lg btn-circle btn-primary"
 			onclick={scrollToTop}
-			aria-label="Scroll ke atas"
+			title="Kembali ke atas"
+			aria-label="Kembali ke atas"
+			class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
 		>
-			<Icon name="up" />
+			<span aria-hidden="true"><Icon name="up" class="h-4 w-4" /></span>
 		</button>
 	</div>
 {/if}

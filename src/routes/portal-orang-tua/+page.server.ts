@@ -1,6 +1,7 @@
 import { error, fail } from '@sveltejs/kit';
 import { and, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
 import db from '$lib/server/db';
+import { chunk, queryInChunks, runInChunks } from '$lib/server/db/chunk';
 import {
 	tableKelas,
 	tableMurid,
@@ -62,18 +63,20 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const classMap = new Map(classRows.map((row) => [row.id, row.nama]));
 	const accountIds = accountRows.map((row) => row.id);
 	const linkRows = accountIds.length
-		? await db
-				.select({
-					orangtuaId: tablePortalOrangtuaMurid.orangtuaId,
-					muridId: tablePortalOrangtuaMurid.muridId,
-					hubungan: tablePortalOrangtuaMurid.hubungan,
-					muridNama: tableMurid.nama,
-					nis: tableMurid.nis,
-					kelasId: tableMurid.kelasId
-				})
-				.from(tablePortalOrangtuaMurid)
-				.innerJoin(tableMurid, eq(tablePortalOrangtuaMurid.muridId, tableMurid.id))
-				.where(inArray(tablePortalOrangtuaMurid.orangtuaId, accountIds))
+		? await queryInChunks(accountIds, (ids) =>
+				db
+					.select({
+						orangtuaId: tablePortalOrangtuaMurid.orangtuaId,
+						muridId: tablePortalOrangtuaMurid.muridId,
+						hubungan: tablePortalOrangtuaMurid.hubungan,
+						muridNama: tableMurid.nama,
+						nis: tableMurid.nis,
+						kelasId: tableMurid.kelasId
+					})
+					.from(tablePortalOrangtuaMurid)
+					.innerJoin(tableMurid, eq(tablePortalOrangtuaMurid.muridId, tableMurid.id))
+					.where(inArray(tablePortalOrangtuaMurid.orangtuaId, ids))
+			)
 		: [];
 
 	const childrenByAccount = new Map<
@@ -136,118 +139,182 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	generate: async ({ locals }) => {
 		authority('portal_orang_tua');
-		await ensurePortalOrangtuaSchema();
 		const sekolahId = activeContext(locals);
 
-		const semester =
-			(await db.query.tableSemester.findFirst({ where: eq(tableSemester.isAktif, true) })) ??
-			(await db.query.tableSemester.findFirst({
-				orderBy: (table, { desc }) => [desc(table.id)]
-			}));
-		if (!semester) return fail(400, { error: 'Semester aktif belum diatur.' });
+		try {
+			await ensurePortalOrangtuaSchema();
 
-		const students = await db.query.tableMurid.findMany({
-			where: and(eq(tableMurid.sekolahId, sekolahId), eq(tableMurid.semesterId, semester.id)),
-			columns: { id: true, nama: true, ibuId: true, ayahId: true, waliId: true }
-		});
-		const waliIds = [
-			...new Set(
-				students
-					.flatMap((student) => [student.ibuId, student.ayahId, student.waliId])
-					.filter((id): id is number => id != null)
-			)
-		];
-		const waliRows = waliIds.length
-			? await db.query.tableWaliMurid.findMany({ where: inArray(tableWaliMurid.id, waliIds) })
-			: [];
-		const waliMap = new Map(waliRows.map((row) => [row.id, row]));
+			const semester =
+				(await db.query.tableSemester.findFirst({ where: eq(tableSemester.isAktif, true) })) ??
+				(await db.query.tableSemester.findFirst({
+					orderBy: (table, { desc }) => [desc(table.id)]
+				}));
+			if (!semester) return fail(400, { error: 'Semester aktif belum diatur.' });
 
-		const groups = new Map<string, ParentGroup>();
-		for (const student of students) {
-			const relations: Array<['ayah' | 'ibu' | 'wali', number | null]> = [
-				['ibu', student.ibuId],
-				['ayah', student.ayahId],
-				['wali', student.waliId]
-			];
-			for (const [hubungan, waliId] of relations) {
-				if (!waliId) continue;
-				const wali = waliMap.get(waliId);
-				const telepon = normalizePhone(wali?.kontak);
-				if (!wali || !telepon) continue;
-				const group = groups.get(telepon) ?? { nama: wali.nama, links: [] };
-				if (hubungan === 'ibu') group.nama = wali.nama;
-				if (!group.links.some((link) => link.muridId === student.id)) {
-					group.links.push({ muridId: student.id, hubungan });
-				}
-				groups.set(telepon, group);
-			}
-		}
-
-		if (groups.size === 0) {
-			return fail(400, {
-				error:
-					'Tidak ada nomor HP wali murid yang bisa dipakai. Isi kolom kontak orang tua/wali di menu Murid terlebih dahulu.'
+			const students = await db.query.tableMurid.findMany({
+				where: and(eq(tableMurid.sekolahId, sekolahId), eq(tableMurid.semesterId, semester.id)),
+				columns: { id: true, nama: true, ibuId: true, ayahId: true, waliId: true }
 			});
-		}
+			const waliIds = [
+				...new Set(
+					students
+						.flatMap((student) => [student.ibuId, student.ayahId, student.waliId])
+						.filter((id): id is number => id != null)
+				)
+			];
+			// Pecah query IN per 90 parameter agar tidak melewati batas 100 parameter D1.
+			const waliRows = waliIds.length
+				? await queryInChunks(waliIds, (ids) =>
+						db.query.tableWaliMurid.findMany({ where: inArray(tableWaliMurid.id, ids) })
+					)
+				: [];
+			const waliMap = new Map(waliRows.map((row) => [row.id, row]));
 
-		const existing = await db.query.tablePortalOrangtua.findMany({
-			where: eq(tablePortalOrangtua.sekolahId, sekolahId)
-		});
-		const existingByPhone = new Map(existing.map((row) => [row.telepon, row]));
-		let created = 0;
-		let linked = 0;
+			const groups = new Map<string, ParentGroup>();
+			for (const student of students) {
+				const relations: Array<['ayah' | 'ibu' | 'wali', number | null]> = [
+					['ibu', student.ibuId],
+					['ayah', student.ayahId],
+					['wali', student.waliId]
+				];
+				for (const [hubungan, waliId] of relations) {
+					if (!waliId) continue;
+					const wali = waliMap.get(waliId);
+					const telepon = normalizePhone(wali?.kontak);
+					if (!wali || !telepon) continue;
+					const group = groups.get(telepon) ?? { nama: wali.nama, links: [] };
+					if (hubungan === 'ibu') group.nama = wali.nama;
+					if (!group.links.some((link) => link.muridId === student.id)) {
+						group.links.push({ muridId: student.id, hubungan });
+					}
+					groups.set(telepon, group);
+				}
+			}
 
-		for (const [telepon, group] of groups) {
-			const account = existingByPhone.get(telepon);
-			if (!account) {
-				const initial = defaultPortalPassword(telepon);
-				const hashed = hashPortalPassword(initial);
+			if (groups.size === 0) {
+				return fail(400, {
+					error:
+						'Tidak ada nomor HP wali murid yang bisa dipakai. Isi kolom kontak orang tua/wali di menu Murid terlebih dahulu.'
+				});
+			}
+
+			const existing = await db.query.tablePortalOrangtua.findMany({
+				where: eq(tablePortalOrangtua.sekolahId, sekolahId)
+			});
+			const existingByPhone = new Map(existing.map((row) => [row.telepon, row]));
+			const existingIds = existing.map((row) => row.id);
+			const existingLinks = existingIds.length
+				? await queryInChunks(existingIds, (ids) =>
+						db
+							.select({
+								orangtuaId: tablePortalOrangtuaMurid.orangtuaId,
+								muridId: tablePortalOrangtuaMurid.muridId
+							})
+							.from(tablePortalOrangtuaMurid)
+							.where(inArray(tablePortalOrangtuaMurid.orangtuaId, ids))
+					)
+				: [];
+			const existingLinkPairs = new Set(
+				existingLinks.map((row) => `${row.orangtuaId}:${row.muridId}`)
+			);
+
+			const inactiveAccountIds: number[] = [];
+			const toCreate: Array<{
+				telepon: string;
+				group: ParentGroup;
+				values: typeof tablePortalOrangtua.$inferInsert;
+			}> = [];
+			const pendingLinks: Array<{
+				orangtuaId: number;
+				muridId: number;
+				hubungan: 'ayah' | 'ibu' | 'wali';
+			}> = [];
+
+			for (const [telepon, group] of groups) {
+				const account = existingByPhone.get(telepon);
+				if (!account) {
+					const initial = defaultPortalPassword(telepon);
+					const hashed = hashPortalPassword(initial);
+					toCreate.push({
+						telepon,
+						group,
+						values: {
+							sekolahId,
+							telepon,
+							nama: group.nama,
+							passwordHash: hashed.hash,
+							passwordSalt: hashed.salt,
+							mustChangePassword: true,
+							isActive: true,
+							forcePasswordSync: true
+						}
+					});
+				} else {
+					if (!account.isActive) inactiveAccountIds.push(account.id);
+					for (const link of group.links) {
+						const key = `${account.id}:${link.muridId}`;
+						if (!existingLinkPairs.has(key)) {
+							existingLinkPairs.add(key);
+							pendingLinks.push({
+								orangtuaId: account.id,
+								muridId: link.muridId,
+								hubungan: link.hubungan
+							});
+						}
+					}
+				}
+			}
+
+			if (inactiveAccountIds.length > 0) {
+				const now = new Date().toISOString();
+				await runInChunks(inactiveAccountIds, (ids) =>
+					db
+						.update(tablePortalOrangtua)
+						.set({ isActive: true, updatedAt: now })
+						.where(inArray(tablePortalOrangtua.id, ids))
+				);
+			}
+
+			let created = 0;
+			for (const batch of chunk(toCreate, 8)) {
 				const inserted = await db
 					.insert(tablePortalOrangtua)
-					.values({
-						sekolahId,
-						telepon,
-						nama: group.nama,
-						passwordHash: hashed.hash,
-						passwordSalt: hashed.salt,
-						mustChangePassword: true,
-						isActive: true,
-						forcePasswordSync: true
-					})
-					.returning({ id: tablePortalOrangtua.id });
-				const id = inserted[0]?.id;
-				if (!id) continue;
-				created += 1;
-				for (const link of group.links) {
-					const result = await db
-						.insert(tablePortalOrangtuaMurid)
-						.values({ orangtuaId: id, muridId: link.muridId, hubungan: link.hubungan })
-						.onConflictDoNothing()
-						.returning({ muridId: tablePortalOrangtuaMurid.muridId });
-					if (result.length) linked += 1;
-				}
-				continue;
-			} else {
-				if (!account.isActive) {
-					await db
-						.update(tablePortalOrangtua)
-						.set({ isActive: true, updatedAt: new Date().toISOString() })
-						.where(eq(tablePortalOrangtua.id, account.id));
-				}
-				for (const link of group.links) {
-					const result = await db
-						.insert(tablePortalOrangtuaMurid)
-						.values({ orangtuaId: account.id, muridId: link.muridId, hubungan: link.hubungan })
-						.onConflictDoNothing()
-						.returning({ muridId: tablePortalOrangtuaMurid.muridId });
-					if (result.length) linked += 1;
+					.values(batch.map((entry) => entry.values))
+					.returning({ id: tablePortalOrangtua.id, telepon: tablePortalOrangtua.telepon });
+				const idByPhone = new Map(inserted.map((row) => [row.telepon, row.id]));
+				created += inserted.length;
+				for (const entry of batch) {
+					const id = idByPhone.get(entry.telepon);
+					if (!id) continue;
+					for (const link of entry.group.links) {
+						const key = `${id}:${link.muridId}`;
+						if (!existingLinkPairs.has(key)) {
+							existingLinkPairs.add(key);
+							pendingLinks.push({
+								orangtuaId: id,
+								muridId: link.muridId,
+								hubungan: link.hubungan
+							});
+						}
+					}
 				}
 			}
-		}
 
-		return {
-			generated: { accounts: created, links: linked, phones: groups.size }
-		};
+			let linked = 0;
+			for (const batch of chunk(pendingLinks, 25)) {
+				await db.insert(tablePortalOrangtuaMurid).values(batch).onConflictDoNothing();
+				linked += batch.length;
+			}
+
+			return {
+				generated: { accounts: created, links: linked, phones: groups.size }
+			};
+		} catch (err) {
+			console.error('[portal] gagal membuat akun dari data wali', err);
+			return fail(500, {
+				error: err instanceof Error ? err.message : 'Gagal membuat akun portal dari data wali.'
+			});
+		}
 	},
 
 	create: async ({ request, locals }) => {
@@ -280,10 +347,12 @@ export const actions: Actions = {
 			return fail(400, { error: 'Nomor HP ini sudah punya akun. Gunakan tombol reset password.' });
 		}
 
-		const students = await db.query.tableMurid.findMany({
-			where: and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, muridIds)),
-			columns: { id: true }
-		});
+		const students = await queryInChunks(muridIds, (ids) =>
+			db.query.tableMurid.findMany({
+				where: and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, ids)),
+				columns: { id: true }
+			})
+		);
 		if (students.length !== muridIds.length) {
 			return fail(400, { error: 'Ada murid yang tidak valid untuk sekolah ini.' });
 		}

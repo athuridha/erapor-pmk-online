@@ -190,11 +190,22 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 
 	const canAccessAdmin = isAdminUser(user);
 	let canAccessWaliKelas = canAccessAdmin || user?.type === 'wali_kelas';
-	let activeModul: 'admin' | 'wali_kelas' | 'guru' = canAccessAdmin ? 'admin' : 'guru';
+	let activeModul: 'admin' | 'wali_kelas' | 'guru' | 'pembina_eskul' = canAccessAdmin
+		? 'admin'
+		: user?.type === 'pembina_eskul'
+			? 'pembina_eskul'
+			: 'guru';
 
 	if (sekolah?.id) {
 		const userWithType = user as { type?: string; id?: number; pegawaiId?: number } | null;
-		if ((userWithType?.type === 'wali_kelas' || userWithType?.type === 'user') && userWithType.id) {
+		const isPembinaEskul = userWithType?.type === 'pembina_eskul';
+		const isTeacherOrWali = userWithType?.type === 'wali_kelas' || userWithType?.type === 'user';
+
+		if (isPembinaEskul) {
+			activeModul = 'pembina_eskul';
+			canAccessWaliKelas = false;
+			daftarKelas = [];
+		} else if (userWithType?.id) {
 			const ownKelasPromise = userWithType.pegawaiId
 				? db.query.tableKelas.findMany({
 						columns: { id: true },
@@ -218,10 +229,12 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 					})
 				: Promise.resolve([]);
 
-			const allowedKelasPromise = db.query.tableAuthUserKelas.findMany({
-				columns: { kelasId: true },
-				where: eq(tableAuthUserKelas.authUserId, userWithType.id)
-			});
+			const allowedKelasPromise = isTeacherOrWali
+				? db.query.tableAuthUserKelas.findMany({
+						columns: { kelasId: true },
+						where: eq(tableAuthUserKelas.authUserId, userWithType.id)
+					})
+				: Promise.resolve([]);
 
 			const [ownKelasRows, mapelKelasRows, allowedKelasRecords] = await Promise.all([
 				ownKelasPromise,
@@ -236,6 +249,16 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 				canAccessWaliKelas = true;
 			}
 
+			for (const r of mapelKelasRows) {
+				teachingKelasIds.add(r.kelasId);
+			}
+
+			allUserAllowedKelasIds = new Set([
+				...ownKelasIds,
+				...allowedKelasRecords.map((r) => r.kelasId),
+				...teachingKelasIds
+			]);
+
 			const activeModulCookie = cookies.get(cookieNames.ACTIVE_MODUL);
 			if (activeModulCookie === 'admin' && canAccessAdmin) {
 				activeModul = 'admin';
@@ -247,24 +270,17 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 				activeModul = canAccessAdmin ? 'admin' : canAccessWaliKelas ? 'wali_kelas' : 'guru';
 			}
 
-			for (const r of mapelKelasRows) {
-				teachingKelasIds.add(r.kelasId);
-			}
-
-			allUserAllowedKelasIds = new Set([
-				...ownKelasIds,
-				...allowedKelasRecords.map((r) => r.kelasId),
-				...teachingKelasIds
-			]);
-
-			// Modul Wali-Kelas hanya memuat kelas binaan wali kelas (tidak mencampur kelas mapel lain)
-			// Modul Guru memuat kelas yang benar-benar diajar oleh guru tersebut
+			// Scope classes to the active module:
+			// - Modul Wali Kelas: homeroom classes (or all active classes when admin previews without assignment)
+			// - Modul Guru: taught classes (or allUserAllowed/active classes as fallback)
 			const targetKelasSet =
 				activeModul === 'wali_kelas' && ownKelasIds.size > 0
 					? ownKelasIds
 					: activeModul === 'guru' && teachingKelasIds.size > 0
 						? teachingKelasIds
-						: allUserAllowedKelasIds;
+						: isTeacherOrWali
+							? allUserAllowedKelasIds
+							: new Set<number>();
 
 			if (targetKelasSet.size > 0) {
 				daftarKelas = await db.query.tableKelas.findMany({
@@ -283,7 +299,6 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 					orderBy: asc(tableKelas.nama)
 				});
 			} else {
-				// Fallback bila guru belum memiliki batasan kelas: tampilkan seluruh kelas aktif
 				daftarKelas = await db.query.tableKelas.findMany({
 					columns: { id: true, nama: true, fase: true },
 					with: { waliKelas: { columns: { id: true, nama: true } } },
@@ -297,7 +312,6 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 				});
 			}
 		} else {
-			// Admin/other: get kelas from active semester only
 			daftarKelas = await db.query.tableKelas.findMany({
 				columns: { id: true, nama: true, fase: true },
 				with: { waliKelas: { columns: { id: true, nama: true } } },
@@ -333,10 +347,9 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	const kelasAliasParam = diKelasKonten ? null : url.searchParams.get('kelas');
 	const kelasOverrideRaw = kelasIdParam ?? kelasAliasParam;
 
-	// Admin & kepala sekolah boleh berada "di luar kelas": data diambil dari
-	// semua kelas (tanpa filter kelas), dan bisa masuk ke kelas mana saja.
-	// Tanpa pilihan kelas eksplisit di URL, Admin selalu default ke mode "Semua Kelas".
-	const bolehSemuaKelas = isAdminUser(user);
+	// Admin & kepala sekolah hanya masuk mode "Semua Kelas" saat berada di Mode Admin.
+	// Saat Admin beralih ke Modul Wali Kelas atau Modul Guru, sistem memilih satu kelas agar alur role konsisten.
+	const bolehSemuaKelas = isAdminUser(user) && activeModul === 'admin';
 	let pilihSemuaKelas = false;
 	if (bolehSemuaKelas) {
 		if (kelasIdParam === SEMUA_KELAS) {
@@ -536,6 +549,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 					path: '/',
 					maxAge: 31536000,
 					sameSite: 'lax',
+					httpOnly: false,
 					secure
 				});
 			}
@@ -574,7 +588,10 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		const isOwnKelas = kelasAktif != null && resolvedWaliOwnKelasIds.includes(kelasAktif.id);
 		const canEditUrutan =
 			isAdminUser(user) ||
-			userType === 'wali_kelas' ||
+			(userType === 'wali_kelas' &&
+				(resolvedWaliOwnKelasIds.length > 0
+					? isOwnKelas
+					: kelasAktif != null && Number(user.kelasId) === kelasAktif.id)) ||
 			// Guru merangkap wali kelas (type 'user'): boleh mengatur kelas diwali-nya.
 			(userType === 'user' && isOwnKelas);
 		const canAddImportMapel = canEditUrutan;
@@ -588,7 +605,8 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		userForClient = Object.assign({}, user, {
 			kelasId: resolvedKelasId,
 			ownKelasIds: resolvedWaliOwnKelasIds,
-			pegawaiName: pegawaiRecord?.nama ?? null,
+			pegawaiName:
+				pegawaiRecord?.nama ?? (user as { namaLengkap?: string | null }).namaLengkap ?? null,
 			canManageMapel,
 			canEditUrutan,
 			canAddImportMapel
@@ -609,11 +627,13 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 			// Mode "di luar kelas": simpan penanda agar tetap aktif di halaman lain.
 			cookies.set(cookieNames.ACTIVE_KELAS_ID, SEMUA_KELAS, {
 				path: '/',
+				httpOnly: false,
 				secure
 			});
 		} else if (kelasAktif) {
 			cookies.set(cookieNames.ACTIVE_KELAS_ID, String(kelasAktif.id), {
 				path: '/',
+				httpOnly: false,
 				secure
 			});
 		} else {
@@ -701,7 +721,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	const kelasPicker = {
 		tampil: pakaiPickerLokal && pilihanPicker.length > 0,
 		currentId: kelasAktif?.id ?? null,
-		bolehSemuaKelas: isAdminUser(user),
+		bolehSemuaKelas,
 		pilihan: pilihanPicker.map(({ id, nama, fase }) => ({ id, nama, fase }))
 	};
 

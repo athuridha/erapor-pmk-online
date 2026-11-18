@@ -2,26 +2,40 @@ import db from '$lib/server/db';
 import {
 	tableEkstrakurikuler,
 	tableMurid,
+	tableMuridEkstrakurikuler,
 	tableKelas,
 	tableEkstrakurikulerTujuan
 } from '$lib/server/db/schema';
 import { error } from '@sveltejs/kit';
 import { asc, eq } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
+import { isAdminUser, isAuthorizedUser } from '../../../pengguna/permissions';
 
 export async function POST({ request, locals }) {
 	try {
+		const user = locals.user;
+		if (!user) throw error(401, 'Silakan login terlebih dahulu');
+		if (
+			!isAdminUser(user) &&
+			user.type !== 'wali_kelas' &&
+			user.type !== 'wali_asuh' &&
+			!isAuthorizedUser(['input_nilai_nilai_ekstrakurikuler'], user)
+		) {
+			throw error(403, 'Anda tidak memiliki izin');
+		}
+
 		const formData = await request.formData();
 		const ekstrakurikulerIdRaw = formData.get('ekstrakurikulerId')?.toString();
 		const kelasIdRaw = formData.get('kelasId')?.toString();
 
-		if (!ekstrakurikulerIdRaw || !kelasIdRaw || !locals.sekolah?.id) {
+		if (!ekstrakurikulerIdRaw || !locals.sekolah?.id) {
 			throw error(400, 'Data tidak lengkap');
 		}
 
 		const ekstrakurikulerId = Number(ekstrakurikulerIdRaw);
-		const kelasId = Number(kelasIdRaw);
-		if (!Number.isInteger(ekstrakurikulerId) || !Number.isInteger(kelasId)) {
+		const kelasId = Number(kelasIdRaw ?? 0) || 0;
+		const isPembinaUser = user.type === 'pembina_eskul';
+		if (!Number.isInteger(ekstrakurikulerId) || (!isPembinaUser && kelasId <= 0)) {
 			throw error(400, 'ID tidak valid');
 		}
 
@@ -29,10 +43,15 @@ export async function POST({ request, locals }) {
 			where: eq(tableEkstrakurikuler.id, ekstrakurikulerId)
 		});
 
-		if (
-			!ekstrakurikuler ||
-			(ekstrakurikuler.kelasId !== kelasId && ekstrakurikuler.semuaKelas !== 1)
-		) {
+		if (!ekstrakurikuler) {
+			throw error(404, 'Ekstrakurikuler tidak ditemukan');
+		}
+
+		if (isPembinaUser) {
+			if (ekstrakurikuler.pembinaUserId !== user.id) {
+				throw error(403, 'Ekstrakurikuler ini bukan binaan Anda');
+			}
+		} else if (ekstrakurikuler.kelasId !== kelasId && ekstrakurikuler.semuaKelas !== 1) {
 			throw error(404, 'Ekstrakurikuler tidak ditemukan');
 		}
 
@@ -41,16 +60,39 @@ export async function POST({ request, locals }) {
 			orderBy: asc(tableEkstrakurikulerTujuan.createdAt)
 		});
 
-		const muridList = await db.query.tableMurid.findMany({
-			columns: { id: true, nama: true },
-			where: eq(tableMurid.kelasId, kelasId),
-			orderBy: asc(tableMurid.nama)
-		});
+		let muridList: Array<{ id: number; nama: string }> = [];
+		let subtitleKelas = 'Kelas';
+		if (isPembinaUser && kelasId === 0) {
+			const anggota = await db
+				.select({ id: tableMurid.id, nama: tableMurid.nama })
+				.from(tableMuridEkstrakurikuler)
+				.innerJoin(tableMurid, eq(tableMuridEkstrakurikuler.muridId, tableMurid.id))
+				.where(eq(tableMuridEkstrakurikuler.ekstrakurikulerId, ekstrakurikulerId))
+				.orderBy(asc(tableMurid.nama));
+			if (anggota.length > 0 || ekstrakurikuler.semuaKelas === 1) {
+				muridList = anggota;
+			} else {
+				muridList = await db.query.tableMurid.findMany({
+					columns: { id: true, nama: true },
+					where: eq(tableMurid.kelasId, ekstrakurikuler.kelasId),
+					orderBy: asc(tableMurid.nama)
+				});
+			}
+			subtitleKelas = 'Anggota Lintas Kelas';
+		} else {
+			muridList = await db.query.tableMurid.findMany({
+				columns: { id: true, nama: true },
+				where: eq(tableMurid.kelasId, kelasId),
+				orderBy: asc(tableMurid.nama)
+			});
+			const kelas = await db.query.tableKelas.findFirst({
+				where: eq(tableKelas.id, kelasId),
+				columns: { nama: true }
+			});
+			subtitleKelas = kelas?.nama ?? 'Kelas';
+		}
 
-		const kelas = await db.query.tableKelas.findFirst({
-			where: eq(tableKelas.id, kelasId),
-			columns: { nama: true }
-		});
+		const kelas = { nama: subtitleKelas };
 
 		const workbook = new ExcelJS.Workbook();
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any

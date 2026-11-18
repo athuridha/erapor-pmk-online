@@ -17,8 +17,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const sekolahId = locals.sekolah?.id ?? null;
 	const admin = isAdminUser(user);
 	const waliKelas = user.type === 'wali_kelas';
+	const pegawaiIdSendiri = (user as { pegawaiId?: number | null }).pegawaiId ?? null;
 
-	if (!admin && !waliKelas) {
+	if (!admin && !waliKelas && !pegawaiIdSendiri) {
 		redirect(303, '/forbidden?required=administrasi_tanda_tangan');
 	}
 
@@ -70,6 +71,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 		entries.set(kelas.waliKelasId, entry);
 	}
 
+	// Guru merangkap wali kelas (user.type === 'user' dengan waliKelasId di rombel) tetap diizinkan
+	if (!admin && !waliKelas && !(pegawaiIdSendiri && entries.has(pegawaiIdSendiri))) {
+		redirect(303, '/forbidden?required=administrasi_tanda_tangan');
+	}
+
 	const pegawaiIds = [...entries.keys()];
 	const pegawaiRows = pegawaiIds.length
 		? await db.query.tablePegawai.findMany({
@@ -78,8 +84,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 			})
 		: [];
 	const pegawaiMap = new Map(pegawaiRows.map((pegawai) => [pegawai.id, pegawai]));
-
-	const pegawaiIdSendiri = (user as { pegawaiId?: number | null }).pegawaiId ?? null;
 
 	const penandatangan = [];
 	for (const entry of entries.values()) {

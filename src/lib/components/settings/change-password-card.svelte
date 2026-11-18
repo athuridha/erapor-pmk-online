@@ -15,49 +15,66 @@
 	}
 </script>
 
-<section class="card bg-base-100 rounded-lg border border-none p-6 shadow-md" id="ganti-password">
+<section
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+	id="ganti-password"
+>
 	<div class="space-y-4">
-		<header class="space-y-2">
-			<h2 class="text-xl font-semibold">Ganti Kata Sandi</h2>
-			<p class="text-base-content/70 text-sm">
+		<header class="border-b border-slate-200 pb-3 dark:border-zinc-800">
+			<h2 class="text-base font-bold text-slate-900 dark:text-zinc-100">Ganti Kata Sandi</h2>
+			<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">
 				Perbarui kata sandi untuk menjaga keamanan akses aplikasi.
 			</p>
 		</header>
 
 		<FormEnhance action="?/change-password" onsuccess={handlePasswordSuccess}>
 			{#snippet children({ submitting, invalid })}
-				<div>
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Kata sandi saat ini</legend>
-						<label class="input bg-base-200 dark:bg-base-300 validator w-full dark:border-none">
-							<span class="pl-2"><Icon name="lock" /></span>
+				<div class="space-y-3">
+					<label class="flex flex-col gap-1.5">
+						<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							>Kata sandi saat ini</span
+						>
+						<div
+							class="flex h-9 items-center overflow-hidden rounded-xl border border-[#7e8b9b] bg-white focus-within:border-blue-600 dark:border-zinc-600 dark:bg-zinc-900 dark:focus-within:border-blue-400"
+						>
+							<span class="pl-3 text-slate-500 dark:text-zinc-400"
+								><Icon name="lock" class="h-4 w-4" /></span
+							>
 							<input
 								type={showCurrentPassword ? 'text' : 'password'}
 								id="currentPassword"
 								name="currentPassword"
+								class="validator h-full w-full bg-transparent px-2.5 text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-400"
 								required
 								autocomplete="current-password"
 								placeholder="Masukkan kata sandi lama"
 							/>
 							<button
 								type="button"
-								class="cursor-pointer pr-2"
+								class="cursor-pointer pr-3 text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200"
 								onclick={() => (showCurrentPassword = !showCurrentPassword)}
 								aria-label="Lihat atau sembunyikan kata sandi"
 							>
-								<Icon name={showCurrentPassword ? 'eye-off' : 'eye'} />
+								<Icon name={showCurrentPassword ? 'eye-off' : 'eye'} class="h-4 w-4" />
 							</button>
-						</label>
-					</fieldset>
+						</div>
+					</label>
 
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Kata sandi baru</legend>
-						<label class="input bg-base-200 dark:bg-base-300 validator w-full dark:border-none">
-							<span class="pl-2"><Icon name="lock" /></span>
+					<label class="flex flex-col gap-1.5">
+						<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							>Kata sandi baru</span
+						>
+						<div
+							class="flex h-9 items-center overflow-hidden rounded-xl border border-[#7e8b9b] bg-white focus-within:border-blue-600 dark:border-zinc-600 dark:bg-zinc-900 dark:focus-within:border-blue-400"
+						>
+							<span class="pl-3 text-slate-500 dark:text-zinc-400"
+								><Icon name="lock" class="h-4 w-4" /></span
+							>
 							<input
 								type={showNewPassword ? 'text' : 'password'}
 								id="newPassword"
 								name="newPassword"
+								class="validator h-full w-full bg-transparent px-2.5 text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-400"
 								required
 								minlength={8}
 								autocomplete="new-password"
@@ -65,23 +82,30 @@
 							/>
 							<button
 								type="button"
-								class="cursor-pointer pr-2"
+								class="cursor-pointer pr-3 text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200"
 								onclick={() => (showNewPassword = !showNewPassword)}
 								aria-label="Lihat atau sembunyikan kata sandi"
 							>
-								<Icon name={showNewPassword ? 'eye-off' : 'eye'} />
+								<Icon name={showNewPassword ? 'eye-off' : 'eye'} class="h-4 w-4" />
 							</button>
-						</label>
-					</fieldset>
+						</div>
+					</label>
 
-					<fieldset class="fieldset">
-						<legend class="fieldset-legend">Konfirmasi kata sandi baru</legend>
-						<label class="input bg-base-200 dark:bg-base-300 validator w-full dark:border-none">
-							<span class="pl-2"><Icon name="lock" /></span>
+					<label class="flex flex-col gap-1.5">
+						<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							>Konfirmasi kata sandi baru</span
+						>
+						<div
+							class="flex h-9 items-center overflow-hidden rounded-xl border border-[#7e8b9b] bg-white focus-within:border-blue-600 dark:border-zinc-600 dark:bg-zinc-900 dark:focus-within:border-blue-400"
+						>
+							<span class="pl-3 text-slate-500 dark:text-zinc-400"
+								><Icon name="lock" class="h-4 w-4" /></span
+							>
 							<input
 								type={showConfirmPassword ? 'text' : 'password'}
 								id="confirmPassword"
 								name="confirmPassword"
+								class="validator h-full w-full bg-transparent px-2.5 text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-400"
 								required
 								minlength={8}
 								autocomplete="new-password"
@@ -89,26 +113,26 @@
 							/>
 							<button
 								type="button"
-								class="cursor-pointer pr-2"
+								class="cursor-pointer pr-3 text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200"
 								onclick={() => (showConfirmPassword = !showConfirmPassword)}
 								aria-label="Lihat atau sembunyikan kata sandi"
 							>
-								<Icon name={showConfirmPassword ? 'eye-off' : 'eye'} />
+								<Icon name={showConfirmPassword ? 'eye-off' : 'eye'} class="h-4 w-4" />
 							</button>
-						</label>
-					</fieldset>
+						</div>
+					</label>
 
-					<p class="text-base-content/70 text-xs">
+					<p class="text-xs text-slate-500 dark:text-zinc-400">
 						Gunakan kombinasi huruf dan angka untuk keamanan maksimal.
 					</p>
 
-					<div class="mt-6 flex justify-end">
+					<div class="mt-5 flex justify-end border-t border-slate-200 pt-4 dark:border-zinc-800">
 						<button
-							class="btn btn-primary shadow-none"
+							class="inline-flex h-9 items-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 							type="submit"
 							disabled={submitting || invalid}
 						>
-							<Icon name="save" />
+							<Icon name="save" class="h-4 w-4" />
 							{submitting ? 'Menyimpan…' : 'Simpan kata sandi'}
 						</button>
 					</div>

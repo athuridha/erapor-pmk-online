@@ -148,13 +148,13 @@ function round2(value: number) {
 	return Number.parseFloat(value.toFixed(2));
 }
 
-/** Tingkat/jenjang dari nama kelas, mis. "XII TSM" → "XII", "X RPL 1" → "X". */
-function jenjangKelas(nama: string | null | undefined) {
+/** Tingkat/jenjang dari nama kelas, mis. "XII TSM" -> "XII", "X RPL 1" -> "X". */
+export function jenjangKelas(nama: string | null | undefined) {
 	return (nama ?? '').trim().split(/\s+/)[0]?.toUpperCase() ?? '';
 }
 
 /** Identitas lintas semester: NIS lebih dulu, NISN sebagai cadangan. */
-function identityOf(nis: string | null | undefined, nisn: string | null | undefined) {
+export function identityOf(nis: string | null | undefined, nisn: string | null | undefined) {
 	const nisTrim = (nis ?? '').trim();
 	if (nisTrim) return `nis:${nisTrim.toLowerCase()}`;
 	const nisnTrim = (nisn ?? '').trim();
@@ -186,7 +186,7 @@ function kosong(konfigurasi?: KonfigurasiNilai): RekapKeseluruhan {
 	};
 }
 
-async function daftarSemester(sekolahId: number) {
+export async function daftarSemester(sekolahId: number) {
 	const tahunAjaran = await db.query.tableTahunAjaran.findMany({
 		columns: { id: true, nama: true, tanggalMulai: true },
 		where: eq(tableTahunAjaran.sekolahId, sekolahId)
@@ -221,7 +221,7 @@ async function daftarSemester(sekolahId: number) {
 			semesterId: row.id,
 			tahunAjaran: namaTa,
 			tipe: row.tipe,
-			label: `${namaTa} — ${row.nama}`,
+			label: `${namaTa} - ${row.nama}`,
 			urut: taUrutan * 10 + (row.tipe === 'ganjil' ? 1 : 2)
 		});
 	}

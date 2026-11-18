@@ -288,18 +288,22 @@
 	}
 </script>
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div
+		class="mb-4 flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-start sm:justify-between dark:border-zinc-800"
+	>
 		<div>
-			<h2 class="text-xl font-bold">
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
 				Daftar Nilai Kokurikuler
 				{#if selectedKokurikuler}
-					- {capitalizeSentence(selectedKokurikuler.tujuan)}
+					: {capitalizeSentence(selectedKokurikuler.tujuan)}
 				{/if}
-			</h2>
+			</h1>
 
 			{#if kelasAktifLabel}
-				<p class="text-base-content/80 block text-sm">{kelasAktifLabel}</p>
+				<p class="mt-0.5 block text-xs text-slate-600 dark:text-zinc-400">{kelasAktifLabel}</p>
 			{/if}
 		</div>
 	</div>
@@ -312,116 +316,148 @@
 		onImport={openImportModal}
 	/>
 
-	<div class="flex flex-col items-center gap-2 sm:flex-row">
+	<div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
 		<label class="w-full md:max-w-80">
 			<span class="sr-only">Pilih kokurikuler</span>
-			<select
-				class="select bg-base-200 w-full truncate dark:border-none"
-				title={!canEdit
-					? 'Anda tidak memiliki izin untuk mengubah'
-					: (selectedKokurikulerLabel ?? 'Pilih kokurikuler')}
-				bind:value={selectedKokurikulerValue}
-				onchange={(event) =>
-					handleKokurikulerChange((event.currentTarget as HTMLSelectElement).value)}
-				disabled={!hasKokurikuler || !canEdit}
-			>
-				{#if !hasKokurikuler}
-					<option value="">Belum ada kokurikuler</option>
-				{:else}
-					<option value="" disabled selected={selectedKokurikulerValue === ''}>
-						Pilih Kokurikuler
-					</option>
-					{#each data.kokurikulerList as item (item.id)}
-						<option value={String(item.id)}>{capitalizeSentence(item.tujuan)}</option>
-					{/each}
-				{/if}
-			</select>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+					title={!canEdit
+						? 'Anda tidak memiliki izin untuk mengubah'
+						: (selectedKokurikulerLabel ?? 'Pilih kokurikuler')}
+					bind:value={selectedKokurikulerValue}
+					onchange={(event) =>
+						handleKokurikulerChange((event.currentTarget as HTMLSelectElement).value)}
+					aria-disabled={!hasKokurikuler || !canEdit}
+					disabled={!hasKokurikuler || !canEdit}
+				>
+					{#if !hasKokurikuler}
+						<option value="">Belum ada kokurikuler</option>
+					{:else}
+						<option value="" disabled selected={selectedKokurikulerValue === ''}>
+							Pilih Kokurikuler
+						</option>
+						{#each data.kokurikulerList as item (item.id)}
+							<option value={String(item.id)}>{capitalizeSentence(item.tujuan)}</option>
+						{/each}
+					{/if}
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
 		</label>
 		<form
-			class="w-full"
+			class="w-full flex-1"
 			data-sveltekit-keepfocus
 			data-sveltekit-replacestate
 			autocomplete="off"
 			onsubmit={submitSearch}
 		>
-			<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
-				<Icon name="search" />
+			<div class="relative">
+				<span
+					class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 dark:text-zinc-500"
+				>
+					<Icon name="search" class="h-4 w-4" />
+				</span>
 				<input
 					type="search"
 					name="q"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 					value={searchTerm}
 					autocomplete="name"
 					placeholder="Cari nama murid..."
 					oninput={handleSearchInput}
 				/>
-			</label>
+			</div>
 		</form>
 	</div>
 
 	{#if !hasKokurikuler}
-		<div class="alert alert-soft alert-info mt-6">
-			<Icon name="info" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-sky-200 bg-sky-50/90 px-4 py-3 text-xs text-sky-950 dark:border-sky-900/60 dark:bg-sky-950/35 dark:text-sky-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
 			<span>
 				Belum ada data kokurikuler untuk kelas ini. Tambahkan terlebih dahulu di menu
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-				<strong><a class="link" href="/kokurikuler">Kokurikuler</a></strong>.
+				<a
+					class="font-semibold text-blue-600 underline hover:text-blue-700 dark:text-blue-400"
+					href="/kokurikuler">Kokurikuler</a
+				>.
 			</span>
 		</div>
 	{:else if !selectedKokurikuler}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>Pilih kokurikuler untuk mulai menilai.</span>
 		</div>
 	{:else if data.muridCount === 0}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>
 				Belum ada data murid di kelas ini. Tambahkan murid terlebih dahulu melalui menu
 				<strong>Murid</strong>.
 			</span>
 		</div>
 	{:else if data.totalMurid === 0}
-		<div class="alert alert-soft alert-info mt-6">
-			<Icon name="info" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-sky-200 bg-sky-50/90 px-4 py-3 text-xs text-sky-950 dark:border-sky-900/60 dark:bg-sky-950/35 dark:text-sky-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
 			<span>Tidak ada murid yang cocok dengan pencarian.</span>
 		</div>
 	{:else}
 		<div
-			class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+			class="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 		>
-			<table class="border-base-200 table min-w-150 border dark:border-none">
+			<table class="w-full min-w-150 border-collapse text-xs">
 				<thead>
-					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-						<th style="width: 50px; min-width: 40px;">No</th>
-						<th class="min-w-44">Nama</th>
-						<th>Aksi</th>
-						<th class="w-full" style="min-width: 240px;">Deskripsi</th>
+					<tr
+						class="border-b border-slate-200 bg-slate-50 text-left font-semibold text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+					>
+						<th style="width: 50px; min-width: 40px;" class="px-3 py-2.5">No</th>
+						<th class="min-w-44 px-3 py-2.5">Nama</th>
+						<th class="px-3 py-2.5">Aksi</th>
+						<th class="w-full px-3 py-2.5" style="min-width: 240px;">Deskripsi</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody class="divide-y divide-slate-200 dark:divide-zinc-800">
 					{#each data.daftarMurid as murid (murid.id)}
-						<tr>
-							<td class="align-top">{murid.no}</td>
-							<td class="align-top">
+						<tr class="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+							<td class="px-3 py-2.5 align-top tabular-nums text-slate-600 dark:text-zinc-400">
+								{murid.no}
+							</td>
+							<td class="px-3 py-2.5 align-top font-medium text-slate-900 dark:text-zinc-100">
 								{@html searchQueryMarker(data.search, murid.nama)}
 							</td>
-							<td class="align-top">
+							<td class="px-3 py-2.5 align-top">
 								<button
 									type="button"
-									class="btn btn-sm btn-soft shadow-none"
+									class="inline-flex h-8 items-center gap-1 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 									onclick={() => openModalFor(murid)}
 									disabled={!canEdit}
+									aria-disabled={!canEdit}
 									title={!canEdit ? 'Anda tidak memiliki izin untuk menilai' : ''}
 								>
-									<Icon name="edit" />
+									<Icon name="edit" class="h-3.5 w-3.5" />
 									Nilai
 								</button>
 							</td>
-							<td class="align-top">
+							<td class="px-3 py-2.5 align-top">
 								{#if murid.deskripsi}
-									<p class="text-base-content text-sm">{murid.deskripsi}</p>
+									<p class="text-xs text-slate-800 dark:text-zinc-200">{murid.deskripsi}</p>
 								{:else}
-									<span class="text-base-content/70 text-sm italic"> Belum ada nilai </span>
+									<span class="text-xs italic text-slate-500 dark:text-zinc-400">
+										Belum ada nilai
+									</span>
 								{/if}
 							</td>
 						</tr>
@@ -429,19 +465,23 @@
 				</tbody>
 			</table>
 		</div>
-		<div class="join mt-4 sm:mx-auto">
-			{#each pages as pageNumber (pageNumber)}
-				<button
-					type="button"
-					class="join-item btn"
-					class:btn-active={pageNumber === currentPage}
-					onclick={() => handlePageClick(pageNumber)}
-					aria-current={pageNumber === currentPage ? 'page' : undefined}
-				>
-					{pageNumber}
-				</button>
-			{/each}
-		</div>
+		{#if pages.length > 1}
+			<div class="mt-4 flex flex-wrap items-center justify-center gap-1">
+				{#each pages as pageNumber (pageNumber)}
+					<button
+						type="button"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors {pageNumber ===
+						currentPage
+							? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+							: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
+						onclick={() => handlePageClick(pageNumber)}
+						aria-current={pageNumber === currentPage ? 'page' : undefined}
+					>
+						{pageNumber}
+					</button>
+				{/each}
+			</div>
+		{/if}
 	{/if}
 </div>
 

@@ -55,17 +55,26 @@
 	});
 </script>
 
-<div class="space-y-4">
+<div class="space-y-5">
 	<header class="flex flex-wrap items-start justify-between gap-3">
-		<div class="space-y-1">
-			<a class="btn btn-ghost btn-xs shadow-none" href="/semua-kelas">
-				<Icon name="left" />
+		<div class="space-y-1.5">
+			<a
+				class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white px-3 text-xs font-semibold text-slate-600 shadow-2xs transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+				href="/semua-kelas"
+			>
+				<Icon name="left" class="h-3.5 w-3.5" />
 				Kembali ke Semua Kelas
 			</a>
-			<h1 class="text-2xl font-bold">{kelas.nama}</h1>
-			<div class="text-base-content/70 flex flex-wrap items-center gap-2 text-sm">
+			<h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+				{kelas.nama}
+			</h1>
+			<div class="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-zinc-400">
 				{#if kelas.fase}
-					<span class={`badge badge-soft ${faseBadgeClass(kelas.fase)}`}>{kelas.fase}</span>
+					<span
+						class={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${faseBadgeClass(kelas.fase)}`}
+					>
+						{kelas.fase}
+					</span>
 				{/if}
 				<span>{kelas.semester ?? 'Semester belum ditentukan'}</span>
 				{#if kelas.tahunAjaran}
@@ -75,149 +84,212 @@
 		</div>
 	</header>
 
-	<div class="card bg-base-100 rounded-box shadow-md">
-		<div class="card-body grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
-			<div>
-				<p class="text-base-content/60 text-xs">Wali Kelas</p>
-				<p class="text-lg font-semibold">{kelas.waliKelas ?? 'Belum ditentukan'}</p>
+	<section
+		class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<div
+				class="rounded-xl border border-slate-200/75 bg-slate-50/70 p-3.5 dark:border-zinc-800 dark:bg-zinc-800/45"
+			>
+				<p class="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">Wali Kelas</p>
+				<p class="mt-1 text-sm font-bold text-slate-900 dark:text-zinc-100">
+					{kelas.waliKelas ?? 'Belum ditentukan'}
+				</p>
 				{#if kelas.waliKelasNip}
-					<p class="text-base-content/60 text-xs">NIP {kelas.waliKelasNip}</p>
+					<p class="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
+						NIP {kelas.waliKelasNip}
+					</p>
 				{/if}
 			</div>
-			<div>
-				<p class="text-base-content/60 text-xs">Wali Asuh</p>
-				<p class="text-lg font-semibold">{kelas.waliAsuh ?? 'Belum ditentukan'}</p>
+			<div
+				class="rounded-xl border border-slate-200/75 bg-slate-50/70 p-3.5 dark:border-zinc-800 dark:bg-zinc-800/45"
+			>
+				<p class="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">Wali Asuh</p>
+				<p class="mt-1 text-sm font-bold text-slate-900 dark:text-zinc-100">
+					{kelas.waliAsuh ?? 'Belum ditentukan'}
+				</p>
 			</div>
-			<div>
-				<p class="text-base-content/60 text-xs">Murid</p>
-				<p class="text-lg font-semibold">{ringkasan.jumlahMurid}</p>
-				<p class="text-base-content/60 text-xs">
+			<div
+				class="rounded-xl border border-slate-200/75 bg-slate-50/70 p-3.5 dark:border-zinc-800 dark:bg-zinc-800/45"
+			>
+				<p class="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">Murid</p>
+				<p class="mt-1 text-sm font-bold text-slate-900 dark:text-zinc-100">
+					{ringkasan.jumlahMurid}
+				</p>
+				<p class="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
 					{ringkasan.lakiLaki} laki-laki · {ringkasan.perempuan} perempuan
 				</p>
 			</div>
-			<div>
-				<p class="text-base-content/60 text-xs">Guru & Mata Pelajaran</p>
-				<p class="text-lg font-semibold">
+			<div
+				class="rounded-xl border border-slate-200/75 bg-slate-50/70 p-3.5 dark:border-zinc-800 dark:bg-zinc-800/45"
+			>
+				<p class="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+					Guru & Mata Pelajaran
+				</p>
+				<p class="mt-1 text-sm font-bold text-slate-900 dark:text-zinc-100">
 					{ringkasan.jumlahGuru} guru · {ringkasan.jumlahMapel} mapel
 				</p>
-				<p class="text-base-content/60 text-xs">
+				<p class="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
 					Sakit {ringkasan.sakit} · Izin {ringkasan.izin} · Alfa {ringkasan.alfa}
 				</p>
 			</div>
 		</div>
-	</div>
+	</section>
 
-	<div class="card bg-base-100 rounded-box shadow-md">
-		<div class="card-body gap-3 p-4">
-			<header class="flex flex-wrap items-center justify-between gap-2">
-				<h2 class="text-lg font-bold">Daftar Siswa</h2>
-				<label class="input input-sm w-full max-w-64">
-					<Icon name="search" />
-					<input type="search" placeholder="Cari nama / NIS / wali…" bind:value={cariMurid} />
-				</label>
-			</header>
+	<section
+		class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<header
+			class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 dark:border-zinc-800"
+		>
+			<h2 class="text-base font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+				Daftar Siswa
+			</h2>
+			<div class="relative flex w-full max-w-64 items-center">
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute left-3 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="search" class="h-3.5 w-3.5" />
+				</span>
+				<input
+					type="search"
+					placeholder="Cari nama / NIS / wali..."
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-8 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+					bind:value={cariMurid}
+				/>
+			</div>
+		</header>
 
-			{#if muridTersaring.length === 0}
-				<p class="text-base-content/60 text-sm">Belum ada siswa di kelas ini.</p>
-			{:else}
-				<div class="overflow-x-auto">
-					<table class="table table-sm">
-						<thead>
-							<tr>
-								<th>No</th>
-								<th>Nama</th>
-								<th>NIS</th>
-								<th>L/P</th>
-								<th>Wali Murid</th>
-								<th>Wali Asuh</th>
-								<th class="text-right">Nilai</th>
-								<th class="text-right">Rata-rata</th>
-								<th class="text-right">S/I/A</th>
+		{#if muridTersaring.length === 0}
+			<p class="text-xs text-slate-500 dark:text-zinc-400">Belum ada siswa di kelas ini.</p>
+		{:else}
+			<div
+				class="overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+			>
+				<table class="w-full border-collapse text-xs">
+					<thead>
+						<tr
+							class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+						>
+							<th class="px-3.5 py-2.5">No</th>
+							<th class="px-3.5 py-2.5">Nama</th>
+							<th class="px-3.5 py-2.5">NIS</th>
+							<th class="px-3.5 py-2.5">L/P</th>
+							<th class="px-3.5 py-2.5">Wali Murid</th>
+							<th class="px-3.5 py-2.5">Wali Asuh</th>
+							<th class="px-3.5 py-2.5 text-right">Nilai</th>
+							<th class="px-3.5 py-2.5 text-right">Rata-rata</th>
+							<th class="px-3.5 py-2.5 text-right">S/I/A</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
+						{#each muridTersaring as murid, index (murid.id)}
+							<tr class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
+								<td class="px-3.5 py-2.5 text-slate-500 dark:text-zinc-400">{index + 1}</td>
+								<td class="px-3.5 py-2.5 font-semibold text-slate-900 dark:text-zinc-100">
+									{murid.nama}
+								</td>
+								<td class="px-3.5 py-2.5 text-slate-600 dark:text-zinc-300">{murid.nis}</td>
+								<td class="px-3.5 py-2.5 text-slate-600 dark:text-zinc-300">{murid.jenisKelamin}</td>
+								<td class="px-3.5 py-2.5 text-slate-600 dark:text-zinc-300">
+									{murid.wali ?? '-'}
+								</td>
+								<td class="px-3.5 py-2.5 text-slate-600 dark:text-zinc-300">
+									{murid.waliAsuh ?? '-'}
+								</td>
+								<td class="px-3.5 py-2.5 text-right text-slate-700 dark:text-zinc-300">
+									{murid.nilaiTerisi}/{murid.nilaiDiharapkan}
+									{#if murid.mapelKosong > 0}
+										<div class="text-[11px] text-slate-400 dark:text-zinc-500">
+											{murid.mapelKosong} mapel kosong
+										</div>
+									{/if}
+								</td>
+								<td class="px-3.5 py-2.5 text-right font-medium text-slate-900 dark:text-zinc-100">
+									{murid.rataNilai ?? '-'}
+								</td>
+								<td class="px-3.5 py-2.5 text-right text-slate-600 dark:text-zinc-300">
+									{murid.sakit}/{murid.izin}/{murid.alfa}
+								</td>
 							</tr>
-						</thead>
-						<tbody>
-							{#each muridTersaring as murid, index (murid.id)}
-								<tr>
-									<td class="text-base-content/60">{index + 1}</td>
-									<td class="font-semibold">{murid.nama}</td>
-									<td class="text-xs">{murid.nis}</td>
-									<td>{murid.jenisKelamin}</td>
-									<td class="text-sm">{murid.wali ?? '—'}</td>
-									<td class="text-sm">{murid.waliAsuh ?? '—'}</td>
-									<td class="text-right">
-										{murid.nilaiTerisi}/{murid.nilaiDiharapkan}
-										{#if murid.mapelKosong > 0}
-											<div class="text-base-content/60 text-xs">
-												{murid.mapelKosong} mapel kosong
-											</div>
-										{/if}
-									</td>
-									<td class="text-right">
-										{murid.rataNilai ?? '—'}
-									</td>
-									<td class="text-right text-xs">
-										{murid.sakit}/{murid.izin}/{murid.alfa}
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		</div>
-	</div>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</section>
 
-	<div class="card bg-base-100 rounded-box shadow-md">
-		<div class="card-body gap-3 p-4">
-			<h2 class="text-lg font-bold">Mata Pelajaran & Guru Pengampu</h2>
-			{#if daftarMapel.length === 0}
-				<p class="text-base-content/60 text-sm">Belum ada mata pelajaran di kelas ini.</p>
-			{:else}
-				<div class="overflow-x-auto">
-					<table class="table table-sm">
-						<thead>
-							<tr>
-								<th>Mata Pelajaran</th>
-								<th>Pengampu</th>
-								<th>Akun Guru</th>
-								<th class="text-right">Nilai Terisi</th>
-								<th class="text-right">Rata-rata</th>
+	<section
+		class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<h2
+			class="mb-4 border-b border-slate-100 pb-3 text-base font-bold tracking-tight text-slate-900 dark:border-zinc-800 dark:text-zinc-100"
+		>
+			Mata Pelajaran & Guru Pengampu
+		</h2>
+		{#if daftarMapel.length === 0}
+			<p class="text-xs text-slate-500 dark:text-zinc-400">Belum ada mata pelajaran di kelas ini.</p>
+		{:else}
+			<div
+				class="overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+			>
+				<table class="w-full border-collapse text-xs">
+					<thead>
+						<tr
+							class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+						>
+							<th class="px-3.5 py-2.5">Mata Pelajaran</th>
+							<th class="px-3.5 py-2.5">Pengampu</th>
+							<th class="px-3.5 py-2.5">Akun Guru</th>
+							<th class="px-3.5 py-2.5 text-right">Nilai Terisi</th>
+							<th class="px-3.5 py-2.5 text-right">Rata-rata</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
+						{#each daftarMapel as mapel (mapel.id)}
+							<tr class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
+								<td class="px-3.5 py-2.5">
+									<div class="font-semibold text-slate-900 dark:text-zinc-100">{mapel.nama}</div>
+									{#if mapel.kode}
+										<div class="text-[11px] text-slate-500 dark:text-zinc-400">{mapel.kode}</div>
+									{/if}
+								</td>
+								<td class="px-3.5 py-2.5 text-slate-700 dark:text-zinc-300">
+									{mapel.pengampu ?? 'Belum ditentukan'}
+									{#if mapel.pengampuNip}
+										<div class="text-[11px] text-slate-500 dark:text-zinc-400">
+											NIP {mapel.pengampuNip}
+										</div>
+									{/if}
+								</td>
+								<td class="px-3.5 py-2.5 text-slate-600 dark:text-zinc-300">
+									{#if mapel.guruAkun.length === 0}
+										-
+									{:else}
+										<ul class="space-y-0.5">
+											{#each mapel.guruAkun as guru (guru.username)}
+												<li>
+													{guru.nama}
+													<span class="text-[11px] text-slate-500 dark:text-zinc-400"
+														>({guru.username})</span
+													>
+												</li>
+											{/each}
+										</ul>
+									{/if}
+								</td>
+								<td class="px-3.5 py-2.5 text-right text-slate-700 dark:text-zinc-300">
+									{mapel.nilaiTerisi}/{mapel.nilaiDiharapkan}
+								</td>
+								<td class="px-3.5 py-2.5 text-right font-medium text-slate-900 dark:text-zinc-100">
+									{mapel.rataNilai ?? '-'}
+								</td>
 							</tr>
-						</thead>
-						<tbody>
-							{#each daftarMapel as mapel (mapel.id)}
-								<tr>
-									<td>
-										<div class="font-semibold">{mapel.nama}</div>
-										{#if mapel.kode}
-											<div class="text-base-content/60 text-xs">{mapel.kode}</div>
-										{/if}
-									</td>
-									<td class="text-sm">
-										{mapel.pengampu ?? 'Belum ditentukan'}
-										{#if mapel.pengampuNip}
-											<div class="text-base-content/60 text-xs">NIP {mapel.pengampuNip}</div>
-										{/if}
-									</td>
-									<td class="text-sm">
-										{#if mapel.guruAkun.length === 0}
-											—
-										{:else}
-											<ul class="space-y-0.5">
-												{#each mapel.guruAkun as guru (guru.username)}
-													<li>{guru.nama} <span class="text-xs">({guru.username})</span></li>
-												{/each}
-											</ul>
-										{/if}
-									</td>
-									<td class="text-right">{mapel.nilaiTerisi}/{mapel.nilaiDiharapkan}</td>
-									<td class="text-right">{mapel.rataNilai ?? '—'}</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		</div>
-	</div>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</section>
 </div>

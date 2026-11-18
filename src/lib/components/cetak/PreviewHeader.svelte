@@ -33,20 +33,22 @@
 	});
 </script>
 
-<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+<div
+	class="mb-4 flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-start sm:justify-between dark:border-zinc-800"
+>
 	<div>
-		<h2 class="text-xl font-bold">
+		<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
 			{headingTitle}
-		</h2>
+		</h1>
 		{#if kelasAktifLabel}
-			<p class="text-base-content/80 block text-sm">
+			<p class="mt-0.5 block text-xs text-slate-600 dark:text-zinc-400">
 				{kelasAktifLabel}
 				{#if activeSemester}
-					- Semester {activeSemester.nama} ({activeSemester.tahunAjaranNama})
+					&middot; Semester {activeSemester.nama} ({activeSemester.tahunAjaranNama})
 				{:else if academicContext?.activeSemesterId}
-					- Semester aktif tidak ditemukan dalam daftar tahun ajaran.
+					&middot; Semester aktif tidak ditemukan dalam daftar tahun ajaran.
 				{:else}
-					- Semester belum disetel di menu Rapor.
+					&middot; Semester belum disetel di menu Rapor.
 				{/if}
 			</p>
 		{/if}

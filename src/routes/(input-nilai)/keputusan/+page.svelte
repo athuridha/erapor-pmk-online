@@ -183,8 +183,10 @@
 </script>
 
 {#if !data.tableReady}
-	<div class="alert alert-soft alert-warning mb-6 flex items-center gap-3">
-		<Icon name="alert" />
+	<div
+		class="mb-5 flex items-center gap-2.5 rounded-2xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+	>
+		<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 		<span>
 			Tabel keputusan belum tersedia. Jalankan <strong>pnpm db:push</strong> untuk menerapkan migrasi
 			terbaru.
@@ -192,12 +194,18 @@
 	</div>
 {/if}
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="mb-4 flex items-start justify-between">
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div
+		class="mb-4 flex items-start justify-between gap-3 border-b border-slate-100 pb-4 dark:border-zinc-800"
+	>
 		<div>
-			<h2 class="text-xl font-bold">Keputusan Kenaikan Kelas</h2>
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+				Keputusan Kenaikan Kelas
+			</h1>
 			{#if kelasAktifLabel}
-				<p class="text-base-content/80 block text-sm">{kelasAktifLabel}</p>
+				<p class="mt-0.5 block text-xs text-slate-500 dark:text-zinc-400">{kelasAktifLabel}</p>
 			{/if}
 		</div>
 		<div class="flex items-center gap-2">
@@ -214,33 +222,39 @@
 							<input type="hidden" name="muridId" value={murid.id} />
 							<input type="hidden" name="naik" value={String(editingValues[murid.id] ?? true)} />
 						{/each}
-						<button type="submit" class="btn btn-primary btn-sm shadow-none" disabled={submitting}>
+						<button
+							type="submit"
+							class="inline-flex h-8 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+							disabled={submitting}
+						>
 							{#if submitting}
 								<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+							{:else}
+								<Icon name="save" class="h-3.5 w-3.5" />
 							{/if}
-							<Icon name="save" />
 							Simpan
 						</button>
 					{/snippet}
 				</FormEnhance>
 				<button
 					type="button"
-					class="btn btn-soft btn-sm btn-error shadow-none"
+					class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-red-300 bg-red-50 px-3 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
 					onclick={cancelEdit}
 					disabled={editingSubmitting}
 				>
-					<Icon name="close" />
+					<Icon name="close" class="h-3.5 w-3.5" />
 					Batal
 				</button>
 			{:else}
 				<button
 					type="button"
-					class="btn btn-soft btn-sm shadow-none"
+					class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					onclick={startEdit}
 					disabled={!data.tableReady || !canEdit}
+					aria-disabled={!data.tableReady || !canEdit}
 					title={!canEdit ? 'Anda tidak memiliki izin untuk mengedit' : ''}
 				>
-					<Icon name="edit" />
+					<Icon name="edit" class="h-3.5 w-3.5" />
 					Edit
 				</button>
 			{/if}
@@ -255,50 +269,67 @@
 		spellcheck="false"
 		onsubmit={submitSearch}
 	>
-		<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
-			<Icon name="search" />
+		<div class="relative w-full">
+			<span
+				class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 dark:text-zinc-500"
+			>
+				<Icon name="search" class="h-4 w-4" />
+			</span>
 			<input
 				type="search"
 				name="q"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				value={searchTerm}
 				placeholder="Cari nama murid..."
 				oninput={handleSearchInput}
 				autocomplete="off"
 			/>
-		</label>
+		</div>
 	</form>
 
 	{#if !hasMurid}
-		<div class="alert alert-soft alert-warning mt-6">
-			<Icon name="alert" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
+		>
+			<Icon name="alert" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 			<span>Belum ada murid di kelas ini. Tambahkan murid terlebih dahulu.</span>
 		</div>
 	{:else if !hasFilteredMurid}
-		<div class="alert alert-soft alert-info mt-6">
-			<Icon name="info" />
+		<div
+			class="mt-5 flex items-center gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/80 px-4 py-3 text-xs text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/35 dark:text-blue-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 			<span>Tidak ada murid yang cocok dengan pencarian.</span>
 		</div>
 	{:else}
 		<div
-			class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+			class="mt-4 overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 		>
-			<table class="border-base-200 table border dark:border-none">
+			<table class="w-full border-collapse text-xs">
 				<thead>
-					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-						<th style="width: 50px; min-width: 40px;">No</th>
-						<th class="w-full" style="min-width: 160px;">Nama</th>
-						<th class="text-center" style="min-width: 200px;">Status</th>
+					<tr
+						class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+					>
+						<th style="width: 50px; min-width: 40px;" class="px-3 py-2.5">No</th>
+						<th class="w-full px-3 py-2.5" style="min-width: 160px;">Nama</th>
+						<th class="px-3 py-2.5 text-center" style="min-width: 200px;">Status</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 					{#each data.daftarMurid as murid (murid.id)}
-						<tr class={isEditing ? 'bg-base-200/40' : undefined}>
-							<td>{murid.no}</td>
-							<td>{@html searchQueryMarker(data.page.search, murid.nama)}</td>
-							<td class="text-center">
+						<tr
+							class={isEditing
+								? 'bg-blue-50/35 dark:bg-blue-950/15'
+								: 'transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40'}
+						>
+							<td class="px-3 py-2.5 tabular-nums text-slate-600 dark:text-zinc-400">{murid.no}</td>
+							<td class="px-3 py-2.5 font-medium text-slate-900 dark:text-zinc-100">
+								{@html searchQueryMarker(data.page.search, murid.nama)}
+							</td>
+							<td class="px-3 py-2.5 text-center">
 								{#if isEditing}
 									<div class="flex items-center justify-center gap-4">
-										<label class="flex cursor-pointer items-center gap-1">
+										<label class="flex cursor-pointer items-center gap-1.5">
 											<input
 												type="radio"
 												name="naik-{murid.id}"
@@ -306,9 +337,11 @@
 												checked={editingValues[murid.id] === true}
 												onchange={() => setNaik(murid.id, true)}
 											/>
-											<span class="text-success text-xs font-medium">{statusLabelNaik}</span>
+											<span class="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+												{statusLabelNaik}
+											</span>
 										</label>
-										<label class="flex cursor-pointer items-center gap-1">
+										<label class="flex cursor-pointer items-center gap-1.5">
 											<input
 												type="radio"
 												name="naik-{murid.id}"
@@ -316,14 +349,16 @@
 												checked={editingValues[murid.id] === false}
 												onchange={() => setNaik(murid.id, false)}
 											/>
-											<span class="text-error text-xs font-medium">{statusLabelTidak}</span>
+											<span class="text-xs font-semibold text-red-700 dark:text-red-400">
+												{statusLabelTidak}
+											</span>
 										</label>
 									</div>
 								{:else}
 									<span
-										class="badge {murid.naik
-											? 'badge-success'
-											: 'badge-error'} badge-sm font-medium"
+										class="inline-flex items-center rounded-md px-2.5 py-0.5 text-[11px] font-semibold {murid.naik
+											? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+											: 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300'}"
 									>
 										{murid.naik ? statusLabelNaik : statusLabelTidak}
 									</span>
@@ -335,19 +370,23 @@
 			</table>
 		</div>
 
-		<div class="join mx-auto mt-4">
-			{#each pages as pageNumber (pageNumber)}
-				<button
-					type="button"
-					class="join-item btn pointer-events-auto"
-					class:btn-active={pageNumber === currentPage}
-					onclick={() => handlePageClick(pageNumber)}
-					aria-current={pageNumber === currentPage ? 'page' : undefined}
-				>
-					{pageNumber}
-				</button>
-			{/each}
-		</div>
+		{#if pages.length > 1}
+			<div class="mt-4 flex flex-wrap items-center justify-center gap-1">
+				{#each pages as pageNumber (pageNumber)}
+					<button
+						type="button"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors {pageNumber ===
+						currentPage
+							? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
+							: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
+						onclick={() => handlePageClick(pageNumber)}
+						aria-current={pageNumber === currentPage ? 'page' : undefined}
+					>
+						{pageNumber}
+					</button>
+				{/each}
+			</div>
+		{/if}
 	{/if}
 </div>
 

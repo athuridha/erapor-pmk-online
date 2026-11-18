@@ -1,14 +1,14 @@
 import { error, fail } from '@sveltejs/kit';
 import { and, asc, count, eq, inArray, isNotNull, or, sql, type SQLWrapper } from 'drizzle-orm';
 import db from '$lib/server/db';
+import { ensureEkstrakurikulerSchema } from '$lib/server/db/ensure-ekstrakurikuler';
 import { tableAuthUser, tableKelas, tableMataPelajaran, tablePegawai } from '$lib/server/db/schema';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 import { hapusMasterData } from '$lib/admin/master-data.server';
 import { hashPassword } from '$lib/server/auth';
 import { validatePasswordStrength } from '$lib/server/password-policy';
-import { defaultPermissionsByType } from '../../../../pengguna/permissions';
+import { defaultPermissionsByType, isAdminUser } from '../../../../pengguna/permissions';
 import { readBufferToAoA } from '$lib/utils/excel.js';
-import { isAdminUser } from '../../../../pengguna/permissions';
 
 const MAKS_UPLOAD_DAFTAR = 2_000_000; // 2 MB
 
@@ -104,22 +104,41 @@ function cariKolom(header: string[]): { kolomUsername: number; kolomNama: number
 }
 
 const KELOMPOK = {
+	semua: {
+		judul: 'Semua',
+		deskripsi:
+			'Seluruh akun pengguna sekolah: guru, wali kelas, pembina eskul, admin, dan kepala sekolah.',
+		types: ['user', 'wali_kelas', 'wali_asuh', 'pembina_eskul', 'admin', 'kepala_sekolah']
+	},
 	guru: {
 		judul: 'Guru',
-		deskripsi:
-			'Akun guru pengajar, wali kelas, dan wali asuh. Akun guru dibuat dari halaman Tambah Akun.',
+		deskripsi: 'Akun guru pengajar, wali kelas, dan wali asuh (termasuk guru multi-role).',
 		types: ['user', 'wali_kelas', 'wali_asuh']
 	},
 	operator: {
 		judul: 'Operator',
 		deskripsi: 'Akun operator sekolah: admin dan kepala sekolah (termasuk guru multi-role).',
 		types: ['admin', 'kepala_sekolah']
+	},
+	'pembina-eskul': {
+		judul: 'Pembina Eskul',
+		deskripsi:
+			'Akun pembina ekstrakurikuler eksternal dan pengguna yang ditugaskan membina ekstrakurikuler.',
+		types: ['pembina_eskul']
 	}
 } as const;
 
 const GURU_TYPES = ['user', 'wali_kelas', 'wali_asuh'] as const;
 
 type KunciKelompok = keyof typeof KELOMPOK;
+
+function resolveKelompokKey(raw?: string): KunciKelompok | null {
+	const value = (raw ?? '').trim().toLowerCase();
+	if (!value || value === 'semua') return 'semua';
+	if (value === 'pembina_eskul' || value === 'pembina-eskul') return 'pembina-eskul';
+	if (value === 'guru' || value === 'operator') return value;
+	return null;
+}
 
 function labelRole(role: string): string {
 	switch (role) {
@@ -131,6 +150,8 @@ function labelRole(role: string): string {
 			return 'Wali Kelas';
 		case 'wali_asuh':
 			return 'Wali Asuh';
+		case 'pembina_eskul':
+			return 'Pembina Eskul';
 		case 'operator':
 			return 'Operator';
 		default:
@@ -139,11 +160,11 @@ function labelRole(role: string): string {
 }
 
 export const load = async ({ params, locals, url }) => {
-	const key = (params.kelompok ?? '') as KunciKelompok;
-	const kelompok = KELOMPOK[key];
-	if (!kelompok) {
+	const key = resolveKelompokKey(params.kelompok);
+	if (!key) {
 		throw error(404, 'Kelompok pengguna tidak ditemukan');
 	}
+	const kelompok = KELOMPOK[key];
 
 	const sekolahId = locals.sekolah?.id ?? null;
 	if (!sekolahId) {
@@ -154,41 +175,52 @@ export const load = async ({ params, locals, url }) => {
 		throw error(403, 'Data pengguna hanya bisa dikelola admin dan kepala sekolah.');
 	}
 
+	await ensureEkstrakurikulerSchema();
+
 	const q = url.searchParams.get('q')?.trim() || null;
 	const like = `%${q ?? ''}%`;
 	const perHalaman = normalisasiBarisPerHalaman(url.searchParams.get('per_page'), 50);
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 
-	// Mode multi-role: kelompok operator juga menampilkan akun guru yang diberi
-	// `operatorLevel` (admin/kepala_sekolah) tanpa mengubah peran utamanya,
-	// sedangkan kelompok guru juga memuat akun admin/kepala yang merangkap guru.
 	const rolesAda = (role: string) =>
 		sql`exists (select 1 from json_each(coalesce(${tableAuthUser.roles}, '[]')) where value = ${role})`;
 	const kondisiOperatorGuru = and(
 		isNotNull(tableAuthUser.operatorLevel),
 		inArray(tableAuthUser.type, [...GURU_TYPES])
 	);
-	const grupKondisi: (SQLWrapper | undefined)[] =
-		key === 'operator'
-			? [
-					inArray(tableAuthUser.type, [...kelompok.types]),
-					kondisiOperatorGuru,
-					rolesAda('operator'),
-					rolesAda('kepala_sekolah')
-				]
-			: [inArray(tableAuthUser.type, [...kelompok.types]), rolesAda('guru')];
-	const kondisi = [or(...grupKondisi)];
-	if (q) {
+	const kondisi: (SQLWrapper | undefined)[] = [];
+	if (key === 'operator') {
 		kondisi.push(
-			sql`(lower(auth_user.username) like ${like} or lower(coalesce(auth_user.nama_lengkap, '')) like ${like} or lower(coalesce(pegawai.nik, '')) like ${like})`
+			or(
+				inArray(tableAuthUser.type, [...kelompok.types]),
+				kondisiOperatorGuru,
+				rolesAda('operator'),
+				rolesAda('kepala_sekolah')
+			)
+		);
+	} else if (key === 'guru') {
+		kondisi.push(or(inArray(tableAuthUser.type, [...kelompok.types]), rolesAda('guru')));
+	} else if (key === 'pembina-eskul') {
+		kondisi.push(
+			or(
+				eq(tableAuthUser.type, 'pembina_eskul'),
+				sql`exists (select 1 from ekstrakurikuler e where e.pembina_user_id = auth_user.id)`
+			)
 		);
 	}
+	if (q) {
+		kondisi.push(
+			sql`(lower(auth_user.username) like ${like} or lower(coalesce(auth_user.nama_lengkap, '')) like ${like} or lower(coalesce(pegawai.nama, '')) like ${like} or lower(coalesce(pegawai.nik, '')) like ${like})`
+		);
+	}
+
+	const whereClause = kondisi.length ? and(...kondisi) : undefined;
 
 	const [{ total }] = await db
 		.select({ total: count() })
 		.from(tableAuthUser)
 		.leftJoin(tablePegawai, eq(tableAuthUser.pegawaiId, tablePegawai.id))
-		.where(and(...kondisi));
+		.where(whereClause);
 
 	const totalHalaman = Math.max(1, Math.ceil(total / perHalaman));
 	const halamanSekarang = Math.min(page, totalHalaman);
@@ -215,12 +247,15 @@ export const load = async ({ params, locals, url }) => {
 			mapel: sql<
 				string | null
 			>`(select mp.nama from mata_pelajaran mp where mp.id = auth_user.mata_pelajaran_id)`,
+			ekskulDibina: sql<
+				string | null
+			>`(select group_concat(e.nama, ', ') from ekstrakurikuler e where e.pembina_user_id = auth_user.id)`,
 			izin: sql<number>`(select count(*) from json_each(auth_user.permissions))`,
 			dibuat: tableAuthUser.createdAt
 		})
 		.from(tableAuthUser)
 		.leftJoin(tablePegawai, eq(tableAuthUser.pegawaiId, tablePegawai.id))
-		.where(and(...kondisi))
+		.where(whereClause)
 		.orderBy(asc(tableAuthUser.username))
 		.limit(perHalaman)
 		.offset(offset);
@@ -237,6 +272,7 @@ export const load = async ({ params, locals, url }) => {
 			id: row.id,
 			nama: row.namaLengkap ?? row.pegawaiNama ?? row.username,
 			role: roleLabel,
+			rawType: row.role,
 			operatorLevel: row.operatorLevel,
 			username: row.username,
 			bisaHapus: row.id !== 1 && row.username.trim().toLowerCase() !== 'admin',
@@ -245,6 +281,7 @@ export const load = async ({ params, locals, url }) => {
 			kelasDiampu: row.kelasDiampu,
 			waliKelas: row.waliKelas,
 			mapel: row.mapel,
+			ekskulDibina: row.ekskulDibina,
 			izin: row.izin,
 			dibuat: row.dibuat
 		};
@@ -269,7 +306,9 @@ export const load = async ({ params, locals, url }) => {
 	]);
 
 	return {
-		meta: { title: `Data Pengguna — ${kelompok.judul}` },
+		meta: {
+			title: key === 'semua' ? 'Akun Pengguna' : `Akun Pengguna — ${kelompok.judul}`
+		},
 		kelompok: { key, judul: kelompok.judul, deskripsi: kelompok.deskripsi },
 		baris,
 		total,
@@ -294,9 +333,10 @@ function pastikanBolehKelola(locals: App.Locals): number {
 export const actions = {
 	async imporGuru({ request, locals, params }) {
 		const sekolahId = pastikanBolehKelola(locals);
+		const key = resolveKelompokKey(params.kelompok);
 
-		if ((params.kelompok ?? '') !== 'guru') {
-			return fail(400, { fail: 'Impor daftar hanya tersedia untuk akun guru.' });
+		if (key !== 'semua' && key !== 'guru') {
+			return fail(400, { fail: 'Impor daftar hanya tersedia pada tab Semua atau Guru.' });
 		}
 
 		const formData = await request.formData();
@@ -443,16 +483,18 @@ export const actions = {
 	async tambah({ request, locals, params }) {
 		const sekolahId = pastikanBolehKelola(locals);
 
-		const key = (params.kelompok ?? '') as KunciKelompok;
-		const kelompok = KELOMPOK[key];
-		if (!kelompok) return fail(404, { fail: 'Kelompok pengguna tidak ditemukan.' });
+		const key = resolveKelompokKey(params.kelompok);
+		if (!key) return fail(404, { fail: 'Kelompok pengguna tidak ditemukan.' });
 
 		const formData = await request.formData();
 		const username = String(formData.get('username') ?? '').trim();
 		const password = String(formData.get('password') ?? '').trim();
 		const nama = String(formData.get('nama') ?? '').trim();
 		const nik = String(formData.get('nik') ?? '').trim();
-		const role = String(formData.get('type') ?? (key === 'operator' ? 'admin' : 'user'));
+		const role = String(
+			formData.get('type') ??
+				(key === 'operator' ? 'admin' : key === 'pembina-eskul' ? 'pembina_eskul' : 'user')
+		);
 		const kelasId = Number(formData.get('kelas_id') ?? 0) || null;
 		const mapelId = Number(formData.get('mata_pelajaran_id') ?? 0) || null;
 
@@ -462,21 +504,30 @@ export const actions = {
 
 		const passwordError = validatePasswordStrength(password);
 		if (passwordError) return fail(400, { fail: passwordError });
-		if (nik && !/^\d{16}$/.test(nik)) {
-			return fail(400, { fail: 'NIK harus 16 digit angka.' });
-		}
-
 		// Role harus sesuai kelompok halaman.
-		const roleBoleh = key === 'operator' ? ['admin', 'kepala_sekolah'] : ['user', 'wali_kelas'];
+		const roleBoleh =
+			key === 'semua'
+				? ['user', 'wali_kelas', 'pembina_eskul', 'admin', 'kepala_sekolah']
+				: key === 'operator'
+					? ['admin', 'kepala_sekolah']
+					: key === 'pembina-eskul'
+						? ['pembina_eskul']
+						: ['user', 'wali_kelas', 'pembina_eskul'];
 		if (!roleBoleh.includes(role)) {
 			return fail(400, { fail: 'Role tidak sesuai kelompok pengguna ini.' });
 		}
 
-		// Level operator opsional (multi-role guru): hanya relevan untuk kelompok guru.
+		const isPembinaEksternal = role === 'pembina_eskul';
+		const isEducatorRole = role === 'user' || role === 'wali_kelas';
+		if (!isPembinaEksternal && nik && !/^\d{16}$/.test(nik)) {
+			return fail(400, { fail: 'NIK harus 16 digit angka.' });
+		}
+
+		// Level operator opsional (multi-role guru): hanya untuk guru/wali kelas.
 		const opsiLevel = ['', 'admin', 'kepala_sekolah'];
 		const opLevelRaw = String(formData.get('operator_level') ?? '');
 		const operatorLevel =
-			key !== 'operator' && opsiLevel.includes(opLevelRaw) && opLevelRaw
+			isEducatorRole && opsiLevel.includes(opLevelRaw) && opLevelRaw
 				? (opLevelRaw as 'admin' | 'kepala_sekolah')
 				: null;
 		const permissionsAwal = operatorLevel
@@ -501,24 +552,30 @@ export const actions = {
 			const { hash, salt } = hashPassword(password);
 			const timestamp = new Date().toISOString();
 
-			const [pegawai] = await db
-				.insert(tablePegawai)
-				.values({ nama, nip: '', nik: nik || null, sekolahId })
-				.returning({ id: tablePegawai.id });
+			// Pembina eskul eksternal tidak masuk daftar pegawai sekolah / presensi guru.
+			let pegawaiId: number | undefined;
+			if (!isPembinaEksternal) {
+				const [pegawai] = await db
+					.insert(tablePegawai)
+					.values({ nama, nip: '', nik: nik || null, sekolahId })
+					.returning({ id: tablePegawai.id });
+				pegawaiId = pegawai?.id;
+			}
 
 			await db.insert(tableAuthUser).values({
 				username,
 				usernameNormalized: username.toLowerCase(),
+				namaLengkap: isPembinaEksternal ? nama : undefined,
 				passwordHash: hash,
 				passwordSalt: salt,
 				passwordUpdatedAt: timestamp,
 				permissions: permissionsAwal,
-				type: role as 'admin' | 'kepala_sekolah' | 'wali_kelas' | 'user',
+				type: role as 'admin' | 'kepala_sekolah' | 'wali_kelas' | 'pembina_eskul' | 'user',
 				operatorLevel,
-				mataPelajaranId: mapelId ?? undefined,
-				kelasId: kelasId ?? undefined,
+				mataPelajaranId: isEducatorRole ? (mapelId ?? undefined) : undefined,
+				kelasId: isEducatorRole ? (kelasId ?? undefined) : undefined,
 				sekolahId,
-				pegawaiId: pegawai?.id ?? undefined,
+				pegawaiId,
 				createdAt: timestamp,
 				updatedAt: timestamp
 			});

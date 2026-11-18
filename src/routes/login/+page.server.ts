@@ -12,8 +12,9 @@ import { getAppVersion } from '$lib/server/app-info';
 import { isSecureRequest, resolveRequestProtocol } from '$lib/server/http';
 import { cookieNames } from '$lib/utils';
 import db from '$lib/server/db';
+import { resolveSekolahAcademicContext } from '$lib/server/db/academic';
 import { tableKelas, tableMataPelajaran } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -98,7 +99,9 @@ export const actions: Actions = {
 			logLoginEvent('Missing credentials', { username, client });
 			const remaining = remainingAttempts(await recentFailureCount(username || null, client));
 			const suffix = remaining > 0 ? ` Sisa ${remaining}x percobaan sebelum akun terkunci.` : '';
-			return fail(400, { message: `NIK dan kata sandi wajib diisi.${suffix}` });
+			return fail(400, {
+				message: `Nama pengguna / NIK dan kata sandi wajib diisi.${suffix}`
+			});
 		}
 
 		// Rate limiting / lockout (brute-force protection). A blocked attempt is
@@ -130,7 +133,7 @@ export const actions: Actions = {
 			const remaining = remainingAttempts(failures + 1);
 			const suffix = remaining > 0 ? ` Sisa ${remaining}x percobaan sebelum akun terkunci.` : '';
 			return fail(401, {
-				message: `NIK atau kata sandi tidak valid.${suffix}`
+				message: `Nama pengguna / NIK atau kata sandi tidak valid.${suffix}`
 			});
 		}
 
@@ -163,34 +166,95 @@ export const actions: Actions = {
 		});
 		applySessionCookie(cookies, session.token, session.expiresAt, secure);
 
-		// If the user record contains a preferred sekolahId, persist it into
-		// the active-sekolah cookie so that accounts (e.g. admin) retain their
-		// last-active sekolah across restarts/logins.
+		// Reset module/class cookies based on the signed-in user's role so previous
+		// browser sessions never leak another user's selected module or class.
 		try {
 			const authUser = user as AuthUser & { sekolahId?: number };
-			if (authUser.sekolahId) {
-				cookies.set(cookieNames.ACTIVE_SEKOLAH_ID, String(authUser.sekolahId), {
+			let resolvedSekolahId: number | null = authUser.sekolahId ?? null;
+
+			if (resolvedSekolahId) {
+				cookies.set(cookieNames.ACTIVE_SEKOLAH_ID, String(resolvedSekolahId), {
 					path: '/',
 					secure
 				});
+			} else if (authUser.type === 'user' && authUser.mataPelajaranId) {
+				try {
+					const mpRow = await db.query.tableMataPelajaran.findFirst({
+						columns: { kelasId: true },
+						where: eq(tableMataPelajaran.id, authUser.mataPelajaranId)
+					});
+					if (mpRow?.kelasId) {
+						const kelas = await db.query.tableKelas.findFirst({
+							columns: { sekolahId: true },
+							where: eq(tableKelas.id, mpRow.kelasId)
+						});
+						if (kelas?.sekolahId) {
+							resolvedSekolahId = kelas.sekolahId;
+							cookies.set(cookieNames.ACTIVE_SEKOLAH_ID, String(kelas.sekolahId), {
+								path: '/',
+								secure
+							});
+						}
+					}
+				} catch (err) {
+					console.warn(
+						'[login action] failed to resolve mata_pelajaran->kelas->sekolah mapping',
+						err
+					);
+				}
 			}
-		} catch (err) {
-			console.warn('[login action] failed to set sekolah from user record', err);
-		}
 
-		// If the authenticated user is a wali_kelas, resolve their actual wali kelas
-		// via tableKelas.waliKelasId (the auth_user.kelasId may be stale) and set
-		// the active-kelas-id cookie so the UI selects their class immediately.
-		try {
-			const authUser = user as AuthUser;
-			if (authUser.type === 'wali_kelas' && authUser.pegawaiId) {
-				const waliKelas = await db.query.tableKelas.findFirst({
+			const academic = resolvedSekolahId
+				? await resolveSekolahAcademicContext(resolvedSekolahId)
+				: null;
+			const activeSemesterId = academic?.activeSemesterId ?? null;
+
+			const findHomeroomKelas = async (pegawaiId: number) => {
+				const activeMatch = activeSemesterId
+					? await db.query.tableKelas.findFirst({
+							columns: { id: true, sekolahId: true },
+							where: and(
+								eq(tableKelas.waliKelasId, pegawaiId),
+								eq(tableKelas.semesterId, activeSemesterId)
+							)
+						})
+					: null;
+				if (activeMatch) return activeMatch;
+				return await db.query.tableKelas.findFirst({
 					columns: { id: true, sekolahId: true },
-					where: eq(tableKelas.waliKelasId, authUser.pegawaiId)
+					where: eq(tableKelas.waliKelasId, pegawaiId),
+					orderBy: [desc(tableKelas.semesterId)]
 				});
+			};
+
+			if (authUser.type === 'admin' || authUser.type === 'kepala_sekolah') {
+				cookies.set(cookieNames.ACTIVE_MODUL, 'admin', {
+					path: '/',
+					maxAge: 31536000,
+					sameSite: 'lax',
+					httpOnly: false,
+					secure
+				});
+				cookies.set(cookieNames.ACTIVE_KELAS_ID, 'semua', {
+					path: '/',
+					maxAge: 31536000,
+					sameSite: 'lax',
+					httpOnly: false,
+					secure
+				});
+			} else if (authUser.type === 'wali_kelas') {
+				cookies.set(cookieNames.ACTIVE_MODUL, 'wali_kelas', {
+					path: '/',
+					maxAge: 31536000,
+					sameSite: 'lax',
+					httpOnly: false,
+					secure
+				});
+				const waliKelas = authUser.pegawaiId ? await findHomeroomKelas(authUser.pegawaiId) : null;
 				if (waliKelas) {
 					cookies.set(cookieNames.ACTIVE_KELAS_ID, String(waliKelas.id), {
 						path: '/',
+						httpOnly: false,
 						secure
 					});
 					if (waliKelas.sekolahId) {
@@ -199,65 +263,56 @@ export const actions: Actions = {
 							secure
 						});
 					}
+				} else {
+					cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure });
 				}
 			} else if (authUser.type === 'user') {
-				// For users assigned to a mata pelajaran: if the system has multiple
-				// sekolah, prefer the sekolah that owns the mata pelajaran's kelas.
-				try {
-					const mpId = (authUser as AuthUser).mataPelajaranId;
-					// First prefer an explicit sekolah saved on the user record (if present)
-					const explicitSekolahId = (authUser as AuthUser & { sekolahId?: number }).sekolahId;
-					if (explicitSekolahId) {
-						cookies.set(cookieNames.ACTIVE_SEKOLAH_ID, String(explicitSekolahId), {
+				const homeroom = authUser.pegawaiId ? await findHomeroomKelas(authUser.pegawaiId) : null;
+				if (homeroom) {
+					cookies.set(cookieNames.ACTIVE_MODUL, 'wali_kelas', {
+						path: '/',
+						maxAge: 31536000,
+						sameSite: 'lax',
+						httpOnly: false,
+						secure
+					});
+					cookies.set(cookieNames.ACTIVE_KELAS_ID, String(homeroom.id), {
+						path: '/',
+						httpOnly: false,
+						secure
+					});
+					if (homeroom.sekolahId && !resolvedSekolahId) {
+						cookies.set(cookieNames.ACTIVE_SEKOLAH_ID, String(homeroom.sekolahId), {
 							path: '/',
 							secure
 						});
-					} else if (mpId) {
-						// Attempt to resolve mata_pelajaran -> kelas -> sekolahId and set the
-						// active sekolah cookie. Do this unconditionally so 'user' accounts
-						// always land on the sekolah that was chosen at account creation.
-						try {
-							const mpRow = await db.query.tableMataPelajaran.findFirst({
-								columns: { kelasId: true },
-								where: eq(tableMataPelajaran.id, mpId)
-							});
-							if (mpRow && mpRow.kelasId) {
-								const kelas = await db.query.tableKelas.findFirst({
-									columns: { sekolahId: true },
-									where: eq(tableKelas.id, mpRow.kelasId)
-								});
-								if (kelas && kelas.sekolahId) {
-									cookies.set(cookieNames.ACTIVE_SEKOLAH_ID, String(kelas.sekolahId), {
-										path: '/',
-										secure
-									});
-								}
-							}
-						} catch (err) {
-							console.warn(
-								'[login action] failed to resolve mata_pelajaran->kelas->sekolah mapping',
-								err
-							);
-						}
 					}
-				} catch (err) {
-					console.warn('[login action] failed to set sekolah for mata pelajaran user', err);
+				} else {
+					cookies.set(cookieNames.ACTIVE_MODUL, 'guru', {
+						path: '/',
+						maxAge: 31536000,
+						sameSite: 'lax',
+						httpOnly: false,
+						secure
+					});
+					cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure });
 				}
-			} else if (authUser.type === 'admin' || authUser.type === 'kepala_sekolah') {
-				// Admin / Operator selalu default ke Semua Kelas saat login
-				cookies.set(cookieNames.ACTIVE_KELAS_ID, 'semua', {
+			} else if (authUser.type === 'pembina_eskul') {
+				cookies.set(cookieNames.ACTIVE_MODUL, 'pembina_eskul', {
 					path: '/',
 					maxAge: 31536000,
 					sameSite: 'lax',
+					httpOnly: false,
 					secure
 				});
+				cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure });
 			} else {
-				// ensure we don't leave a stale kelas cookie for other user types
+				cookies.delete(cookieNames.ACTIVE_MODUL, { path: '/', secure });
 				cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure });
 			}
 		} catch (err) {
 			// non-critical: log but don't block login flow
-			console.warn('[login action] failed to set active kelas cookie', err);
+			console.warn('[login action] failed to set active module/kelas cookies', err);
 		}
 
 		// Accounts flagged with mustChangePassword (e.g. the default Admin) will

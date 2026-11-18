@@ -98,24 +98,32 @@
 	}
 
 	function keteranganColor(value: string | null | undefined) {
-		if (value == null || value === '') return 'badge-soft badge-success';
+		if (value == null || value === '') {
+			return 'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300';
+		}
 		const colors: Record<string, string> = {
-			sakit: 'badge-soft badge-warning',
-			izin: 'badge-soft badge-info',
-			alfa: 'badge-soft badge-error'
+			sakit:
+				'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300',
+			izin: 'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300',
+			alfa: 'border-red-200/80 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300'
 		};
-		return colors[value] ?? '';
+		return (
+			colors[value] ??
+			'border-slate-200/80 bg-slate-100 text-slate-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+		);
 	}
 </script>
 
 <div
-	class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+	class="mt-4 overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 >
-	<table class="border-base-200 table border dark:border-none">
+	<table class="w-full border-collapse text-xs">
 		<thead>
-			<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
+			<tr
+				class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+			>
 				{#if selectable}
-					<th class="text-center" style="width: 36px; min-width: 32px;">
+					<th class="w-9 min-w-8 px-3 py-2.5 text-center">
 						<input
 							bind:this={headerCheckbox}
 							type="checkbox"
@@ -127,27 +135,31 @@
 						/>
 					</th>
 				{/if}
-				<th style="width: 50px; min-width: 40px;">No</th>
-				<th class="w-full" style="min-width: 160px;">Nama</th>
+				<th class="w-12 min-w-10 px-3.5 py-2.5">No</th>
+				<th class="w-full min-w-40 px-3.5 py-2.5">Nama</th>
 				{#if isWaliKelasMasukPulang}
-					<th class="text-center" style="min-width: 100px;">Masuk</th>
-					<th class="text-center" style="min-width: 100px;">Pulang</th>
+					<th class="min-w-28 px-3.5 py-2.5 text-center">Masuk</th>
+					<th class="min-w-28 px-3.5 py-2.5 text-center">Pulang</th>
 				{:else if isSingleColumnMode}
-					<th class="text-center" style="min-width: 100px;">Hadir</th>
+					<th class="min-w-28 px-3.5 py-2.5 text-center">Hadir</th>
 				{:else}
-					<th class="text-center" style="min-width: 100px;">Hadir</th>
-					<th class="text-center" style="min-width: 120px;">Keterangan</th>
+					<th class="min-w-28 px-3.5 py-2.5 text-center">Hadir</th>
+					<th class="min-w-32 px-3.5 py-2.5 text-center">Keterangan</th>
 				{/if}
-				<th class="text-center" style="min-width: 120px;">Aksi</th>
+				<th class="min-w-28 px-3.5 py-2.5 text-center">Aksi</th>
 			</tr>
 		</thead>
-		<tbody>
+		<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 			{#each rows as murid (murid.id)}
 				{@const isEditing = editingRowId === murid.id}
 				{@const formId = `kehadiran-form-${murid.id}`}
-				<tr class={isEditing ? 'bg-base-200/40' : undefined}>
+				<tr
+					class="transition-colors {isEditing
+						? 'bg-blue-50/40 dark:bg-blue-950/20'
+						: 'hover:bg-slate-50/70 dark:hover:bg-zinc-800/40'}"
+				>
 					{#if selectable}
-						<td class="text-center">
+						<td class="px-3 py-2.5 text-center">
 							<input
 								type="checkbox"
 								class="checkbox checkbox-sm"
@@ -159,111 +171,155 @@
 							/>
 						</td>
 					{/if}
-					<td>{murid.no}</td>
-					<td>{@html searchQueryMarker(search, murid.nama)}</td>
+					<td class="px-3.5 py-2.5 text-slate-500 dark:text-zinc-400">{murid.no}</td>
+					<td class="px-3.5 py-2.5 font-medium text-slate-900 dark:text-zinc-100">
+						{@html searchQueryMarker(search, murid.nama)}
+					</td>
 
 					{#if isWaliKelasMasukPulang}
-						<td class="text-center">
+						<td class="px-3.5 py-2.5 text-center">
 							{#if isEditing}
-								<select
-									class="select select-sm bg-base-200 dark:bg-base-300 w-full truncate text-center dark:border-none"
-									value={editingValues.keterangan}
-									onchange={(event) =>
-										onEditValueChange({
-											...editingValues,
-											keterangan: (event.currentTarget as HTMLSelectElement).value
-										})}
-								>
-									<option value="">Hadir</option>
-									<option value="sakit">Sakit</option>
-									<option value="izin">Izin</option>
-									<option value="alfa">TK</option>
-								</select>
+								<div class="relative flex items-center">
+									<select
+										class="h-8 w-full appearance-none truncate rounded-lg border border-[#7e8b9b] bg-white pr-7 pl-2.5 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+										value={editingValues.keterangan}
+										onchange={(event) =>
+											onEditValueChange({
+												...editingValues,
+												keterangan: (event.currentTarget as HTMLSelectElement).value
+											})}
+									>
+										<option value="">Hadir</option>
+										<option value="sakit">Sakit</option>
+										<option value="izin">Izin</option>
+										<option value="alfa">TK</option>
+									</select>
+									<span
+										aria-hidden="true"
+										class="pointer-events-none absolute right-2 flex items-center text-slate-400 dark:text-zinc-400"
+									>
+										<Icon name="down" class="h-3 w-3" />
+									</span>
+								</div>
 							{:else if murid.updatedAt != null || murid.hadir}
-								<span class="badge badge-sm whitespace-nowrap {keteranganColor(murid.keterangan)}">
+								<span
+									class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap {keteranganColor(
+										murid.keterangan
+									)}"
+								>
 									{displayKeterangan(murid.keterangan)}
 								</span>
 							{:else}
-								<span class="text-base-content/40">-</span>
+								<span class="text-slate-300 dark:text-zinc-600">-</span>
 							{/if}
 						</td>
-						<td class="text-center">
+						<td class="px-3.5 py-2.5 text-center">
 							{#if isEditing}
-								<select
-									class="select select-sm bg-base-200 dark:bg-base-300 w-full truncate text-center dark:border-none"
-									value={editingValues.keteranganPulang}
-									onchange={(event) =>
-										onEditValueChange({
-											...editingValues,
-											keteranganPulang: (event.currentTarget as HTMLSelectElement).value
-										})}
-								>
-									<option value="">Hadir</option>
-									<option value="sakit">Sakit</option>
-									<option value="izin">Izin</option>
-									<option value="alfa">TK</option>
-								</select>
+								<div class="relative flex items-center">
+									<select
+										class="h-8 w-full appearance-none truncate rounded-lg border border-[#7e8b9b] bg-white pr-7 pl-2.5 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+										value={editingValues.keteranganPulang}
+										onchange={(event) =>
+											onEditValueChange({
+												...editingValues,
+												keteranganPulang: (event.currentTarget as HTMLSelectElement).value
+											})}
+									>
+										<option value="">Hadir</option>
+										<option value="sakit">Sakit</option>
+										<option value="izin">Izin</option>
+										<option value="alfa">TK</option>
+									</select>
+									<span
+										aria-hidden="true"
+										class="pointer-events-none absolute right-2 flex items-center text-slate-400 dark:text-zinc-400"
+									>
+										<Icon name="down" class="h-3 w-3" />
+									</span>
+								</div>
 							{:else if murid.keteranganPulang != null}
 								<span
-									class="badge badge-sm whitespace-nowrap {keteranganColor(murid.keteranganPulang)}"
+									class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap {keteranganColor(
+										murid.keteranganPulang
+									)}"
 								>
 									{displayKeterangan(murid.keteranganPulang)}
 								</span>
 							{:else}
-								<span class="text-base-content/40">-</span>
+								<span class="text-slate-300 dark:text-zinc-600">-</span>
 							{/if}
 						</td>
 					{:else if isSingleColumnMode}
-						<td class="text-center">
+						<td class="px-3.5 py-2.5 text-center">
 							{#if isEditing}
-								<select
-									class="select select-sm bg-base-200 dark:bg-base-300 w-full truncate text-center dark:border-none"
-									value={editingValues.keterangan}
-									onchange={(event) =>
-										onEditValueChange({
-											...editingValues,
-											keterangan: (event.currentTarget as HTMLSelectElement).value
-										})}
-								>
-									<option value="">Hadir</option>
-									<option value="sakit">Sakit</option>
-									<option value="izin">Izin</option>
-									<option value="alfa">TK</option>
-								</select>
+								<div class="relative flex items-center">
+									<select
+										class="h-8 w-full appearance-none truncate rounded-lg border border-[#7e8b9b] bg-white pr-7 pl-2.5 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+										value={editingValues.keterangan}
+										onchange={(event) =>
+											onEditValueChange({
+												...editingValues,
+												keterangan: (event.currentTarget as HTMLSelectElement).value
+											})}
+									>
+										<option value="">Hadir</option>
+										<option value="sakit">Sakit</option>
+										<option value="izin">Izin</option>
+										<option value="alfa">TK</option>
+									</select>
+									<span
+										aria-hidden="true"
+										class="pointer-events-none absolute right-2 flex items-center text-slate-400 dark:text-zinc-400"
+									>
+										<Icon name="down" class="h-3 w-3" />
+									</span>
+								</div>
 							{:else if murid.updatedAt != null || murid.hadir}
-								<span class="badge badge-sm whitespace-nowrap {keteranganColor(murid.keterangan)}">
+								<span
+									class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap {keteranganColor(
+										murid.keterangan
+									)}"
+								>
 									{displayKeterangan(murid.keterangan)}
 								</span>
 							{:else}
-								<span class="text-base-content/40">-</span>
+								<span class="text-slate-300 dark:text-zinc-600">-</span>
 							{/if}
 						</td>
 					{:else}
-						<td class="text-center">
+						<td class="px-3.5 py-2.5 text-center">
 							<span
-								class="badge badge-sm whitespace-nowrap {murid.hadir
-									? 'badge-soft badge-success'
-									: 'badge-soft badge-error'}"
+								class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap {murid.hadir
+									? 'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300'
+									: 'border-red-200/80 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300'}"
 							>
 								{murid.hadir ? 'Hadir' : 'Tidak hadir'}
 							</span>
 						</td>
-						<td class="overflow-hidden text-center">
+						<td class="overflow-hidden px-3.5 py-2.5 text-center text-slate-700 dark:text-zinc-200">
 							{#if isEditing}
-								<select
-									class="select select-sm bg-base-200 dark:bg-base-300 w-full truncate text-center dark:border-none"
-									value={editingValues.keterangan}
-									onchange={(event) =>
-										onEditValueChange({
-											...editingValues,
-											keterangan: (event.currentTarget as HTMLSelectElement).value
-										})}
-								>
-									<option value="">-</option>
-									<option value="sakit">Sakit</option>
-									<option value="izin">Izin</option>
-									<option value="alfa">TK</option>
-								</select>
+								<div class="relative flex items-center">
+									<select
+										class="h-8 w-full appearance-none truncate rounded-lg border border-[#7e8b9b] bg-white pr-7 pl-2.5 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+										value={editingValues.keterangan}
+										onchange={(event) =>
+											onEditValueChange({
+												...editingValues,
+												keterangan: (event.currentTarget as HTMLSelectElement).value
+											})}
+									>
+										<option value="">-</option>
+										<option value="sakit">Sakit</option>
+										<option value="izin">Izin</option>
+										<option value="alfa">TK</option>
+									</select>
+									<span
+										aria-hidden="true"
+										class="pointer-events-none absolute right-2 flex items-center text-slate-400 dark:text-zinc-400"
+									>
+										<Icon name="down" class="h-3 w-3" />
+									</span>
+								</div>
 							{:else if murid.keterangan}
 								{displayKeterangan(murid.keterangan)}
 							{:else}
@@ -272,8 +328,8 @@
 						</td>
 					{/if}
 
-					<td>
-						<div class="flex items-center justify-center gap-2">
+					<td class="px-3.5 py-2.5">
+						<div class="flex items-center justify-center gap-1.5">
 							{#if isEditing}
 								<FormEnhance
 									id={formId}
@@ -304,34 +360,38 @@
 								</FormEnhance>
 								<button
 									type="button"
-									class="btn btn-soft btn-sm btn-error shadow-none"
+									class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
+									aria-label="Batalkan"
 									title="Batalkan"
 									onclick={onCancelEdit}
 									disabled={editingSubmitting}
 								>
-									<Icon name="close" />
+									<Icon name="close" class="h-3.5 w-3.5" />
 								</button>
 								<button
 									type="submit"
-									class="btn btn-primary btn-sm shadow-none"
+									class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+									aria-label="Simpan"
 									title="Simpan"
 									form={formId}
 									disabled={editingSaveDisabled}
 								>
 									{#if editingSubmitting}
 										<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+									{:else}
+										<Icon name="save" class="h-3.5 w-3.5" />
 									{/if}
-									<Icon name="save" />
 								</button>
 							{:else}
 								<button
 									type="button"
-									class="btn btn-soft btn-sm shadow-none"
+									class="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 									onclick={() => onStartEdit(murid)}
 									disabled={!tableReady || !canEdit}
+									aria-disabled={!tableReady || !canEdit}
 									title={!canEdit ? 'Anda tidak memiliki izin untuk mengedit' : ''}
 								>
-									<Icon name="edit" />
+									<Icon name="edit" class="h-3.5 w-3.5" />
 									Edit
 								</button>
 							{/if}

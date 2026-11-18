@@ -60,31 +60,44 @@
 	}
 </script>
 
-<div class="w-full">
-	<p class="mt-2 text-sm">Pastikan gambar berorientasi landscape dan berformat PNG.</p>
+<div class="w-full space-y-4">
+	<p class="text-xs text-slate-600 dark:text-zinc-300">
+		Pastikan gambar berorientasi landscape dan berformat PNG.
+	</p>
 
-	<div class="mt-4 flex flex-col gap-3">
+	<div class="flex flex-col gap-3">
 		<input
 			bind:this={fileInput}
 			type="file"
 			accept="image/png"
-			class="file-input file-input-ghost"
+			class="file-input file-input-bordered w-full rounded-xl border-[#7e8b9b] bg-white text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 			onchange={handleFileChange}
 		/>
 
 		{#if previewUrl}
-			<div class="bg-base-100 rounded border p-2">
-				<img src={previewUrl} alt="Preview" class="w-full object-contain" />
+			<div
+				class="overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50 p-2 dark:border-zinc-800 dark:bg-zinc-800/50"
+			>
+				<img src={previewUrl} alt="Preview" class="w-full rounded-lg object-contain" />
 			</div>
 		{/if}
 	</div>
 
-	<div class="mt-4 flex justify-end gap-2">
-		<button class="btn" type="button" onclick={() => hideModal()} disabled={uploading}>Batal</button
+	<div class="flex justify-end gap-2 border-t border-slate-100 pt-3 dark:border-zinc-800">
+		<button
+			class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+			type="button"
+			onclick={() => hideModal()}
+			disabled={uploading}>Batal</button
 		>
-		<button class="btn btn-primary" type="button" onclick={upload} disabled={uploading}>
+		<button
+			class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+			type="button"
+			onclick={upload}
+			disabled={uploading}
+		>
 			{#if uploading}
-				<span class="loading loading-spinner loading-sm"></span>
+				<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
 			{/if}
 			Unggah
 		</button>

@@ -45,7 +45,7 @@
 				scores.push(num);
 			}
 		}
-		if (scores.length === 0) return '—';
+		if (scores.length === 0) return '-';
 		const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
 		return avg.toFixed(2);
 	}
@@ -62,7 +62,7 @@
 				map.set(tid, {
 					id: entry.teknikPenilaianId ?? null,
 					nama: entry.teknikPenilaian?.nama ?? 'Tanpa Teknik',
-					singkatan: entry.teknikPenilaian?.singkatan ?? '—',
+					singkatan: entry.teknikPenilaian?.singkatan ?? '-',
 					count: 0
 				});
 			}
@@ -90,7 +90,7 @@
 				groups.set(key, {
 					id: entry.teknikPenilaianId ?? null,
 					nama: entry.teknikPenilaian?.nama ?? 'Lainnya / Belum Ditentukan',
-					singkatan: entry.teknikPenilaian?.singkatan ?? '—',
+					singkatan: entry.teknikPenilaian?.singkatan ?? '-',
 					keterangan: entry.teknikPenilaian?.keterangan ?? null,
 					items: []
 				});
@@ -132,12 +132,13 @@
 <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 	{#if availableTekniks.length > 1}
 		<div class="flex flex-wrap items-center gap-1.5">
-			<span class="text-xs font-semibold text-base-content/70 mr-0.5">Filter:</span>
+			<span class="mr-0.5 text-xs font-semibold text-slate-600 dark:text-zinc-300">Filter:</span>
 			<button
 				type="button"
-				class="btn btn-xs rounded-full shadow-none transition-all {selectedTeknikFilter === 'semua'
-					? 'btn-primary font-bold'
-					: 'btn-soft'}"
+				class="inline-flex h-7 items-center rounded-full border px-2.5 text-[11px] font-semibold transition-colors {selectedTeknikFilter ===
+				'semua'
+					? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
+					: 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
 				onclick={() => (selectedTeknikFilter = 'semua')}
 			>
 				Semua ({entries.length})
@@ -145,28 +146,36 @@
 			{#each availableTekniks as t (t.id ?? 'none')}
 				<button
 					type="button"
-					class="btn btn-xs rounded-full shadow-none transition-all {selectedTeknikFilter ===
+					class="inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold transition-colors {selectedTeknikFilter ===
 					(t.id ?? -1)
-						? 'btn-primary font-bold'
-						: 'btn-soft'}"
+						? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
+						: 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
 					onclick={() => (selectedTeknikFilter = t.id ?? -1)}
 				>
 					<span class="font-mono font-bold">{t.singkatan}</span>
 					<span>{t.nama}</span>
-					<span class="badge badge-xs badge-neutral/20 font-semibold">{t.count}</span>
+					<span
+						class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold {selectedTeknikFilter ===
+						(t.id ?? -1)
+							? 'bg-white/20 text-white'
+							: 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300'}">{t.count}</span
+					>
 				</button>
 			{/each}
 		</div>
 	{/if}
 
 	<div class="flex items-center gap-1.5 sm:ml-auto">
-		<span class="text-xs text-base-content/60 font-medium">Tampilan:</span>
-		<div class="join border border-base-200 dark:border-base-300 rounded-lg p-0.5 bg-base-200/50">
+		<span class="text-xs font-medium text-slate-500 dark:text-zinc-400">Tampilan:</span>
+		<div
+			class="inline-flex rounded-xl border border-slate-200/80 bg-slate-50 p-0.5 dark:border-zinc-700 dark:bg-zinc-800"
+		>
 			<button
 				type="button"
-				class="join-item btn btn-xs border-none shadow-none {groupBy === 'teknik'
-					? 'btn-primary font-bold'
-					: 'btn-ghost'}"
+				class="rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors {groupBy ===
+				'teknik'
+					? 'bg-blue-600 text-white shadow-xs dark:bg-blue-500'
+					: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'}"
 				onclick={() => (groupBy = 'teknik')}
 				title="Kelompokkan berdasarkan Teknik Penilaian"
 			>
@@ -174,9 +183,10 @@
 			</button>
 			<button
 				type="button"
-				class="join-item btn btn-xs border-none shadow-none {groupBy === 'lingkup'
-					? 'btn-primary font-bold'
-					: 'btn-ghost'}"
+				class="rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors {groupBy ===
+				'lingkup'
+					? 'bg-blue-600 text-white shadow-xs dark:bg-blue-500'
+					: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'}"
 				onclick={() => (groupBy = 'lingkup')}
 				title="Kelompokkan berdasarkan Lingkup Materi"
 			>
@@ -184,9 +194,10 @@
 			</button>
 			<button
 				type="button"
-				class="join-item btn btn-xs border-none shadow-none {groupBy === 'none'
-					? 'btn-primary font-bold'
-					: 'btn-ghost'}"
+				class="rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors {groupBy ===
+				'none'
+					? 'bg-blue-600 text-white shadow-xs dark:bg-blue-500'
+					: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'}"
 				onclick={() => (groupBy = 'none')}
 				title="Daftar lurus tanpa kategori"
 			>
@@ -205,32 +216,40 @@
 				selectedTeknikFilter !== 'semua' && (section.id ?? -1) !== selectedTeknikFilter}
 			{@const avg = computeSectionAverage(section.items)}
 			<div
-				class="rounded-xl border border-base-200 bg-base-100 shadow-sm overflow-hidden dark:border-base-300 dark:bg-base-200/40"
+				class="overflow-hidden rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 				class:hidden={isSectionHidden}
 			>
 				<!-- Section Header -->
 				<div
-					class="flex flex-col gap-2 bg-base-200/70 p-3 sm:flex-row sm:items-center sm:justify-between border-b border-base-200 dark:border-base-300 dark:bg-base-300/40"
+					class="flex flex-col gap-2 border-b border-slate-200/80 bg-slate-50/80 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-800/60"
 				>
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="badge badge-primary font-mono font-bold text-xs">
+						<span
+							class="inline-flex items-center rounded-md border border-blue-200/80 bg-blue-50 px-2 py-0.5 font-mono text-[11px] font-bold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300"
+						>
 							{section.singkatan}
 						</span>
-						<h4 class="font-bold text-base text-base-content">{section.nama}</h4>
-						<span class="badge badge-soft badge-info text-xs font-semibold">
+						<h4 class="text-sm font-bold text-slate-900 dark:text-zinc-100">{section.nama}</h4>
+						<span
+							class="inline-flex items-center rounded-full border border-blue-200/80 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300"
+						>
 							{getTeknikHint(section.singkatan, section.nama)}
 						</span>
 						{#if section.keterangan}
-							<span class="text-xs text-base-content/60 font-normal hidden lg:inline">
-								• {section.keterangan}
+							<span class="hidden text-xs font-normal text-slate-500 lg:inline dark:text-zinc-400">
+								· {section.keterangan}
 							</span>
 						{/if}
 					</div>
 					<div class="flex items-center gap-3">
-						<span class="text-xs text-base-content/70">
-							Rata-rata: <strong class="text-base-content font-mono font-bold">{avg}</strong>
+						<span class="text-xs text-slate-500 dark:text-zinc-400">
+							Rata-rata: <strong class="font-mono font-bold text-slate-900 dark:text-zinc-100"
+								>{avg}</strong
+							>
 						</span>
-						<span class="badge badge-neutral/20 badge-sm font-semibold">
+						<span
+							class="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+						>
 							{section.items.length} TP
 						</span>
 					</div>
@@ -238,32 +257,38 @@
 
 				<!-- Section Table -->
 				<div class="overflow-x-auto">
-					<table class="table table-sm w-full">
+					<table class="w-full border-collapse text-xs">
 						<thead>
-							<tr class="bg-base-100/50 text-base-content/70 border-b border-base-200 text-xs">
-								<th style="width: 48px;" class="text-center font-semibold">No</th>
-								<th class="font-semibold">Tujuan Pembelajaran</th>
-								<th style="width: 130px;" class="text-center font-semibold">Nilai (0-100)</th>
+							<tr
+								class="border-b border-slate-200/80 bg-slate-50/40 text-left text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/30 dark:text-zinc-300"
+							>
+								<th class="w-12 px-3 py-2 text-center font-semibold">No</th>
+								<th class="px-3 py-2 font-semibold">Tujuan Pembelajaran</th>
+								<th class="w-32 px-3 py-2 text-center font-semibold">Nilai (0-100)</th>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 							{#each section.items as item (item.entry.tujuanPembelajaranId)}
-								<tr class="hover:bg-base-200/40 border-b border-base-200/60 last:border-b-0">
-									<td class="align-top text-center font-semibold text-base-content/60 pt-3">
+								<tr class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
+									<td
+										class="px-3 py-2.5 pt-3 text-center align-top font-semibold text-slate-500 dark:text-zinc-400"
+									>
 										{item.entry.index}
 									</td>
-									<td class="align-top py-2.5">
-										<p class="font-medium text-sm text-base-content leading-relaxed">
+									<td class="px-3 py-2.5 align-top">
+										<p
+											class="text-xs leading-relaxed font-medium text-slate-900 dark:text-zinc-100"
+										>
 											{item.entry.deskripsi}
 										</p>
 										<div
-											class="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-base-content/70"
+											class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400"
 										>
-											<span class="font-semibold uppercase tracking-wider text-xs">
+											<span class="font-semibold tracking-wider uppercase">
 												{item.entry.lingkupMateri}
 											</span>
 											{#if item.entry.bobot != null}
-												<span class="opacity-50">•</span>
+												<span class="opacity-50">·</span>
 												<span class="font-medium">Bobot {formatScore(item.entry.bobot)}%</span>
 											{/if}
 										</div>
@@ -273,13 +298,13 @@
 											value={item.entry.tujuanPembelajaranId}
 										/>
 									</td>
-									<td class="align-top text-center py-2.5">
+									<td class="px-3 py-2.5 text-center align-top">
 										<input
 											type="number"
 											name={`entries.${item.originalIndex}.nilai`}
 											class="{getInputClass(
 												item.entry.nilaiText
-											)} input-sm input-bordered text-center font-mono font-bold text-sm w-28 shadow-2xs"
+											)} h-8 w-28 text-center font-mono text-xs font-bold shadow-2xs"
 											value={item.entry.nilaiText}
 											placeholder="Isi nilai"
 											min="0"
@@ -310,28 +335,36 @@
 			)}
 			{@const avg = computeSectionAverage(matchingItems)}
 			<div
-				class="rounded-xl border border-base-200 bg-base-100 shadow-sm overflow-hidden dark:border-base-300 dark:bg-base-200/40"
+				class="overflow-hidden rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 				class:hidden={matchingItems.length === 0}
 			>
 				<!-- Section Header -->
 				<div
-					class="flex flex-col gap-2 bg-base-200/70 p-3 sm:flex-row sm:items-center sm:justify-between border-b border-base-200 dark:border-base-300 dark:bg-base-300/40"
+					class="flex flex-col gap-2 border-b border-slate-200/80 bg-slate-50/80 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-800/60"
 				>
 					<div class="flex items-center gap-2">
-						<h4 class="font-bold text-base text-base-content uppercase tracking-wider">
+						<h4
+							class="text-sm font-bold tracking-wider text-slate-900 uppercase dark:text-zinc-100"
+						>
 							{section.nama}
 						</h4>
 						{#if section.bobot != null}
-							<span class="badge badge-soft badge-sm font-semibold">
+							<span
+								class="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+							>
 								Bobot {formatScore(section.bobot)}%
 							</span>
 						{/if}
 					</div>
 					<div class="flex items-center gap-3">
-						<span class="text-xs text-base-content/70">
-							Rata-rata: <strong class="text-base-content font-mono font-bold">{avg}</strong>
+						<span class="text-xs text-slate-500 dark:text-zinc-400">
+							Rata-rata: <strong class="font-mono font-bold text-slate-900 dark:text-zinc-100"
+								>{avg}</strong
+							>
 						</span>
-						<span class="badge badge-neutral/20 badge-sm font-semibold">
+						<span
+							class="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+						>
 							{matchingItems.length} TP
 						</span>
 					</div>
@@ -339,42 +372,48 @@
 
 				<!-- Section Table -->
 				<div class="overflow-x-auto">
-					<table class="table table-sm w-full">
+					<table class="w-full border-collapse text-xs">
 						<thead>
-							<tr class="bg-base-100/50 text-base-content/70 border-b border-base-200 text-xs">
-								<th style="width: 48px;" class="text-center font-semibold">No</th>
-								<th class="font-semibold">Tujuan Pembelajaran</th>
-								<th style="width: 130px;" class="text-center font-semibold">Nilai (0-100)</th>
+							<tr
+								class="border-b border-slate-200/80 bg-slate-50/40 text-left text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/30 dark:text-zinc-300"
+							>
+								<th class="w-12 px-3 py-2 text-center font-semibold">No</th>
+								<th class="px-3 py-2 font-semibold">Tujuan Pembelajaran</th>
+								<th class="w-32 px-3 py-2 text-center font-semibold">Nilai (0-100)</th>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 							{#each section.items as item (item.entry.tujuanPembelajaranId)}
 								{@const isHidden =
 									selectedTeknikFilter !== 'semua' &&
 									(item.entry.teknikPenilaianId ?? -1) !== selectedTeknikFilter}
 								<tr
-									class="hover:bg-base-200/40 border-b border-base-200/60 last:border-b-0"
+									class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40"
 									class:hidden={isHidden}
 								>
-									<td class="align-top text-center font-semibold text-base-content/60 pt-3">
+									<td
+										class="px-3 py-2.5 pt-3 text-center align-top font-semibold text-slate-500 dark:text-zinc-400"
+									>
 										{item.entry.index}
 									</td>
-									<td class="align-top py-2.5">
-										<p class="font-medium text-sm text-base-content leading-relaxed">
+									<td class="px-3 py-2.5 align-top">
+										<p
+											class="text-xs leading-relaxed font-medium text-slate-900 dark:text-zinc-100"
+										>
 											{item.entry.deskripsi}
 										</p>
 										<div
-											class="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-base-content/70"
+											class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400"
 										>
 											{#if item.entry.teknikPenilaian}
 												<span
-													class="badge badge-xs badge-info badge-outline font-semibold gap-1 py-1"
+													class="inline-flex items-center gap-1 rounded-md border border-blue-200/80 bg-blue-50 px-1.5 py-0.5 font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300"
 												>
 													<span class="font-bold">{item.entry.teknikPenilaian.singkatan}</span>
-													<span class="opacity-60">•</span>
+													<span class="opacity-60">·</span>
 													<span>{item.entry.teknikPenilaian.nama}</span>
 												</span>
-												<span class="text-xs text-base-content/60 font-medium">
+												<span class="font-medium text-slate-500 dark:text-zinc-400">
 													({getTeknikHint(
 														item.entry.teknikPenilaian.singkatan,
 														item.entry.teknikPenilaian.nama
@@ -388,13 +427,13 @@
 											value={item.entry.tujuanPembelajaranId}
 										/>
 									</td>
-									<td class="align-top text-center py-2.5">
+									<td class="px-3 py-2.5 text-center align-top">
 										<input
 											type="number"
 											name={`entries.${item.originalIndex}.nilai`}
 											class="{getInputClass(
 												item.entry.nilaiText
-											)} input-sm input-bordered text-center font-mono font-bold text-sm w-28 shadow-2xs"
+											)} h-8 w-28 text-center font-mono text-xs font-bold shadow-2xs"
 											value={item.entry.nilaiText}
 											placeholder="Isi nilai"
 											min="0"
@@ -417,48 +456,56 @@
 {:else}
 	<!-- Flat Table View -->
 	<div
-		class="mt-3 rounded-xl border border-base-200 bg-base-100 shadow-sm overflow-hidden dark:border-base-300 dark:bg-base-200/40"
+		class="mt-3 overflow-hidden rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 	>
 		<div class="overflow-x-auto">
-			<table class="table table-sm w-full">
+			<table class="w-full border-collapse text-xs">
 				<thead>
-					<tr class="bg-base-200/70 text-base-content border-b border-base-200 text-xs">
-						<th style="width: 48px;" class="text-center font-bold">No</th>
-						<th class="font-bold">Tujuan Pembelajaran</th>
-						<th style="width: 130px;" class="text-center font-bold">Nilai (0-100)</th>
+					<tr
+						class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+					>
+						<th class="w-12 px-3 py-2.5 text-center">No</th>
+						<th class="px-3 py-2.5">Tujuan Pembelajaran</th>
+						<th class="w-32 px-3 py-2.5 text-center">Nilai (0-100)</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 					{#each entries as entry, index (entry.tujuanPembelajaranId)}
 						{@const isHidden =
 							selectedTeknikFilter !== 'semua' &&
 							(entry.teknikPenilaianId ?? -1) !== selectedTeknikFilter}
 						<tr
-							class="hover:bg-base-200/40 border-b border-base-200/60 last:border-b-0"
+							class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40"
 							class:hidden={isHidden}
 						>
-							<td class="align-top text-center font-semibold text-base-content/60 pt-3">
+							<td
+								class="px-3 py-2.5 pt-3 text-center align-top font-semibold text-slate-500 dark:text-zinc-400"
+							>
 								{entry.index}
 							</td>
-							<td class="align-top py-2.5">
-								<p class="font-medium text-sm text-base-content leading-relaxed">
+							<td class="px-3 py-2.5 align-top">
+								<p class="text-xs leading-relaxed font-medium text-slate-900 dark:text-zinc-100">
 									{entry.deskripsi}
 								</p>
-								<div class="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-base-content/70">
-									<span class="font-semibold uppercase tracking-wider text-xs">
+								<div
+									class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400"
+								>
+									<span class="font-semibold tracking-wider uppercase">
 										{entry.lingkupMateri}
 									</span>
 									{#if entry.bobot != null}
-										<span class="opacity-50">•</span>
+										<span class="opacity-50">·</span>
 										<span class="font-medium">Bobot {formatScore(entry.bobot)}%</span>
 									{/if}
 									{#if entry.teknikPenilaian}
-										<span class="badge badge-xs badge-info badge-outline font-semibold gap-1 py-1">
+										<span
+											class="inline-flex items-center gap-1 rounded-md border border-blue-200/80 bg-blue-50 px-1.5 py-0.5 font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300"
+										>
 											<span class="font-bold">{entry.teknikPenilaian.singkatan}</span>
-											<span class="opacity-60">•</span>
+											<span class="opacity-60">·</span>
 											<span>{entry.teknikPenilaian.nama}</span>
 										</span>
-										<span class="text-xs text-base-content/60 font-medium">
+										<span class="font-medium text-slate-500 dark:text-zinc-400">
 											({getTeknikHint(entry.teknikPenilaian.singkatan, entry.teknikPenilaian.nama)})
 										</span>
 									{/if}
@@ -469,13 +516,13 @@
 									value={entry.tujuanPembelajaranId}
 								/>
 							</td>
-							<td class="align-top text-center py-2.5">
+							<td class="px-3 py-2.5 text-center align-top">
 								<input
 									type="number"
 									name={`entries.${index}.nilai`}
 									class="{getInputClass(
 										entry.nilaiText
-									)} input-sm input-bordered text-center font-mono font-bold text-sm w-28 shadow-2xs"
+									)} h-8 w-28 text-center font-mono text-xs font-bold shadow-2xs"
 									value={entry.nilaiText}
 									placeholder="Isi nilai"
 									min="0"

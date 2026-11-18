@@ -109,9 +109,12 @@
 </script>
 
 {#if data.isInit}
-	<div role="alert" class="alert alert-success alert-soft mx-auto mb-4 max-w-4xl">
+	<div
+		role="alert"
+		class="mx-auto mb-4 flex max-w-4xl items-center gap-2.5 rounded-2xl border border-blue-200/80 bg-blue-50/75 px-4 py-3 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/35 dark:text-blue-200"
+	>
 		<!-- TODO: sesuaikan pesan saat pertama kali setup -->
-		<Icon name="info" />
+		<Icon name="info" class="h-4 w-4 shrink-0" />
 		<span>Selamat datang! Pertama-tama, isi formulir sekolah terlebih dahulu!</span>
 	</div>
 {/if}
@@ -130,32 +133,38 @@
 			<input name="id" value={initialSekolah.id} hidden />
 		{/if}
 
-		<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-			<div class="mb-4 flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
-				<h2 class="text-xl font-bold">
+		<div
+			class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+		>
+			<div
+				class="mb-4 flex flex-col items-start justify-between gap-2 border-b border-slate-200 pb-4 md:flex-row md:items-center dark:border-zinc-800"
+			>
+				<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
 					{#if isNew}
 						Tambah Sekolah Baru
 					{:else}
 						Formulir Isian Identitas Sekolah
 					{/if}
-				</h2>
+				</h1>
 				<a
-					class="btn btn-soft shadow-none w-full sm:w-auto"
+					class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 sm:w-auto dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					href="/sekolah/form/sync-dapodik"
 					use:modalRoute={'sync-dapodik'}
 				>
-					<Icon name="dapodik" />
+					<Icon name="dapodik" class="h-4 w-4" />
 					Sync Dapodik
 				</a>
 			</div>
 
-			<div class="grid grid-cols-1 items-center gap-2 md:grid-cols-2">
+			<div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
 				<!-- Jenjang Pendidikan & Lokasi Tanda Tangan -->
-				<div class="grid grid-cols-1 gap-2 md:col-span-2 md:grid-cols-2 md:items-end">
-					<div class="fieldset">
-						<legend class="fieldset-legend">Jenjang Pendidikan</legend>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Jenjang Pendidikan</span
+					>
+					<div class="relative flex items-center">
 						<select
-							class="select bg-base-200 dark:bg-base-300 validator w-full truncate dark:border-none"
+							class="validator h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 							name="jenjangPendidikan"
 							required
 							onchange={(e) => {
@@ -180,52 +189,63 @@
 								</option>
 							{/each}
 						</select>
-						<input hidden name="jenjangVariant" value={initialSekolah?.jenjangVariant ?? 'smk'} />
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
 					</div>
-					<div class="fieldset">
-						<legend class="fieldset-legend">Lokasi Tanda Tangan</legend>
-						<input
-							required
-							type="text"
-							class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
-							placeholder="Contoh: Karawang"
-							name="lokasiTandaTangan"
-						/>
-					</div>
-				</div>
+					<input hidden name="jenjangVariant" value={initialSekolah?.jenjangVariant ?? 'smk'} />
+				</label>
 
-				<div class="fieldset">
-					<!-- Nama Sekolah -->
-					<legend class="fieldset-legend">Nama Sekolah</legend>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Lokasi Tanda Tangan</span
+					>
 					<input
 						required
 						type="text"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+						placeholder="Contoh: Karawang"
+						name="lokasiTandaTangan"
+					/>
+				</label>
+
+				<label class="flex flex-col gap-1.5">
+					<!-- Nama Sekolah -->
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Nama Sekolah</span>
+					<input
+						required
+						type="text"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 						placeholder="Contoh: SMK Pratama Mulya Karawang"
 						name="nama"
 					/>
-				</div>
+				</label>
 
-				<div class="fieldset">
+				<label class="flex flex-col gap-1.5">
 					<!-- NPSN -->
-					<legend class="fieldset-legend">NPSN</legend>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">NPSN</span>
 					<input
 						required
 						type="text"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 						placeholder="Contoh: 20260930"
 						name="npsn"
 					/>
-				</div>
+				</label>
 
-				<div class="fieldset">
+				<div class="flex flex-col gap-1.5">
 					<!-- Nama Kepala Sekolah -->
-					<legend class="fieldset-legend">Nama Kepala Sekolah</legend>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Nama Kepala Sekolah</span
+					>
 					{#if pakaiSelectPegawai}
 						<div class="relative">
 							<input
 								type="text"
-								class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+								class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Pilih Kepala Sekolah"
 								name="kepalaSekolah.nama"
 								required
@@ -253,7 +273,7 @@
 								<ul
 									id="daftar-nama-kepala"
 									role="listbox"
-									class="bg-base-200 absolute z-50 mt-1 max-h-60 w-full list-none overflow-y-auto rounded-box p-1 shadow-lg"
+									class="absolute z-50 mt-1 max-h-60 w-full list-none overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
 								>
 									{#each kepalaTersaring.slice(0, MAX_OPSI_TAMPIL) as opsi, i (`${opsi.id}|${opsi.nama}`)}
 										<li
@@ -263,23 +283,26 @@
 										>
 											<button
 												type="button"
-												class="w-full truncate rounded px-2 py-1.5 text-left text-sm transition-colors duration-200 hover:bg-base-content/10 {i ===
+												class="w-full truncate rounded-lg px-2.5 py-1.5 text-left text-xs text-slate-800 transition-colors hover:bg-blue-50 dark:text-zinc-200 dark:hover:bg-zinc-800 {i ===
 												indeksSorotKepala
-													? 'bg-base-content/10'
+													? 'bg-blue-50 font-semibold text-blue-900 dark:bg-zinc-800 dark:text-blue-300'
 													: ''}"
 												onmousedown={(e) => e.preventDefault()}
 												onclick={() => pilihKepala(opsi)}
 											>
 												{#if opsi.nip}
-													<span class="mr-1.5 font-mono text-xs opacity-60">{opsi.nip}</span>
+													<span
+														class="mr-1.5 font-mono text-[11px] text-slate-500 dark:text-zinc-400"
+														>{opsi.nip}</span
+													>
 												{/if}
 												{opsi.nama}
 											</button>
 										</li>
 									{/each}
 									{#if kepalaTersaring.length > MAX_OPSI_TAMPIL}
-										<li class="px-2 py-1 text-sm opacity-60">
-											{kepalaTersaring.length - MAX_OPSI_TAMPIL} lainnya — ketik untuk mempersempit.
+										<li class="px-2.5 py-1 text-xs text-slate-500 dark:text-zinc-400">
+											{kepalaTersaring.length - MAX_OPSI_TAMPIL} lainnya. Ketik untuk mempersempit.
 										</li>
 									{/if}
 								</ul>
@@ -289,12 +312,12 @@
 						<input
 							required
 							type="text"
-							class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+							class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 							placeholder="Contoh: Bruce Wayne, Bat"
 							name="kepalaSekolah.nama"
 						/>
 					{/if}
-					<span>
+					<span class="text-xs text-slate-500 dark:text-zinc-400">
 						{#if kunciKepalaSekolah}
 							Otomatis dari Dapodik. Menambahkan gelar dilakukan melalui menu Pengaturan - Edit
 							profil.
@@ -304,13 +327,15 @@
 					</span>
 				</div>
 
-				<div class="fieldset">
+				<label class="flex flex-col gap-1.5">
 					<!-- NIP Kepala Sekolah -->
-					<legend class="fieldset-legend">NIP Kepala Sekolah</legend>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>NIP Kepala Sekolah</span
+					>
 					<input
 						required
 						type="text"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
 						placeholder="Contoh: NIP 19700305 199309 1 009"
 						name="kepalaSekolah.nip"
 						value={pakaiSelectPegawai ? kepalaNip : undefined}
@@ -320,237 +345,294 @@
 							: undefined}
 					/>
 					{#if !pakaiSelectPegawai}
-						<span>Biarkan kosong jika kepala sekolah tidak memiliki NIP.</span>
+						<span class="text-xs text-slate-500 dark:text-zinc-400"
+							>Biarkan kosong jika kepala sekolah tidak memiliki NIP.</span
+						>
 					{:else if kunciKepalaSekolah}
-						<span>
+						<span class="text-xs text-slate-500 dark:text-zinc-400">
 							Otomatis berdasarkan pegawai yang dipilih. Edit melalui menu Pengaturan - Edit profil.
 						</span>
 					{/if}
-				</div>
+				</label>
 
 				<input type="hidden" name="kepalaSekolahId" value={kepalaTerpilihId ?? ''} />
 
-				<div class="fieldset">
+				<label class="flex flex-col gap-1.5">
 					<!-- Nama desa atau kelurahan -->
-					<legend class="fieldset-legend">Desa atau Kelurahan</legend>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Desa atau Kelurahan</span
+					>
 					<input
 						required
 						type="text"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 						placeholder="Contoh: Desa Sungai Dangin atau Kelurahan Sungai Sengkuang"
 						name="alamat.desa"
 					/>
-				</div>
+				</label>
 
-				<div class="fieldset">
+				<label class="flex flex-col gap-1.5">
 					<!-- Kecamatan -->
-					<legend class="fieldset-legend">Kecamatan</legend>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Kecamatan</span>
 					<input
 						required
 						type="text"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 						placeholder="Contoh: Kecamatan Noyan"
 						name="alamat.kecamatan"
 					/>
-				</div>
+				</label>
 
-				<div class="fieldset">
+				<label class="flex flex-col gap-1.5">
 					<!-- Kabupaten -->
-					<legend class="fieldset-legend">Kabupaten</legend>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Kabupaten</span>
 					<input
 						required
 						type="text"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 						placeholder="Contoh: Kabupaten Sanggau"
 						name="alamat.kabupaten"
 					/>
-				</div>
+				</label>
 
-				<div class="fieldset">
+				<label class="flex flex-col gap-1.5">
 					<!-- Provinsi -->
-					<legend class="fieldset-legend">Provinsi</legend>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Provinsi</span>
 					<input
 						required
 						type="text"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 						placeholder="Contoh: Kalimantan Barat"
 						name="alamat.provinsi"
 					/>
-				</div>
+				</label>
 
-				<div class="fieldset">
+				<label class="flex flex-col gap-1.5">
 					<!-- Kode Pos -->
-					<legend class="fieldset-legend">Kode POS</legend>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Kode POS</span>
 					<input
 						required
 						type="text"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 						placeholder="Contoh: 78554"
 						name="alamat.kodePos"
 					/>
-				</div>
+				</label>
 
-				<div class="fieldset">
+				<label class="flex flex-col gap-1.5">
 					<!-- Alamat Sekolah -->
-					<legend class="fieldset-legend">Rincian Alamat Sekolah</legend>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Rincian Alamat Sekolah</span
+					>
 					<input
 						required
 						type="text"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 						placeholder="Contoh: Jalan Raya Noyan, RT 9 / RW 3, Dusun Periji"
 						name="alamat.jalan"
 					/>
-				</div>
+				</label>
 
-				<div class="fieldset">
+				<div class="flex flex-col gap-1.5">
 					<!-- Website Sekolah -->
-					<legend class="fieldset-legend">Website Sekolah</legend>
-					<label class="input bg-base-200 dark:bg-base-300 validator w-full dark:border-none">
-						<span class="label">https://</span>
-						<input type="text" placeholder="Kosongkan bila tidak ada" name="website" />
-					</label>
+					<label
+						class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						for="sekolah-website">Website Sekolah</label
+					>
+					<div
+						class="flex h-9 items-center overflow-hidden rounded-xl border border-[#7e8b9b] bg-white focus-within:border-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:focus-within:border-blue-400"
+					>
+						<span
+							class="border-r border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
+							>https://</span
+						>
+						<input
+							id="sekolah-website"
+							type="text"
+							class="validator h-full w-full bg-transparent px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-400"
+							placeholder="Kosongkan bila tidak ada"
+							name="website"
+						/>
+					</div>
 				</div>
 
-				<div class="fieldset">
+				<label class="flex flex-col gap-1.5">
 					<!-- Email Sekolah -->
-					<legend class="fieldset-legend">Email Sekolah</legend>
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Email Sekolah</span>
 					<input
 						required
 						type="text"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 						placeholder="Contoh: cs@sdn19periji.sch.id"
 						name="email"
 					/>
-				</div>
+				</label>
 
 				<!-- Kementrian -->
-				<div class="fieldset">
-					<legend class="fieldset-legend">Pilih Naungan</legend>
-					<select
-						class="select bg-base-200 dark:bg-base-300 validator w-full truncate dark:border-none"
-						name="naungan"
-						required
-					>
-						{#each nauganOptions as option (option.key)}
-							<option
-								value={option.key}
-								selected={initialSekolah?.naungan === option.key ||
-									(!initialSekolah && option.key === 'kemendikbud')}
-							>
-								{option.label}
-							</option>
-						{/each}
-					</select>
-				</div>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Pilih Naungan</span>
+					<div class="relative flex items-center">
+						<select
+							class="validator h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+							name="naungan"
+							required
+						>
+							{#each nauganOptions as option (option.key)}
+								<option
+									value={option.key}
+									selected={initialSekolah?.naungan === option.key ||
+										(!initialSekolah && option.key === 'kemendikbud')}
+								>
+									{option.label}
+								</option>
+							{/each}
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
+					</div>
+				</label>
 
 				<!-- Status definitif plt -->
-				<div class="fieldset">
-					<legend class="fieldset-legend">Status Kepala Sekolah</legend>
-					<select
-						class="select bg-base-200 dark:bg-base-300 validator w-full truncate dark:border-none"
-						name="statusKepalaSekolah"
-						required
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Status Kepala Sekolah</span
 					>
-						<option
-							value="definitif"
-							selected={initialSekolah?.statusKepalaSekolah === 'definitif'}
+					<div class="relative flex items-center">
+						<select
+							class="validator h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+							name="statusKepalaSekolah"
+							required
 						>
-							Definitif
-						</option>
-						<option value="plt" selected={initialSekolah?.statusKepalaSekolah === 'plt'}>
-							PLT (Pelaksana Tugas)
-						</option>
-					</select>
-				</div>
+							<option
+								value="definitif"
+								selected={initialSekolah?.statusKepalaSekolah === 'definitif'}
+							>
+								Definitif
+							</option>
+							<option value="plt" selected={initialSekolah?.statusKepalaSekolah === 'plt'}>
+								PLT (Pelaksana Tugas)
+							</option>
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
+					</div>
+				</label>
 
 				<!-- Ambang kriteria rapor (dulu hanya bisa diubah di Master Data > Profil Sekolah) -->
-				<div class="fieldset">
-					<legend class="fieldset-legend">Ambang Kriteria Cukup</legend>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Ambang Kriteria Cukup</span
+					>
 					<input
 						type="number"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 						name="raporKriteriaCukup"
 						min="0"
 						max="100"
 						required
 						value={initialSekolah?.raporKriteriaCukup ?? 85}
 					/>
-					<span class="label text-wrap text-base-content/60">
+					<span class="text-xs text-slate-500 dark:text-zinc-400">
 						Batas bawah predikat "Cukup" pada rapor. Standar: 85.
 					</span>
-				</div>
+				</label>
 
-				<div class="fieldset">
-					<legend class="fieldset-legend">Ambang Kriteria Baik</legend>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Ambang Kriteria Baik</span
+					>
 					<input
 						type="number"
-						class="input validator bg-base-200 dark:bg-base-300 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 						name="raporKriteriaBaik"
 						min="0"
 						max="100"
 						required
 						value={initialSekolah?.raporKriteriaBaik ?? 95}
 					/>
-					<span class="label text-wrap text-base-content/60">
+					<span class="text-xs text-slate-500 dark:text-zinc-400">
 						Batas bawah predikat "Baik" pada rapor. Standar: 95.
 					</span>
-				</div>
+				</label>
 			</div>
 
 			<!-- Upload logo sekolah dan dinas pendidikan -->
-			<div class="mt-2 grid gap-2 md:grid-cols-2">
-				<div class="fieldset">
-					<legend class="fieldset-legend">Logo Sekolah</legend>
-					<input type="file" class="file-input file-input-ghost" accept="image/*" name="logo" />
-					<p class="label text-wrap">Format png, tanpa latar belakang, maksimal 300KB</p>
-				</div>
-				<div class="fieldset">
-					<legend class="fieldset-legend">Logo Pemda</legend>
+			<div class="mt-4 grid gap-4 md:grid-cols-2">
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Logo Sekolah</span>
 					<input
 						type="file"
-						class="file-input file-input-ghost"
+						class="block w-full text-xs text-slate-600 file:mr-3 file:h-9 file:cursor-pointer file:rounded-xl file:border file:border-[#7e8b9b] file:bg-white file:px-3.5 file:text-xs file:font-semibold file:text-slate-800 hover:file:bg-slate-50 dark:text-zinc-400 dark:file:border-zinc-700 dark:file:bg-zinc-900 dark:file:text-zinc-100 dark:hover:file:bg-zinc-800"
+						accept="image/*"
+						name="logo"
+					/>
+					<span class="text-xs text-slate-500 dark:text-zinc-400"
+						>Format png, tanpa latar belakang, maksimal 300KB</span
+					>
+				</label>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Logo Pemda</span>
+					<input
+						type="file"
+						class="block w-full text-xs text-slate-600 file:mr-3 file:h-9 file:cursor-pointer file:rounded-xl file:border file:border-[#7e8b9b] file:bg-white file:px-3.5 file:text-xs file:font-semibold file:text-slate-800 hover:file:bg-slate-50 dark:text-zinc-400 dark:file:border-zinc-700 dark:file:bg-zinc-900 dark:file:text-zinc-100 dark:hover:file:bg-zinc-800"
 						accept="image/*"
 						name="logoDinas"
 					/>
-					<p class="label text-wrap">Format png, tanpa latar belakang, maksimal 300KB</p>
-				</div>
+					<span class="text-xs text-slate-500 dark:text-zinc-400"
+						>Format png, tanpa latar belakang, maksimal 300KB</span
+					>
+				</label>
 			</div>
 
 			<!-- Back and Save -->
-			<div class="mt-6 flex flex-col justify-end gap-2 sm:flex-row">
+			<div
+				class="mt-6 flex flex-col justify-end gap-2 border-t border-slate-200 pt-4 sm:flex-row dark:border-zinc-800"
+			>
 				{#if !data.isInit}
 					<div class="grid grid-cols-2 gap-2 sm:contents">
 						<a
-							class="btn btn-soft shadow-none sm:mr-auto sm:w-auto"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 sm:mr-auto sm:w-auto dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							href="/sekolah"
 							aria-label="kembali"
 						>
-							<Icon name="left" />
+							<Icon name="left" class="h-4 w-4" />
 							Kembali
 						</a>
 						<button
 							type="button"
-							class="btn btn-soft shadow-none sm:w-auto"
+							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 sm:w-auto dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							onclick={handleImportDb}
 						>
-							<Icon name="import" />
+							<Icon name="import" class="h-4 w-4" />
 							Import DB
 						</button>
 					</div>
 				{:else}
-					<button type="button" class="btn btn-soft shadow-none sm:w-auto" onclick={handleImportDb}>
-						<Icon name="import" />
+					<button
+						type="button"
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 sm:w-auto dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+						onclick={handleImportDb}
+					>
+						<Icon name="import" class="h-4 w-4" />
 						Import DB
 					</button>
 				{/if}
 				<button
-					class="btn btn-primary shadow-none mt-4 sm:mt-0 sm:w-auto"
+					class="mt-2 inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0 sm:w-auto"
 					disabled={submitting || kepalaBelumDipilih}
 				>
 					{#if submitting}
-						<span class="loading loading-spinner"></span>
+						<span class="loading loading-spinner loading-sm"></span>
 					{/if}
-					<Icon name="save" />
+					<Icon name="save" class="h-4 w-4" />
 					Simpan
 				</button>
 			</div>

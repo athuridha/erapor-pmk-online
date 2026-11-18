@@ -101,7 +101,7 @@
 
 {#if open}
 	<dialog
-		class="modal modal-open modal-middle"
+		class="modal modal-open modal-middle bg-slate-950/45 backdrop-blur-[2px]"
 		open
 		aria-modal="true"
 		oncancel={handleCancel}
@@ -112,84 +112,103 @@
 			}
 		}}
 	>
-		<div class="modal-box max-w-2xl">
-			<div class="space-y-1">
-				<h2 class="text-xl font-semibold">{title}</h2>
-				<p class="break-all text-base-content/70 text-sm">{current || 'Pilih drive/folder'}</p>
+		<div
+			class="modal-box max-w-2xl rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		>
+			<div class="border-b border-slate-100 pb-3 dark:border-zinc-800">
+				<h2 class="text-base font-bold text-slate-900 dark:text-zinc-100">{title}</h2>
+				<p class="mt-0.5 break-all font-mono text-xs text-slate-500 dark:text-zinc-400">
+					{current || 'Pilih drive/folder'}
+				</p>
 			</div>
 
 			<div class="mt-4 space-y-3">
 				{#if error}
-					<div class="alert alert-error">
-						<Icon name="error" />
+					<div
+						class="flex items-center gap-2 rounded-xl border border-red-200/80 bg-red-50/80 px-4 py-3 text-xs text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200"
+					>
+						<Icon name="error" class="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
 						<span>{error}</span>
 					</div>
 				{/if}
 
 				<div class="flex flex-wrap gap-2">
 					<button
-						class="btn btn-outline btn-sm"
+						class="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 						type="button"
 						onclick={goUp}
 						disabled={!parent || loading}
 					>
-						<Icon name="up" />
+						<Icon name="up" class="h-3.5 w-3.5" />
 						Naik
 					</button>
 					<button
-						class="btn btn-outline btn-sm"
+						class="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 						type="button"
 						onclick={() => void load(current)}
 						disabled={loading}
 					>
-						<Icon name="repeat" />
+						<Icon name="repeat" class="h-3.5 w-3.5" />
 						Muat ulang
 					</button>
 				</div>
 
 				{#if loading}
-					<div class="rounded-box bg-base-200/60 p-4">
-						<p class="text-sm font-medium">Memuat folder…</p>
+					<div
+						class="rounded-xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/40"
+					>
+						<p class="text-xs font-medium text-slate-600 dark:text-zinc-300">Memuat folder...</p>
 						<progress class="progress progress-primary mt-3 w-full"></progress>
 					</div>
 				{:else}
 					<div
-						class="rounded-box max-h-72 overflow-y-auto border border-base-300 bg-base-200/40 p-2"
+						class="max-h-72 space-y-0.5 overflow-y-auto rounded-xl border border-slate-200/80 bg-slate-50/60 p-2 dark:border-zinc-800 dark:bg-zinc-800/40"
 					>
 						{#if drives.length > 0}
 							{#each drives as drive (drive)}
 								<button
-									class="btn btn-ghost btn-sm justify-start w-full"
+									class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-slate-700 transition-colors hover:bg-white hover:text-blue-700 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-blue-300"
 									type="button"
 									onclick={() => navigate(drive)}
 								>
-									<Icon name="folder" />
-									<span class="font-mono text-xs">{drive}</span>
+									<Icon name="folder" class="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+									<span class="font-mono font-medium">{drive}</span>
 								</button>
 							{/each}
 						{/if}
 						{#if entries.length === 0 && drives.length === 0}
-							<p class="text-base-content/60 p-3 text-center text-sm">
+							<p class="p-3 text-center text-xs text-slate-500 dark:text-zinc-400">
 								Folder ini kosong (tidak ada subfolder).
 							</p>
 						{/if}
 						{#each entries as name (current + '/' + name)}
 							<button
-								class="btn btn-ghost btn-sm justify-start w-full"
+								class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-slate-700 transition-colors hover:bg-white hover:text-blue-700 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-blue-300"
 								type="button"
 								onclick={() => navigate(name)}
 							>
-								<Icon name="folder" />
-								<span class="truncate text-xs">{name}</span>
+								<Icon name="folder" class="h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" />
+								<span class="truncate font-medium">{name}</span>
 							</button>
 						{/each}
 					</div>
 				{/if}
 
-				<div class="flex justify-end gap-2">
-					<button class="btn btn-outline" type="button" onclick={requestClose}> Batal </button>
-					<button class="btn btn-primary" type="button" onclick={requestSelect} disabled={!current}>
-						<Icon name="check" />
+				<div class="flex justify-end gap-2 border-t border-slate-100 pt-3 dark:border-zinc-800">
+					<button
+						class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+						type="button"
+						onclick={requestClose}
+					>
+						Batal
+					</button>
+					<button
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+						type="button"
+						onclick={requestSelect}
+						disabled={!current}
+					>
+						<Icon name="check" class="h-3.5 w-3.5" />
 						Pilih Folder Ini
 					</button>
 				</div>
@@ -197,7 +216,7 @@
 		</div>
 		<form
 			method="dialog"
-			class="modal-backdrop"
+			class="modal-backdrop bg-transparent"
 			onsubmit={(event) => {
 				event.preventDefault();
 				requestClose();

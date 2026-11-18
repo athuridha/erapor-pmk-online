@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidate } from '$app/navigation';
 	import { hideModal, updateModal } from '$lib/components/global-modal.svelte';
+	import Icon from '$lib/components/icon.svelte';
 	import { toast } from '$lib/components/toast.svelte';
 	import { searchQueryMarker } from '$lib/utils';
 	import { onMount } from 'svelte';
@@ -119,12 +120,14 @@
 		updateModal({
 			onPositive: {
 				label: 'Simpan',
-				class: 'btn-soft flex-1 sm:flex-none',
+				class:
+					'flex-1 border-0 bg-blue-600 text-white hover:bg-blue-700 sm:flex-none dark:bg-blue-500 dark:hover:bg-blue-600',
 				action: () => submitSelected()
 			},
 			onNegative: {
 				label: 'Kembali',
-				class: 'btn-soft flex-1 sm:flex-none sm:mr-auto',
+				class:
+					'flex-1 border border-[#7e8b9b] bg-white text-slate-800 hover:bg-slate-50 sm:mr-auto sm:flex-none dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800',
 				action: () => goToStep1()
 			},
 			onNeutral: undefined
@@ -136,12 +139,14 @@
 		updateModal({
 			onPositive: {
 				label: 'Ya',
-				class: 'btn-soft flex-1 sm:flex-none',
+				class:
+					'flex-1 border-0 bg-blue-600 text-white hover:bg-blue-700 sm:flex-none dark:bg-blue-500 dark:hover:bg-blue-600',
 				action: () => submitHadirSemua()
 			},
 			onNegative: {
 				label: 'Tidak',
-				class: 'btn-soft flex-1 sm:flex-none sm:mr-auto',
+				class:
+					'flex-1 border border-[#7e8b9b] bg-white text-slate-800 hover:bg-slate-50 sm:mr-auto sm:flex-none dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800',
 				action: () => pilihTidak()
 			},
 			onNeutral: undefined
@@ -207,12 +212,14 @@
 		updateModal({
 			onPositive: {
 				label: 'Ya',
-				class: 'btn-soft flex-1 sm:flex-none',
+				class:
+					'flex-1 border-0 bg-blue-600 text-white hover:bg-blue-700 sm:flex-none dark:bg-blue-500 dark:hover:bg-blue-600',
 				action: () => submitHadirSemua()
 			},
 			onNegative: {
 				label: 'Tidak',
-				class: 'btn-soft flex-1 sm:flex-none sm:mr-auto',
+				class:
+					'flex-1 border border-[#7e8b9b] bg-white text-slate-800 hover:bg-slate-50 sm:mr-auto sm:flex-none dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800',
 				action: () => pilihTidak()
 			},
 			onNeutral: undefined
@@ -223,52 +230,79 @@
 {#if step === 'pilih-mode'}
 	<div class="flex flex-col gap-4">
 		{#if isAwalAkhir}
-			<select
-				class="select select-sm bg-base-200 dark:bg-base-300 w-full dark:border-none"
-				bind:value={sessionType}
-			>
-				<option value="awal">Awal Mapel</option>
-				<option value="akhir">Akhir Mapel</option>
-			</select>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					bind:value={sessionType}
+				>
+					<option value="awal">Awal Mapel</option>
+					<option value="akhir">Akhir Mapel</option>
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
 		{/if}
 		{#if isWaliKelasMasukPulang}
-			<select
-				class="select select-sm bg-base-200 dark:bg-base-300 w-full dark:border-none"
-				bind:value={presensiType}
-			>
-				<option value="masuk">Presensi Masuk</option>
-				<option value="pulang">Presensi Pulang</option>
-			</select>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					bind:value={presensiType}
+				>
+					<option value="masuk">Presensi Masuk</option>
+					<option value="pulang">Presensi Pulang</option>
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
 		{/if}
 		{#if namaMataPelajaran}
-			<p class="text-base-content text-lg font-medium">
+			<p class="text-sm font-medium text-slate-800 dark:text-zinc-100">
 				Apakah hadir semua pada mata pelajaran {namaMataPelajaran}
 				{perkiraanJam ? `- ${perkiraanJam}` : ''}?
 			</p>
 		{:else}
-			<p class="text-base-content text-lg font-medium">Apakah hadir semua hari ini?</p>
+			<p class="text-sm font-medium text-slate-800 dark:text-zinc-100">
+				Apakah hadir semua hari ini?
+			</p>
 		{/if}
 	</div>
 {:else}
 	<div class="flex flex-col gap-3">
-		<p class="text-base-content text-lg font-medium">Siapa yang tidak hadir?</p>
+		<p class="text-sm font-semibold text-slate-900 dark:text-zinc-100">Siapa yang tidak hadir?</p>
 
-		<label class="input bg-base-200 dark:bg-base-300 w-full dark:border-none">
+		<div class="relative flex items-center">
+			<span
+				aria-hidden="true"
+				class="pointer-events-none absolute left-3 flex items-center text-slate-400 dark:text-zinc-400"
+			>
+				<Icon name="search" class="h-3.5 w-3.5" />
+			</span>
 			<input
 				type="search"
 				placeholder="Cari nama murid..."
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-8 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				bind:value={searchTerm}
 				autocomplete="off"
 			/>
-		</label>
+		</div>
 
 		<div
-			class="bg-base-100 dark:bg-base-200 max-h-80 overflow-y-auto rounded-md shadow-md dark:shadow-none"
+			class="max-h-80 overflow-y-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 		>
-			<table class="border-base-200 table border dark:border-none">
-				<thead>
-					<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-						<th class="w-12">
+			<table class="w-full border-collapse text-xs">
+				<thead class="sticky top-0 z-10">
+					<tr
+						class="border-b border-slate-200/80 bg-slate-50 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
+					>
+						<th class="w-10 px-3 py-2.5 text-center">
 							<input
 								type="checkbox"
 								class="checkbox checkbox-sm"
@@ -276,15 +310,15 @@
 								onclick={toggleSelectAll}
 							/>
 						</th>
-						<th>Nama</th>
-						<th class="text-center" style="min-width: 120px;">Keterangan</th>
+						<th class="px-3 py-2.5">Nama</th>
+						<th class="min-w-28 px-3 py-2.5 text-center">Keterangan</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
 					{#each filteredMurid as murid (murid.id)}
 						{@const checked = selectedIds.includes(murid.id)}
-						<tr>
-							<td>
+						<tr class="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
+							<td class="px-3 py-2 text-center">
 								<input
 									type="checkbox"
 									class="checkbox checkbox-sm"
@@ -292,19 +326,29 @@
 									onclick={() => toggleSelect(murid.id)}
 								/>
 							</td>
-							<td>{@html searchQueryMarker(searchTerm, murid.nama)}</td>
-							<td class="overflow-hidden text-center">
+							<td class="px-3 py-2 font-medium text-slate-900 dark:text-zinc-100">
+								{@html searchQueryMarker(searchTerm, murid.nama)}
+							</td>
+							<td class="px-3 py-2 text-center">
 								{#if checked}
-									<select
-										class="select select-sm bg-base-200 dark:bg-base-300 w-full truncate text-center dark:border-none"
-										value={keteranganMap[murid.id] || 'alfa'}
-										onchange={(e) =>
-											setKeterangan(murid.id, (e.currentTarget as HTMLSelectElement).value)}
-									>
-										<option value="sakit">Sakit</option>
-										<option value="izin">Izin</option>
-										<option value="alfa">TK</option>
-									</select>
+									<div class="relative flex items-center">
+										<select
+											class="h-8 w-full appearance-none truncate rounded-lg border border-[#7e8b9b] bg-white pr-7 pl-2.5 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+											value={keteranganMap[murid.id] || 'alfa'}
+											onchange={(e) =>
+												setKeterangan(murid.id, (e.currentTarget as HTMLSelectElement).value)}
+										>
+											<option value="sakit">Sakit</option>
+											<option value="izin">Izin</option>
+											<option value="alfa">TK</option>
+										</select>
+										<span
+											aria-hidden="true"
+											class="pointer-events-none absolute right-2 flex items-center text-slate-400 dark:text-zinc-400"
+										>
+											<Icon name="down" class="h-3 w-3" />
+										</span>
+									</div>
 								{/if}
 							</td>
 						</tr>

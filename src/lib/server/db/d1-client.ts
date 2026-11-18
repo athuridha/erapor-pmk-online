@@ -264,14 +264,37 @@ export function createD1HttpClient(config: D1HttpConfig): Client {
 			}
 		}
 
-		const res = await fetch(config.url, {
-			method: 'POST',
-			headers: {
-				Authorization: `Bearer ${config.token}`,
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({ sql, params })
-		});
+		let res: Response | null = null;
+		let lastNetworkError: unknown = null;
+		const maxAttempts = isSelect ? 3 : 1;
+
+		for (let attempt = 0; attempt < maxAttempts; attempt++) {
+			try {
+				res = await fetch(config.url, {
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${config.token}`,
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({ sql, params })
+				});
+				if (res.ok || !isSelect || (res.status < 500 && res.status !== 429)) {
+					break;
+				}
+			} catch (err) {
+				lastNetworkError = err;
+				if (!isSelect || attempt === maxAttempts - 1) throw err;
+			}
+			if (attempt < maxAttempts - 1) {
+				await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+			}
+		}
+
+		if (!res) {
+			throw lastNetworkError instanceof Error
+				? lastNetworkError
+				: new Error('D1 HTTP request failed');
+		}
 
 		if (!res.ok) {
 			const txt = await res.text();

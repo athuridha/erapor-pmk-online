@@ -247,23 +247,31 @@
 
 <div class="not-prose flex flex-col gap-4">
 	<div class="flex flex-wrap items-end gap-3">
-		<label class="flex flex-1 flex-col gap-1">
-			<span class="fieldset-legend text-sm font-semibold">Hari</span>
-			<select
-				class="select bg-base-200 dark:bg-base-300 w-full truncate dark:border-none"
-				bind:value={simulasiHari}
-				disabled={simulasiRunning}
-			>
-				{#each hariList as h (h)}
-					<option value={h}>{formatHari(h)}</option>
-				{/each}
-			</select>
+		<label class="flex flex-1 flex-col gap-1.5">
+			<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Hari</span>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					bind:value={simulasiHari}
+					disabled={simulasiRunning}
+				>
+					{#each hariList as h (h)}
+						<option value={h}>{formatHari(h)}</option>
+					{/each}
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
 		</label>
-		<label class="flex flex-1 flex-col gap-1">
-			<span class="fieldset-legend text-sm font-semibold">Mulai Jam</span>
+		<label class="flex flex-1 flex-col gap-1.5">
+			<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Mulai Jam</span>
 			<input
 				type="text"
-				class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				bind:value={simulasiJam}
 				disabled={simulasiRunning}
 				pattern="[0-9]{2}:[0-9]{2}"
@@ -273,62 +281,83 @@
 		</label>
 		<div class="flex gap-2">
 			{#if simulasiRunning}
-				<button type="button" class="btn btn-error shadow-none" onclick={stopSimulasi}>
-					<Icon name="pause" />
+				<button
+					type="button"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-red-200/80 bg-red-50 px-3.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
+					onclick={stopSimulasi}
+				>
+					<Icon name="pause" class="h-3.5 w-3.5" />
 					Hentikan
-				</button>{:else}
-				<button type="button" class="btn btn-primary shadow-none" onclick={startSimulasi}>
-					<Icon name="play" />
+				</button>
+			{:else}
+				<button
+					type="button"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+					onclick={startSimulasi}
+				>
+					<Icon name="play" class="h-3.5 w-3.5" />
 					Mulai Simulasi
 				</button>
 			{/if}
 		</div>
 	</div>
 
-	<div class="bg-base-200 dark:bg-base-300 rounded-box flex flex-col p-4 text-sm">
-		<div class="mb-2 flex items-center justify-between">
-			<span class="text-base-content/70 text-xs font-semibold tracking-wide uppercase">
+	<div
+		class="flex flex-col rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 text-xs dark:border-zinc-800 dark:bg-zinc-800/50"
+	>
+		<div class="mb-2.5 flex items-center justify-between">
+			<span
+				class="text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-zinc-400"
+			>
 				Event {currentEventIndex >= 0 ? currentEventIndex + 1 : 0} / {totalCount}
 			</span>
 			{#if simulasiRunning && currentEventIndex >= 0 && currentEventIndex < events.length}
-				<span class="text-info inline-flex items-center gap-1 font-medium">
-					<Icon name="play" />
+				<span class="inline-flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400">
+					<Icon name="play" class="h-3.5 w-3.5" />
 					{events[currentEventIndex].description}
 				</span>
 			{/if}
 		</div>
 
-		<div class="flex flex-col gap-0.5">
+		<div class="flex flex-col gap-1">
 			{#each visibleEvents as event (event.timeLabel + event.kode + event.description)}
 				{@const globalIdx = events.indexOf(event)}
 				{@const isDone = globalIdx < currentEventIndex}
 				{@const isCurrent = globalIdx === currentEventIndex}
 				<button
 					type="button"
-					class="btn btn-ghost btn-xs flex w-full justify-start gap-2 px-2 py-1 text-left shadow-none {isCurrent
-						? 'bg-primary/20 border-primary border'
+					class="flex w-full items-center justify-start gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs transition-colors {isCurrent
+						? 'border-blue-500 bg-blue-50 text-blue-900 dark:border-blue-600 dark:bg-blue-950/50 dark:text-blue-200'
 						: isDone
-							? 'text-base-content/40'
-							: ''}"
+							? 'border-transparent text-slate-400 dark:text-zinc-500'
+							: 'border-transparent text-slate-700 hover:bg-slate-100/80 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
 					onclick={() => {
 						if (!simulasiRunning && !isDone) jumpToEvent(globalIdx);
 					}}
 					disabled={simulasiRunning || isDone}
 				>
-					<span class="inline-flex w-4 items-center justify-center {isDone ? 'text-success' : ''}">
+					<span
+						class="inline-flex w-4 items-center justify-center {isDone
+							? 'text-emerald-600 dark:text-emerald-400'
+							: isCurrent
+								? 'text-blue-600 dark:text-blue-400'
+								: ''}"
+					>
 						{#if isDone}
-							<Icon name="check" />
+							<Icon name="check" class="h-3.5 w-3.5" />
 						{:else if isCurrent}
-							<Icon name="play" />
+							<Icon name="play" class="h-3.5 w-3.5" />
 						{/if}
 					</span>
 					<span class="font-mono text-xs">{event.timeLabel}</span>
-					<span class="text-base-content/50 font-mono text-[10px]">jm-{event.jamKe}</span>
+					<span class="font-mono text-[10px] text-slate-400 dark:text-zinc-500"
+						>jm-{event.jamKe}</span
+					>
 					<span class="truncate">{event.description}</span>
 				</button>
 			{/each}
 			{#if filteredEvents.length > 20}
-				<span class="text-base-content/40 mt-1 text-center text-[10px]">
+				<span class="mt-1.5 text-center text-[11px] text-slate-400 dark:text-zinc-500">
 					... dan {filteredEvents.length - 20} event lainnya
 				</span>
 			{/if}

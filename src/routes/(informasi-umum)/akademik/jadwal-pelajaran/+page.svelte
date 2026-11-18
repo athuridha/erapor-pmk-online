@@ -78,14 +78,14 @@
 	);
 
 	const badgeColors = [
-		'badge-neutral',
-		'badge-primary',
-		'badge-secondary',
-		'badge-accent',
-		'badge-info',
-		'badge-success',
-		'badge-warning',
-		'badge-error'
+		'border-slate-200/80 bg-slate-100 text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200',
+		'border-blue-200/80 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300',
+		'border-indigo-200/80 bg-indigo-50 text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/50 dark:text-indigo-300',
+		'border-violet-200/80 bg-violet-50 text-violet-700 dark:border-violet-900/50 dark:bg-violet-950/50 dark:text-violet-300',
+		'border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-900/50 dark:bg-sky-950/50 dark:text-sky-300',
+		'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300',
+		'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300',
+		'border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300'
 	];
 	let badgeColorMap = $state<Record<string, string>>({});
 
@@ -101,11 +101,14 @@
 		const map: Record<string, string> = {};
 		sorted.forEach((kode, i) => {
 			if (kode === 'UPB') {
-				map[kode] = 'badge-warning';
+				map[kode] =
+					'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300';
 			} else if (kode === 'IST') {
-				map[kode] = 'badge-success';
+				map[kode] =
+					'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300';
 			} else if (kode === 'PLG') {
-				map[kode] = 'badge-error';
+				map[kode] =
+					'border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300';
 			} else {
 				map[kode] = badgeColors[i % badgeColors.length];
 			}
@@ -877,16 +880,21 @@
 	<title>Jadwal Pelajaran & Bell</title>
 </svelte:head>
 
-<div class="grid grid-cols-1 gap-6">
-	<div class="alert alert-info sm:hidden">
-		<Icon name="info" />
-		<span
-			>Gunakan tablet/laptop atau layar yang lebih besar agar lebih mudah mengatur jadwal pelajaran
-			pada halaman ini.</span
-		>
+<div class="grid grid-cols-1 gap-4 sm:gap-6">
+	<div
+		class="flex items-start gap-2.5 rounded-xl border border-sky-200 bg-sky-50/90 p-3 text-xs text-sky-900 sm:hidden dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200"
+	>
+		<Icon name="info" class="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
+		<span>
+			Gunakan tablet/laptop atau layar yang lebih besar agar lebih mudah mengatur jadwal pelajaran
+			pada halaman ini.
+		</span>
 	</div>
-	<section class="card bg-base-100 rounded-lg border border-none p-6 shadow-md" bind:this={cardEl}>
-		<div class="space-y-6">
+	<section
+		class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+		bind:this={cardEl}
+	>
+		<div class="space-y-5">
 			<JadwalPelajaranToolbar
 				{canManage}
 				{isEditing}
@@ -906,7 +914,12 @@
 				onSimulasi={openSimulasi}
 			/>
 
-			<BellStatus {bellActive} {hariIni} {nextEventMessage} class="alert alert-soft alert-info" />
+			<BellStatus
+				{bellActive}
+				{hariIni}
+				{nextEventMessage}
+				class="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50/85 px-3.5 py-2.5 text-xs text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/35 dark:text-sky-200"
+			/>
 
 			<JadwalPelajaranTable
 				bind:scrollEl={tableScrollEl}

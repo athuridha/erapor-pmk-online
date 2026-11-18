@@ -261,18 +261,27 @@
 	}}
 >
 	{#snippet children({ submitting, invalid })}
-		<h3 class="mb-3 text-lg font-bold">{heading}</h3>
-		<div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-1">
+		<h2
+			class="mb-3 border-b border-slate-200 pb-3 text-lg font-bold tracking-tight text-slate-900 dark:border-zinc-800 dark:text-zinc-100"
+		>
+			{heading}
+		</h2>
+		<div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-1 pt-1">
 			{#if mode === 'add'}
-				<fieldset class="fieldset border-base-300 dark:border-base-200 rounded-lg border p-3">
-					<legend class="fieldset-legend text-xs font-semibold">Pilih Kelas / Rombel</legend>
-					<div class="mb-2 flex items-center justify-between border-b pb-2">
-						<label class="flex cursor-pointer items-center gap-2 text-xs font-semibold">
+				<div
+					class="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900/60"
+				>
+					<div
+						class="mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2 dark:border-zinc-800"
+					>
+						<label
+							class="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-800 dark:text-zinc-200"
+						>
 							<input
 								type="checkbox"
 								name="semuaKelas"
 								value="1"
-								class="checkbox checkbox-xs checkbox-primary"
+								class="checkbox checkbox-xs"
 								checked={daftarKelas.length > 0 && terpilihKelasIds.length === daftarKelas.length}
 								onchange={(e) => {
 									if ((e.currentTarget as HTMLInputElement).checked) {
@@ -284,18 +293,18 @@
 							/>
 							<span>Pilih Semua Kelas ({daftarKelas.length} kelas)</span>
 						</label>
-						<div class="flex items-center gap-1.5">
+						<div class="flex items-center gap-2">
 							<button
 								type="button"
-								class="btn btn-ghost btn-xs text-primary text-xs"
+								class="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
 								onclick={() => (terpilihKelasIds = daftarKelas.map((k) => k.id))}
 							>
 								Pilih Semua
 							</button>
-							<span class="opacity-30">•</span>
+							<span class="text-slate-300 dark:text-zinc-600">&middot;</span>
 							<button
 								type="button"
-								class="btn btn-ghost btn-xs text-error text-xs"
+								class="text-xs font-semibold text-red-700 hover:underline dark:text-red-400"
 								onclick={() => (terpilihKelasIds = [])}
 							>
 								Kosongkan
@@ -305,11 +314,11 @@
 
 					<!-- Daftar Kelas Selalu Ditampilkan -->
 					<div
-						class="bg-base-200/50 grid max-h-40 grid-cols-2 gap-1.5 overflow-y-auto rounded-md p-1.5 sm:grid-cols-3"
+						class="grid max-h-40 grid-cols-2 gap-1.5 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 sm:grid-cols-3 dark:border-zinc-800 dark:bg-zinc-900"
 					>
 						{#each daftarKelas as k (k.id)}
 							<label
-								class="hover:bg-base-200 flex cursor-pointer items-center gap-1.5 rounded p-1 text-xs"
+								class="flex cursor-pointer items-center gap-1.5 rounded-md p-1 text-xs text-slate-700 hover:bg-slate-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
 							>
 								<input
 									type="checkbox"
@@ -330,21 +339,30 @@
 							</label>
 						{/each}
 					</div>
-					<div class="mt-1 flex items-center justify-between text-xs opacity-70">
+					<div
+						class="mt-2 flex items-center justify-between text-xs text-slate-600 dark:text-zinc-400"
+					>
 						<span
-							>Terpilih: <strong>{terpilihKelasIds.length}</strong> dari {daftarKelas.length} kelas</span
+							>Terpilih: <strong class="text-slate-900 dark:text-zinc-100"
+								>{terpilihKelasIds.length}</strong
+							>
+							dari {daftarKelas.length} kelas</span
 						>
 						{#if daftarKelas.length > 0 && terpilihKelasIds.length === daftarKelas.length}
-							<span class="badge badge-success badge-xs font-semibold">Semua Kelas Terpilih</span>
+							<span
+								class="rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300"
+								>Semua Kelas Terpilih</span
+							>
 						{:else if terpilihKelasIds.length === 0}
-							<span class="badge badge-error badge-xs font-semibold"
+							<span
+								class="rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold text-red-800 dark:bg-red-950/70 dark:text-red-300"
 								>Wajib pilih minimal 1 kelas</span
 							>
 						{/if}
 					</div>
-				</fieldset>
+				</div>
 			{:else}
-				<p class="text-base-content/70 text-sm">Kelas aktif: {kelasAktifLabel}</p>
+				<p class="text-xs text-slate-600 dark:text-zinc-400">Kelas aktif: {kelasAktifLabel}</p>
 			{/if}
 
 			{#if mode === 'edit'}
@@ -356,13 +374,15 @@
 			{#if mode === 'edit' && disableJenis}
 				<input name="jenis" value={mapel?.jenis ?? ''} hidden />
 			{/if}
-			<fieldset class="fieldset">
-				<legend class="fieldset-legend">Nama Mata Pelajaran</legend>
+			<div class="flex flex-col gap-1.5">
+				<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					>Nama Mata Pelajaran</span
+				>
 				{#if pakaiSelectDapodik}
 					<div class="relative">
 						<input
 							type="text"
-							class="input validator bg-base-200 w-full dark:border-none"
+							class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
 							placeholder="Pilih Mata Pelajaran"
 							name="nama"
 							required={!disableNama}
@@ -391,28 +411,30 @@
 							<ul
 								id="daftar-nama-mapel"
 								role="listbox"
-								class="bg-base-200 absolute z-50 mt-1 max-h-60 w-full list-none overflow-y-auto rounded-box p-1 shadow-lg"
+								class="absolute z-50 mt-1 max-h-60 w-full list-none overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
 							>
 								{#each namaTersaring.slice(0, MAX_OPSI_TAMPIL) as opsi, i (`${opsi.kode ?? ''}|${opsi.nama}`)}
 									<li id={`nama-opsi-${i}`} role="option" aria-selected={i === indeksSorot}>
 										<button
 											type="button"
-											class="w-full truncate rounded px-2 py-1.5 text-left text-sm transition-colors duration-200 hover:bg-base-content/10 {i ===
+											class="w-full truncate rounded-lg px-2.5 py-1.5 text-left text-xs text-slate-800 transition-colors hover:bg-blue-50 dark:text-zinc-200 dark:hover:bg-zinc-800 {i ===
 											indeksSorot
-												? 'bg-base-content/10'
+												? 'bg-blue-50 font-semibold text-blue-900 dark:bg-zinc-800 dark:text-blue-300'
 												: ''}"
 											onmousedown={(e) => e.preventDefault()}
 											onclick={() => pilihNama(opsi.nama)}
 										>
 											{#if opsi.kode}
-												<span class="mr-1.5 font-mono text-xs opacity-60">{opsi.kode}</span>
+												<span class="mr-1.5 font-mono text-[11px] text-slate-500 dark:text-zinc-400"
+													>{opsi.kode}</span
+												>
 											{/if}
 											{opsi.nama}
 										</button>
 									</li>
 								{/each}
 								{#if namaTersaring.length > MAX_OPSI_TAMPIL}
-									<li class="px-2 py-1 text-sm opacity-60">
+									<li class="px-2.5 py-1 text-xs text-slate-500 dark:text-zinc-400">
 										{namaTersaring.length - MAX_OPSI_TAMPIL} lainnya. Ketik untuk mempersempit.
 									</li>
 								{/if}
@@ -422,7 +444,7 @@
 				{:else}
 					<input
 						type="text"
-						class="input validator bg-base-200 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
 						placeholder={namaPlaceholder}
 						name="nama"
 						required={!disableNama}
@@ -431,7 +453,7 @@
 						oninput={onNamaInput}
 					/>
 				{/if}
-				<p class="label text-wrap">
+				<p class="text-xs text-slate-500 dark:text-zinc-400">
 					{#if pakaiSelectDapodik}
 						Ketik untuk mencari, lalu pilih dari daftar. Nama mata pelajaran jangan disingkat!
 					{:else}
@@ -439,54 +461,69 @@
 					{/if}
 				</p>
 				{#if agamaDapodikBlocked}
-					<div class="alert alert-soft alert-warning mt-2 flex items-center gap-2" role="alert">
-						<Icon name="alert" />
+					<div
+						class="mt-1 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+						role="alert"
+					>
+						<Icon name="alert" class="h-4 w-4 shrink-0" />
 						<span
 							>Tidak dapat menambahkan mapel agama karena termasuk ke dalam PAPB dan sub mapel yang
 							sudah ada secara otomatis di tabel</span
 						>
 					</div>
 				{/if}
-			</fieldset>
+			</div>
 			{#if tampilNamaLokal}
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend">Nama Mata Pelajaran Lokal</legend>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Nama Mata Pelajaran Lokal</span
+					>
 					<input
 						type="text"
-						class="input validator bg-base-200 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
 						placeholder="Kosongkan bila sama dengan Dapodik"
 						name="nama_lokal"
 						maxlength="100"
 						disabled={!adaKelasTujuan}
 					/>
-					<p class="label text-wrap">
+					<span class="text-xs text-slate-500 dark:text-zinc-400">
 						Nama lokal mata pelajaran di Dapodik (opsional). Kosongkan bila sama dengan Nama Mata
 						Pelajaran.
-					</p>
-				</fieldset>
+					</span>
+				</label>
 			{/if}
 			{#if tampilkanInduk}
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend">Mata Pelajaran Induk</legend>
-					<select
-						name="induk_pembelajaran_id"
-						required={!isAgamaGroup && !isPksGroup}
-						class="select bg-base-200 w-full truncate dark:border-none"
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+						>Mata Pelajaran Induk</span
 					>
-						<option disabled selected={mode === 'add' || !mapel?.dapodikIndukPembelajaranId}>
-							Pilih Pembelajaran Induk (terdaftar di Dapodik)
-						</option>
-						{#each indukList as induk (induk.pembelajaranId)}
-							<option
-								value={induk.pembelajaranId}
-								selected={mode === 'edit' &&
-									mapel?.dapodikIndukPembelajaranId === induk.pembelajaranId}
-							>
-								{induk.nama}
+					<div class="relative flex items-center">
+						<select
+							name="induk_pembelajaran_id"
+							required={!isAgamaGroup && !isPksGroup}
+							class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+						>
+							<option disabled selected={mode === 'add' || !mapel?.dapodikIndukPembelajaranId}>
+								Pilih Pembelajaran Induk (terdaftar di Dapodik)
 							</option>
-						{/each}
-					</select>
-					<p class="label text-wrap">
+							{#each indukList as induk (induk.pembelajaranId)}
+								<option
+									value={induk.pembelajaranId}
+									selected={mode === 'edit' &&
+										mapel?.dapodikIndukPembelajaranId === induk.pembelajaranId}
+								>
+									{induk.nama}
+								</option>
+							{/each}
+						</select>
+						<span
+							aria-hidden="true"
+							class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+						>
+							<Icon name="down" class="h-3.5 w-3.5" />
+						</span>
+					</div>
+					<span class="text-xs text-slate-500 dark:text-zinc-400">
 						{#if mode === 'edit' && isAgamaGroup}
 							Jika salah satu varian agama sudah terdaftar di Dapodik, ia akan menjadi mapel induk.
 							Varian tanpa padanan Dapodik akan dikirim sebagai Sub Pembelajaran. Pilihan berlaku
@@ -495,79 +532,96 @@
 							"{namaEfektif}" belum terdaftar sebagai pembelajaran Dapodik, akan dikirim sebagai Sub
 							Pembelajaran dari mata pelajaran induk yang dipilih.
 						{/if}
-					</p>
-				</fieldset>
+					</span>
+				</label>
 			{/if}
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend">KKM</legend>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">KKM</span>
 					<input
 						type="number"
-						class="input validator bg-base-200 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
 						placeholder="Contoh: 76"
 						name="kkm"
 						required
 						disabled={!adaKelasTujuan}
 						min="0"
 					/>
-				</fieldset>
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend">Singkatan/kode</legend>
+				</label>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Singkatan/kode</span
+					>
 					<input
 						type="text"
-						class="input validator bg-base-200 w-full dark:border-none"
+						class="validator h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
 						placeholder="Contoh: PAPB"
 						name="kode"
 						bind:value={localKode}
 						disabled={isAgamaGroup || isPksGroup ? true : !adaKelasTujuan}
 					/>
-					<p class="label text-wrap">Singkatan/kode singkat untuk mata pelajaran (opsional).</p>
-				</fieldset>
+					<span class="text-xs text-slate-500 dark:text-zinc-400"
+						>Singkatan/kode singkat untuk mata pelajaran (opsional).</span
+					>
+				</label>
 			</div>
-			<fieldset class="fieldset">
-				<legend class="fieldset-legend">Jenis Mata Pelajaran</legend>
-				<select
-					class="select bg-base-200 w-full truncate dark:border-none"
-					name="jenis"
-					required={!disableJenis}
-					disabled={disableJenis}
+			<label class="flex flex-col gap-1.5">
+				<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					>Jenis Mata Pelajaran</span
 				>
-					<option disabled selected>Pilih Jenis Mata Pelajaran</option>
-					{#each Object.entries(displayJenisMapel) as [value, label] (value)}
-						<option {value}>{label}</option>
-					{/each}
-				</select>
-			</fieldset>
+				<div class="relative flex items-center">
+					<select
+						class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400 dark:disabled:bg-zinc-800"
+						name="jenis"
+						required={!disableJenis}
+						disabled={disableJenis}
+					>
+						<option disabled selected>Pilih Jenis Mata Pelajaran</option>
+						{#each Object.entries(displayJenisMapel) as [value, label] (value)}
+							<option {value}>{label}</option>
+						{/each}
+					</select>
+					<span
+						aria-hidden="true"
+						class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+					>
+						<Icon name="down" class="h-3.5 w-3.5" />
+					</span>
+				</div>
+			</label>
 			{#if mode === 'edit' && isAgamaParent}
-				<p class="text-base-content/70 mt-2 text-sm">
+				<p class="text-xs text-slate-600 dark:text-zinc-400">
 					Perubahan KKM akan diterapkan ke semua varian mata pelajaran Pendidikan Agama dan Budi
 					Pekerti.
 				</p>
 			{/if}
 			{#if mode === 'edit' && isPksParent}
-				<p class="text-base-content/70 mt-2 text-sm">
+				<p class="text-xs text-slate-600 dark:text-zinc-400">
 					Perubahan KKM dan jenis akan diterapkan ke semua varian mata pelajaran Pendalaman Kitab
 					Suci.
 				</p>
 			{/if}
 		</div>
-		<div class="modal-action">
-			<button type="button" class="btn btn-soft shadow-none mr-auto" onclick={() => history.back()}>
-				<Icon name="close-sm" />
+		<div class="modal-action mt-4 border-t border-slate-200 pt-3 dark:border-zinc-800">
+			<button
+				type="button"
+				class="mr-auto inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+				onclick={() => history.back()}
+			>
+				<Icon name="close-sm" class="h-3.5 w-3.5" />
 				Batal
 			</button>
 			<button
 				type="submit"
-				class="btn btn-primary shadow-none"
+				class="inline-flex h-9 items-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 				disabled={submitting ||
 					(invalid && !isAgamaParent && !isPksParent) ||
 					!adaKelasTujuan ||
 					agamaDapodikBlocked}
 			>
 				{#if submitting}
-					<div class="loading loading-spinner"></div>
+					<span class="loading loading-spinner loading-sm"></span>
 				{:else}
-					<Icon name="save" />
+					<Icon name="save" class="h-3.5 w-3.5" />
 				{/if}
 				Simpan
 			</button>

@@ -13,21 +13,15 @@
 	} from './tasks/task-service';
 	import type { TaskRecord } from './tasks/types';
 
-	let { variant = 'sidebar' }: { variant?: 'sidebar' | 'modal' } = $props();
+	let {
+		variant = 'drawer',
+		onClose = () => {}
+	}: {
+		variant?: 'sidebar' | 'modal' | 'drawer';
+		onClose?: () => void;
+	} = $props();
 
-	const wrapperClass = $derived(
-		variant === 'sidebar'
-			? 'card bg-base-100 mb-4 min-w-70 max-w-70 shadow-md rounded-box'
-			: 'card bg-base-100 shadow-md w-full'
-	);
-
-	const isSidebar = $derived(variant === 'sidebar');
-
-	const listContainerClass = $derived(
-		variant === 'sidebar'
-			? 'flex flex-col max-h-60 min-h-60 overflow-y-auto'
-			: 'flex flex-col max-h-[60vh] overflow-y-auto'
-	);
+	const isDrawer = $derived(variant === 'drawer' || variant === 'modal');
 
 	const kelasAktifId = $derived(page.data.kelasAktif?.id ?? null);
 	const kelasLabel = $derived.by(() => {
@@ -45,7 +39,6 @@
 	let isProcessing = $state(false);
 	let errorMessage = $state('');
 	let previousKelasId = $state<number | null>(null);
-	let sidebarOpen = $state(true);
 	let activeListRef = $state<{ focusInput: () => Promise<void> | void } | null>(null);
 
 	const showInitialSpinner = $derived(isLoading && !hasLoaded);
@@ -213,34 +206,49 @@
 	};
 </script>
 
-{#snippet taskList()}
+<div class="flex h-full w-full flex-col bg-white dark:bg-zinc-900">
+	<TaskHeader
+		{isAdding}
+		{isProcessing}
+		canManage={canManageTasks}
+		{showInitialSpinner}
+		{hasCompletedTasks}
+		{hasAnyTasks}
+		{kelasLabel}
+		showCloseButton={isDrawer}
+		onToggleAdd={toggleAddTask}
+		onClearCompleted={clearCompleted}
+		onClearAll={clearAll}
+		{onClose}
+	/>
+
 	{#if errorMessage}
-		<div class="px-4 pb-2">
-			<div class="alert alert-error flex items-center gap-2 rounded-lg p-3 text-sm">
-				<Icon name="error" class="h-4 w-4" />
-				<span>{errorMessage}</span>
+		<div class="px-4 pt-3">
+			<div
+				class="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-800 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
+				role="alert"
+			>
+				<span aria-hidden="true"><Icon name="error" class="h-4 w-4 shrink-0" /></span>
+				<span class="flex-1">{errorMessage}</span>
 			</div>
 		</div>
 	{/if}
-	<div class={listContainerClass}>
+
+	<div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
 		{#if showInitialSpinner}
-			<div class="flex-1 overflow-y-auto">
-				<table class="table w-full pl-2">
-					<tbody>
-						<tr>
-							<td colspan="3" class="p-4 text-center text-sm">
-								<span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
-								<span class="sr-only">Memuat daftar tugas</span>
-							</td>
-						</tr>
-					</tbody>
-				</table>
+			<div class="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-xs">
+				<span
+					class="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent dark:border-blue-400"
+					aria-hidden="true"
+				></span>
+				<span class="text-slate-600 dark:text-zinc-400">Memuat daftar tugas...</span>
 			</div>
 		{:else if showNoClass}
-			<div
-				class="text-base-content/60 flex flex-1 items-center justify-center px-4 py-6 text-center text-sm"
-			>
-				Pilih kelas untuk melihat daftar tugas.
+			<div class="flex flex-1 flex-col items-center justify-center gap-1.5 px-6 py-8 text-center">
+				<p class="text-sm font-semibold text-slate-900 dark:text-zinc-100">Belum ada kelas aktif</p>
+				<p class="text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
+					Pilih satu kelas terlebih dahulu untuk melihat atau menambah daftar tugas kelas.
+				</p>
 			</div>
 		{:else}
 			<TaskActiveList
@@ -250,135 +258,35 @@
 				{isProcessing}
 				{newTaskTitle}
 				canManage={canManageTasks}
-				on:updateTitle={(event: CustomEvent<string>) => (newTaskTitle = event.detail)}
-				on:save={() => void saveTask()}
-				on:cancel={resetInput}
-				on:complete={(event: CustomEvent<number>) => void moveToCompleted(event.detail)}
-				on:remove={(event: CustomEvent<number>) => void removeTask(event.detail)}
+				onUpdateTitle={(title) => (newTaskTitle = title)}
+				onSave={() => void saveTask()}
+				onCancel={resetInput}
+				onComplete={(id) => void moveToCompleted(id)}
+				onRemove={(id) => void removeTask(id)}
 			/>
 			{#if showEmptyState}
-				<div
-					class="text-base-content/60 flex flex-1 items-center justify-center px-4 py-6 text-center text-sm"
-				>
-					Belum ada tugas aktif.
+				<div class="flex flex-1 flex-col items-center justify-center gap-1.5 px-6 py-8 text-center">
+					<p class="text-sm font-semibold text-slate-900 dark:text-zinc-100">
+						Belum ada tugas aktif
+					</p>
+					<p class="text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
+						Tekan tombol Tambah di atas untuk mencatat pengingat kelas.
+					</p>
 				</div>
 			{/if}
 		{/if}
-		<div class="m-2 mt-auto">
-			<TaskCompletedList
-				tasks={completedTasks}
-				{isProcessing}
-				{showInitialSpinner}
-				canManage={canManageTasks}
-				on:restore={(event: CustomEvent<number>) => void moveToActive(event.detail)}
-				on:remove={(event: CustomEvent<number>) => void removeTask(event.detail)}
-			/>
-		</div>
-	</div>
-{/snippet}
 
-{#if isSidebar}
-	<div class="hidden xl:block">
-		<div class={wrapperClass}>
-			<div class="p-4">
-				<div class="flex flex-row items-center gap-2">
-					<h2 class="text-sm font-bold">Daftar tugas</h2>
-					{#if showInitialSpinner}
-						<span class="loading loading-spinner loading-xs text-primary" aria-hidden="true"></span>
-					{/if}
-					<div class="flex-1"></div>
-					<div class="join">
-						<button
-							type="button"
-							class="btn btn-sm join-item btn-soft {isAdding ? 'btn-error' : ''} shadow-none"
-							onclick={(e) => {
-								e.stopPropagation();
-								toggleAddTask();
-							}}
-							title={isAdding ? 'Batalkan tambah tugas' : 'Tambah tugas'}
-							disabled={isProcessing || !canManageTasks}
-							aria-disabled={isProcessing || !canManageTasks}
-						>
-							<Icon name={isAdding ? 'close' : 'plus'} />
-						</button>
-						<div class="dropdown dropdown-end">
-							<div
-								tabindex="0"
-								role="button"
-								title="Tombol hapus"
-								class="join-item btn btn-sm shadow-none"
-							>
-								<Icon name="del" class="text-error" />
-								<Icon name="collapse-all" class="text-error" />
-							</div>
-							<ul
-								class="border-base-300 menu dropdown-content bg-base-100 rounded-box z-1 mt-2 w-43 border p-2 shadow-md"
-							>
-								<li>
-									<button
-										type="button"
-										class="btn btn-ghost btn-sm justify-start"
-										onclick={(e) => {
-											e.stopPropagation();
-											clearCompleted();
-										}}
-										disabled={!hasCompletedTasks || isProcessing || !canManageTasks}
-									>
-										Hapus tugas selesai
-									</button>
-								</li>
-								<li>
-									<button
-										type="button"
-										class="btn btn-ghost btn-sm text-error justify-start"
-										onclick={(e) => {
-											e.stopPropagation();
-											clearAll();
-										}}
-										disabled={!hasAnyTasks || isProcessing || !canManageTasks}
-									>
-										Hapus semua tugas
-									</button>
-								</li>
-							</ul>
-						</div>
-						<button
-							type="button"
-							class="btn btn-sm join-item px-2 shadow-none"
-							onclick={() => (sidebarOpen = !sidebarOpen)}
-							title={sidebarOpen ? 'Tutup daftar tugas' : 'Buka daftar tugas'}
-						>
-							<Icon name={sidebarOpen ? 'up' : 'down'} />
-						</button>
-					</div>
-				</div>
-				{#if kelasLabel}
-					<p class="text-base-content/60 truncate text-xs" title={kelasLabel}>
-						Kelas aktif: {kelasLabel.slice(0, 15)}{kelasLabel.length > 15 ? '…' : ''}
-					</p>
-				{/if}
+		{#if !showNoClass}
+			<div class="mt-auto p-3">
+				<TaskCompletedList
+					tasks={completedTasks}
+					{isProcessing}
+					{showInitialSpinner}
+					canManage={canManageTasks}
+					onRestore={(id) => void moveToActive(id)}
+					onRemove={(id) => void removeTask(id)}
+				/>
 			</div>
-			{#if sidebarOpen}
-				<div class="p-0">
-					{@render taskList()}
-				</div>
-			{/if}
-		</div>
+		{/if}
 	</div>
-{:else}
-	<div class={wrapperClass}>
-		<TaskHeader
-			{isAdding}
-			{isProcessing}
-			canManage={canManageTasks}
-			{showInitialSpinner}
-			{hasCompletedTasks}
-			{hasAnyTasks}
-			{kelasLabel}
-			on:toggleAdd={toggleAddTask}
-			on:clearCompleted={clearCompleted}
-			on:clearAll={clearAll}
-		/>
-		{@render taskList()}
-	</div>
-{/if}
+</div>

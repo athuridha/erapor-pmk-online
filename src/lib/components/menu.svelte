@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { cookieNames, searchQueryMarker } from '$lib/utils';
 	import Icon from './icon.svelte';
-	import { appMenuItems, menuModulGuru, menuModulWaliKelas } from './menu';
+	import { appMenuItems, menuModulGuru, menuModulPembinaEskul, menuModulWaliKelas } from './menu';
 	import {
 		isAdminUser,
 		isAuthorizedUser,
@@ -12,8 +12,8 @@
 	} from '../../routes/pengguna/permissions';
 
 	/**
-	 * Status buka tiap kelompok submenu (diisi oleh pengguna, tidak dipaksa
-	 * terbuka). Tanpa ini, setiap render ulang menu membuka semua submenu.
+	 * Track open/closed state per submenu group manually so filtering or
+	 * navigation updates never force every accordion open unexpectedly.
 	 */
 	let terbuka = $state<Record<string, boolean>>({});
 	let bukaSemua = $state(false);
@@ -45,7 +45,11 @@
 	);
 
 	const serverActiveModul = $derived(
-		(page.data as { activeModul?: 'admin' | 'wali_kelas' | 'guru' } | null)?.activeModul ?? 'guru'
+		(
+			page.data as {
+				activeModul?: 'admin' | 'wali_kelas' | 'guru' | 'pembina_eskul';
+			} | null
+		)?.activeModul ?? 'guru'
 	);
 	const canAccessAdmin = $derived(
 		(page.data as { canAccessAdmin?: boolean } | null)?.canAccessAdmin ?? false
@@ -53,12 +57,10 @@
 	const canAccessWaliKelas = $derived(
 		(page.data as { canAccessWaliKelas?: boolean } | null)?.canAccessWaliKelas ?? false
 	);
-	const activeSemesterNama = $derived(
-		(page.data as { activeSemesterNama?: string | null } | null)?.activeSemesterNama ?? null
-	);
+	const hasMultipleModules = $derived(canAccessAdmin || canAccessWaliKelas);
 
 	let currentModul = $derived(serverActiveModul);
-	let selectedModul = $state<'admin' | 'wali_kelas' | 'guru' | null>(null);
+	let selectedModul = $state<'admin' | 'wali_kelas' | 'guru' | 'pembina_eskul' | null>(null);
 	let isSwitchingModul = $state(false);
 	const activeDisplayModul = $derived(selectedModul ?? currentModul);
 
@@ -67,27 +69,69 @@
 		isSwitchingModul = true;
 		selectedModul = modul;
 		try {
-			document.cookie = `${cookieNames.ACTIVE_MODUL}=${modul}; path=/; max-age=31536000; SameSite=Lax`;
-			if (modul === 'admin') {
-				document.cookie = `${cookieNames.ACTIVE_KELAS_ID}=semua; path=/; max-age=31536000; SameSite=Lax`;
-			} else {
-				// Hapus active-kelas-id lama agar server otomatis memilih kelas yang tepat untuk modul baru
-				document.cookie = `${cookieNames.ACTIVE_KELAS_ID}=; path=/; max-age=0; SameSite=Lax`;
+			const res = await fetch('/api/modul', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ modul })
+			});
+			if (!res.ok) {
+				document.cookie = `${cookieNames.ACTIVE_MODUL}=${modul}; path=/; max-age=31536000; SameSite=Lax`;
+				if (modul === 'admin') {
+					document.cookie = `${cookieNames.ACTIVE_KELAS_ID}=semua; path=/; max-age=31536000; SameSite=Lax`;
+				} else {
+					document.cookie = `${cookieNames.ACTIVE_KELAS_ID}=; path=/; max-age=0; SameSite=Lax`;
+				}
 			}
 
-			// Bila user sedang berada di halaman yang khusus untuk modul tertentu,
-			// arahkan ke Beranda (/) agar tidak memuat ulang halaman lama yang tidak relevan / lambat
 			const pathname = window.location.pathname;
-			const isWaliOnly = ['/murid', '/catatan-wali-kelas', '/keputusan', '/cetak/rapor'].some((p) =>
-				pathname.startsWith(p)
-			);
-			const isAdminOnly = ['/master-data', '/semua-kelas', '/pengaturan', '/pengguna'].some((p) =>
-				pathname.startsWith(p)
-			);
+			const isMatchPrefix = (prefixes: string[]) =>
+				prefixes.some((p) => pathname === p || pathname.startsWith(p + '/'));
+
+			const isAdminOnly = isMatchPrefix([
+				'/master-data',
+				'/semua-kelas',
+				'/pengaturan',
+				'/pengguna',
+				'/sekolah',
+				'/akademik',
+				'/kelas',
+				'/import-data',
+				'/impor',
+				'/portal-orang-tua',
+				'/buku-tamu',
+				'/sppd',
+				'/kunci-nilai',
+				'/audit',
+				'/cetak/kustomisasi'
+			]);
+			const isWaliOnly = isMatchPrefix([
+				'/murid',
+				'/catatan-wali-kelas',
+				'/keputusan',
+				'/legger',
+				'/tanda-tangan',
+				'/p5',
+				'/prakerin',
+				'/kokurikuler',
+				'/asesmen-kokurikuler',
+				'/ekstrakurikuler',
+				'/nilai-ekstrakurikuler',
+				'/cetak/rapor',
+				'/cetak/cover',
+				'/cetak/biodata',
+				'/cetak/piagam'
+			]);
+			const isGuruFocusedOnly = isMatchPrefix([
+				'/asesmen-formatif',
+				'/asesmen-sumatif',
+				'/teknik-penilaian',
+				'/jurnal-mengajar',
+				'/rpm'
+			]);
 
 			if (
 				(modul === 'guru' && (isWaliOnly || isAdminOnly)) ||
-				(modul === 'wali_kelas' && isAdminOnly)
+				(modul === 'wali_kelas' && (isAdminOnly || isGuruFocusedOnly))
 			) {
 				await goto('/', { invalidateAll: true });
 			} else {
@@ -100,28 +144,20 @@
 	}
 
 	function isHiddenForUser(path?: string): boolean {
-		// Menu items without a path (parent groups) are filtered recursively via subMenu
 		if (!path) return false;
 		const kelasOperis = isAdminUser(user ?? undefined);
-		// Presensi Guru hanya untuk pemegang izin `administrasi_presensi_guru`
-		// (sama dengan guard halaman, B8) dan bila fiturnya diaktifkan sekolah.
 		if (path === '/presensi-guru') {
 			if (!presensiGuruEnabled) return true;
 			if (!kelasOperis && !(user?.permissions ?? []).includes('administrasi_presensi_guru')) {
 				return true;
 			}
 		}
-		// /dinas-luar is the permohonan feature for non-admin roles; admin & kepala
-		// sekolah manage perjalanan dinas via the full /sppd page instead.
 		if (path === '/dinas-luar' && user && kelasOperis) {
 			return true;
 		}
-		// Tanda tangan: admin/kepala sekolah mengunggah untuk semua orang, wali kelas
-		// hanya untuk tanda tangannya sendiri.
 		if (path === '/tanda-tangan') {
-			return !kelasOperis && user?.type !== 'wali_kelas';
+			return !kelasOperis && user?.type !== 'wali_kelas' && !canAccessWaliKelas;
 		}
-		// Guru on non-own class: sembunyikan menu khusus wali kelas
 		if (user && !kelasOperis && kelasAktif?.id != null) {
 			const ownIds = user.ownKelasIds?.length
 				? user.ownKelasIds
@@ -148,8 +184,6 @@
 					const subMenu = item.subMenu;
 					const filtered = filterMenuByUserType(subMenu);
 					if (filtered.length === 0 && !item.path) return null;
-					// Reuse the original item reference when nothing changed so the
-					// keyed {#each} doesn't recreate <details> (preserves manual open/close).
 					if (
 						filtered.length === subMenu.length &&
 						filtered.every((child, i) => child === subMenu[i])
@@ -180,8 +214,6 @@
 					const subMenu = item.subMenu;
 					const filtered = filterMenuByCondition(subMenu, semesterTipe);
 					if (filtered.length === 0) return null;
-					// Reuse the original item reference when nothing changed so the
-					// keyed {#each} doesn't recreate <details> (preserves manual open/close).
 					if (
 						filtered.length === subMenu.length &&
 						filtered.every((child, i) => child === subMenu[i])
@@ -195,8 +227,8 @@
 			.filter((item): item is MenuItem => item !== null);
 	}
 
-	function filterMenu(menu: MenuItem[], search: string): MenuItem[] {
-		const lowerSearch = search.toLowerCase();
+	function filterMenu(menu: MenuItem[], searchQuery: string): MenuItem[] {
+		const lowerSearch = searchQuery.toLowerCase();
 		return menu
 			.map((item) => {
 				if (!filterByCondition(item, activeSemesterTipe)) return null;
@@ -205,10 +237,8 @@
 					item.title.toLowerCase().includes(lowerSearch) ||
 					item.tags?.some((t) => t.toLocaleLowerCase().includes(lowerSearch));
 
-				// if it has subMenu, filter recursively
-				const filteredSubMenu = item.subMenu ? filterMenu(item.subMenu, search) : [];
+				const filteredSubMenu = item.subMenu ? filterMenu(item.subMenu, searchQuery) : [];
 
-				// keep this item if it matches or has matching children
 				if (isMatch || filteredSubMenu.length > 0) {
 					return {
 						...item,
@@ -216,13 +246,13 @@
 					};
 				}
 
-				// discard
 				return null;
 			})
 			.filter((item) => item !== null);
 	}
 
 	const baseMenuItems = $derived.by(() => {
+		if (currentModul === 'pembina_eskul') return menuModulPembinaEskul;
 		if (currentModul === 'guru') return menuModulGuru;
 		if (currentModul === 'wali_kelas') return menuModulWaliKelas;
 		return appMenuItems;
@@ -239,14 +269,10 @@
 	function isMenuActive(currentPath: string, menuPath?: string, siblingPaths: string[] = []) {
 		if (!menuPath) return false;
 
-		// match to sub paths
 		const normalizedPath = currentPath.replace(/\/+$/, '');
 		const normalizedItemPath = menuPath.replace(/\/+$/, '');
-		// Beranda ("/") hanya aktif di halaman beranda. Tanpa ini, path kosong
-		// membuat semua halaman dianggap turunan "/" sehingga Beranda selalu aktif.
 		if (normalizedItemPath === '') return normalizedPath === '';
-		// Item yang lebih spesifik menang: jika ada sibling dengan path yang cocok persis,
-		// path induk yang lebih pendek tidak boleh ikut ditandai aktif.
+
 		const adaYangLebihSpesifik = siblingPaths.some((path) => {
 			if (!path) return false;
 			const normalizedSibling = path.replace(/\/+$/, '');
@@ -254,9 +280,9 @@
 		});
 		if (adaYangLebihSpesifik) return false;
 
-		const active =
-			normalizedPath === normalizedItemPath || normalizedPath.startsWith(normalizedItemPath + '/');
-		return active;
+		return (
+			normalizedPath === normalizedItemPath || normalizedPath.startsWith(normalizedItemPath + '/')
+		);
 	}
 </script>
 
@@ -271,6 +297,7 @@
 			)}
 			{@const isOpen = search ? true : bukaSemua ? true : (terbuka[groupKey] ?? groupActive)}
 			<details
+				class="group/nav"
 				open={isOpen}
 				ontoggle={(event) => {
 					if (search) return;
@@ -278,10 +305,30 @@
 					terbuka[groupKey] = (event.currentTarget as HTMLDetailsElement).open;
 				}}
 			>
-				<summary>
-					{@render menu_item_label(item)}
+				<summary
+					class="flex list-none items-center justify-between gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-slate-600 transition-colors select-none hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 [&::-webkit-details-marker]:hidden"
+				>
+					<span class="flex min-w-0 items-center gap-2.5">
+						{#if item.icon}
+							<span
+								aria-hidden="true"
+								class="flex shrink-0 items-center text-slate-400 dark:text-zinc-400"
+							>
+								<Icon name={item.icon} class="h-4 w-4" />
+							</span>
+						{/if}
+						<span class="truncate">{@html searchQueryMarker(search, item.title)}</span>
+					</span>
+					<span
+						aria-hidden="true"
+						class="shrink-0 text-slate-400 transition-transform duration-150 group-open/nav:rotate-90 dark:text-zinc-400"
+					>
+						<Icon name="right" class="h-3.5 w-3.5" />
+					</span>
 				</summary>
-				<ul>
+				<ul
+					class="mt-0.5 ml-4 space-y-0.5 border-l border-slate-200/80 pl-2.5 dark:border-zinc-800"
+				>
 					{#each item.subMenu as menu (menu.path ?? menu.title)}
 						{@render menu_item(
 							menu,
@@ -291,92 +338,117 @@
 				</ul>
 			</details>
 		{:else}
-			<!-- `class:menu-active` is shorthand for `class="{active ? 'menu-active': ''}"` -->
-			<a class:menu-active={active} href={item.path}>
-				{@render menu_item_label(item)}
+			<a
+				href={item.path}
+				aria-current={active ? 'page' : undefined}
+				class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] transition-colors {active
+					? 'bg-[#ebf3fe] font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
+					: 'font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'}"
+			>
+				{#if item.icon}
+					<span
+						aria-hidden="true"
+						class="flex shrink-0 items-center {active
+							? 'text-blue-600 dark:text-blue-400'
+							: 'text-slate-400 dark:text-zinc-400'}"
+					>
+						<Icon name={item.icon} class="h-4 w-4" />
+					</span>
+				{/if}
+				<span class="truncate">{@html searchQueryMarker(search, item.title)}</span>
 			</a>
 		{/if}
 	</li>
 {/snippet}
 
-{#snippet menu_item_label(item: MenuItem)}
-	{#if item.icon}
-		<Icon name={item.icon} />
-	{/if}
-	<span>{@html searchQueryMarker(search, item.title)}</span>
-	{#if search && item.tags?.length}
-		<div class="badge badge-xs badge-accent" title="Termasuk di dalam menu">tag</div>
-	{/if}
-{/snippet}
-
 <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-	<!-- Selector Modul Guru / Modul Wali-Kelas / Mode Admin -->
-	<div class="mb-3 flex shrink-0 flex-col gap-1.5">
-		<div class="relative flex items-center">
-			<select
-				class="select select-sm w-full rounded-xl bg-[#053d2e] border border-[#065f46] text-white font-bold text-xs focus:border-emerald-400 focus:outline-none pr-8 {isSwitchingModul
-					? 'opacity-70 cursor-wait'
-					: ''}"
-				value={activeDisplayModul}
-				disabled={isSwitchingModul}
-				onchange={(e) => switchModul(e.currentTarget.value as 'admin' | 'wali_kelas' | 'guru')}
-			>
-				{#if canAccessAdmin}
-					<option value="admin">Mode Admin / Operator</option>
-				{/if}
-				{#if canAccessWaliKelas}
-					<option value="wali_kelas">Modul Wali-Kelas</option>
-				{/if}
-				<option value="guru">Modul Guru</option>
-			</select>
-			{#if isSwitchingModul}
-				<div class="absolute right-2.5 pointer-events-none flex items-center">
-					<span class="loading loading-spinner loading-xs text-emerald-300"></span>
-				</div>
-			{/if}
-		</div>
-
-		{#if activeSemesterNama}
-			<div
-				class="px-2.5 py-1 text-[11px] font-medium text-emerald-200/90 bg-[#042f23] rounded-lg border border-[#065f46]/60 truncate flex items-center gap-1.5"
-				title={activeSemesterNama}
-			>
-				<Icon name="calendar" />
-				<span class="truncate">{activeSemesterNama}</span>
+	{#if hasMultipleModules}
+		<div class="mb-2 shrink-0">
+			<label for="sidebar-modul-select" class="sr-only">Pilih modul kerja</label>
+			<div class="relative flex items-center">
+				<select
+					id="sidebar-modul-select"
+					class="h-8.5 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/90 pr-8 pl-3 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-100 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700/80 dark:focus:border-blue-400 {isSwitchingModul
+						? 'cursor-wait opacity-70'
+						: ''}"
+					value={activeDisplayModul}
+					disabled={isSwitchingModul}
+					onchange={(e) => switchModul(e.currentTarget.value as 'admin' | 'wali_kelas' | 'guru')}
+				>
+					{#if canAccessAdmin}
+						<option value="admin">Mode Admin / Operator</option>
+					{/if}
+					{#if canAccessWaliKelas}
+						<option value="wali_kelas">Modul Wali Kelas</option>
+					{/if}
+					<option value="guru">Modul Guru</option>
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					{#if isSwitchingModul}
+						<span
+							class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent dark:border-blue-400"
+						></span>
+					{:else}
+						<Icon name="down" class="h-3.5 w-3.5" />
+					{/if}
+				</span>
 			</div>
-		{/if}
+		</div>
+	{/if}
+
+	<div class="mb-2.5 flex shrink-0 items-center gap-1.5">
+		<div
+			class="flex h-8.5 grow items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 transition-colors focus-within:border-blue-600 focus-within:bg-white dark:border-zinc-700 dark:bg-zinc-800 dark:focus-within:border-blue-400 dark:focus-within:bg-zinc-900"
+		>
+			<label for="sidebar-menu-search" class="sr-only">Cari menu</label>
+			<span aria-hidden="true" class="flex shrink-0 items-center text-slate-400 dark:text-zinc-400">
+				<Icon name="search" class="h-3.5 w-3.5" />
+			</span>
+			<input
+				id="sidebar-menu-search"
+				type="search"
+				class="min-w-0 grow bg-transparent text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-400"
+				bind:value={search}
+				placeholder="Cari menu..."
+			/>
+		</div>
+		<button
+			type="button"
+			onclick={() => (bukaSemua = !bukaSemua)}
+			aria-pressed={bukaSemua}
+			title={bukaSemua ? 'Tutup semua kelompok menu' : 'Buka semua kelompok menu'}
+			aria-label={bukaSemua ? 'Tutup semua kelompok menu' : 'Buka semua kelompok menu'}
+			class="inline-flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+		>
+			<span aria-hidden="true">
+				<Icon name={bukaSemua ? 'expand-all' : 'collapse-all'} class="h-4 w-4" />
+			</span>
+		</button>
 	</div>
 
-	<div class="mb-3 flex shrink-0 gap-1">
-		<label
-			class="input bg-[#053d2e] border border-[#065f46] text-white rounded-xl flex items-center gap-2 grow px-3 py-1.5 focus-within:border-emerald-400"
-		>
-			<Icon name="search" class="text-emerald-300" />
-			<input
-				type="search"
-				class="grow bg-transparent text-xs text-white placeholder:text-emerald-300/60 focus:outline-none"
-				bind:value={search}
-				placeholder="Cari menu"
-			/>
-		</label>
-		<label
-			class="btn swap btn-square rounded-xl bg-[#053d2e] border border-[#065f46] text-emerald-200 hover:text-white hover:bg-[#075e46] shadow-none"
-			title={bukaSemua ? 'Tutup semua submenu' : 'Buka semua submenu'}
-		>
-			<input type="checkbox" bind:checked={bukaSemua} />
-			<span class="swap-on"><Icon name="expand-all" /></span>
-			<span class="swap-off"><Icon name="collapse-all" /></span>
-		</label>
-	</div>
-	<div class="sidebar-menu-scroll min-h-0 flex-1 overflow-y-auto rounded-xl space-y-0.5 pr-0.5">
-		<ul class="menu w-full p-0 text-emerald-100 font-medium text-xs space-y-0.5">
+	<nav aria-label="Menu utama" class="sidebar-menu-scroll min-h-0 flex-1 overflow-y-auto pr-0.5">
+		<ul class="w-full space-y-0.5">
 			{#each menuItems as menu (menu.path ?? menu.title)}
 				{@render menu_item(menu)}
 			{:else}
-				<li>
-					<span class="italic text-emerald-300/60 text-xs"> Tidak ada hasil pencarian </span>
+				<li class="px-2 py-5 text-center">
+					<p class="text-xs text-slate-600 dark:text-zinc-400">
+						Menu "{search}" tidak ditemukan.
+					</p>
+					{#if search}
+						<button
+							type="button"
+							class="mt-2 rounded-lg px-2.5 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+							onclick={() => (search = '')}
+						>
+							Reset pencarian
+						</button>
+					{/if}
 				</li>
 			{/each}
 		</ul>
-	</div>
+	</nav>
 </div>

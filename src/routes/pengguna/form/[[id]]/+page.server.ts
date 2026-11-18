@@ -37,6 +37,14 @@ function parseRoleSelection(form: FormData) {
 	);
 	if (rolesSet.size === 0) rolesSet.add('guru');
 
+	if (rolesSet.has('pembina_eskul') && rolesSet.size === 1) {
+		return {
+			type: 'pembina_eskul' as AuthUser['type'],
+			operatorLevel: null,
+			roles: ['pembina_eskul']
+		};
+	}
+
 	const hasEducator = rolesSet.has('guru') || rolesSet.has('wali_kelas');
 	let type: AuthUser['type'];
 	let operatorLevel: 'admin' | 'kepala_sekolah' | null = null;
@@ -47,6 +55,12 @@ function parseRoleSelection(form: FormData) {
 		// Kepala sekolah + guru/wali → tetap base type dengan operatorLevel,
 		// lama-lama `type` hanya bisa dua: user atau wali_kelas.
 		type = hasEducator ? 'user' : 'kepala_sekolah';
+	} else if (rolesSet.has('pembina_eskul') && !hasEducator && !rolesSet.has('operator')) {
+		return {
+			type: 'pembina_eskul' as AuthUser['type'],
+			operatorLevel: null,
+			roles: ['pembina_eskul']
+		};
 	} else {
 		type = rolesSet.has('wali_kelas') ? 'wali_kelas' : 'user';
 	}
@@ -58,7 +72,7 @@ function parseRoleSelection(form: FormData) {
 
 	if (!OPERATOR_LEVELS.includes(operatorLevel ?? '')) operatorLevel = null;
 	// Simpan daftar roles eksplisit (urutan tetap stabil) — kolom `roles`.
-	const ROLE_ORDER = ['guru', 'wali_kelas', 'operator', 'kepala_sekolah', 'admin'];
+	const ROLE_ORDER = ['guru', 'wali_kelas', 'pembina_eskul', 'operator', 'kepala_sekolah', 'admin'];
 	const roles = ROLE_ORDER.filter((role) => rolesSet.has(role));
 	return { type, operatorLevel, roles };
 }
@@ -150,6 +164,7 @@ export async function load({ params }) {
 			.select({
 				id: u.id,
 				username: u.username,
+				namaLengkap: u.namaLengkap,
 				type: u.type,
 				operatorLevel: u.operatorLevel,
 				roles: u.roles,
@@ -185,6 +200,8 @@ export async function load({ params }) {
 			roles.push('admin');
 		} else if (user.type === 'kepala_sekolah') {
 			roles.push('kepala_sekolah');
+		} else if (user.type === 'pembina_eskul') {
+			roles.push('pembina_eskul');
 		} else if (user.type === 'wali_kelas') {
 			roles.push('wali_kelas', 'guru');
 		} else {
@@ -271,8 +288,9 @@ async function createUser(request: Request) {
 		const { hash, salt } = hashPassword(password);
 		const timestamp = new Date().toISOString();
 
+		const isPembinaEksternal = roleValue === 'pembina_eskul';
 		let pegawaiId: number | null = null;
-		if (nama) {
+		if (nama && !isPembinaEksternal) {
 			const [p] = await db
 				.insert(tablePegawai)
 				.values({ nama, nip: '', nik: nik || null, sekolahId: sekolahId ?? undefined })
@@ -307,6 +325,7 @@ async function createUser(request: Request) {
 		const insertData = {
 			username,
 			usernameNormalized: username.toLowerCase(),
+			namaLengkap: isPembinaEksternal ? nama : undefined,
 			passwordHash: hash,
 			passwordSalt: salt,
 			passwordUpdatedAt: timestamp,
@@ -314,8 +333,9 @@ async function createUser(request: Request) {
 			type: roleValue,
 			operatorLevel,
 			roles: savedRoles,
-			mataPelajaranId: mataPelajaranIds.length === 1 ? mataPelajaranIds[0] : undefined,
-			kelasId: kelasIds.length > 0 ? kelasIds[0] : undefined,
+			mataPelajaranId:
+				!isPembinaEksternal && mataPelajaranIds.length === 1 ? mataPelajaranIds[0] : undefined,
+			kelasId: !isPembinaEksternal && kelasIds.length > 0 ? kelasIds[0] : undefined,
 			sekolahId: sekolahId ?? undefined,
 			pegawaiId: pegawaiId ?? undefined,
 			createdAt: timestamp,
@@ -465,6 +485,7 @@ async function updateUser(request: Request, id: number) {
 
 		await db.transaction(async (tx) => {
 			const role = parseRoleSelection(form);
+			const isPembinaEksternal = role.type === 'pembina_eskul';
 			const updateData: Record<string, unknown> = {};
 			if (username !== existing.username) {
 				updateData.username = username;
@@ -480,22 +501,27 @@ async function updateUser(request: Request, id: number) {
 			updateData.roles = role.roles;
 			updateData.sekolahId = sekolahId ?? null;
 			updateData.updatedAt = new Date().toISOString();
-			updateData.mataPelajaranId = mataPelajaranIds.length === 1 ? mataPelajaranIds[0] : null;
-			updateData.kelasId = kelasIds.length > 0 ? kelasIds[0] : null;
+			updateData.namaLengkap = isPembinaEksternal ? nama || null : null;
+			updateData.mataPelajaranId =
+				!isPembinaEksternal && mataPelajaranIds.length === 1 ? mataPelajaranIds[0] : null;
+			updateData.kelasId = !isPembinaEksternal && kelasIds.length > 0 ? kelasIds[0] : null;
+			if (isPembinaEksternal) {
+				updateData.pegawaiId = null;
+			}
 
-			const submittedPermissions = parsePermissions(form.get('permissions'), roleValue);
+			const submittedPermissions = parsePermissions(form.get('permissions'), role.type);
 			if (submittedPermissions) updateData.permissions = submittedPermissions;
 
 			if (Object.keys(updateData).length > 0) {
 				await tx.update(u).set(updateData).where(eq(u.id, id));
 			}
 
-			if (nama && existing.pegawaiId) {
+			if (!isPembinaEksternal && nama && existing.pegawaiId) {
 				await tx
 					.update(tablePegawai)
 					.set({ nama, nik: nik || null, ...(sekolahId ? { sekolahId } : {}) })
 					.where(eq(tablePegawai.id, existing.pegawaiId));
-			} else if (nama && !existing.pegawaiId) {
+			} else if (!isPembinaEksternal && nama && !existing.pegawaiId) {
 				const [p] = await tx
 					.insert(tablePegawai)
 					.values({ nama, nip: '', nik: nik || null, sekolahId: sekolahId ?? undefined })

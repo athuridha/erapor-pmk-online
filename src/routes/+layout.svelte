@@ -7,9 +7,6 @@
 	import ForcedPasswordChangeBody from '$lib/components/settings/forced-password-change-body.svelte';
 	import Menu from '$lib/components/menu.svelte';
 	import Navbar from '$lib/components/navbar.svelte';
-	import KelasPickerLokal from '$lib/components/kelas-picker-lokal.svelte';
-	import Task from '$lib/components/tasks.svelte';
-	import FavoriteMenusSidebar from '$lib/components/dashboard/favorite-menus-sidebar.svelte';
 	import KodeKegiatan from '$lib/components/jadwal-bell/kode-kegiatan.svelte';
 	import TambahKegiatanModal from '$lib/components/jadwal-bell/tambah-kegiatan-modal.svelte';
 	import Toast, { toast } from '$lib/components/toast.svelte';
@@ -18,7 +15,6 @@
 
 	import NavIndicator from '$lib/components/nav-indicator.svelte';
 	import ScrollToTop from '$lib/components/scroll-to-top.svelte';
-	import FavoriteMenusFab from '$lib/components/dashboard/favorite-menus-fab.svelte';
 	import PresensiGuruModal from '$lib/components/presensi-guru/presensi-guru-modal.svelte';
 	import { isAdminUser } from './pengguna/permissions';
 	import '../app.css';
@@ -28,6 +24,7 @@
 	const appName = 'e-Rapor SMK Pratama Mulya';
 	let loggingOut = $state(false);
 	let isStoppingImpersonation = $state(false);
+	let mobileMenuOpen = $state(false);
 
 	let _isOnline = $state(true);
 
@@ -51,25 +48,34 @@
 		};
 	});
 
-	// Close the mobile drawer when a menu item triggers client-side navigation.
-	// The toggle checkbox lives in the layout (survives soft navigation), so
-	// without this the drawer + overlay stay open on the target page and block
-	// all clicks until a manual reload.
+	$effect(() => {
+		if (!mobileMenuOpen) return;
+		const onKeydown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				mobileMenuOpen = false;
+			}
+		};
+		window.addEventListener('keydown', onKeydown);
+		return () => window.removeEventListener('keydown', onKeydown);
+	});
+
 	onNavigate(() => {
-		const drawerToggle = document.getElementById('my-drawer-2') as HTMLInputElement | null;
-		if (drawerToggle) drawerToggle.checked = false;
+		mobileMenuOpen = false;
 	});
 
 	const isLoginPage = $derived(page.url.pathname === '/login');
 	const isTamuPage = $derived(page.url.pathname === '/tamu');
 	const isJadwalPublikPage = $derived(page.url.pathname === '/jadwal-pelajaran');
 	const isVerifikasiRapor = $derived(page.url.pathname === '/rapor/verifikasi');
-	const isLimitPage = $derived(page.url.pathname === '/server-limit' || page.url.pathname === '/limit');
-	// When not authenticated, never render the drawer/navbar shell — not even for
-	// error pages (e.g. 404 on an unknown URL). This avoids exposing the app menu
-	// structure to anonymous visitors.
+	const isLimitPage = $derived(
+		page.url.pathname === '/server-limit' || page.url.pathname === '/limit'
+	);
 	const isUnauthenticatedError = $derived(!!page.error && !data.user);
 	let isJadwalPage = $derived(page.url.pathname === '/akademik/jadwal-pelajaran');
+
+	const activeSemesterNama = $derived(
+		(page.data as { activeSemesterNama?: string | null } | null)?.activeSemesterNama ?? null
+	);
 
 	const skipPresensiGuruPrompt = $derived(
 		isLoginPage ||
@@ -142,16 +148,13 @@
 				presensiGuruPromptChecked = false;
 			});
 	});
+
 	const jadwalCanManage = $derived(
 		((page.data.user as { permissions?: string[] })?.permissions ?? []).includes(
 			'informasi_umum_akademik'
 		)
 	);
 
-	// Pengguna yang memakai kata sandi bawaan (mustChangePassword) harus
-	// menggantinya sebelum menggunakan aplikasi. Modal ini tidak bisa
-	// ditutup (dismissible: false) dan terpasang di layout, jadi berlaku
-	// untuk semua halaman (kecuali mode beralih akun).
 	let forcedPasswordModalDismissed = $state(false);
 	const forcedPasswordModalShown = $derived(
 		!!data.user && !data.impersonator && data.user.mustChangePassword === true
@@ -172,9 +175,10 @@
 		});
 	});
 
-	// Beberapa halaman (mis. Kustomisasi Cetak) butuh ruang penuh: panel
-	// "Daftar tugas" dan "Menu Favorit" disembunyikan.
 	const hideTaskRail = $derived(page.data.meta?.hideTaskRail === true);
+	const showJadwalSidebar = $derived(
+		!hideTaskRail && isJadwalPage && Boolean(page.data.daftarKodeMapel)
+	);
 
 	async function handleHapusKegiatan(kode: string) {
 		if (!jadwalCanManage || !get(jadwalIsEditing)) return;
@@ -227,12 +231,12 @@
 		readonlyRoutes.some((r) => page.url.pathname === r || page.url.pathname.startsWith(r + '/'))
 	);
 
-	// Guru hanya read-only pada catatan wali kelas dan keputusan kelulusan/kenaikan jika bukan kelas walinya
 	const isOwnClass = $derived.by(() => {
 		const ownIds = (data.user as { ownKelasIds?: number[] })?.ownKelasIds ?? [];
 		return data.kelasAktif?.id != null && ownIds.includes(data.kelasAktif.id);
 	});
 	const disableInteraction = $derived(!isAdminUser(data.user) && !isOwnClass && isReadonlyPage);
+	const isPengaturanActive = $derived(page.url.pathname.startsWith('/pengaturan'));
 
 	async function logout() {
 		if (loggingOut) return;
@@ -294,7 +298,7 @@
 
 {#if isLoginPage || isTamuPage || isUnauthenticatedError}
 	<div
-		class="bg-gradient-to-br from-slate-100 via-emerald-50/50 to-slate-200 dark:from-slate-950 dark:via-emerald-950/30 dark:to-slate-900 flex min-h-screen flex-col items-center justify-center p-6"
+		class="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-6 dark:bg-zinc-950"
 	>
 		{#if isUnauthenticatedError}
 			<div class="w-full max-w-lg">
@@ -305,7 +309,7 @@
 		{/if}
 	</div>
 {:else if isJadwalPublikPage}
-	<div class="bg-base-200 flex min-h-screen flex-col p-6">
+	<div class="flex min-h-screen flex-col bg-slate-50 p-6 dark:bg-zinc-950">
 		{@render children()}
 	</div>
 {:else if isVerifikasiRapor}
@@ -313,187 +317,225 @@
 {:else if isLimitPage}
 	{@render children()}
 {:else}
-	<main class="drawer lg:drawer-open">
-		<input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
-		<div class="drawer-content flex min-h-screen flex-col">
-			<Navbar {logout} {loggingOut} />
+	<div class="app-canvas-bg relative isolate flex min-h-screen text-slate-900 dark:text-zinc-100">
+		<div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+			<div class="app-canvas-blob-a absolute -top-32 -right-32 h-96 w-96 rounded-full"></div>
+			<div class="app-canvas-blob-b absolute -bottom-32 -left-32 h-80 w-80 rounded-full"></div>
+		</div>
+
+		{#if mobileMenuOpen}
+			<button
+				type="button"
+				aria-label="Tutup menu navigasi"
+				onclick={() => (mobileMenuOpen = false)}
+				class="app-sidebar-backdrop fixed inset-0 z-40 bg-slate-950/45"
+			></button>
+		{/if}
+
+		<aside
+			aria-label="Navigasi samping"
+			class="app-sidebar-panel fixed inset-y-0 left-0 z-50 flex h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200/80 bg-white px-3.5 py-4 transition-transform duration-200 lg:visible lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none dark:border-zinc-800 dark:bg-zinc-900 {mobileMenuOpen
+				? 'visible translate-x-0 shadow-xl'
+				: 'invisible -translate-x-full'}"
+		>
+			<div class="relative mb-4 flex items-center justify-center px-1 pt-1">
+				<a
+					href="/"
+					class="flex flex-col items-center rounded-xl px-3 py-1.5 text-center transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/60"
+				>
+					<img
+						class="h-11 w-11 shrink-0 object-contain"
+						src="/logo.png"
+						alt="Logo SMK Pratama Mulya"
+						width="44"
+						height="44"
+					/>
+					<p
+						class="mt-1.5 text-[14px] leading-tight font-bold tracking-tight text-slate-900 dark:text-zinc-100"
+					>
+						SMK Pratama Mulya
+					</p>
+					<p
+						class="mt-0.5 truncate text-[11px] font-medium text-slate-500 dark:text-zinc-400"
+						title={activeSemesterNama ?? 'Karawang'}
+					>
+						{activeSemesterNama ?? 'Karawang'}
+					</p>
+				</a>
+
+				<button
+					type="button"
+					onclick={() => (mobileMenuOpen = false)}
+					aria-label="Tutup menu navigasi"
+					class="app-mobile-menu-trigger absolute top-1 right-0 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+				>
+					<span aria-hidden="true"><Icon name="close" class="h-4 w-4" /></span>
+				</button>
+			</div>
+
+			<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+				<Menu />
+			</div>
+
+			<div class="mt-3 shrink-0 border-t border-slate-200/80 pt-3 dark:border-zinc-800">
+				<a
+					href="/pengaturan"
+					aria-current={isPengaturanActive ? 'page' : undefined}
+					class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] transition-colors {isPengaturanActive
+						? 'bg-[#ebf3fe] font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
+						: 'font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'}"
+				>
+					<span
+						aria-hidden="true"
+						class={isPengaturanActive
+							? 'text-blue-600 dark:text-blue-400'
+							: 'text-slate-400 dark:text-zinc-400'}
+					>
+						<Icon name="gear" class="h-4 w-4" />
+					</span>
+					<span>Pengaturan</span>
+				</a>
+			</div>
+		</aside>
+
+		<div class="flex min-w-0 flex-1 flex-col">
+			<a
+				href="#main-content"
+				class="sr-only rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50"
+			>
+				Langsung ke konten utama
+			</a>
+
+			<Navbar {logout} {loggingOut} onOpenMobileMenu={() => (mobileMenuOpen = true)} />
 
 			{#if data.impersonator}
 				<div
-					class="bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-between text-xs font-bold shadow-sm border-b border-amber-600/30 relative z-20"
+					class="border-b border-amber-300 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
 				>
-					<div class="flex items-center gap-2">
-						<Icon name="warning" class="w-4 h-4 text-amber-900" />
-						<span>
-							Mode Beralih Akun: Anda sedang masuk sebagai <strong class="underline"
-								>{(data.user as { pegawaiName?: string | null })?.pegawaiName ||
-									data.user?.username}</strong
-							>
-							(Sesi Asli: @{data.impersonator.username}).
-						</span>
-					</div>
-					<form
-						method="POST"
-						action="/api/auth/switch-user/stop"
-						onsubmit={async (e) => {
-							e.preventDefault();
-							if (isStoppingImpersonation) return;
-							isStoppingImpersonation = true;
-							try {
-								const res = await fetch('/api/auth/switch-user/stop', { method: 'POST' });
-								window.location.href = '/';
-							} catch {
-								window.location.href = '/';
-							}
-						}}
-					>
-						<button
-							type="submit"
-							disabled={isStoppingImpersonation}
-							class="btn btn-xs bg-amber-950 text-white hover:bg-black border-none rounded-lg font-bold shadow-none cursor-pointer gap-1.5"
+					<div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
+						<div class="flex items-center gap-2">
+							<span aria-hidden="true" class="text-amber-700 dark:text-amber-400">
+								<Icon name="warning" class="h-4 w-4" />
+							</span>
+							<span>
+								Mode Beralih Akun: masuk sebagai
+								<strong class="font-semibold">
+									{(data.user as { pegawaiName?: string | null })?.pegawaiName ||
+										data.user?.username}
+								</strong>
+								(Sesi asal: @{data.impersonator.username}).
+							</span>
+						</div>
+						<form
+							method="POST"
+							action="/api/auth/switch-user/stop"
+							onsubmit={async (e) => {
+								e.preventDefault();
+								if (isStoppingImpersonation) return;
+								isStoppingImpersonation = true;
+								try {
+									await fetch('/api/auth/switch-user/stop', { method: 'POST' });
+									window.location.href = '/';
+								} catch {
+									window.location.href = '/';
+								}
+							}}
 						>
-							<Icon name="repeat" class="w-3 h-3 {isStoppingImpersonation ? 'animate-spin' : ''}" />
-							<span>{isStoppingImpersonation ? 'Kembali…' : 'Kembali ke Admin'}</span>
-						</button>
-					</form>
+							<button
+								type="submit"
+								disabled={isStoppingImpersonation}
+								class="inline-flex h-7 items-center gap-1.5 rounded-md bg-amber-950 px-2.5 text-xs font-semibold text-white transition-colors hover:bg-black disabled:opacity-60"
+							>
+								<span aria-hidden="true">
+									<Icon
+										name="repeat"
+										class="h-3 w-3 {isStoppingImpersonation ? 'animate-spin' : ''}"
+									/>
+								</span>
+								<span>{isStoppingImpersonation ? 'Kembali...' : 'Kembali ke Admin'}</span>
+							</button>
+						</form>
+					</div>
 				</div>
 			{/if}
 
-			<div
-				class="bg-base-300 dark:bg-base-200 dark:border-base-200 border-base-300 flex flex-1 flex-col border lg:mr-2 lg:mb-2 lg:rounded-xl"
-			>
-				<div
-					class="max-h-[calc(100vh-4.2rem)] min-h-[calc(100vh-4.2rem)] max-w-none overflow-y-auto md:max-h-[calc(100vh-4.6rem)] md:min-h-[calc(100vh-4.6rem)]"
-				>
-					<div class="m-4 flex min-w-0 flex-col xl:flex-row xl:gap-4">
-						<div class="w-full max-w-7xl min-w-0 flex-1">
-							<ScrollToTop />
-							<FavoriteMenusFab />
-							<KelasPickerLokal />
-							<div class={disableInteraction ? 'is-readonly' : ''}>
-								{@render children()}
-							</div>
-						</div>
-						{#if !hideTaskRail}
-							<div class="sticky top-4 self-start">
-								{#if isJadwalPage && page.data.daftarKodeMapel}
-									<div class="hidden xl:block">
-										<div class="card bg-base-100 rounded-box mb-4 max-w-70 min-w-70 shadow-md">
-											<div class="p-4">
-												<div class="flex flex-row items-center gap-2">
-													<h2 class="text-sm font-bold">Kode Kegiatan</h2>
-													<div class="flex-1"></div>
-													<div class="join">
-														<button
-															type="button"
-															class="btn btn-sm join-item px-2 shadow-none"
-															onclick={() => (kodeKegiatanOpen = !kodeKegiatanOpen)}
-															title={kodeKegiatanOpen ? 'Tutup daftar kode' : 'Buka daftar kode'}
-														>
-															<Icon name={kodeKegiatanOpen ? 'up' : 'down'} />
-														</button>
-													</div>
-												</div>
-											</div>
-											{#if kodeKegiatanOpen}
-												<div class="p-4 pt-0">
-													<KodeKegiatan
-														kodeMapelPerKelas={(page.data.kodeMapelPerKelas as Array<{
-															kelasId: number;
-															namaKelas: string;
-															kodeMapel: string[];
-														}>) ?? []}
-														kodeTambahan={['UPB', 'IST', 'PLG']}
-														kodeKokurikuler={(page.data.daftarKodeKokurikuler as string[]) ?? []}
-														kegiatanCustom={(page.data.kegiatanCustom as Array<{
-															kode: string;
-															nama: string;
-															durasi: number | null;
-														}>) ?? []}
-														canManage={jadwalCanManage && $jadwalIsEditing}
-														onHapusKegiatan={handleHapusKegiatan}
-														onEditKegiatan={openEditKegiatan}
-													/>
-												</div>
-											{/if}
-										</div>
+			<main id="main-content" class="flex-1 px-4 py-5 sm:px-6 lg:px-8">
+				<div class="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-5 xl:flex-row">
+					<div class="min-w-0 flex-1 {disableInteraction ? 'is-readonly' : ''}">
+						{@render children()}
+					</div>
+
+					{#if showJadwalSidebar}
+						<aside class="hidden w-72 shrink-0 self-start xl:sticky xl:top-20 xl:block">
+							<div
+								class="rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+							>
+								<div
+									class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-zinc-800"
+								>
+									<h2 class="text-sm font-semibold text-slate-900 dark:text-zinc-100">
+										Kode Kegiatan
+									</h2>
+									<button
+										type="button"
+										class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+										onclick={() => (kodeKegiatanOpen = !kodeKegiatanOpen)}
+										title={kodeKegiatanOpen ? 'Tutup daftar kode' : 'Buka daftar kode'}
+										aria-label={kodeKegiatanOpen ? 'Tutup daftar kode' : 'Buka daftar kode'}
+									>
+										<span aria-hidden="true">
+											<Icon name={kodeKegiatanOpen ? 'up' : 'down'} class="h-3.5 w-3.5" />
+										</span>
+									</button>
+								</div>
+								{#if kodeKegiatanOpen}
+									<div class="p-4">
+										<KodeKegiatan
+											kodeMapelPerKelas={(page.data.kodeMapelPerKelas as Array<{
+												kelasId: number;
+												namaKelas: string;
+												kodeMapel: string[];
+											}>) ?? []}
+											kodeTambahan={['UPB', 'IST', 'PLG']}
+											kodeKokurikuler={(page.data.daftarKodeKokurikuler as string[]) ?? []}
+											kegiatanCustom={(page.data.kegiatanCustom as Array<{
+												kode: string;
+												nama: string;
+												durasi: number | null;
+											}>) ?? []}
+											canManage={jadwalCanManage && $jadwalIsEditing}
+											onHapusKegiatan={handleHapusKegiatan}
+											onEditKegiatan={openEditKegiatan}
+										/>
 									</div>
 								{/if}
-								<Task variant="sidebar" />
-								<FavoriteMenusSidebar />
 							</div>
-						{/if}
-					</div>
+						</aside>
+					{/if}
 				</div>
-			</div>
-		</div>
-		<div class="drawer-side z-40">
-			<label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label>
-			<aside
-				class="flex h-dvh min-h-0 w-72 shrink-0 flex-col overflow-hidden bg-[#064e3b] text-emerald-100 border-r border-[#065f46] p-4 shadow-2xl"
-			>
-				<div
-					class="mt-14 lg:mt-0 flex items-center gap-3 p-3 mb-3 rounded-2xl bg-[#053d2e] border border-[#065f46]/70 shadow-md"
-				>
-					<div
-						class="w-11 h-11 rounded-xl bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm"
-					>
-						<img
-							class="w-full h-full object-contain"
-							src="/logo.png"
-							alt="Logo SMK Pratama Mulya"
-						/>
-					</div>
-					<div class="overflow-hidden">
-						<a href="/"
-							><h2 class="text-sm font-black text-white tracking-tight leading-tight truncate">
-								SMK Pratama Mulya
-							</h2></a
-						>
-						<p class="text-[11px] text-emerald-300 font-semibold truncate">e-Rapor Terpadu</p>
-					</div>
-				</div>
+			</main>
 
-				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-					<Menu />
-				</div>
-				<div
-					class="mt-auto shrink-0 pt-3 border-t border-[#065f46]/70 flex flex-row items-center justify-between gap-1 text-xs"
-				>
-					<a
-						href="/pengaturan"
-						class="flex items-center gap-2.5 px-3 py-2 rounded-xl font-semibold text-emerald-200 hover:text-white hover:bg-[#075e46] transition-colors"
-					>
-						<Icon name="gear" class="text-emerald-300" />
-						<span>Pengaturan</span>
-					</a>
-					<a
-						href="/tentang"
-						class="flex items-center gap-2.5 px-3 py-2 rounded-xl font-semibold text-emerald-200 hover:text-white hover:bg-[#075e46] transition-colors"
-					>
-						<Icon name="info" class="text-emerald-300" />
-						<span>Tentang Aplikasi</span>
-					</a>
-				</div>
-			</aside>
+			<ScrollToTop />
 		</div>
-	</main>
+	</div>
 {/if}
 
 <Toast />
 <GlobalModal />
 <NavIndicator />
 {#if dev && simulasiTanggalJam && data.user}
-	<div class="fixed right-4 bottom-4 z-40 flex items-center gap-2">
-		<div class="alert alert-soft alert-warning shadow-lg">
-			<Icon name="calendar" class="h-5 w-5 shrink-0" />
+	<div class="fixed right-4 bottom-4 z-40">
+		<div
+			class="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-amber-950 shadow-lg dark:border-amber-800 dark:bg-amber-950/90 dark:text-amber-100"
+		>
+			<span aria-hidden="true"><Icon name="calendar" class="h-4 w-4 shrink-0" /></span>
 			<div class="text-xs leading-tight">
-				<div class="font-bold">Mode simulasi presensi aktif</div>
-				<div>{simulasiTanggalJam}</div>
+				<div class="font-semibold">Mode simulasi presensi aktif</div>
+				<div class="opacity-80">{simulasiTanggalJam}</div>
 			</div>
 			<button
 				type="button"
-				class="btn btn-soft btn-warning btn-sm shadow-none"
+				class="rounded-lg bg-amber-900 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-amber-950"
 				onclick={resetSimulasi}
 			>
 				Reset
@@ -510,7 +552,4 @@
 		cursor: not-allowed !important;
 		pointer-events: none !important;
 	}
-
-	/* Ikon tautan bawah sidebar (Pengaturan & Tentang Aplikasi) cukup satu:
-	   <Icon> inline saja; tanpa ::before mask agar tidak ganda. */
 </style>

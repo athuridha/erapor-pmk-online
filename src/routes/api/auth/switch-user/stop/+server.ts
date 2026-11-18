@@ -44,11 +44,13 @@ export const POST: RequestHandler = async ({ request, locals, cookies }) => {
 			cookies.set(cookieNames.ACTIVE_KELAS_ID, 'semua', {
 				path: '/',
 				sameSite: 'lax',
+				httpOnly: false,
 				secure
 			});
 			cookies.set(cookieNames.ACTIVE_MODUL, 'admin', {
 				path: '/',
 				sameSite: 'lax',
+				httpOnly: false,
 				secure
 			});
 			if (acceptsHtml) {
@@ -73,11 +75,13 @@ export const POST: RequestHandler = async ({ request, locals, cookies }) => {
 	cookies.set(cookieNames.ACTIVE_KELAS_ID, 'semua', {
 		path: '/',
 		sameSite: 'lax',
+		httpOnly: false,
 		secure
 	});
 	cookies.set(cookieNames.ACTIVE_MODUL, 'admin', {
 		path: '/',
 		sameSite: 'lax',
+		httpOnly: false,
 		secure
 	});
 

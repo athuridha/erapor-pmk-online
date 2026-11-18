@@ -20,13 +20,14 @@ function isTableMissingError(error: unknown, tableName: string) {
 export async function load({ depends, url, parent }) {
 	const { kelasAktif, user } = await parent();
 
-	// Permission check: Allow admin, wali_kelas, wali_asuh, and users with rapor_manage
+	// Permission check: Allow admin, wali_kelas, wali_asuh, pembina_eskul, or permitted user
 	const userType = (user as { type?: string } | null)?.type;
 	if (
 		userType !== 'admin' &&
 		userType !== 'kepala_sekolah' &&
 		userType !== 'wali_kelas' &&
-		userType !== 'wali_asuh'
+		userType !== 'wali_asuh' &&
+		userType !== 'pembina_eskul'
 	) {
 		authority('mata_pelajaran_ekstrakurikuler');
 	}
@@ -63,7 +64,15 @@ export async function load({ depends, url, parent }) {
 		throw error(404, 'Ekstrakurikuler tidak ditemukan');
 	}
 
-	if (kelasAktif?.id && ekstrakurikuler.kelasId !== kelasAktif.id && !ekstrakurikuler.semuaKelas) {
+	if (userType === 'pembina_eskul') {
+		if (ekstrakurikuler.pembinaUserId !== user?.id) {
+			throw error(403, 'Ekstrakurikuler ini bukan binaan Anda');
+		}
+	} else if (
+		kelasAktif?.id &&
+		ekstrakurikuler.kelasId !== kelasAktif.id &&
+		!ekstrakurikuler.semuaKelas
+	) {
 		throw error(403, 'Ekstrakurikuler tidak termasuk dalam kelas aktif');
 	}
 
@@ -95,13 +104,13 @@ export async function load({ depends, url, parent }) {
 
 export const actions = {
 	create: async ({ request, locals }) => {
-		// Allow admin, wali_kelas, wali_asuh, and users with rapor_manage
 		const userType = (locals.user as { type?: string } | null)?.type;
 		if (
 			userType !== 'admin' &&
 			userType !== 'kepala_sekolah' &&
 			userType !== 'wali_kelas' &&
-			userType !== 'wali_asuh'
+			userType !== 'wali_asuh' &&
+			userType !== 'pembina_eskul'
 		) {
 			authority('mata_pelajaran_ekstrakurikuler');
 		}
@@ -117,6 +126,16 @@ export const actions = {
 		const ekstrakurikulerId = Number(ekstrakurikulerIdRaw);
 		if (!Number.isInteger(ekstrakurikulerId)) {
 			return fail(400, { fail: 'Ekstrakurikuler tidak valid' });
+		}
+
+		if (userType === 'pembina_eskul') {
+			const owned = await db.query.tableEkstrakurikuler.findFirst({
+				columns: { pembinaUserId: true },
+				where: eq(tableEkstrakurikuler.id, ekstrakurikulerId)
+			});
+			if (!owned || owned.pembinaUserId !== locals.user?.id) {
+				return fail(403, { fail: 'Ekstrakurikuler ini bukan binaan Anda' });
+			}
 		}
 
 		if (!deskripsi) {
@@ -139,13 +158,13 @@ export const actions = {
 	},
 
 	update: async ({ request, locals }) => {
-		// Allow admin, wali_kelas, wali_asuh, and users with rapor_manage
 		const userType = (locals.user as { type?: string } | null)?.type;
 		if (
 			userType !== 'admin' &&
 			userType !== 'kepala_sekolah' &&
 			userType !== 'wali_kelas' &&
-			userType !== 'wali_asuh'
+			userType !== 'wali_asuh' &&
+			userType !== 'pembina_eskul'
 		) {
 			authority('mata_pelajaran_ekstrakurikuler');
 		}
@@ -169,6 +188,16 @@ export const actions = {
 		const ekstrakurikulerId = Number(ekstrakurikulerIdRaw);
 		if (!Number.isInteger(ekstrakurikulerId)) {
 			return fail(400, { fail: 'Ekstrakurikuler tidak valid' });
+		}
+
+		if (userType === 'pembina_eskul') {
+			const owned = await db.query.tableEkstrakurikuler.findFirst({
+				columns: { pembinaUserId: true },
+				where: eq(tableEkstrakurikuler.id, ekstrakurikulerId)
+			});
+			if (!owned || owned.pembinaUserId !== locals.user?.id) {
+				return fail(403, { fail: 'Ekstrakurikuler ini bukan binaan Anda' });
+			}
 		}
 
 		if (!deskripsi) {
@@ -201,13 +230,13 @@ export const actions = {
 	},
 
 	delete: async ({ request, locals }) => {
-		// Allow admin, wali_kelas, wali_asuh, and users with rapor_manage
 		const userType = (locals.user as { type?: string } | null)?.type;
 		if (
 			userType !== 'admin' &&
 			userType !== 'kepala_sekolah' &&
 			userType !== 'wali_kelas' &&
-			userType !== 'wali_asuh'
+			userType !== 'wali_asuh' &&
+			userType !== 'pembina_eskul'
 		) {
 			authority('mata_pelajaran_ekstrakurikuler');
 		}
@@ -224,6 +253,25 @@ export const actions = {
 
 		if (!ids.length) {
 			return fail(400, { fail: 'Pilih tujuan ekstrakurikuler yang akan dihapus' });
+		}
+
+		if (userType === 'pembina_eskul') {
+			const ownedTujuan = await db
+				.select({ id: tableEkstrakurikulerTujuan.id })
+				.from(tableEkstrakurikulerTujuan)
+				.innerJoin(
+					tableEkstrakurikuler,
+					eq(tableEkstrakurikulerTujuan.ekstrakurikulerId, tableEkstrakurikuler.id)
+				)
+				.where(
+					and(
+						inArray(tableEkstrakurikulerTujuan.id, ids),
+						eq(tableEkstrakurikuler.pembinaUserId, locals.user?.id ?? -1)
+					)
+				);
+			if (ownedTujuan.length !== ids.length) {
+				return fail(403, { fail: 'Anda hanya dapat menghapus tujuan ekstrakurikuler binaan Anda' });
+			}
 		}
 
 		try {

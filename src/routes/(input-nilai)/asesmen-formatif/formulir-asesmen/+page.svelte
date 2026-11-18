@@ -121,39 +121,54 @@
 	}
 </script>
 
-<div class="bg-base-100 rounded-lg border border-none p-4 shadow-md">
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
 	<FormEnhance action="?/save" onsuccess={handleSuccess} showToast>
 		{#snippet children({ submitting })}
 			<input type="hidden" name="muridId" value={data.murid.id} />
 			<input type="hidden" name="mapelId" value={data.mapel.id} />
 
-			<div class="mb-6 grid grid-cols-2 gap-2 md:flex md:items-center">
-				<a href={kembaliHref} class="btn btn-soft shadow-none md:w-auto">
-					<Icon name="left" />
+			<div
+				class="mb-4 grid grid-cols-2 gap-2 border-b border-slate-200 pb-4 md:flex md:items-center dark:border-zinc-800"
+			>
+				<a
+					href={kembaliHref}
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 md:w-auto dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+				>
+					<Icon name="left" class="h-4 w-4" />
 					Kembali
 				</a>
 				<button
 					type="submit"
-					class="btn btn-primary shadow-none md:w-auto md:ml-auto"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 md:ml-auto md:w-auto"
 					disabled={!data.hasTujuan || submitting}
 				>
-					<Icon name="save" />
+					<Icon name="save" class="h-4 w-4" />
 					{submitting ? 'Menyimpan...' : 'Simpan'}
 				</button>
 			</div>
 
 			<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-				<select
-					class="select bg-base-200 w-full truncate dark:border-none"
-					title="Pilih mata pelajaran"
-					aria-label="Pilih mata pelajaran"
-					value={data.pickerMapelId}
-					onchange={pilihMapel}
-				>
-					{#each data.mapelList as opsi (opsi.id)}
-						<option value={opsi.id}>{opsi.nama}</option>
-					{/each}
-				</select>
+				<div class="relative flex items-center">
+					<select
+						class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+						title="Pilih mata pelajaran"
+						aria-label="Pilih mata pelajaran"
+						value={data.pickerMapelId}
+						onchange={pilihMapel}
+					>
+						{#each data.mapelList as opsi (opsi.id)}
+							<option value={opsi.id}>{opsi.nama}</option>
+						{/each}
+					</select>
+					<span
+						aria-hidden="true"
+						class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+					>
+						<Icon name="down" class="h-3.5 w-3.5" />
+					</span>
+				</div>
 				<MuridPicker
 					basePath="/asesmen-formatif/formulir-asesmen"
 					kelasId={data.kelasId}
@@ -164,54 +179,65 @@
 				/>
 			</div>
 
-			<h3 class="py-2 text-lg font-bold">
+			<h1 class="mt-4 mb-3 text-base font-bold tracking-tight text-slate-900 dark:text-zinc-100">
 				Apakah {data.murid.nama} telah memenuhi setiap tujuan pembelajaran {data.mapel.nama}?
-			</h3>
+			</h1>
 
 			{#if !data.hasTujuan}
-				<div class="alert alert-soft alert-info mt-4">
-					<Icon name="info" />
+				<div
+					class="mt-4 flex items-center gap-2.5 rounded-xl border border-sky-200 bg-sky-50/90 px-4 py-3 text-xs text-sky-950 dark:border-sky-900/60 dark:bg-sky-950/35 dark:text-sky-200"
+				>
+					<Icon name="info" class="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
 					<span>
 						Belum ada tujuan pembelajaran untuk mata pelajaran ini. Tambahkan tujuan pembelajaran di
-						menu
-						<strong>Intrakurikuler</strong> terlebih dahulu.
+						menu <strong>Intrakurikuler</strong> terlebih dahulu.
 					</span>
 				</div>
 			{:else}
 				<div
-					class="bg-base-100 dark:bg-base-200 border-base-200 mt-2 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+					class="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 				>
-					<table class="border-base-200 table border dark:border-none">
+					<table class="w-full border-collapse text-xs">
 						<thead>
-							<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-								<th style="width: 40px; min-width: 40px;">No</th>
-								<th class="w-full" style="min-width: 260px;">Tujuan Pembelajaran</th>
-								<th class="text-center">Ya</th>
-								<th class="text-center">Tidak</th>
+							<tr
+								class="border-b border-slate-200 bg-slate-50 text-left font-semibold text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+							>
+								<th style="width: 44px; min-width: 40px;" class="px-3 py-2.5">No</th>
+								<th class="w-full px-3 py-2.5" style="min-width: 260px;">Tujuan Pembelajaran</th>
+								<th class="px-3 py-2.5 text-center">Ya</th>
+								<th class="px-3 py-2.5 text-center">Tidak</th>
 							</tr>
 						</thead>
-						<tbody use:checkboxArrowNavigation>
+						<tbody
+							class="divide-y divide-slate-200 dark:divide-zinc-800"
+							use:checkboxArrowNavigation
+						>
 							{#each entries as entry, index (entry.tujuanPembelajaranId)}
 								<tr
-									class:border-l-success={entry.status === 'ya'}
-									class:border-l-error={entry.status === 'tidak'}
-									class:border-l-4={entry.status !== null}
+									class="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50 {entry.status ===
+									'ya'
+										? 'border-l-4 border-l-emerald-600'
+										: entry.status === 'tidak'
+											? 'border-l-4 border-l-red-500'
+											: ''}"
 								>
-									<td>{entry.index}</td>
-									<td>
-										<p class="font-medium">{entry.deskripsi}</p>
+									<td class="px-3 py-2.5 tabular-nums text-slate-600 dark:text-zinc-400">
+										{entry.index}
+									</td>
+									<td class="px-3 py-2.5">
+										<p class="font-medium text-slate-900 dark:text-zinc-100">{entry.deskripsi}</p>
 										<div
-											class="mt-2 flex flex-wrap items-center gap-2 text-xs text-base-content/70"
+											class="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400"
 										>
-											<span class="font-semibold uppercase tracking-wider"
+											<span class="font-semibold tracking-wider uppercase"
 												>{entry.lingkupMateri}</span
 											>
 											{#if entry.teknikPenilaian}
 												<span
-													class="badge badge-xs badge-info badge-outline font-semibold gap-1 py-1"
+													class="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300"
 												>
 													<span class="font-bold">{entry.teknikPenilaian.singkatan}</span>
-													<span class="opacity-60">•</span>
+													<span class="opacity-60">·</span>
 													<span>{entry.teknikPenilaian.nama}</span>
 												</span>
 											{/if}
@@ -227,10 +253,10 @@
 											value={entry.status ?? ''}
 										/>
 									</td>
-									<td class="text-center">
+									<td class="px-3 py-2.5 text-center">
 										<input
 											type="checkbox"
-											class="checkbox"
+											class="checkbox checkbox-sm"
 											disabled={submitting}
 											checked={isChecked(entry.status, 'ya')}
 											data-checkbox-column="ya"
@@ -238,10 +264,10 @@
 												toggleEntry(index, 'ya', event.currentTarget as HTMLInputElement)}
 										/>
 									</td>
-									<td class="text-center">
+									<td class="px-3 py-2.5 text-center">
 										<input
 											type="checkbox"
-											class="checkbox"
+											class="checkbox checkbox-sm"
 											disabled={submitting}
 											checked={isChecked(entry.status, 'tidak')}
 											data-checkbox-column="tidak"

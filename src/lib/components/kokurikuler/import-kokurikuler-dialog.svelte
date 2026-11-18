@@ -44,39 +44,48 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<p class="text-base-content/70 text-sm">
+<div class="space-y-4">
+	<p class="text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
 		Unggah file Excel (.xlsx) sesuai format di bawah. Baris kosong akan diabaikan.
 	</p>
 
-	<div class="overflow-auto rounded-lg text-sm">
-		<table class="table-sm table-compact table-zebra table w-full border-collapse">
-			<thead class="bg-base-300">
-				<tr class="text-sm font-semibold">
-					<th class="pl-2">Kode</th>
-					<th>Dimensi</th>
-					<th>Kegiatan</th>
+	<div
+		class="overflow-x-auto rounded-xl border border-slate-200/80 bg-white text-xs dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<table class="w-full border-collapse text-left">
+			<thead
+				class="border-b border-slate-200/80 bg-slate-50/75 text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400"
+			>
+				<tr>
+					<th class="px-3 py-2">Kode</th>
+					<th class="px-3 py-2">Dimensi</th>
+					<th class="px-3 py-2">Kegiatan</th>
 				</tr>
 			</thead>
-			<tbody>
+			<tbody
+				class="divide-y divide-slate-200/70 text-slate-700 dark:divide-zinc-800 dark:text-zinc-300"
+			>
 				<tr>
-					<td class="pl-2 font-mono text-xs">KOK1</td>
-					<td class="text-xs">{dimensiExample}</td>
-					<td>Menulis cerita tentang profile pelajar pancasila</td>
+					<td class="px-3 py-2 font-mono text-[11px] text-slate-900 dark:text-zinc-100">KOK1</td>
+					<td class="px-3 py-2">{dimensiExample}</td>
+					<td class="px-3 py-2">Menulis cerita tentang profile pelajar pancasila</td>
 				</tr>
-				<tr>
-					<td class="pl-2 font-mono text-xs">KOK2</td>
-					<td class="text-xs">{dimensiExample}</td>
-					<td>Presentasi hasil diskusi kelompok</td>
+				<tr class="bg-slate-50/50 dark:bg-zinc-800/30">
+					<td class="px-3 py-2 font-mono text-[11px] text-slate-900 dark:text-zinc-100">KOK2</td>
+					<td class="px-3 py-2">{dimensiExample}</td>
+					<td class="px-3 py-2">Presentasi hasil diskusi kelompok</td>
 				</tr>
 			</tbody>
 		</table>
 	</div>
 
-	<p class="text-base-content/50 text-xs">
+	<p class="text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
 		<strong>Dimensi</strong> dipisahkan koma. Gunakan salah satu dari:
 		{#each dimensiKeys as key, i (key)}{#if i > 0},
-			{/if}<code class="text-xs">{key}</code>{/each}.
+			{/if}<code
+				class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
+				>{key}</code
+			>{/each}.
 	</p>
 
 	<FormEnhance
@@ -91,8 +100,10 @@
 		}}
 	>
 		{#snippet children({ submitting })}
-			<fieldset class="fieldset">
-				<legend class="fieldset-legend font-semibold">Pilih File Excel (.xlsx)</legend>
+			<fieldset class="space-y-1.5">
+				<label class="block text-xs font-medium text-slate-700 dark:text-zinc-300" for={fileInputId}
+					>Pilih File Excel (.xlsx)</label
+				>
 				<input
 					id={fileInputId}
 					bind:this={fileInput}
@@ -101,36 +112,36 @@
 					name="file"
 					type="file"
 					accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-					class="file-input file-input-ghost"
+					class="file-input file-input-bordered w-full rounded-xl border-[#7e8b9b] bg-white text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				/>
-				<label class="label" for={fileInputId}>
-					<span class="label-text-alt text-base-content/60 text-xs text-wrap"
-						>Maksimal 2MB. Kolom Kode, Dimensi, dan Kegiatan wajib ada.</span
-					>
-					{#if fileName}
-						<span class="label-text-alt text-base-content/60 text-xs"
-							>File dipilih: <strong>{fileName}</strong></span
-						>
-					{/if}
-				</label>
+				<p class="text-[11px] text-slate-500 dark:text-zinc-400">
+					Maksimal 2MB. Kolom Kode, Dimensi, dan Kegiatan wajib ada.
+				</p>
+				{#if fileName}
+					<p class="text-[11px] text-slate-600 dark:text-zinc-300">
+						File dipilih: <strong>{fileName}</strong>
+					</p>
+				{/if}
 			</fieldset>
 
-			<div class="flex justify-end gap-2">
+			<div
+				class="mt-5 flex justify-end gap-2 border-t border-slate-200/70 pt-4 dark:border-zinc-800"
+			>
 				<button
 					type="button"
-					class="btn btn-soft shadow-none"
+					class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-4 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					onclick={handleClose}
 					disabled={submitting}>Batal</button
 				>
 				<button
 					type="submit"
-					class="btn btn-primary btn-soft shadow-none"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 					disabled={submitting || !hasFile}
 				>
 					{#if submitting}
-						<span class="loading loading-spinner"></span>
+						<span class="loading loading-spinner loading-xs"></span>
 					{:else}
-						<Icon name="import" /> Import
+						<Icon name="import" class="h-3.5 w-3.5" /> Import
 					{/if}
 				</button>
 			</div>

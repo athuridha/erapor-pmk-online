@@ -30,10 +30,10 @@ type P5Rating = keyof typeof P5_RATING_LABEL;
 
 /** Badge class per rating ketika sel sudah terisi. */
 const RATING_BADGE_CLASS: Record<P5Rating, string> = {
-	BB: 'badge-neutral text-neutral',
-	MB: 'badge-warning text-warning',
-	BSH: 'badge-info text-info',
-	BSB: 'badge-success text-success'
+	BB: 'bg-slate-100 text-slate-700 ring-slate-200/80 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700',
+	MB: 'bg-amber-50 text-amber-800 ring-amber-200/80 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900/60',
+	BSH: 'bg-blue-50 text-blue-700 ring-blue-200/80 dark:bg-blue-950/50 dark:text-blue-300 dark:ring-blue-900/60',
+	BSB: 'bg-emerald-50 text-emerald-700 ring-emerald-200/80 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900/60'
 };
 
 function isTableMissingError(error: unknown) {

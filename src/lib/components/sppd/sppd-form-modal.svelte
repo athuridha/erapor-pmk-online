@@ -223,51 +223,59 @@
 
 <div class="not-prose flex flex-col gap-4">
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Nomor Surat Tugas</legend>
+		<div>
+			<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+				>Nomor Surat Tugas</span
+			>
 			<input
 				type="text"
-				class="input bg-base-200 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				bind:value={nomorSuratTugas}
 				placeholder="contoh: 422/12/SD.19/Adm/2026"
 				disabled={submitting}
 			/>
-		</fieldset>
+		</div>
 
-		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Tanggal Surat Tugas</legend>
+		<div>
+			<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+				>Tanggal Surat Tugas</span
+			>
 			<input
 				type="date"
-				class="input bg-base-200 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				bind:value={tanggalSuratTugas}
 				disabled={submitting}
 			/>
-		</fieldset>
+		</div>
 	</div>
 
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">Dasar Surat Tugas</legend>
+	<div>
+		<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+			>Dasar Surat Tugas</span
+		>
 		<textarea
-			class="textarea bg-base-200 w-full dark:border-none"
+			class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 			bind:value={dasarSuratTugas}
 			placeholder="Contoh: berdasarkan undangan dari Dinas nomor xxx tanggal xxx"
 			rows={3}
 			disabled={submitting}></textarea>
-	</fieldset>
+	</div>
 
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">
+	<div>
+		<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
 			Nama yang melaksanakan perjalanan dinas
-			<span class="text-error">*</span>
-		</legend>
+			<span class="text-red-500">*</span>
+		</span>
 		{#if guruList.length === 0}
-			<p class="text-base-content/60 text-sm">Belum ada guru/staff yang terdaftar.</p>
+			<p class="text-xs text-slate-500 dark:text-zinc-400">Belum ada guru/staff yang terdaftar.</p>
 		{:else}
 			<div
-				class="border-base-300 max-h-48 space-y-0.5 overflow-y-auto rounded-md border p-2 bg-base-200"
+				class="max-h-48 space-y-0.5 overflow-y-auto rounded-xl border border-slate-200/80 bg-slate-50/70 p-2 dark:border-zinc-800 dark:bg-zinc-800/50"
 			>
 				{#each guruList as guru (guru.id)}
-					<label class="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-base-200">
+					<label
+						class="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-white dark:hover:bg-zinc-800"
+					>
 						<input
 							type="checkbox"
 							class="checkbox checkbox-sm checkbox-primary"
@@ -275,212 +283,245 @@
 							onchange={(e) =>
 								togglePegawai(guru.id, (e.currentTarget as HTMLInputElement).checked)}
 						/>
-						<span class="text-sm">{guru.nama}</span>
+						<span class="text-xs font-medium text-slate-800 dark:text-zinc-200">{guru.nama}</span>
 					</label>
 				{/each}
 			</div>
-			<p class="label-text-alt text-base-content/60">Pilih satu atau lebih pegawai.</p>
+			<p class="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">
+				Pilih satu atau lebih pegawai.
+			</p>
 		{/if}
-	</fieldset>
+	</div>
 
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">
+	<div>
+		<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
 			Maksud Perjalanan Dinas
-			<span class="text-error">*</span>
-		</legend>
+			<span class="text-red-500">*</span>
+		</span>
 		<textarea
-			class="textarea bg-base-200 w-full dark:border-none"
+			class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 			bind:value={maksud}
 			placeholder="Contoh: Menghadiri seminar, rapat, dsb."
 			rows={3}
 			disabled={submitting}></textarea>
-	</fieldset>
+	</div>
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Alat angkut yang digunakan</legend>
+		<div>
+			<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+				>Alat angkut yang digunakan</span
+			>
 			<input
 				type="text"
-				class="input bg-base-200 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				bind:value={alatAngkut}
 				placeholder="Contoh: Mobil, Motor, Sepeda, dsb."
 				disabled={submitting}
 			/>
-		</fieldset>
+		</div>
 
-		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Lamanya Perjalanan Dinas</legend>
+		<div>
+			<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+				>Lamanya Perjalanan Dinas</span
+			>
 			<input
 				type="text"
-				class="input bg-base-200 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				bind:value={lamanya}
 				placeholder="Contoh: 1 hari, 2 hari, dsb."
 				disabled={submitting}
 			/>
-		</fieldset>
+		</div>
 	</div>
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Tempat Berangkat</legend>
+		<div>
+			<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+				>Tempat Berangkat</span
+			>
 			<input
 				type="text"
-				class="input bg-base-200 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				bind:value={tempatBerangkat}
 				placeholder="Contoh: Kantor, Rumah, dsb."
 				disabled={submitting}
 			/>
-		</fieldset>
+		</div>
 
-		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Tempat Tujuan</legend>
+		<div>
+			<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+				>Tempat Tujuan</span
+			>
 			<input
 				type="text"
-				class="input bg-base-200 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				bind:value={tempatTujuan}
 				placeholder="Contoh: Kantor BKPSDM, Kantor Bupati, dsb."
 				disabled={submitting}
 			/>
-		</fieldset>
+		</div>
 	</div>
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<fieldset class="fieldset">
-			<legend class="fieldset-legend">
+		<div>
+			<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
 				Tanggal Berangkat
-				<span class="text-error">*</span>
-			</legend>
+				<span class="text-red-500">*</span>
+			</span>
 			<input
 				type="date"
-				class="input bg-base-200 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				bind:value={tanggalBerangkat}
 				disabled={submitting}
 			/>
-		</fieldset>
+		</div>
 
-		<fieldset class="fieldset">
-			<legend class="fieldset-legend">
+		<div>
+			<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
 				Tanggal Kembali
-				<span class="text-error">*</span>
-			</legend>
+				<span class="text-red-500">*</span>
+			</span>
 			<input
 				type="date"
-				class="input bg-base-200 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				bind:value={tanggalKembali}
 				disabled={submitting}
 			/>
-		</fieldset>
+		</div>
 	</div>
 
-	<div class="border-base-300 rounded-md border p-3">
-		<div class="mb-2 flex items-center justify-between gap-2">
-			<span class="text-sm font-semibold">Pengikut Perjalanan Dinas</span>
+	<div
+		class="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 dark:border-zinc-800 dark:bg-zinc-800/40"
+	>
+		<div class="mb-2.5 flex items-center justify-between gap-2">
+			<span class="text-xs font-bold text-slate-900 dark:text-zinc-100"
+				>Pengikut Perjalanan Dinas</span
+			>
 			<button
 				type="button"
-				class="btn btn-soft btn-sm shadow-none"
+				class="inline-flex h-8 items-center justify-center gap-1 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				onclick={addPengikut}
 				disabled={submitting}
 			>
-				<Icon name="plus" />
+				<Icon name="plus" class="h-3.5 w-3.5" />
 				Tambah Pengikut
 			</button>
 		</div>
 
 		{#if pengikut.length === 0}
-			<p class="text-base-content/60 text-sm">Belum ada pengikut.</p>
+			<p class="text-xs text-slate-500 dark:text-zinc-400">Belum ada pengikut.</p>
 		{:else}
 			<div class="space-y-3">
 				{#each pengikut as p, i (p.key)}
-					<div class="border-base-300 space-y-3 rounded-md border p-3">
+					<div
+						class="space-y-3 rounded-xl border border-slate-200/80 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900"
+					>
 						<div class="flex items-center justify-between gap-2">
-							<span class="text-sm font-semibold">Pengikut {i + 1}</span>
+							<span class="text-xs font-semibold text-slate-900 dark:text-zinc-100"
+								>Pengikut {i + 1}</span
+							>
 							<button
 								type="button"
-								class="btn btn-soft btn-error btn-sm shadow-none"
+								class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 								onclick={() => removePengikut(i)}
 								disabled={submitting}
+								aria-label="Hapus pengikut"
 								title="Hapus pengikut"
 							>
-								<Icon name="del" />
+								<Icon name="del" class="h-3.5 w-3.5" />
 							</button>
 						</div>
-						<fieldset class="fieldset">
-							<legend class="fieldset-legend">Nama Pengikut</legend>
+						<div>
+							<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Nama Pengikut</span
+							>
 							<input
 								type="text"
-								class="input bg-base-200 w-full dark:border-none"
+								class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 								bind:value={p.nama}
 								placeholder="Contoh: Budi Santoso, Siti Aminah, dsb."
 								disabled={submitting}
 							/>
-						</fieldset>
+						</div>
 						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-							<fieldset class="fieldset">
-								<legend class="fieldset-legend">Tempat Lahir Pengikut</legend>
+							<div>
+								<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+									>Tempat Lahir Pengikut</span
+								>
 								<input
 									type="text"
-									class="input bg-base-200 w-full dark:border-none"
+									class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 									bind:value={p.tempatLahir}
 									placeholder="Contoh: Jakarta, Bandung, dsb."
 									disabled={submitting}
 								/>
-							</fieldset>
-							<fieldset class="fieldset">
-								<legend class="fieldset-legend">Tanggal Lahir Pengikut</legend>
+							</div>
+							<div>
+								<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+									>Tanggal Lahir Pengikut</span
+								>
 								<input
 									type="date"
-									class="input bg-base-200 w-full dark:border-none"
+									class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 									bind:value={p.tanggalLahir}
 									disabled={submitting}
 								/>
-							</fieldset>
+							</div>
 						</div>
 					</div>
 				{/each}
 			</div>
 		{/if}
 
-		<fieldset class="fieldset mt-3">
-			<legend class="fieldset-legend">Keterangan Pengikut</legend>
+		<div class="mt-3">
+			<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+				>Keterangan Pengikut</span
+			>
 			<input
 				type="text"
-				class="input bg-base-200 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				bind:value={keteranganPengikut}
 				placeholder="Contoh: Keluarga, Sopir, dsb."
 				disabled={submitting}
 			/>
-		</fieldset>
+		</div>
 	</div>
 
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">Kode rekening pembebanan anggaran</legend>
+	<div>
+		<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+			>Kode rekening pembebanan anggaran</span
+		>
 		<input
 			type="text"
-			class="input bg-base-200 w-full dark:border-none"
+			class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 			bind:value={kodeRekening}
 			placeholder="Masukkan kode rekening di arkas jika ada"
 			disabled={submitting}
 		/>
-	</fieldset>
+	</div>
 
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">Tingkat biaya perjalanan dinas</legend>
+	<div>
+		<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+			>Tingkat biaya perjalanan dinas</span
+		>
 		<input
 			type="text"
-			class="input bg-base-200 w-full dark:border-none"
+			class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 			bind:value={tingkatBiaya}
 			placeholder="Contoh: Perjalanan dinas dalam kota/daerah"
 			disabled={submitting}
 		/>
-	</fieldset>
+	</div>
 
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">Keterangan lain-lain</legend>
+	<div>
+		<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+			>Keterangan lain-lain</span
+		>
 		<textarea
-			class="textarea bg-base-200 w-full dark:border-none"
+			class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 			rows="3"
 			bind:value={keteranganLain}
 			placeholder="Masukkan keterangan yang diperlukan"
 			disabled={submitting}></textarea>
-	</fieldset>
+	</div>
 </div>

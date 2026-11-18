@@ -121,6 +121,7 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'cetak_dokumen'
 	],
 	wali_asuh: ['cetak_dokumen', 'administrasi_dinas_luar'],
+	pembina_eskul: ['mata_pelajaran_ekstrakurikuler', 'input_nilai_nilai_ekstrakurikuler'],
 	user: [
 		'informasi_umum_murid',
 		'mata_pelajaran_intrakurikuler',

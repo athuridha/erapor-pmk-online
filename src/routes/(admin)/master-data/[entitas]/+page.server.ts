@@ -32,9 +32,9 @@ export const load = async ({ params, locals, url, depends }) => {
 		throw error(404, 'Jenis master data tidak ditemukan');
 	}
 
-	// Akun pengguna dikelola lewat Data Pengguna (Guru/Operator).
+	// Akun pengguna dikelola lewat halaman terpadu Akun Pengguna.
 	if (entitas.key === 'pengguna') {
-		throw redirect(303, '/master-data/pengguna/guru');
+		throw redirect(303, '/master-data/pengguna');
 	}
 
 	const q = url.searchParams.get('q')?.trim() || null;

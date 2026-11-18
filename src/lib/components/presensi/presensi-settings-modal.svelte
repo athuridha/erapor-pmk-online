@@ -386,11 +386,15 @@
 	});
 </script>
 
-<div class="not-prose flex flex-col gap-2">
-	<div class="alert alert-info alert-soft flex-wrap items-center justify-between gap-2">
+<div class="not-prose flex flex-col gap-4">
+	<div
+		class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200/80 bg-blue-50/75 p-3.5 dark:border-blue-900/60 dark:bg-blue-950/35"
+	>
 		<div>
-			<span class="fieldset-legend text-sm font-semibold">Presensi Guru</span>
-			<p class="text-base-content/70 text-sm">
+			<span class="block text-xs font-semibold text-slate-900 dark:text-zinc-100"
+				>Presensi Guru</span
+			>
+			<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">
 				Aktifkan agar guru dapat melakukan presensi dan menu Presensi Guru tampil.
 			</p>
 		</div>
@@ -401,35 +405,39 @@
 				bind:checked={presensiGuruEnabledValue}
 				disabled={submitting}
 			/>
-			<span class="text-sm font-semibold">
+			<span class="text-xs font-semibold">
 				{#if presensiGuruEnabledValue}
-					<span class="text-success">Aktif</span>
+					<span class="text-emerald-600 dark:text-emerald-400">Aktif</span>
 				{:else}
-					<span class="text-error">Nonaktif</span>
+					<span class="text-red-600 dark:text-red-400">Nonaktif</span>
 				{/if}
 			</span>
 		</label>
 	</div>
 
-	<div class="divider divider-middle text-sm font-semibold">Presensi Murid</div>
+	<div class="my-1 flex items-center gap-3 text-xs font-semibold text-slate-600 dark:text-zinc-300">
+		<div class="h-px flex-1 bg-slate-200/80 dark:bg-zinc-800"></div>
+		<span>Presensi Murid</span>
+		<div class="h-px flex-1 bg-slate-200/80 dark:bg-zinc-800"></div>
+	</div>
 
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<label class="fieldset flex flex-col gap-1">
-			<span class="fieldset-legend text-sm font-semibold">Jam Masuk</span>
+	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+		<label class="flex flex-col gap-1.5">
+			<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Jam Masuk</span>
 			<input
 				type="text"
-				class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				bind:value={jamMasukValue}
 				pattern="[0-9]{2}:[0-9]{2}"
 				inputmode="numeric"
 				placeholder="HH:mm"
 			/>
 		</label>
-		<label class="fieldset flex flex-col gap-1">
-			<span class="fieldset-legend text-sm font-semibold">Jam Pulang</span>
+		<label class="flex flex-col gap-1.5">
+			<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Jam Pulang</span>
 			<input
 				type="text"
-				class="input bg-base-200 dark:bg-base-300 w-full dark:border-none"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 				bind:value={jamPulangValue}
 				pattern="[0-9]{2}:[0-9]{2}"
 				inputmode="numeric"
@@ -438,25 +446,35 @@
 		</label>
 	</div>
 
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<label class="fieldset flex flex-col gap-1">
-			<span class="fieldset-legend text-sm font-semibold">Hari Sekolah</span>
-			<select
-				class="select bg-base-200 dark:bg-base-300 w-full truncate dark:border-none"
-				bind:value={hariSekolahValue}
-			>
-				<option value="5">5 Hari Sekolah (Senin - Jumat)</option>
-				<option value="6">6 Hari Sekolah (Senin - Sabtu)</option>
-				<option value="custom">Kustom (pilih hari belajar)</option>
-			</select>
+	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+		<label class="flex flex-col gap-1.5">
+			<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Hari Sekolah</span>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					bind:value={hariSekolahValue}
+				>
+					<option value="5">5 Hari Sekolah (Senin - Jumat)</option>
+					<option value="6">6 Hari Sekolah (Senin - Sabtu)</option>
+					<option value="custom">Kustom (pilih hari belajar)</option>
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
 			{#if hariSekolahValue === 'custom'}
 				<div class="flex flex-wrap gap-1.5 pt-1">
 					{#each HARI_SEKOLAH_KEYS as key (key)}
 						<button
 							type="button"
-							class="badge badge-soft cursor-pointer px-2.5 py-3 {customDays.includes(key)
-								? 'badge-success'
-								: ''}"
+							class="inline-flex cursor-pointer items-center rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors {customDays.includes(
+								key
+							)
+								? 'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/50 dark:text-emerald-300'
+								: 'border-slate-200/80 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'}"
 							onclick={() => toggleCustomDay(key)}
 						>
 							{customDayLabels[key]}
@@ -465,54 +483,72 @@
 				</div>
 			{/if}
 		</label>
-		<label class="fieldset flex flex-col gap-1">
-			<span class="fieldset-legend text-sm font-semibold">Jenis Presensi</span>
-			<select
-				class="select bg-base-200 dark:bg-base-300 w-full truncate dark:border-none"
-				bind:value={jenisPresensiValue}
-			>
-				<option value="wali_kelas_saja">Wali kelas saja</option>
-				<option value="tiap_mapel">Tiap mapel</option>
-			</select>
+		<label class="flex flex-col gap-1.5">
+			<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Jenis Presensi</span>
+			<div class="relative flex items-center">
+				<select
+					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					bind:value={jenisPresensiValue}
+				>
+					<option value="wali_kelas_saja">Wali kelas saja</option>
+					<option value="tiap_mapel">Tiap mapel</option>
+				</select>
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="down" class="h-3.5 w-3.5" />
+				</span>
+			</div>
 		</label>
 	</div>
 
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<div class="flex flex-col gap-2 sm:order-2">
-			<label class="fieldset flex flex-col gap-1">
-				<span class="fieldset-legend text-sm font-semibold">Tipe Presensi</span>
-				<select
-					class="select bg-base-200 dark:bg-base-300 w-full truncate dark:border-none"
-					bind:value={tipePresensiValue}
-				>
-					<option value="masuk_pulang" disabled={jenisPresensiValue === 'tiap_mapel'}>
-						Masuk Pulang
-					</option>
-					<option value="masuk_saja" disabled={jenisPresensiValue === 'tiap_mapel'}>
-						Masuk Saja
-					</option>
-					<option value="awal_mapel" disabled={jenisPresensiValue !== 'tiap_mapel'}>
-						Awal Mapel
-					</option>
-					<option value="awal_akhir_mapel" disabled={jenisPresensiValue !== 'tiap_mapel'}>
-						Awal & Akhir Mapel
-					</option>
-				</select>
+	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+		<div class="flex flex-col gap-1.5 sm:order-2">
+			<label class="flex flex-col gap-1.5">
+				<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Tipe Presensi</span>
+				<div class="relative flex items-center">
+					<select
+						class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						bind:value={tipePresensiValue}
+					>
+						<option value="masuk_pulang" disabled={jenisPresensiValue === 'tiap_mapel'}>
+							Masuk Pulang
+						</option>
+						<option value="masuk_saja" disabled={jenisPresensiValue === 'tiap_mapel'}>
+							Masuk Saja
+						</option>
+						<option value="awal_mapel" disabled={jenisPresensiValue !== 'tiap_mapel'}>
+							Awal Mapel
+						</option>
+						<option value="awal_akhir_mapel" disabled={jenisPresensiValue !== 'tiap_mapel'}>
+							Awal & Akhir Mapel
+						</option>
+					</select>
+					<span
+						aria-hidden="true"
+						class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+					>
+						<Icon name="down" class="h-3.5 w-3.5" />
+					</span>
+				</div>
 			</label>
 		</div>
 
-		<div class="flex flex-col gap-2 sm:order-1">
-			<span class="fieldset-legend text-sm font-semibold">Tanggal Libur Nasional</span>
-			<div class="join">
+		<div class="flex flex-col gap-1.5 sm:order-1">
+			<span class="text-xs font-medium text-slate-700 dark:text-zinc-300"
+				>Tanggal Libur Nasional</span
+			>
+			<div class="flex items-center gap-2">
 				<input
 					type="date"
-					class="input bg-base-200 dark:bg-base-300 join-item w-full dark:border-none"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 					bind:value={newLiburDate}
 					disabled={submitting}
 				/>
 				<button
 					type="button"
-					class="btn btn-soft join-item shadow-none"
+					class="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					onclick={addLiburDate}
 					disabled={submitting || !newLiburDate}
 				>
@@ -523,25 +559,20 @@
 	</div>
 
 	{#if liburDates.length > 0}
-		<div class="flex flex-wrap gap-1.5 my-2">
+		<div class="flex flex-wrap gap-1.5">
 			{#each liburDates as date, i (date)}
-				<div class="badge badge-soft gap-1 px-2 py-3 text-sm badge-error">
-					{date}
+				<div
+					class="inline-flex items-center gap-1.5 rounded-full border border-red-200/80 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
+				>
+					<span>{date}</span>
 					<button
 						type="button"
-						class="btn btn-xs btn-ghost btn-circle hover:bg-error/20 p-0 shadow-none"
+						class="inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-red-200/60 dark:hover:bg-red-900/60"
 						onclick={() => removeLiburDate(i)}
 						disabled={submitting}
 						aria-label="Hapus {date}"
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-3 w-3"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg
-						>
+						<Icon name="close-sm" class="h-3 w-3" />
 					</button>
 				</div>
 			{/each}
@@ -550,10 +581,10 @@
 
 	<div class="flex flex-col gap-2">
 		<div class="flex items-center justify-between">
-			<span class="fieldset-legend text-sm font-semibold">Libur Semester</span>
+			<span class="text-xs font-medium text-slate-700 dark:text-zinc-300">Libur Semester</span>
 			<button
 				type="button"
-				class="btn btn-soft btn-sm shadow-none"
+				class="inline-flex h-8 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				onclick={addSemesterRange}
 				disabled={submitting}
 			>
@@ -564,68 +595,72 @@
 			<div class="flex flex-wrap items-center gap-2">
 				<input
 					type="date"
-					class="input bg-base-200 dark:bg-base-300 w-44 dark:border-none"
+					class="h-9 w-44 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 					value={range.start}
 					onchange={(e) =>
 						updateSemesterRange(i, 'start', (e.currentTarget as HTMLInputElement).value)}
 				/>
-				<span class="text-sm">s.d.</span>
+				<span class="text-xs text-slate-500 dark:text-zinc-400">s.d.</span>
 				<input
 					type="date"
-					class="input bg-base-200 dark:bg-base-300 w-44 dark:border-none"
+					class="h-9 w-44 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 					value={range.end}
 					onchange={(e) =>
 						updateSemesterRange(i, 'end', (e.currentTarget as HTMLInputElement).value)}
 				/>
 				<button
 					type="button"
-					class="btn btn-soft btn-sm btn-error shadow-none"
+					class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-200/80 bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 					onclick={() => removeSemesterRange(i)}
 					disabled={submitting}
 					aria-label="Hapus rentang tanggal"
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-4 w-4"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg
-					>
+					<Icon name="close-sm" class="h-3.5 w-3.5" />
 				</button>
 			</div>
 		{/each}
 		{#if semesterRanges.length === 0}
-			<p class="text-base-content/50 text-xs">Belum ada rentang libur semester.</p>
+			<p class="text-[11px] text-slate-400 dark:text-zinc-500">Belum ada rentang libur semester.</p>
 		{/if}
 	</div>
 
 	{#if kelasRows.length > 0}
 		<div class="flex flex-col gap-2">
-			<div class="divider divider-middle text-sm font-semibold">
-				Presensi Per Kelas (Halaman Pengaturan)
+			<div
+				class="my-1 flex items-center gap-3 text-xs font-semibold text-slate-600 dark:text-zinc-300"
+			>
+				<div class="h-px flex-1 bg-slate-200/80 dark:bg-zinc-800"></div>
+				<span>Presensi Per Kelas (Halaman Pengaturan)</span>
+				<div class="h-px flex-1 bg-slate-200/80 dark:bg-zinc-800"></div>
 			</div>
-			<div class="max-h-64 overflow-x-auto overflow-y-auto">
-				<table class="table table-sm">
-					<thead>
+			<div
+				class="max-h-64 overflow-x-auto overflow-y-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+			>
+				<table class="w-full border-collapse text-left text-xs">
+					<thead
+						class="sticky top-0 z-10 border-b border-slate-200/80 bg-slate-50/95 text-[11px] font-semibold tracking-wider text-slate-500 uppercase backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-800/95 dark:text-zinc-400"
+					>
 						<tr>
-							<th class="text-sm">Kelas</th>
+							<th class="px-3 py-2">Kelas</th>
 							{#each DAY_LABELS as day (day)}
-								<th class="text-center text-xs">{day}</th>
+								<th class="px-1.5 py-2 text-center">{day}</th>
 							{/each}
-							<th class="text-sm">Jam Masuk</th>
-							<th class="text-sm">Jam Pulang</th>
+							<th class="px-2 py-2">Jam Masuk</th>
+							<th class="px-2 py-2">Jam Pulang</th>
 						</tr>
 					</thead>
-					<tbody>
+					<tbody class="divide-y divide-slate-200/70 dark:divide-zinc-800">
 						{#each kelasRows as row (row.id)}
-							<tr>
-								<td class="whitespace-nowrap text-sm">{row.nama}</td>
+							<tr class="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40">
+								<td
+									class="px-3 py-2 font-medium whitespace-nowrap text-slate-800 dark:text-zinc-200"
+									>{row.nama}</td
+								>
 								{#each row.hari as on, i (i)}
-									<td class="text-center">
+									<td class="px-1.5 py-2 text-center">
 										<input
 											type="checkbox"
-											class="checkbox checkbox-sm"
+											class="checkbox checkbox-sm rounded border-[#7e8b9b] checked:border-blue-600 checked:bg-blue-600 checked:text-white dark:border-zinc-600"
 											checked={on}
 											onchange={() => toggleKelasHari(row, i)}
 											disabled={submitting}
@@ -633,10 +668,10 @@
 										/>
 									</td>
 								{/each}
-								<td>
+								<td class="px-2 py-1.5">
 									<input
 										type="text"
-										class="input input-sm bg-base-200 dark:bg-base-300 w-20 dark:border-none"
+										class="h-8 w-20 rounded-lg border border-[#7e8b9b] bg-white px-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 										value={row.jamMasuk}
 										onchange={(e) =>
 											setKelasJam(row, 'jamMasuk', (e.currentTarget as HTMLInputElement).value)}
@@ -644,10 +679,10 @@
 										disabled={submitting}
 									/>
 								</td>
-								<td>
+								<td class="px-2 py-1.5">
 									<input
 										type="text"
-										class="input input-sm bg-base-200 dark:bg-base-300 w-20 dark:border-none"
+										class="h-8 w-20 rounded-lg border border-[#7e8b9b] bg-white px-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 										value={row.jamPulang}
 										onchange={(e) =>
 											setKelasJam(row, 'jamPulang', (e.currentTarget as HTMLInputElement).value)}
@@ -660,16 +695,19 @@
 					</tbody>
 				</table>
 			</div>
-			<p class="text-base-content/50 text-xs">
+			<p class="text-[11px] text-slate-400 dark:text-zinc-500">
 				Kosongkan jam untuk mengikuti jam masuk/pulang umum di atas.
 			</p>
 		</div>
 	{/if}
 
 	{#if validationError}
-		<div class="alert alert-soft alert-warning flex items-center gap-2" role="alert">
-			<Icon name="warning" class="h-4 w-4 shrink-0" />
-			<span class="text-sm">{validationError}</span>
+		<div
+			class="flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/90 px-3.5 py-2.5 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+			role="alert"
+		>
+			<Icon name="warning" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+			<span>{validationError}</span>
 		</div>
 	{/if}
 </div>

@@ -20,6 +20,7 @@ import {
 } from '$lib/server/db/schema';
 import { and, asc, count, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import { chunk, queryInChunks, runInChunks } from '$lib/server/db/chunk';
+import { ensureEkstrakurikulerSchema } from '$lib/server/db/ensure-ekstrakurikuler';
 import { MASTER_DATA } from '$lib/admin/master-data';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 
@@ -29,12 +30,12 @@ export interface OpsiRelasi {
 }
 
 export type PetaRelasi = Partial<
-	Record<'kelas' | 'mapel' | 'pegawai' | 'tahun_ajaran' | 'semester', OpsiRelasi[]>
+	Record<'kelas' | 'mapel' | 'pegawai' | 'tahun_ajaran' | 'semester' | 'pembina', OpsiRelasi[]>
 >;
 
 /** Daftar pilihan relasi yang dipakai form master data. */
 export async function loadOpsiRelasi(sekolahId: number): Promise<PetaRelasi> {
-	const [tahunAjaran, semester, kelas, mapel, pegawai] = await Promise.all([
+	const [tahunAjaran, semester, kelas, mapel, pegawai, pembinaRows] = await Promise.all([
 		db
 			.select({ id: tableTahunAjaran.id, nama: tableTahunAjaran.nama })
 			.from(tableTahunAjaran)
@@ -65,8 +66,44 @@ export async function loadOpsiRelasi(sekolahId: number): Promise<PetaRelasi> {
 			.select({ id: tablePegawai.id, nama: tablePegawai.nama })
 			.from(tablePegawai)
 			.where(and(eq(tablePegawai.sekolahId, sekolahId), ne(tablePegawai.nama, '-')))
-			.orderBy(asc(tablePegawai.nama))
+			.orderBy(asc(tablePegawai.nama)),
+		db
+			.select({
+				id: tableAuthUser.id,
+				username: tableAuthUser.username,
+				namaLengkap: tableAuthUser.namaLengkap,
+				type: tableAuthUser.type,
+				sekolahId: tableAuthUser.sekolahId,
+				pegawaiNama: tablePegawai.nama
+			})
+			.from(tableAuthUser)
+			.leftJoin(tablePegawai, eq(tableAuthUser.pegawaiId, tablePegawai.id))
+			.where(
+				and(
+					inArray(tableAuthUser.type, ['pembina_eskul', 'user', 'wali_kelas', 'kepala_sekolah']),
+					or(eq(tableAuthUser.sekolahId, sekolahId), sql`${tableAuthUser.sekolahId} IS NULL`)
+				)
+			)
+			.orderBy(asc(tableAuthUser.type), asc(tableAuthUser.username))
 	]);
+
+	const pembina = pembinaRows
+		.map((u) => {
+			const displayName = (u.namaLengkap || u.pegawaiNama || u.username).trim();
+			const roleTag =
+				u.type === 'pembina_eskul'
+					? 'Pembina Eskul Eksternal'
+					: u.type === 'wali_kelas'
+						? 'Wali Kelas'
+						: u.type === 'kepala_sekolah'
+							? 'Kepala Sekolah'
+							: 'Guru';
+			return {
+				value: u.id,
+				label: `${displayName} (${roleTag})`
+			};
+		})
+		.sort((a, b) => a.label.localeCompare(b.label, 'id'));
 
 	return {
 		tahun_ajaran: tahunAjaran.map((row) => ({ value: row.id, label: row.nama })),
@@ -76,7 +113,8 @@ export async function loadOpsiRelasi(sekolahId: number): Promise<PetaRelasi> {
 		})),
 		kelas: kelas.map((row) => ({ value: row.id, label: row.nama })),
 		mapel: mapel.map((row) => ({ value: row.id, label: row.nama })),
-		pegawai: pegawai.map((row) => ({ value: row.id, label: row.nama }))
+		pegawai: pegawai.map((row) => ({ value: row.id, label: row.nama })),
+		pembina
 	};
 }
 
@@ -266,6 +304,7 @@ async function muatSemuaBaris(
 			}));
 		}
 		case 'ekstrakurikuler': {
+			await ensureEkstrakurikulerSchema();
 			const rows = await db
 				.select({
 					id: tableEkstrakurikuler.id,
@@ -274,6 +313,9 @@ async function muatSemuaBaris(
 						string | number
 					>`case when ekstrakurikuler.semua_kelas = 1 then '' else ekstrakurikuler.kelas_id end`,
 					semua_kelas: tableEkstrakurikuler.semuaKelas,
+					pembina_user_id: sql<string | number>`coalesce(ekstrakurikuler.pembina_user_id, '')`,
+					pembina_nama: tableEkstrakurikuler.pembinaNama,
+					pembina: sql<string>`coalesce(nullif(trim(ekstrakurikuler.pembina_nama), ''), (select coalesce(nullif(trim(u.nama_lengkap), ''), p.nama, u.username) from auth_user u left join pegawai p on p.id = u.pegawai_id where u.id = ekstrakurikuler.pembina_user_id), '')`,
 					kelas: sql<
 						string | null
 					>`case when ekstrakurikuler.semua_kelas = 1 then 'Semua kelas' else (select k.nama from kelas k where k.id = ekstrakurikuler.kelas_id) end`,
@@ -445,6 +487,8 @@ function labelRole(role: string): string {
 			return 'Wali Kelas';
 		case 'wali_asuh':
 			return 'Wali Asuh';
+		case 'pembina_eskul':
+			return 'Pembina Eskul';
 		default:
 			return 'Guru';
 	}
@@ -785,10 +829,27 @@ export async function simpanMasterData(
 			return { message: `Mata pelajaran "${nama}" berhasil disimpan untuk ${ketKelas}.` };
 		}
 		case 'ekstrakurikuler': {
+			await ensureEkstrakurikulerSchema();
 			const kelasRaw = teks(formData, 'kelas_id');
 			const semuaKelas = kelasRaw === '' ? 1 : 0;
 			const nama = teks(formData, 'nama');
+			const pembinaUserRaw = teks(formData, 'pembina_user_id');
+			const pembinaNama = teks(formData, 'pembina_nama') || null;
 			if (!nama) return { fail: 'Nama ekstrakurikuler wajib diisi.' };
+
+			let pembinaUserId: number | null = null;
+			if (pembinaUserRaw !== '') {
+				const parsedPembina = Number(pembinaUserRaw);
+				if (!Number.isInteger(parsedPembina) || parsedPembina <= 0) {
+					return { fail: 'Akun pembina tidak valid.' };
+				}
+				const foundPembina = await db.query.tableAuthUser.findFirst({
+					columns: { id: true },
+					where: eq(tableAuthUser.id, parsedPembina)
+				});
+				if (!foundPembina) return { fail: 'Akun pembina tidak ditemukan.' };
+				pembinaUserId = foundPembina.id;
+			}
 
 			// Kelas acuan: kelas yang dipilih, atau kelas pertama sekolah untuk ekstra umum.
 			let kelasId = Number(kelasRaw) || null;
@@ -835,7 +896,14 @@ export async function simpanMasterData(
 				};
 			}
 
-			const values = { nama, kelasId, semuaKelas, updatedAt: now };
+			const values = {
+				nama,
+				kelasId,
+				semuaKelas,
+				pembinaUserId,
+				pembinaNama,
+				updatedAt: now
+			};
 			if (id) {
 				const kelasIds = (
 					await db

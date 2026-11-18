@@ -7,14 +7,12 @@
 	import MapelEkstrakurikulerStats from '$lib/components/dashboard/mapel-ekstrakurikuler-stats.svelte';
 	import ProgressCard from '$lib/components/dashboard/progress-card.svelte';
 	import QuickActionsCard from '$lib/components/dashboard/quick-actions-card.svelte';
-	import FavoriteMenusCard from '$lib/components/dashboard/favorite-menus-card.svelte';
 	import RingkasanKelasCard from '$lib/components/dashboard/ringkasan-kelas-card.svelte';
 	import { computeNextEventMessage } from '$lib/utils/next-event-message';
-	import BellStatus from '$lib/components/jadwal-bell/bell-status.svelte';
 	import Icon from '$lib/components/icon.svelte';
 	import { showModal } from '$lib/components/global-modal.svelte';
 	import PresensiGuruModal from '$lib/components/presensi-guru/presensi-guru-modal.svelte';
-	import { getHariSekolahList, isSchoolDay } from '$lib/hari-sekolah';
+	import { isSchoolDay } from '$lib/hari-sekolah';
 
 	let { data } = $props();
 	// svelte-ignore state_referenced_locally
@@ -42,16 +40,21 @@
 		}
 	);
 	const ekstrakurikulerStats = $derived(statistikDashboard.ekstrakurikuler ?? { total: 0 });
-	// Jumlah baris mapel kelas aktif (termasuk varian agama) — dipakai sebagai
-	// keterangan agar angka kartu tidak bertentangan dengan tabel per kelas.
 	const mapelBaris = $derived(
 		(mapelStats as { baris?: number }).baris ?? statistikDashboard.mapel?.total ?? 0
 	);
-	// 0% bisa berarti data memang belum diisi. Bedakan dari penghitung yang rusak
-	// dengan menampilkan keterangan eksplisit di bawah kartu progress.
 	const nilaiSumatifKosong = $derived(
 		(progressStats.akademik?.total ?? 0) > 0 && (progressStats.akademik?.completed ?? 0) === 0
 	);
+	const activeSemesterNama = $derived(
+		(page.data as { activeSemesterNama?: string | null } | null)?.activeSemesterNama ?? null
+	);
+	const kelasAktif = $derived(page.data.kelasAktif ?? null);
+	const kelasAktifLabel = $derived.by(() => {
+		if (!kelasAktif) return 'Semua Kelas';
+		return kelasAktif.fase ? `${kelasAktif.nama} - ${kelasAktif.fase}` : kelasAktif.nama;
+	});
+
 	const bellActive = $derived(data.bellActive ?? false);
 	const hariSekolah = $derived((data.hariSekolah as number) ?? 6);
 	const hariSekolahCustom = $derived((data.hariSekolahCustom as string | null) ?? null);
@@ -259,14 +262,10 @@
 			month: 'long',
 			year: 'numeric'
 		});
-		return `${hariNama}, ${tgl} - ${status}`;
+		return `${hariNama}, ${tgl} (${status})`;
 	});
 
-	// Fallback reminder: warn on the dashboard when the auto-prompt "Presensi Guru"
-	// modal was shown but the teacher still hasn't done presensi (e.g. force-closed
-	// via Escape, or the page was reloaded while the modal was open).
 	let presensiWarningVisible = $state(false);
-
 	const SIMULASI_STORAGE_KEY = 'erapor-pmk-simulasi-tanggal-jam';
 
 	function presensiApiUrl() {
@@ -288,8 +287,6 @@
 			.then((res) => (res.ok ? res.json() : null))
 			.then((status) => {
 				if (!status?.shouldPrompt) return;
-				// Match the layout's effective date so the fallback only fires once the
-				// auto-prompt has actually been triggered (works with ?tanggal-jam simulation).
 				const today = new Date().toISOString().slice(0, 10);
 				const simulatedDate = override ? override.slice(0, 10) : null;
 				const effectiveDate =
@@ -329,180 +326,99 @@
 
 	onMount(() => {
 		checkPresensiFallback();
-		// Re-check whenever a dialog closes (catches the teacher force-closing the modal).
 		const onDialogClose = () => checkPresensiFallback();
-		document.addEventListener('close', onDialogClose, true);
 		document.addEventListener('close', onDialogClose, true);
 		return () => document.removeEventListener('close', onDialogClose, true);
 	});
 </script>
 
-<BellStatus
-	{bellActive}
-	{hariIni}
-	{nextEventMessage}
-	class="dg-alert alert alert-info alert-soft mb-4"
-/>
-
-{#if presensiWarningVisible}
-	<div class="dg-alert alert alert-warning alert-soft mb-4 flex items-center gap-3">
-		<Icon name="warning" class="h-5 w-5 shrink-0" />
-		<span>
-			Bapak/Ibu belum melakukan presensi guru hari ini. Silakan lakukan presensi melalui tombol
-			berikut:
-		</span>
-		<button
-			class="btn btn-primary btn-sm ml-auto shrink-0 shadow-none"
-			type="button"
-			title="Presensi Sekarang"
-			onclick={openPresensiGuruModal}
+<div class="space-y-5">
+	{#if presensiWarningVisible}
+		<div
+			class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200/80 bg-amber-50/95 px-4 py-3 text-sm text-amber-950 shadow-xs dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+			role="alert"
 		>
-			<Icon name="pen" />
-			<span class="hidden sm:inline">Presensi Sekarang</span>
-		</button>
-	</div>
-{/if}
-
-<!-- Kontainer Utama Grid -->
-<div class="dashboard-grid grid w-full grid-cols-1 gap-4 md:grid-cols-2">
-	<!-- Kolom 1: Data Utama & Statistik -->
-	<div class="flex flex-col gap-4">
-		<SekolahOverviewCard {sekolah} />
-		<FavoriteMenusCard favorites={data.favorites ?? []} />
-		<RombelMuridStats rombel={statistikDashboard.rombel} murid={statistikDashboard.murid} />
-		<MapelEkstrakurikulerStats mapel={mapelStats} ekstrakurikuler={ekstrakurikulerStats} />
-		{#if mapelBaris > 0}
-			<p class="text-base-content/60 -mt-2 px-1 text-xs">
-				Angka mapel di kartu di atas dihitung per nama mapel unik (varian agama digabung). Konteks
-				saat ini mencakup <strong>{mapelBaris} baris mapel</strong> — angka yang sama dengan tabel Mapel
-				di halaman Semua Kelas.
-			</p>
-		{/if}
-		{#if data.ringkasanKelas}
-			<RingkasanKelasCard
-				ringkasan={data.ringkasanKelas.ringkasan}
-				daftarKelas={data.ringkasanKelas.daftarKelas}
-			/>
-			{#if data.ringkasanKelas.ringkasan.persenNilai === 0 && data.ringkasanKelas.ringkasan.totalMurid > 0}
-				<p class="text-base-content/60 -mt-2 px-1 text-xs">
-					Kelengkapan nilai 0% karena belum ada nilai sumatif yang diisi untuk semester aktif —
-					bukan karena perhitungan gagal. Isi nilai di menu Input Nilai → Sumatif.
-				</p>
-			{/if}
-		{/if}
-	</div>
-
-	<!-- Kolom 2: Progress & Aksi -->
-	<div class="flex flex-col gap-5">
-		<ProgressCard progress={progressStats} />
-		{#if nilaiSumatifKosong}
-			<div class="alert alert-info alert-soft text-sm">
-				<Icon name="info" />
-				<span>
-					Belum ada nilai sumatif terisi untuk kelas aktif semester ini. Angka 0% berarti data masih
-					kosong, bukan penghitung kelengkapan yang rusak.
+			<div class="flex items-center gap-2.5">
+				<span aria-hidden="true" class="shrink-0 text-amber-600 dark:text-amber-400">
+					<Icon name="warning" class="h-5 w-5" />
 				</span>
+				<span>Bapak/Ibu belum melakukan presensi guru hari ini.</span>
 			</div>
-		{/if}
-		<QuickActionsCard />
+			<button
+				type="button"
+				onclick={openPresensiGuruModal}
+				class="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+			>
+				<span aria-hidden="true"><Icon name="pen" class="h-3.5 w-3.5" /></span>
+				<span>Presensi Sekarang</span>
+			</button>
+		</div>
+	{/if}
+
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h1
+				class="text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px] dark:text-zinc-100"
+			>
+				Beranda
+			</h1>
+			<p class="mt-0.5 text-xs text-slate-500 sm:text-sm dark:text-zinc-400">
+				Selamat datang di sistem e-Rapor {sekolah?.nama ?? 'SMK Pratama Mulya'}
+			</p>
+		</div>
+		<div
+			class="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-700 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
+			title={bellActive && nextEventMessage ? `Bel aktif: ${nextEventMessage}` : hariIni}
+		>
+			<span aria-hidden="true" class="text-slate-400 dark:text-zinc-400">
+				<Icon name="calendar" class="h-3.5 w-3.5" />
+			</span>
+			<span>{hariIni}</span>
+			{#if bellActive && nextEventMessage}
+				<span class="hidden text-blue-600 md:inline dark:text-blue-400">· {nextEventMessage}</span>
+			{/if}
+		</div>
 	</div>
+
+	<SekolahOverviewCard
+		{sekolah}
+		{activeSemesterNama}
+		{kelasAktifLabel}
+		{bellActive}
+		{hariIni}
+		{nextEventMessage}
+	/>
+
+	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+		<RombelMuridStats rombel={statistikDashboard.rombel} murid={statistikDashboard.murid} />
+		<MapelEkstrakurikulerStats
+			mapel={mapelStats}
+			ekstrakurikuler={ekstrakurikulerStats}
+			{mapelBaris}
+		/>
+	</div>
+
+	{#if data.ringkasanKelas}
+		<div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
+			<div class="min-w-0 xl:col-span-8">
+				<RingkasanKelasCard
+					ringkasan={data.ringkasanKelas.ringkasan}
+					daftarKelas={data.ringkasanKelas.daftarKelas}
+				/>
+			</div>
+			<div class="flex min-w-0 flex-col gap-5 xl:col-span-4">
+				<ProgressCard progress={progressStats} {nilaiSumatifKosong} />
+				<QuickActionsCard />
+			</div>
+		</div>
+	{:else}
+		<div class="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
+			<div class="min-w-0 lg:col-span-7">
+				<ProgressCard progress={progressStats} {nilaiSumatifKosong} />
+			</div>
+			<div class="min-w-0 lg:col-span-5">
+				<QuickActionsCard />
+			</div>
+		</div>
+	{/if}
 </div>
-
-<style>
-	/* Dashboard styling — sama dengan halaman login: glass card,
-	   rounded besar, border emerald halus, statis (tanpa animasi). */
-
-	/* Kartu utama */
-	.dashboard-grid :global(.card) {
-		border-radius: 1.5rem;
-		border: 1px solid rgba(16, 185, 129, 0.15);
-		background: color-mix(in srgb, var(--color-base-100, #fff) 85%, transparent);
-		backdrop-filter: blur(16px);
-		box-shadow: 0 10px 40px -18px rgba(16, 185, 129, 0.25);
-	}
-
-	/* Judul kartu: ikon jadi chip emerald */
-	.dashboard-grid :global(.card-title) {
-		font-weight: 700;
-		letter-spacing: -0.01em;
-		gap: 0.75rem;
-	}
-	.dashboard-grid :global(.card-title > span) {
-		display: inline-grid;
-		place-items: center;
-		width: 2.5rem;
-		height: 2.5rem;
-		border-radius: 0.8rem;
-		background: rgba(16, 185, 129, 0.14);
-		color: #059669;
-	}
-
-	/* Statistik: ikon jadi medali tint, angka tebal */
-	.dashboard-grid :global(.stat-figure) {
-		margin-bottom: 0.25rem;
-	}
-	.dashboard-grid :global(.stat-figure > span) {
-		display: inline-grid;
-		place-items: center;
-		width: 3.5rem;
-		height: 3.5rem;
-		border-radius: 1.1rem;
-		background: color-mix(in srgb, currentColor 13%, transparent);
-	}
-	.dashboard-grid :global(.stat-value) {
-		font-weight: 800;
-		letter-spacing: -0.03em;
-	}
-	.dashboard-grid :global(.stat-title) {
-		font-size: 0.85rem;
-		letter-spacing: 0.02em;
-		color: color-mix(in srgb, var(--color-base-content, #0f172a) 60%, transparent);
-	}
-
-	/* Progress bar: pill + gradient emerald */
-	.dashboard-grid :global(.progress) {
-		height: 0.75rem;
-		border-radius: 9999px;
-		background: color-mix(in srgb, var(--color-base-content, #0f172a) 7%, transparent);
-	}
-	.dashboard-grid :global(.progress-primary::-webkit-progress-value),
-	.dashboard-grid :global(.progress-success::-webkit-progress-value) {
-		background-image: linear-gradient(90deg, #059669, #34d399);
-		border-radius: 9999px;
-	}
-	.dashboard-grid :global(.progress-warning::-webkit-progress-value) {
-		background-image: linear-gradient(90deg, #d97706, #fbbf24);
-		border-radius: 9999px;
-	}
-	.dashboard-grid :global(.progress-error::-webkit-progress-value) {
-		background-image: linear-gradient(90deg, #dc2626, #f87171);
-		border-radius: 9999px;
-	}
-
-	/* Tombol aksi: rounded, outline emerald */
-	.dashboard-grid :global(.btn) {
-		border-radius: 0.9rem;
-		font-weight: 600;
-	}
-	.dashboard-grid :global(.btn-outline) {
-		border-color: rgba(16, 185, 129, 0.35);
-	}
-	.dashboard-grid :global(.btn-outline:not(:disabled):hover) {
-		border-color: rgba(5, 150, 105, 0.6);
-		background-color: rgba(16, 185, 129, 0.08);
-	}
-
-	/* Badge fase: pill */
-	.dashboard-grid :global(.badge) {
-		border-radius: 9999px;
-		font-weight: 600;
-	}
-
-	/* Banner atas (jam bel / presensi): ikut bahasa kartu */
-	.dg-alert {
-		border-radius: 1.1rem;
-		border: 1px solid rgba(16, 185, 129, 0.15);
-		box-shadow: 0 10px 40px -20px rgba(16, 185, 129, 0.25);
-		backdrop-filter: blur(10px);
-	}
-</style>

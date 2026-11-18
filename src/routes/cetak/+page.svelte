@@ -2,9 +2,7 @@
 	import { page } from '$app/state';
 	import PreviewHeader from '$lib/components/cetak/PreviewHeader.svelte';
 	import DocumentMuridSelector from '$lib/components/cetak/DocumentMuridSelector.svelte';
-	import PdfPreviewModal from '$lib/components/cetak/PdfPreviewModal.svelte';
 	import { toast } from '$lib/components/toast.svelte';
-	import { onDestroy } from 'svelte';
 	import { DEFAULT_RAPOR_CRITERIA, type RaporPeriode } from '$lib/rapor-params';
 
 	type DocumentType =
@@ -26,6 +24,10 @@
 	let { data } = $props();
 
 	const userType = $derived((page.data.user as { type?: string } | null)?.type);
+	const activeModul = $derived(
+		(page.data as { activeModul?: 'admin' | 'wali_kelas' | 'guru' } | null)?.activeModul ??
+			(userType === 'user' ? 'guru' : userType === 'wali_kelas' ? 'wali_kelas' : 'admin')
+	);
 
 	const presensiGuruEnabled = $derived(
 		(page.data as { presensiGuruEnabled?: boolean } | null)?.presensiGuruEnabled ?? true
@@ -45,10 +47,10 @@
 		const visible = all.filter(
 			(o) => !((o.value === 'presensi-guru' || o.value === 'laporan-tpp') && !presensiGuruEnabled)
 		);
-		if (userType === 'user') {
+		if (activeModul === 'guru' || (userType === 'user' && activeModul !== 'wali_kelas')) {
 			return visible.filter((o) => o.value === 'jurnal-mengajar');
 		}
-		if (userType !== 'admin' && userType !== 'kepala_sekolah') {
+		if (activeModul === 'wali_kelas' || (userType !== 'admin' && userType !== 'kepala_sekolah')) {
 			return visible.filter(
 				(o) => o.value !== 'presensi-guru' && o.value !== 'buku-tamu' && o.value !== 'laporan-tpp'
 			);
@@ -57,6 +59,12 @@
 	});
 
 	let selectedDocument = $state<DocumentType | ''>('');
+
+	$effect(() => {
+		if (selectedDocument && !documentOptions.some((option) => option.value === selectedDocument)) {
+			selectedDocument = '';
+		}
+	});
 	let selectedRaporPeriode = $state<RaporPeriode | ''>('');
 	let selectedTemplate = $state<'1' | '2'>('1');
 	let searchTerm = $state('');
@@ -95,10 +103,6 @@
 		return () => {
 			cancelled = true;
 		};
-	});
-
-	onDestroy(() => {
-		if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
 	});
 
 	// Jurnal mengajar date range
@@ -176,206 +180,35 @@
 
 	const headingTitle = $derived.by(() => {
 		const parts: string[] = ['Cetak'];
-		const docLabel = selectedDocumentEntry?.label?.trim();
-		if (docLabel) parts.push(docLabel);
+		const label = selectedDocumentEntry?.label?.trim();
+		if (label) parts.push(label);
 		return parts.join(' - ');
 	});
 
-	const docLabel = $derived.by(() => {
-		const base =
-			selectedDocumentEntry?.label?.replace(/\s+/g, '-')?.toLowerCase() ?? selectedDocument;
-		if (selectedDocument === 'rapor' && selectedRaporPeriode === 'rts') {
-			return 'rapor-tengah-semester';
-		}
-		return base;
-	});
-
-	// PDF preview modal state
-	let pdfPreviewUrl = $state('');
-	let pdfPreviewTitle = $state('');
-	let pdfModalOpen = $state(false);
-
-	// preview navigation (prev/next murid within filtered list)
-	let previewMuridList = $state<MuridData[]>([]);
-	let previewMuridIndex = $state(-1);
-	const hasPrevMurid = $derived(previewMuridIndex > 0);
-	const hasNextMurid = $derived(previewMuridIndex < previewMuridList.length - 1);
-
-	function closePdfModal() {
-		if (pdfPreviewUrl) {
-			URL.revokeObjectURL(pdfPreviewUrl);
-		}
-		pdfPreviewUrl = '';
-		pdfPreviewTitle = '';
-		pdfModalOpen = false;
-		previewMuridList = [];
-		previewMuridIndex = -1;
-	}
-
-	async function navigateMurid(direction: 'prev' | 'next') {
-		const list = previewMuridList;
-		const currentIndex = previewMuridIndex;
-		if (currentIndex < 0) return;
-		const offset = direction === 'next' ? 1 : -1;
-		const targetIndex = currentIndex + offset;
-		if (targetIndex < 0 || targetIndex >= list.length) return;
-		const murid = list[targetIndex];
-		if (!murid) return;
-		previewMuridIndex = targetIndex;
-		await handlePreviewMurid(murid);
-	}
-
-	function handleNavigatePrev() {
-		navigateMurid('prev');
-	}
-
-	function handleNavigateNext() {
-		navigateMurid('next');
-	}
-
-	async function handlePreviewMurid(murid: MuridData) {
-		const documentType = selectedDocument;
-		if (!documentType) return;
-
-		downloadLoading = true;
-		try {
-			const res = await fetch('/api/pdf/token', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					docType: documentType,
-					muridId: murid.id,
-					kelasId: data.kelasId ? Number(data.kelasId) : undefined,
-					tpMode: fullTP,
-					kriteria: { kritCukup, kritBaik },
-					template: documentType === 'piagam' ? selectedTemplate : undefined,
-					docLabel,
-					bgLogo: showBgLogo,
-					raporPeriode:
-						documentType === 'rapor' && selectedRaporPeriode ? selectedRaporPeriode : undefined
-				})
-			});
-			if (!res.ok) throw new Error('Gagal mendapatkan token');
-			const { token, slug } = await res.json();
-
-			const pdfRes = await fetch(`/cetak/pdf/${slug}/${token}`);
-			if (!pdfRes.ok) throw new Error('Gagal memuat PDF');
-			const blob = await pdfRes.blob();
-
-			closePdfModal();
-
-			let navList: MuridData[];
-			if (isPiagamSelected) {
-				const q = searchTerm.trim().toLowerCase();
-				navList = piagamRankingOptions
-					.filter((o) => !q || o.nama.toLowerCase().includes(q))
-					.map((o) => ({ id: o.muridId, nama: o.nama }));
-			} else {
-				const q = searchTerm.trim().toLowerCase();
-				navList = daftarMurid.filter((m) => !q || m.nama.toLowerCase().includes(q));
-			}
-			const navIdx = navList.findIndex((m) => m.id === murid.id);
-			if (navIdx >= 0) {
-				previewMuridList = navList;
-				previewMuridIndex = navIdx;
-			} else {
-				previewMuridList = [];
-				previewMuridIndex = -1;
-			}
-
-			if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
-			pdfPreviewUrl = URL.createObjectURL(blob);
-			pdfPreviewTitle = `${selectedDocumentEntry?.label ?? 'Dokumen'} - ${murid.nama}`;
-			pdfModalOpen = true;
-		} catch (err) {
-			console.error('Preview error:', err);
-			toast('Gagal membuka PDF', 'error');
-		} finally {
-			downloadLoading = false;
-		}
-	}
-
-	async function handlePreviewJurnal() {
+	function handlePreviewJurnal() {
 		if (!isJurnalMengajar) return;
 		if (!jurnalTanggalMulai || !jurnalTanggalSelesai) {
 			toast('Pilih rentang tanggal terlebih dahulu', 'warning');
 			return;
 		}
-
-		downloadLoading = true;
-		try {
-			const params = new URLSearchParams({
-				tanggal_mulai: jurnalTanggalMulai,
-				tanggal_selesai: jurnalTanggalSelesai
-			});
-			const res = await fetch(`/api/pdf/jurnal-mengajar?${params}`);
-			if (!res.ok) throw new Error('Gagal membuat PDF');
-			const blob = await res.blob();
-
-			closePdfModal();
-			pdfPreviewUrl = URL.createObjectURL(blob);
-			pdfPreviewTitle = `Jurnal Mengajar ${jurnalTanggalMulai} - ${jurnalTanggalSelesai}`;
-			pdfModalOpen = true;
-		} catch (err) {
-			console.error('Jurnal preview error:', err);
-			toast('Gagal membuat PDF Jurnal Mengajar', 'error');
-		} finally {
-			downloadLoading = false;
-		}
+		const params = new URLSearchParams({
+			tanggal_mulai: jurnalTanggalMulai,
+			tanggal_selesai: jurnalTanggalSelesai
+		});
+		window.open(`/api/pdf/jurnal-mengajar?${params}`, '_blank', 'noopener,noreferrer');
 	}
 
-	async function handlePreviewBukuTamu() {
+	function handlePreviewBukuTamu() {
 		if (!isBukuTamu) return;
 		if (!bukuTamuTanggalMulai || !bukuTamuTanggalSelesai) {
 			toast('Pilih rentang tanggal terlebih dahulu', 'warning');
 			return;
 		}
-
-		downloadLoading = true;
-		try {
-			const params = new URLSearchParams({
-				tanggal_mulai: bukuTamuTanggalMulai,
-				tanggal_selesai: bukuTamuTanggalSelesai
-			});
-			const res = await fetch(`/api/pdf/buku-tamu?${params}`);
-			if (!res.ok) throw new Error('Gagal membuat PDF');
-			const blob = await res.blob();
-
-			closePdfModal();
-			pdfPreviewUrl = URL.createObjectURL(blob);
-			pdfPreviewTitle = `Buku Tamu ${bukuTamuTanggalMulai} - ${bukuTamuTanggalSelesai}`;
-			pdfModalOpen = true;
-		} catch (err) {
-			console.error('Buku tamu preview error:', err);
-			toast('Gagal membuat PDF Buku Tamu', 'error');
-		} finally {
-			downloadLoading = false;
-		}
-	}
-
-	async function handlePreviewPresensiGuru() {
-		if (!isPresensiGuru) return;
-
-		downloadLoading = true;
-		try {
-			const params = new URLSearchParams({
-				bulan: String(presensiBulan),
-				tahun: String(presensiTahun)
-			});
-			const res = await fetch(`/api/pdf/presensi-guru?${params}`);
-			if (!res.ok) throw new Error('Gagal membuat PDF');
-			const blob = await res.blob();
-
-			closePdfModal();
-			pdfPreviewUrl = URL.createObjectURL(blob);
-			pdfPreviewTitle = `Presensi Guru ${presensiBulan}-${presensiTahun}`;
-			pdfModalOpen = true;
-		} catch (err) {
-			console.error('Presensi guru preview error:', err);
-			toast('Gagal membuat PDF Presensi Guru', 'error');
-		} finally {
-			downloadLoading = false;
-		}
+		const params = new URLSearchParams({
+			tanggal_mulai: bukuTamuTanggalMulai,
+			tanggal_selesai: bukuTamuTanggalSelesai
+		});
+		window.open(`/api/pdf/buku-tamu?${params}`, '_blank', 'noopener,noreferrer');
 	}
 
 	async function handleDownloadLaporanTpp() {
@@ -483,7 +316,9 @@
 	}
 </script>
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
 	<PreviewHeader {headingTitle} {kelasAktifLabel} {academicContext} />
 
 	<DocumentMuridSelector
@@ -494,7 +329,6 @@
 		{daftarMurid}
 		{piagamRankingOptions}
 		{documentOptions}
-		onPreviewMurid={handlePreviewMurid}
 		onBulkDownload={handleDownloadBulk}
 		{downloadDisabled}
 		{downloadLoading}
@@ -555,18 +389,5 @@
 		onBgRefresh={() => {}}
 		onPreviewJurnal={handlePreviewJurnal}
 		onPreviewBukuTamu={handlePreviewBukuTamu}
-		onPreviewPresensiGuru={handlePreviewPresensiGuru}
 	/>
 </div>
-
-<PdfPreviewModal
-	bind:open={pdfModalOpen}
-	pdfUrl={pdfPreviewUrl}
-	pdfTitle={pdfPreviewTitle}
-	hasPrev={hasPrevMurid}
-	hasNext={hasNextMurid}
-	loading={downloadLoading}
-	onPrev={handleNavigatePrev}
-	onNext={handleNavigateNext}
-	onClose={closePdfModal}
-/>

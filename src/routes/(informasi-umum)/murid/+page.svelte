@@ -179,7 +179,7 @@
 	const kelasTujuanNaik = $derived.by(() => {
 		const groups = new Map<string, typeof data.kelasTujuan>();
 		for (const kelas of data.kelasTujuan ?? []) {
-			const label = [kelas.tahunAjaranNama, kelas.semesterNama].filter(Boolean).join(' — ');
+			const label = [kelas.tahunAjaranNama, kelas.semesterNama].filter(Boolean).join(' - ');
 			const items = groups.get(label) ?? [];
 			items.push(kelas);
 			groups.set(label, items);
@@ -361,8 +361,10 @@
 
 {#if academicContext}
 	{#if academicContext.activeSemesterId}
-		<div class="alert alert-info alert-soft mb-4 flex items-center gap-3">
-			<Icon name="info" />
+		<div
+			class="mb-4 flex items-center gap-2.5 rounded-2xl border border-blue-200/80 bg-blue-50/75 px-4 py-3 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/35 dark:text-blue-200"
+		>
+			<Icon name="info" class="h-4 w-4 shrink-0" />
 			<span>
 				Menampilkan data murid untuk
 				{#if activeSemester}
@@ -374,165 +376,192 @@
 			</span>
 		</div>
 	{:else}
-		<div class="alert alert-warning mb-6 flex items-center gap-3">
-			<Icon name="warning" />
+		<div
+			class="mb-4 flex items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+		>
+			<Icon name="warning" class="h-4 w-4 shrink-0" />
 			<span>Setel semester aktif di menu Rapor untuk mulai mengelola data kelas per periode.</span>
 		</div>
 	{/if}
 {/if}
 
-<div class="card bg-base-100 rounded-lg border border-none p-4 shadow-md">
-	<div class="mb-6">
-		<div class="flex flex-col sm:flex-row sm:justify-between">
-			<div>
-				<h2 class="text-xl font-bold">Formulir Dan Tabel Isian Data Murid</h2>
-				{#if kelasAktifLabel}
-					<p class="text-base-content/80 block text-sm">{kelasAktifLabel}</p>
-				{/if}
-			</div>
-			<!-- Tombol Tambah Manual (dipindahkan ke kanan judul) -->
-			{#if hasSelection}
-				<div class="mt-4 flex gap-2 sm:mt-0">
-					<button
-						class="btn btn-soft btn-primary shadow-none"
-						type="button"
-						disabled={formSubmitting || !canEdit}
-						onclick={openBulkMoveModal}
-						title={!canEdit
-							? 'Anda tidak memiliki izin untuk memindahkan murid'
-							: 'Pindahkan murid terpilih ke kelas lain'}
-					>
-						<Icon name="move" />
-						Pindahkan
-					</button>
-					<button
-						class="btn btn-soft btn-success shadow-none"
-						type="button"
-						disabled={formSubmitting || !canEdit}
-						onclick={openNaikKelasModal}
-						title={!canEdit
-							? 'Anda tidak memiliki izin untuk menaikkan kelas'
-							: 'Naikkan murid terpilih ke kelas fase berikutnya'}
-					>
-						<Icon name="up" />
-						Naik Kelas
-					</button>
-					<button
-						class="btn btn-soft btn-warning shadow-none"
-						type="button"
-						disabled={formSubmitting || !canEdit}
-						onclick={() => {
-							formTanggalKeluar = new Date().toISOString().split('T')[0];
-							formAlasanKeluar = 'Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)';
-							formAlasanKustom = '';
-							isKeluarkanBulkOpen = true;
-						}}
-						title={!canEdit ? 'Anda tidak memiliki izin' : 'Keluarkan murid terpilih dari sekolah'}
-					>
-						<Icon name="close" />
-						Keluarkan
-					</button>
-					<button
-						class="btn btn-soft btn-error shadow-none"
-						type="button"
-						disabled={formSubmitting || !canEdit}
-						onclick={openBulkDeleteModal}
-						title={!canEdit ? 'Anda tidak memiliki izin untuk menghapus' : 'Hapus murid terpilih'}
-					>
-						<Icon name="del" />
-						Hapus
-					</button>
-				</div>
-			{:else}
-				<div class="mt-2 flex max-sm:w-full sm:mt-0">
-					{#if canEdit}
-						<a
-							class="btn btn-soft rounded-r-none shadow-none max-sm:flex-1"
-							href="/murid/form"
-							use:modalRoute={'add-murid'}
-						>
-							<Icon name="plus" />
-							Tambah Murid
-						</a>
-					{:else}
-						<button
-							type="button"
-							class="btn btn-disabled rounded-r-none shadow-none max-sm:flex-1"
-							disabled
-							title="Anda tidak memiliki izin untuk menambah murid"
-						>
-							<Icon name="plus" />
-							Tambah Murid
-						</button>
-					{/if}
-					<div class="dropdown dropdown-end">
-						<button
-							bind:this={dropdownToggle}
-							type="button"
-							tabindex="0"
-							class="btn btn-soft rounded-l-none shadow-none"
-						>
-							<Icon name="down" />
-						</button>
-						<ul
-							tabindex="-1"
-							class="dropdown-content menu bg-base-100 rounded-box border-base-300 z-1 mt-2 w-50 border p-2 shadow-lg"
-						>
-							<li><a href="/murid/photos">Lihat Semua Foto</a></li>
-							{#if canEdit}
-								<li>
-									<button type="button" onclick={openBulkPhotoUploadModal} class="text-left">
-										Unggah Semua Foto
-									</button>
-								</li>
-							{/if}
-							<li>
-								<a href="/api/murid/download-excel" class="text-left"> Unduh Murid </a>
-							</li>
-						</ul>
-					</div>
-				</div>
+<div
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<div
+		class="mb-4 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800"
+	>
+		<div>
+			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+				Daftar &amp; Data Murid
+			</h1>
+			{#if kelasAktifLabel}
+				<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">{kelasAktifLabel}</p>
 			{/if}
 		</div>
+		<!-- Tombol Aksi Massal atau Tambah Murid -->
+		{#if hasSelection}
+			<div class="flex flex-wrap gap-2">
+				<button
+					class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+					type="button"
+					aria-disabled={formSubmitting || !canEdit}
+					disabled={formSubmitting || !canEdit}
+					onclick={openBulkMoveModal}
+					title={!canEdit
+						? 'Anda tidak memiliki izin untuk memindahkan murid'
+						: 'Pindahkan murid terpilih ke kelas lain'}
+				>
+					<Icon name="move" class="h-3.5 w-3.5" />
+					Pindahkan
+				</button>
+				<button
+					class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-200 dark:hover:bg-emerald-950"
+					type="button"
+					aria-disabled={formSubmitting || !canEdit}
+					disabled={formSubmitting || !canEdit}
+					onclick={openNaikKelasModal}
+					title={!canEdit
+						? 'Anda tidak memiliki izin untuk menaikkan kelas'
+						: 'Naikkan murid terpilih ke kelas fase berikutnya'}
+				>
+					<Icon name="up" class="h-3.5 w-3.5" />
+					Naik Kelas
+				</button>
+				<button
+					class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-900/60 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-950/80"
+					type="button"
+					aria-disabled={formSubmitting || !canEdit}
+					disabled={formSubmitting || !canEdit}
+					onclick={() => {
+						formTanggalKeluar = new Date().toISOString().split('T')[0];
+						formAlasanKeluar = 'Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)';
+						formAlasanKustom = '';
+						isKeluarkanBulkOpen = true;
+					}}
+					title={!canEdit ? 'Anda tidak memiliki izin' : 'Keluarkan murid terpilih dari sekolah'}
+				>
+					<Icon name="close" class="h-3.5 w-3.5" />
+					Keluarkan
+				</button>
+				<button
+					class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-red-300 bg-red-50 px-3 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950/80"
+					type="button"
+					aria-disabled={formSubmitting || !canEdit}
+					disabled={formSubmitting || !canEdit}
+					onclick={openBulkDeleteModal}
+					title={!canEdit ? 'Anda tidak memiliki izin untuk menghapus' : 'Hapus murid terpilih'}
+				>
+					<Icon name="del" class="h-3.5 w-3.5" />
+					Hapus
+				</button>
+			</div>
+		{:else}
+			<div class="flex max-sm:w-full">
+				{#if canEdit}
+					<a
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-l-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 max-sm:flex-1"
+						href="/murid/form"
+						use:modalRoute={'add-murid'}
+					>
+						<Icon name="plus" class="h-4 w-4" />
+						Tambah Murid
+					</a>
+				{:else}
+					<button
+						type="button"
+						class="inline-flex h-9 cursor-not-allowed items-center justify-center gap-1.5 rounded-l-xl bg-blue-600 px-3.5 text-xs font-semibold text-white opacity-50 max-sm:flex-1"
+						disabled
+						aria-disabled="true"
+						title="Anda tidak memiliki izin untuk menambah murid"
+					>
+						<Icon name="plus" class="h-4 w-4" />
+						Tambah Murid
+					</button>
+				{/if}
+				<div class="dropdown dropdown-end">
+					<button
+						bind:this={dropdownToggle}
+						type="button"
+						tabindex="0"
+						aria-label="Menu opsi murid lainnya"
+						class="inline-flex h-9 items-center justify-center rounded-r-xl border-l border-blue-500 bg-blue-600 px-2.5 text-white shadow-sm transition-colors hover:bg-blue-700"
+					>
+						<Icon name="down" class="h-3.5 w-3.5" />
+					</button>
+					<ul
+						tabindex="-1"
+						class="dropdown-content menu z-20 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-1.5 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+					>
+						<li><a href="/murid/photos">Lihat Semua Foto</a></li>
+						{#if canEdit}
+							<li>
+								<button type="button" onclick={openBulkPhotoUploadModal} class="text-left">
+									Unggah Semua Foto
+								</button>
+							</li>
+						{/if}
+						<li>
+							<a href="/api/murid/download-excel" class="text-left">Unduh Murid</a>
+						</li>
+					</ul>
+				</div>
+			</div>
+		{/if}
 	</div>
 
 	<!-- Filter Status Murid -->
-	<div class="tabs tabs-box bg-base-200/50 mb-4 flex flex-wrap gap-1 p-1">
-		{#each [{ key: 'aktif', label: 'Aktif', count: data.statusCounts?.aktif ?? 0, badge: 'badge-success' }, { key: 'keluar', label: 'Dikeluarkan / Keluar', count: data.statusCounts?.keluar ?? 0, badge: 'badge-error' }, { key: 'pindah', label: 'Pindah', count: data.statusCounts?.pindah ?? 0, badge: 'badge-warning' }, { key: 'lulus', label: 'Lulus', count: data.statusCounts?.lulus ?? 0, badge: 'badge-info' }, { key: 'semua', label: 'Semua Status', count: data.statusCounts?.semua ?? 0, badge: 'badge-ghost' }] as tab (tab.key)}
+	<div
+		class="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-slate-200 bg-slate-50/90 p-1.5 dark:border-zinc-800 dark:bg-zinc-800/60"
+	>
+		{#each [{ key: 'aktif', label: 'Aktif', count: data.statusCounts?.aktif ?? 0 }, { key: 'keluar', label: 'Dikeluarkan / Keluar', count: data.statusCounts?.keluar ?? 0 }, { key: 'pindah', label: 'Pindah', count: data.statusCounts?.pindah ?? 0 }, { key: 'lulus', label: 'Lulus', count: data.statusCounts?.lulus ?? 0 }, { key: 'semua', label: 'Semua Status', count: data.statusCounts?.semua ?? 0 }] as tab (tab.key)}
+			{@const isActiveTab = (data.page.status ?? 'aktif') === tab.key}
 			<button
 				type="button"
-				class="tab text-xs font-medium"
-				class:tab-active={(data.page.status ?? 'aktif') === tab.key}
+				class="inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-colors {isActiveTab
+					? 'bg-blue-600 text-white shadow-sm'
+					: 'text-slate-700 hover:bg-white hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'}"
 				onclick={() => setStatusFilter(tab.key)}
 			>
-				{tab.label}
-				<span class="badge {tab.badge} badge-sm ml-1.5">{tab.count}</span>
+				<span>{tab.label}</span>
+				<span
+					class="rounded px-1.5 py-0.5 text-[11px] tabular-nums {isActiveTab
+						? 'bg-blue-700/80 text-white'
+						: 'bg-slate-200/80 text-slate-700 dark:bg-zinc-700 dark:text-zinc-200'}"
+					>{tab.count}</span
+				>
 			</button>
 		{/each}
 	</div>
 
 	<form
-		class="flex flex-col items-center gap-2 sm:flex-row"
+		class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center"
 		data-sveltekit-keepfocus
 		data-sveltekit-replacestate
 		onsubmit={submitSearch}
 	>
 		<!-- Cari nama murid -->
-		<div class="join w-full">
-			<label class="input bg-base-200 dark:bg-base-300 join-item grow dark:border-none">
-				<Icon name="search" />
-				<input
-					type="search"
-					name="q"
-					value={searchTerm}
-					spellcheck="false"
-					placeholder="Cari nama murid..."
-					autocomplete="name"
-					oninput={handleSearchInput}
-				/>
-			</label>
+		<div class="relative flex min-w-0 flex-1 items-center">
+			<span
+				aria-hidden="true"
+				class="pointer-events-none absolute left-3 flex items-center text-slate-500 dark:text-zinc-400"
+			>
+				<Icon name="search" class="h-4 w-4" />
+			</span>
+			<input
+				type="search"
+				name="q"
+				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+				value={searchTerm}
+				spellcheck="false"
+				placeholder="Cari nama murid..."
+				autocomplete="name"
+				oninput={handleSearchInput}
+			/>
+		</div>
+		<div class="relative flex items-center sm:w-32">
 			<select
-				class="select bg-base-200 dark:bg-base-300 join-item w-auto shrink dark:border-none"
+				class="h-9 w-full appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 				value={data.page.perPage}
 				title="Baris per halaman"
 				onchange={(event) =>
@@ -542,6 +571,12 @@
 					<option value={jumlah}>{jumlah} / hal</option>
 				{/each}
 			</select>
+			<span
+				aria-hidden="true"
+				class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+			>
+				<Icon name="down" class="h-3.5 w-3.5" />
+			</span>
 		</div>
 	</form>
 
@@ -554,16 +589,17 @@
 	>
 		{#snippet children({ submitting })}
 			<div
-				class="bg-base-100 dark:bg-base-200 mt-4 overflow-x-auto rounded-md shadow-md dark:shadow-none"
+				class="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 			>
-				<table class="border-base-200 table border dark:border-none">
-					<!-- head -->
+				<table class="w-full border-collapse text-xs">
 					<thead>
-						<tr class="bg-base-200 dark:bg-base-300 text-base-content text-left font-bold">
-							<th>
+						<tr
+							class="border-b border-slate-200 bg-slate-50 text-left font-semibold text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+						>
+							<th class="px-3 py-2.5">
 								<input
 									type="checkbox"
-									class="checkbox"
+									class="checkbox checkbox-sm"
 									bind:this={selectAllCheckbox}
 									checked={semuaDipilih}
 									onchange={(event) => toggleSelectAll(event.currentTarget.checked)}
@@ -571,25 +607,25 @@
 									disabled={submitting}
 								/>
 							</th>
-							<th style="width: 50px; min-width: 40px;">No</th>
-							<th style="min-width: 90px;">NIS</th>
-							<th style="min-width: 90px;">NISN</th>
-							<th style="width: 35%;">Nama</th>
-							<th style="min-width: 100px;">Kelas</th>
-							<th style="min-width: 100px;">Ayah</th>
-							<th>Agama</th>
-							<th>Tempat Lahir</th>
-							<th>Tanggal Lahir</th>
-							<th>Aksi</th>
+							<th class="w-10 px-3 py-2.5">No</th>
+							<th class="px-3 py-2.5 whitespace-nowrap">NIS</th>
+							<th class="px-3 py-2.5 whitespace-nowrap">NISN</th>
+							<th class="min-w-44 px-3 py-2.5">Nama</th>
+							<th class="px-3 py-2.5 whitespace-nowrap">Kelas</th>
+							<th class="min-w-28 px-3 py-2.5">Ayah</th>
+							<th class="px-3 py-2.5">Agama</th>
+							<th class="px-3 py-2.5">Tempat Lahir</th>
+							<th class="px-3 py-2.5">Tanggal Lahir</th>
+							<th class="px-3 py-2.5 text-center">Aksi</th>
 						</tr>
 					</thead>
-					<tbody>
+					<tbody class="divide-y divide-slate-200 dark:divide-zinc-800">
 						{#each data.daftarMurid as murid, index (murid)}
-							<tr>
-								<td>
+							<tr class="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40">
+								<td class="px-3 py-2.5">
 									<input
 										type="checkbox"
-										class="checkbox"
+										class="checkbox checkbox-sm"
 										name="muridIds"
 										value={murid.id}
 										checked={selectedIds.has(murid.id)}
@@ -598,53 +634,71 @@
 										disabled={submitting}
 									/>
 								</td>
-								<td>{offset + index + 1}</td>
-								<td class="font-mono text-xs">{murid.nis || '—'}</td>
-								<td class="font-mono text-xs">{murid.nisn || '—'}</td>
-								<td>
+								<td class="px-3 py-2.5 text-slate-600 tabular-nums dark:text-zinc-400"
+									>{offset + index + 1}</td
+								>
+								<td class="px-3 py-2.5 font-mono text-xs text-slate-700 dark:text-zinc-300"
+									>{murid.nis || '-'}</td
+								>
+								<td class="px-3 py-2.5 font-mono text-xs text-slate-700 dark:text-zinc-300"
+									>{murid.nisn || '-'}</td
+								>
+								<td class="px-3 py-2.5">
 									<div class="flex flex-wrap items-center gap-1.5">
-										<span class="font-medium"
+										<span class="font-semibold text-slate-900 dark:text-zinc-100"
 											>{@html searchQueryMarker(data.page.search, murid.nama)}</span
 										>
 										{#if murid.status === 'keluar'}
 											<span
-												class="badge badge-error badge-xs font-semibold"
+												class="inline-flex items-center rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold text-red-800 dark:bg-red-950/70 dark:text-red-300"
 												title={`Dikeluarkan: ${murid.alasanKeluar ?? '-'} (${murid.tanggalKeluar ?? '-'})`}
 											>
 												Keluar
 											</span>
 										{:else if murid.status === 'pindah'}
-											<span class="badge badge-warning badge-xs font-semibold">Pindah</span>
+											<span
+												class="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/70 dark:text-amber-300"
+												>Pindah</span
+											>
 										{:else if murid.status === 'lulus'}
-											<span class="badge badge-info badge-xs font-semibold">Lulus</span>
+											<span
+												class="inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300"
+												>Lulus</span
+											>
 										{/if}
 									</div>
 									{#if murid.status === 'keluar' && murid.alasanKeluar}
-										<p class="text-error mt-0.5 text-xs opacity-80">
+										<p class="mt-0.5 text-xs text-red-700 dark:text-red-300">
 											Alasan: {murid.alasanKeluar}
 											{murid.tanggalKeluar ? `(${murid.tanggalKeluar})` : ''}
 										</p>
 									{/if}
 								</td>
-								<td>
-									{murid.kelas?.nama ?? '—'}
+								<td class="px-3 py-2.5 text-slate-700 dark:text-zinc-300">
+									{murid.kelas?.nama ?? '-'}
 									{#if murid.kelas?.fase}
-										<span class="text-base-content/60 block text-xs">{murid.kelas.fase}</span>
+										<span class="block text-[11px] text-slate-500 dark:text-zinc-400"
+											>{murid.kelas.fase}</span
+										>
 									{/if}
 								</td>
-								<td>{murid.ayah?.nama ?? '—'}</td>
-								<td>{murid.agama}</td>
-								<td>{murid.tempatLahir}</td>
-								<td>{murid.tanggalLahir}</td>
-								<td>
-									<div class="flex flex-row">
+								<td class="px-3 py-2.5 text-slate-700 dark:text-zinc-300"
+									>{murid.ayah?.nama ?? '-'}</td
+								>
+								<td class="px-3 py-2.5 text-slate-700 dark:text-zinc-300">{murid.agama}</td>
+								<td class="px-3 py-2.5 text-slate-700 dark:text-zinc-300">{murid.tempatLahir}</td>
+								<td class="px-3 py-2.5 text-slate-700 tabular-nums dark:text-zinc-300"
+									>{murid.tanggalLahir}</td
+								>
+								<td class="px-3 py-2.5">
+									<div class="flex flex-row justify-center">
 										<a
-											class="btn btn-sm btn-soft pointer-events-auto rounded-r-none shadow-none"
+											class="inline-flex h-8 w-8 items-center justify-center rounded-l-lg border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 											href="/murid/{murid.id}"
 											use:modalRoute={'detail-murid'}
 											title="Lihat detail murid"
 										>
-											<Icon name="eye" />
+											<Icon name="eye" class="h-3.5 w-3.5" />
 										</a>
 
 										{#if canEdit}
@@ -660,11 +714,11 @@
 														<input type="hidden" name="muridId" value={murid.id} />
 														<button
 															type="submit"
-															class="btn btn-sm btn-success btn-soft rounded-none shadow-none"
+															class="inline-flex h-8 w-8 items-center justify-center border-y border-r border-slate-200 bg-emerald-50 text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-zinc-700 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-950"
 															disabled={subAktif}
 															title="Aktifkan kembali murid ini"
 														>
-															<Icon name="check" />
+															<Icon name="check" class="h-3.5 w-3.5" />
 														</button>
 													{/snippet}
 												</FormEnhance>
@@ -672,30 +726,31 @@
 												<!-- Tombol Keluarkan Murid -->
 												<button
 													type="button"
-													class="btn btn-sm btn-warning btn-soft rounded-none shadow-none"
+													class="inline-flex h-8 w-8 items-center justify-center border-y border-r border-slate-200 bg-amber-50 text-amber-700 transition-colors hover:bg-amber-100 dark:border-zinc-700 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-950"
 													onclick={() => bukaKeluarkanModal(murid)}
 													title="Keluarkan murid dari sekolah"
 												>
-													<Icon name="close" />
+													<Icon name="close" class="h-3.5 w-3.5" />
 												</button>
 											{/if}
 
 											<a
-												class="btn btn-sm btn-error btn-soft rounded-l-none shadow-none"
+												class="inline-flex h-8 w-8 items-center justify-center rounded-r-lg border-y border-r border-slate-200 bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:border-zinc-700 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 												href="/murid/{murid.id}/delete"
 												use:modalRoute={'delete-murid'}
 												title="Hapus data murid permanen"
 											>
-												<Icon name="del" />
+												<Icon name="del" class="h-3.5 w-3.5" />
 											</a>
 										{:else}
 											<button
 												type="button"
-												class="btn btn-sm btn-disabled rounded-l-none shadow-none"
+												class="inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-r-lg border-y border-r border-slate-200 bg-slate-100 text-slate-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500"
 												disabled
+												aria-disabled="true"
 												title="Anda tidak memiliki izin mengelola murid"
 											>
-												<Icon name="del" />
+												<Icon name="del" class="h-3.5 w-3.5" />
 											</button>
 										{/if}
 									</div>
@@ -703,8 +758,8 @@
 							</tr>
 						{:else}
 							<tr>
-								<td class="text-center p-7" colspan="10">
-									<em class="opacity-50">Belum ada data murid</em>
+								<td class="px-3 py-8 text-center text-slate-500 dark:text-zinc-400" colspan="11">
+									Belum ada data murid
 								</td>
 							</tr>
 						{/each}
@@ -715,44 +770,46 @@
 	</FormEnhance>
 	<!-- pagination -->
 	{#if totalPages > 1}
-		<div class="mt-4 flex justify-center">
-			<div class="join">
-				<button
-					type="button"
-					class="join-item btn"
-					disabled={currentPage <= 1}
-					onclick={() => handlePageClick(currentPage - 1)}
-				>
-					«
-				</button>
-				{#each nomorHalaman as nomor, index (index)}
-					{#if nomor === '…'}
-						<button type="button" class="join-item btn" disabled>…</button>
-					{:else}
-						<button
-							type="button"
-							class="join-item btn pointer-events-auto"
-							class:btn-active={nomor === currentPage}
-							onclick={() => handlePageClick(nomor)}
-							aria-current={nomor === currentPage ? 'page' : undefined}
-						>
-							{nomor}
-						</button>
-					{/if}
-				{/each}
-				<button
-					type="button"
-					class="join-item btn"
-					disabled={currentPage >= totalPages}
-					onclick={() => handlePageClick(currentPage + 1)}
-				>
-					»
-				</button>
-			</div>
+		<div class="mt-4 flex flex-wrap items-center justify-center gap-1">
+			<button
+				type="button"
+				class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+				disabled={currentPage <= 1}
+				onclick={() => handlePageClick(currentPage - 1)}
+			>
+				&laquo;
+			</button>
+			{#each nomorHalaman as nomor, index (index)}
+				{#if nomor === '…'}
+					<span class="inline-flex h-8 min-w-8 items-center justify-center text-xs text-slate-400"
+						>…</span
+					>
+				{:else}
+					<button
+						type="button"
+						class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border px-2 text-xs font-semibold tabular-nums transition-colors {nomor ===
+						currentPage
+							? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+							: 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
+						onclick={() => handlePageClick(nomor)}
+						aria-current={nomor === currentPage ? 'page' : undefined}
+					>
+						{nomor}
+					</button>
+				{/if}
+			{/each}
+			<button
+				type="button"
+				class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+				disabled={currentPage >= totalPages}
+				onclick={() => handlePageClick(currentPage + 1)}
+			>
+				&raquo;
+			</button>
 		</div>
 	{/if}
 
-	<p class="mt-3 text-center text-sm opacity-70">
+	<p class="mt-3 text-center text-xs text-slate-500 dark:text-zinc-400">
 		Menampilkan {data.daftarMurid.length} dari {data.page.totalItems ?? 0} data
 	</p>
 </div>
@@ -773,75 +830,89 @@
 
 <!-- Modal Naik Kelas (massal) -->
 {#if isNaikKelasOpen}
-	<dialog class="modal modal-open">
-		<div class="modal-box max-w-lg">
-			<h3 class="flex items-center gap-2 text-lg font-bold">
-				<Icon name="up" />
+	<dialog class="modal modal-open bg-slate-950/45 backdrop-blur-[2px]">
+		<div
+			class="modal-box max-w-lg rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		>
+			<h3
+				class="flex items-center gap-2 border-b border-slate-200 pb-3 text-base font-bold dark:border-zinc-800"
+			>
+				<Icon name="up" class="h-4 w-4 text-blue-600 dark:text-blue-400" />
 				Naik Kelas Massal
 			</h3>
-			<p class="py-2 text-sm">
-				<strong>{selectedMurids.length}</strong> murid terpilih akan dipindah ke kelas tujuan. Murid
-				yang sudah di kelas tujuan atau tidak punya fase lebih rendah dilaporkan gagal tanpa
-				membatalkan sisanya.
+			<p class="pt-3 text-xs leading-relaxed text-slate-600 dark:text-zinc-300">
+				<strong>{selectedMurids.length}</strong> murid terpilih akan dipindah ke kelas tujuan. Murid yang
+				sudah di kelas tujuan atau tidak punya fase lebih rendah dilaporkan gagal tanpa membatalkan sisanya.
 			</p>
 
-			<FormEnhance
-				action="?/naikKelas"
-				onsuccess={handleNaikKelasSuccess}
-				showToast={false}
-			>
+			<FormEnhance action="?/naikKelas" onsuccess={handleNaikKelasSuccess} showToast={false}>
 				{#snippet children({ submitting, invalid })}
 					{#each selectedMurids as murid (murid.id)}
 						<input type="hidden" name="muridIds" value={murid.id} />
 					{/each}
 
 					{#if kelasTujuanNaik.length}
-						<fieldset class="fieldset mt-2">
-							<legend class="fieldset-legend">Kelas tujuan (fase berikutnya)</legend>
-							<select
-								name="kelasId"
-								class="select w-full"
-								required
-								disabled={submitting}
-								bind:value={naikKelasTujuanId}
+						<label class="mt-3 flex flex-col gap-1.5">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+								>Kelas tujuan (fase berikutnya)</span
 							>
-								<option value="" disabled>Pilih kelas tujuan</option>
-								{#each kelasTujuanNaik as [label, items] (label)}
-									<optgroup {label}>
-										{#each items as kelas (kelas.id)}
-											<option value={kelas.id}>
-												{kelas.nama}{kelas.fase ? ` (${kelas.fase})` : ''}
-											</option>
-										{/each}
-									</optgroup>
-								{/each}
-							</select>
-							<span class="label text-wrap text-xs text-base-content/60">
-								Kelas tujuan sebaiknya satu fase di atas kelas asal (mis. Fase E → Fase F).
+							<div class="relative flex items-center">
+								<select
+									name="kelasId"
+									class="h-9 w-full appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+									required
+									disabled={submitting}
+									bind:value={naikKelasTujuanId}
+								>
+									<option value="" disabled>Pilih kelas tujuan</option>
+									{#each kelasTujuanNaik as [label, items] (label)}
+										<optgroup {label}>
+											{#each items as kelas (kelas.id)}
+												<option value={kelas.id}>
+													{kelas.nama}{kelas.fase ? ` (${kelas.fase})` : ''}
+												</option>
+											{/each}
+										</optgroup>
+									{/each}
+								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
+							</div>
+							<span class="text-xs text-slate-500 dark:text-zinc-400">
+								Kelas tujuan sebaiknya satu fase di atas kelas asal (mis. Fase E ke Fase F).
 							</span>
-						</fieldset>
+						</label>
 					{:else}
-						<div class="alert alert-warning alert-soft mt-2">
-							<Icon name="warning" />
+						<div
+							class="mt-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+						>
+							<Icon name="warning" class="h-4 w-4 shrink-0" />
 							<span>Belum ada kelas tujuan yang tersedia pada semester ini.</span>
 						</div>
 					{/if}
 
-					<div class="bg-base-200 rounded-box mt-3 max-h-40 overflow-y-auto p-3 text-sm">
-						<ul class="list-disc space-y-1 pl-4">
+					<div
+						class="mt-3 max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs dark:border-zinc-800 dark:bg-zinc-800/70"
+					>
+						<ul class="list-disc space-y-1 pl-4 text-slate-800 dark:text-zinc-200">
 							{#each selectedMurids as murid (murid.id)}
 								<li>
 									{murid.nama}
-									<span class="opacity-60">({murid.kelas?.nama ?? '-'})</span>
+									<span class="text-slate-500 dark:text-zinc-400">({murid.kelas?.nama ?? '-'})</span
+									>
 								</li>
 							{/each}
 						</ul>
 					</div>
 
-					<div class="modal-action mt-4">
+					<div class="modal-action mt-4 border-t border-slate-200 pt-3 dark:border-zinc-800">
 						<button
 							type="button"
-							class="btn btn-soft shadow-none"
+							class="inline-flex h-9 items-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							onclick={() => (isNaikKelasOpen = false)}
 							disabled={submitting}
 						>
@@ -849,13 +920,13 @@
 						</button>
 						<button
 							type="submit"
-							class="btn btn-success shadow-none"
+							class="inline-flex h-9 items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 							disabled={submitting || invalid || !naikKelasTujuanId}
 						>
 							{#if submitting}
 								<span class="loading loading-spinner loading-sm"></span>
 							{:else}
-								<Icon name="up" />
+								<Icon name="up" class="h-3.5 w-3.5" />
 							{/if}
 							Naikkan {selectedMurids.length} Murid
 						</button>
@@ -863,7 +934,7 @@
 				{/snippet}
 			</FormEnhance>
 		</div>
-		<form method="dialog" class="modal-backdrop">
+		<form method="dialog" class="modal-backdrop bg-transparent">
 			<button onclick={() => (isNaikKelasOpen = false)}>close</button>
 		</form>
 	</dialog>
@@ -871,13 +942,17 @@
 
 <!-- Modal Keluarkan Satuan -->
 {#if targetMuridKeluarkan}
-	<dialog class="modal modal-open">
-		<div class="modal-box max-w-md">
-			<h3 class="text-error flex items-center gap-2 text-lg font-bold">
-				<Icon name="warning" />
+	<dialog class="modal modal-open bg-slate-950/45 backdrop-blur-[2px]">
+		<div
+			class="modal-box max-w-md rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		>
+			<h3
+				class="flex items-center gap-2 border-b border-slate-200 pb-3 text-base font-bold text-red-700 dark:border-zinc-800 dark:text-red-400"
+			>
+				<Icon name="warning" class="h-4 w-4" />
 				Keluarkan Murid
 			</h3>
-			<p class="py-2 text-sm">
+			<p class="pt-3 text-xs leading-relaxed text-slate-600 dark:text-zinc-300">
 				Anda akan mengeluarkan murid <strong>{targetMuridKeluarkan.nama}</strong>
 				{targetMuridKeluarkan.nis ? `(NIS: ${targetMuridKeluarkan.nis})` : ''}. Status murid akan
 				diubah menjadi <em>Keluar</em> dan tidak tampil di daftar murid aktif.
@@ -893,40 +968,54 @@
 				{#snippet children({ submitting })}
 					<input type="hidden" name="muridId" value={targetMuridKeluarkan?.id} />
 
-					<fieldset class="fieldset mt-3">
-						<legend class="fieldset-legend font-medium">Tanggal Keluar</legend>
+					<label class="mt-3 flex flex-col gap-1.5">
+						<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							>Tanggal Keluar</span
+						>
 						<input
 							type="date"
 							name="tanggalKeluar"
-							class="input bg-base-200 dark:bg-base-300 w-full"
+							class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 							bind:value={formTanggalKeluar}
 							required
 						/>
-					</fieldset>
+					</label>
 
-					<fieldset class="fieldset mt-3">
-						<legend class="fieldset-legend font-medium">Alasan Keluar</legend>
-						<select
-							class="select bg-base-200 dark:bg-base-300 w-full"
-							bind:value={formAlasanKeluar}
-							onchange={(e) => {
-								const val = (e.currentTarget as HTMLSelectElement).value;
-								if (val !== 'Lainnya') formAlasanKustom = '';
-							}}
+					<div class="mt-3 flex flex-col gap-1.5">
+						<label
+							class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							for="keluarkan-satuan-alasan">Alasan Keluar</label
 						>
-							<option value="Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)">
-								Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)
-							</option>
-							<option value="Drop Out (DO) / Putus Sekolah">Drop Out (DO) / Putus Sekolah</option>
-							<option value="Mengundurkan Diri">Mengundurkan Diri</option>
-							<option value="Pindah Sekolah">Pindah Sekolah</option>
-							<option value="Bekerja">Bekerja</option>
-							<option value="Lainnya">Lainnya...</option>
-						</select>
+						<div class="relative flex items-center">
+							<select
+								id="keluarkan-satuan-alasan"
+								class="h-9 w-full appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+								bind:value={formAlasanKeluar}
+								onchange={(e) => {
+									const val = (e.currentTarget as HTMLSelectElement).value;
+									if (val !== 'Lainnya') formAlasanKustom = '';
+								}}
+							>
+								<option value="Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)">
+									Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)
+								</option>
+								<option value="Drop Out (DO) / Putus Sekolah">Drop Out (DO) / Putus Sekolah</option>
+								<option value="Mengundurkan Diri">Mengundurkan Diri</option>
+								<option value="Pindah Sekolah">Pindah Sekolah</option>
+								<option value="Bekerja">Bekerja</option>
+								<option value="Lainnya">Lainnya...</option>
+							</select>
+							<span
+								aria-hidden="true"
+								class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+							>
+								<Icon name="down" class="h-3.5 w-3.5" />
+							</span>
+						</div>
 						{#if formAlasanKeluar === 'Lainnya'}
 							<input
 								type="text"
-								class="input bg-base-200 dark:bg-base-300 mt-2 w-full"
+								class="mt-1.5 h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 								placeholder="Tuliskan alasan keluar..."
 								bind:value={formAlasanKustom}
 								required
@@ -937,12 +1026,12 @@
 							name="alasanKeluar"
 							value={formAlasanKeluar === 'Lainnya' ? formAlasanKustom : formAlasanKeluar}
 						/>
-					</fieldset>
+					</div>
 
-					<div class="modal-action mt-6">
+					<div class="modal-action mt-5 border-t border-slate-200 pt-3 dark:border-zinc-800">
 						<button
 							type="button"
-							class="btn btn-ghost shadow-none"
+							class="inline-flex h-9 items-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							onclick={() => (targetMuridKeluarkan = null)}
 							disabled={submitting}
 						>
@@ -950,7 +1039,7 @@
 						</button>
 						<button
 							type="submit"
-							class="btn btn-error shadow-none"
+							class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-red-600 px-3.5 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
 							disabled={submitting || (formAlasanKeluar === 'Lainnya' && !formAlasanKustom.trim())}
 						>
 							{#if submitting}
@@ -964,7 +1053,7 @@
 		</div>
 		<button
 			type="button"
-			class="modal-backdrop"
+			class="modal-backdrop bg-transparent"
 			onclick={() => (targetMuridKeluarkan = null)}
 			aria-label="Tutup"
 		></button>
@@ -973,13 +1062,17 @@
 
 <!-- Modal Keluarkan Massal -->
 {#if isKeluarkanBulkOpen}
-	<dialog class="modal modal-open">
-		<div class="modal-box max-w-md">
-			<h3 class="text-error flex items-center gap-2 text-lg font-bold">
-				<Icon name="warning" />
+	<dialog class="modal modal-open bg-slate-950/45 backdrop-blur-[2px]">
+		<div
+			class="modal-box max-w-md rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		>
+			<h3
+				class="flex items-center gap-2 border-b border-slate-200 pb-3 text-base font-bold text-red-700 dark:border-zinc-800 dark:text-red-400"
+			>
+				<Icon name="warning" class="h-4 w-4" />
 				Keluarkan {selectedIds.size} Murid Terpilih
 			</h3>
-			<p class="py-2 text-sm">
+			<p class="pt-3 text-xs leading-relaxed text-slate-600 dark:text-zinc-300">
 				Semua murid yang dipilih akan diubah statusnya menjadi <em>Keluar</em> dan dipindahkan ke arsip
 				murid non-aktif.
 			</p>
@@ -997,40 +1090,54 @@
 						<input type="hidden" name="muridIds" value={id} />
 					{/each}
 
-					<fieldset class="fieldset mt-3">
-						<legend class="fieldset-legend font-medium">Tanggal Keluar</legend>
+					<label class="mt-3 flex flex-col gap-1.5">
+						<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							>Tanggal Keluar</span
+						>
 						<input
 							type="date"
 							name="tanggalKeluar"
-							class="input bg-base-200 dark:bg-base-300 w-full"
+							class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 							bind:value={formTanggalKeluar}
 							required
 						/>
-					</fieldset>
+					</label>
 
-					<fieldset class="fieldset mt-3">
-						<legend class="fieldset-legend font-medium">Alasan Keluar</legend>
-						<select
-							class="select bg-base-200 dark:bg-base-300 w-full"
-							bind:value={formAlasanKeluar}
-							onchange={(e) => {
-								const val = (e.currentTarget as HTMLSelectElement).value;
-								if (val !== 'Lainnya') formAlasanKustom = '';
-							}}
+					<div class="mt-3 flex flex-col gap-1.5">
+						<label
+							class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							for="keluarkan-bulk-alasan">Alasan Keluar</label
 						>
-							<option value="Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)">
-								Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)
-							</option>
-							<option value="Drop Out (DO) / Putus Sekolah">Drop Out (DO) / Putus Sekolah</option>
-							<option value="Mengundurkan Diri">Mengundurkan Diri</option>
-							<option value="Pindah Sekolah">Pindah Sekolah</option>
-							<option value="Bekerja">Bekerja</option>
-							<option value="Lainnya">Lainnya...</option>
-						</select>
+						<div class="relative flex items-center">
+							<select
+								id="keluarkan-bulk-alasan"
+								class="h-9 w-full appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+								bind:value={formAlasanKeluar}
+								onchange={(e) => {
+									const val = (e.currentTarget as HTMLSelectElement).value;
+									if (val !== 'Lainnya') formAlasanKustom = '';
+								}}
+							>
+								<option value="Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)">
+									Dikeluarkan oleh pihak sekolah (Pelanggaran Tata Tertib)
+								</option>
+								<option value="Drop Out (DO) / Putus Sekolah">Drop Out (DO) / Putus Sekolah</option>
+								<option value="Mengundurkan Diri">Mengundurkan Diri</option>
+								<option value="Pindah Sekolah">Pindah Sekolah</option>
+								<option value="Bekerja">Bekerja</option>
+								<option value="Lainnya">Lainnya...</option>
+							</select>
+							<span
+								aria-hidden="true"
+								class="pointer-events-none absolute right-2.5 flex items-center text-slate-500 dark:text-zinc-400"
+							>
+								<Icon name="down" class="h-3.5 w-3.5" />
+							</span>
+						</div>
 						{#if formAlasanKeluar === 'Lainnya'}
 							<input
 								type="text"
-								class="input bg-base-200 dark:bg-base-300 mt-2 w-full"
+								class="mt-1.5 h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 								placeholder="Tuliskan alasan keluar..."
 								bind:value={formAlasanKustom}
 								required
@@ -1041,12 +1148,12 @@
 							name="alasanKeluar"
 							value={formAlasanKeluar === 'Lainnya' ? formAlasanKustom : formAlasanKeluar}
 						/>
-					</fieldset>
+					</div>
 
-					<div class="modal-action mt-6">
+					<div class="modal-action mt-5 border-t border-slate-200 pt-3 dark:border-zinc-800">
 						<button
 							type="button"
-							class="btn btn-ghost shadow-none"
+							class="inline-flex h-9 items-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							onclick={() => (isKeluarkanBulkOpen = false)}
 							disabled={submitting}
 						>
@@ -1054,7 +1161,7 @@
 						</button>
 						<button
 							type="submit"
-							class="btn btn-error shadow-none"
+							class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-red-600 px-3.5 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
 							disabled={submitting || (formAlasanKeluar === 'Lainnya' && !formAlasanKustom.trim())}
 						>
 							{#if submitting}
@@ -1068,7 +1175,7 @@
 		</div>
 		<button
 			type="button"
-			class="modal-backdrop"
+			class="modal-backdrop bg-transparent"
 			onclick={() => (isKeluarkanBulkOpen = false)}
 			aria-label="Tutup"
 		></button>

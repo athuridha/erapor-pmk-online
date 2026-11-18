@@ -43,13 +43,20 @@
 
 {#if wasForcePasswordChange}
 	{#if passwordChanged}
-		<div class="alert alert-success mt-4" role="status">
-			<Icon name="success" />
+		<div
+			class="mt-4 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200"
+			role="status"
+		>
+			<Icon name="success" class="h-4 w-4 shrink-0" />
 			<span>Kata sandi berhasil diubah. Silakan gunakan aplikasi.</span>
 		</div>
 	{:else}
-		<div id="default-password-warning" class="alert alert-warning mt-4 scroll-mt-20" role="alert">
-			<Icon name="lock" />
+		<div
+			id="default-password-warning"
+			class="mt-4 flex scroll-mt-20 items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+			role="alert"
+		>
+			<Icon name="lock" class="h-4 w-4 shrink-0" />
 			<span>
 				Jangan gunakan sandi bawaan! Perbarui kata sandi di bagian
 				<strong>Ganti Kata Sandi</strong> di bawah sebelum menggunakan aplikasi.

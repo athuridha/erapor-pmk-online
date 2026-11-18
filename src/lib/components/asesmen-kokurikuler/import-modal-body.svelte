@@ -22,18 +22,18 @@
 	});
 </script>
 
-<div class="p-2">
-	<div class="form-control">
-		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Import file excel</legend>
-			<input
-				type="file"
-				class="file-input file-input-ghost"
-				accept=".xlsx"
-				onchange={onFileChange}
-				aria-label="Pilih file Excel"
-			/>
-			<p class="label text-wrap">Pilih file Excel (.xlsx) sesuai format "Unduh Template"</p>
-		</fieldset>
-	</div>
+<div class="space-y-2 p-1">
+	<span class="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+		Import file excel
+	</span>
+	<input
+		type="file"
+		class="file-input file-input-bordered w-full rounded-xl border-[#7e8b9b] bg-white text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+		accept=".xlsx"
+		onchange={onFileChange}
+		aria-label="Pilih file Excel"
+	/>
+	<p class="text-[11px] text-slate-500 dark:text-zinc-400">
+		Pilih file Excel (.xlsx) sesuai format "Unduh Template"
+	</p>
 </div>

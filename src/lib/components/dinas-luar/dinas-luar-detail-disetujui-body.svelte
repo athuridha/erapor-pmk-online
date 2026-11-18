@@ -53,7 +53,7 @@
 {#if undanganUrl && undanganName}
 	<section class="not-prose mt-4">
 		<a
-			class="border-base-200 dark:border-base-300 flex items-center justify-between gap-3 rounded-box border p-3"
+			class="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-white p-3 transition-colors hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/50"
 			href={undanganUrl}
 			target="_blank"
 			rel="noopener"
@@ -61,22 +61,27 @@
 		>
 			<span class="flex min-w-0 items-center gap-3">
 				<span
-					class="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+					class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400"
 				>
 					<Icon name="download" class="h-4 w-4" />
 				</span>
-				<span class="truncate text-sm font-medium">Undangan Kegiatan</span>
+				<span class="truncate text-xs font-semibold text-slate-900 dark:text-zinc-100"
+					>Undangan Kegiatan</span
+				>
 			</span>
-			<span class="badge badge-soft badge-primary shrink-0">Lihat Undangan</span>
+			<span
+				class="inline-flex shrink-0 items-center rounded-full border border-blue-200/80 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300"
+				>Lihat Undangan</span
+			>
 		</a>
 	</section>
 {/if}
 
-<section class="not-prose mt-6 border-t border-base-300 pt-4">
+<section class="not-prose mt-5 border-t border-slate-100 pt-4 dark:border-zinc-800">
 	<h4
-		class="text-base-content/50 mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest"
+		class="mb-3 flex items-center gap-2 text-[11px] font-semibold tracking-widest text-slate-400 uppercase dark:text-zinc-500"
 	>
-		<Icon name="download" class="h-4 w-4" />
+		<Icon name="download" class="h-3.5 w-3.5" />
 		Bukti Perjalanan Dinas
 	</h4>
 
@@ -84,7 +89,7 @@
 		<div class="space-y-2">
 			{#each pdfBukti as item (item.id)}
 				<a
-					class="border-base-200 dark:border-none bg-base-200 flex items-center justify-between gap-3 rounded-box border p-2.5"
+					class="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/70 p-2.5 transition-colors hover:bg-slate-100/70 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:bg-zinc-800"
 					href={buktiUrl(item)}
 					target="_blank"
 					rel="noopener"
@@ -92,24 +97,27 @@
 				>
 					<span class="flex min-w-0 items-center gap-3">
 						<span
-							class="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+							class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400"
 						>
 							<Icon name="book" class="h-4 w-4" />
 						</span>
-						<span class="truncate text-sm font-medium">
+						<span class="truncate text-xs font-medium text-slate-900 dark:text-zinc-100">
 							{item.namaFile.split('/').pop()}
 						</span>
 					</span>
-					<span class="badge badge-soft badge-info">PDF</span>
+					<span
+						class="inline-flex shrink-0 items-center rounded-full border border-blue-200/80 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300"
+						>PDF</span
+					>
 				</a>
 			{/each}
 		</div>
 
 		{#if fotoBukti.length > 0}
-			<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+			<div class="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
 				{#each fotoBukti as item (item.id)}
 					<a
-						class="border-base-300 group relative block overflow-hidden rounded-md border"
+						class="group relative block overflow-hidden rounded-xl border border-slate-200/80 dark:border-zinc-700"
 						href={buktiUrl(item)}
 						target="_blank"
 						rel="noopener"
@@ -121,6 +129,6 @@
 			</div>
 		{/if}
 	{:else}
-		<p class="text-base-content/60 text-sm">Belum ada bukti perjalanan dinas.</p>
+		<p class="text-xs text-slate-500 dark:text-zinc-400">Belum ada bukti perjalanan dinas.</p>
 	{/if}
 </section>

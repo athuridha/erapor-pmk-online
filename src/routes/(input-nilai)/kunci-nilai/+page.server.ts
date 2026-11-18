@@ -45,7 +45,7 @@ export const load = async ({ parent, locals }) => {
 		return {
 			id: row.id,
 			nama: row.nama,
-			pengampu: row.pengampu?.nama ?? '—',
+			pengampu: row.pengampu?.nama ?? '-',
 			terkunci: Boolean(info),
 			dikunciOleh: info?.dikunciOleh ?? null,
 			dikunciPada: info?.dikunciPada ?? null,

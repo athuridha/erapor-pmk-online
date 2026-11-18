@@ -1,7 +1,7 @@
 import type { EntryDraft, TujuanEntry } from './types';
 
 export function formatScore(value: number | null): string {
-	if (value == null || Number.isNaN(value)) return '—';
+	if (value == null || Number.isNaN(value)) return '-';
 	return value.toFixed(2);
 }
 

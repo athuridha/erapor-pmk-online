@@ -77,28 +77,30 @@
 </script>
 
 <div class="not-prose flex flex-col gap-4">
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">Unggah file undangan kegiatan perjalanan dinas</legend>
+	<div>
+		<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+			Unggah file undangan kegiatan perjalanan dinas
+		</span>
 		<input
 			type="file"
-			class="file-input bg-base-200 w-full dark:border-none"
+			class="file-input file-input-bordered w-full rounded-xl border-[#7e8b9b] bg-white text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 			accept=".pdf,application/pdf"
 			onchange={handleFileChange}
 			disabled={submitting}
 		/>
-		<p class="label-text-alt text-base-content/60">Opsional. Format PDF.</p>
-	</fieldset>
+		<p class="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Opsional. Format PDF.</p>
+	</div>
 
-	<fieldset class="fieldset">
-		<legend class="fieldset-legend">
+	<div>
+		<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
 			Maksud Perjalanan Dinas
-			<span class="text-error">*</span>
-		</legend>
+			<span class="text-red-500">*</span>
+		</span>
 		<textarea
-			class="textarea bg-base-200 w-full dark:border-none"
+			class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 			bind:value={maksud}
 			placeholder="Contoh: Menghadiri undangan rapat koordinasi, seminar, dsb."
 			rows={3}
 			disabled={submitting}></textarea>
-	</fieldset>
+	</div>
 </div>

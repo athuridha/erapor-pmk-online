@@ -62,9 +62,10 @@
 </script>
 
 <div class="not-prose flex flex-col gap-4">
-	<p class="text-base-content/70 text-sm">
-		Terapkan catatan yang sama untuk {targetCount} murid pada halaman ini. Tindakan ini akan menimpa catatan
-		sebelumnya.
+	<p class="text-xs leading-relaxed text-slate-600 dark:text-zinc-300">
+		Terapkan catatan yang sama untuk <strong class="text-slate-900 dark:text-zinc-100"
+			>{targetCount}</strong
+		> murid pada halaman ini. Tindakan ini akan menimpa catatan sebelumnya.
 	</p>
 
 	<FormEnhance
@@ -74,17 +75,17 @@
 		submitStateChange={setLoading}
 	>
 		<input type="hidden" name="muridIds" value={muridIdsPayload} />
-		<label class="flex flex-col gap-2">
-			<span class="text-sm font-semibold">Catatan</span>
+		<label class="flex flex-col gap-1.5">
+			<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Catatan</span>
 			<textarea
-				class="textarea textarea-bordered bg-base-200 dark:bg-base-300 w-full dark:border-none"
+				class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				name="catatan"
 				rows="5"
 				value={catatanValue}
 				oninput={handleInput}
 				placeholder="Tuliskan catatan yang ingin diterapkan ke semua murid"
 				spellcheck="false"></textarea>
-			<small class="text-base-content/70 text-xs">
+			<small class="text-[11px] text-slate-500 dark:text-zinc-400">
 				Biarkan kosong untuk menghapus catatan seluruh murid pada halaman ini.
 			</small>
 		</label>

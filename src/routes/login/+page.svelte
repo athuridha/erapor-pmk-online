@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import DarkMode from '$lib/components/dark-mode.svelte';
 	import FormEnhance from '$lib/components/form-enhance.svelte';
 	import Icon from '$lib/components/icon.svelte';
 
 	let showPassword = $state(false);
+	let errorMessage = $state<string | null>(null);
 	let { data } = $props();
 
 	// Brute-force lockout countdown (epoch ms when the account/IP unlocks).
@@ -75,6 +77,11 @@
 	});
 
 	function handleLoginFailure({ data: failData }: { data?: Record<string, unknown> }) {
+		const msg =
+			typeof failData?.message === 'string'
+				? failData.message
+				: 'Gagal masuk. Periksa kembali data akun Anda.';
+		errorMessage = msg;
 		const retry = failData?.retryAfterSeconds;
 		if (typeof retry === 'number' && retry > 0) {
 			const endAt = Date.now() + retry * 1000;
@@ -85,29 +92,31 @@
 </script>
 
 <!--
-  Modern login page: gradient background + glass card.
-  Theme: Emerald (SMK Pratama Mulya). Centered card on all screens.
+  Minimalist login screen aligned with the workspace design system (app-canvas-bg).
 -->
-<div class="login-bg relative flex min-h-screen w-full items-center justify-center p-4">
-	<!-- Soft background glow -->
-	<div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-		<div class="blob-a absolute -top-32 -right-32 h-96 w-96 rounded-full"></div>
-		<div class="blob-b absolute -bottom-32 -left-32 h-80 w-80 rounded-full"></div>
+<div class="app-canvas-bg relative flex min-h-screen w-full items-center justify-center p-4 sm:p-6">
+	<div class="absolute top-4 right-4 z-10">
+		<DarkMode />
 	</div>
 
-	<!-- Card -->
 	<main class="relative z-10 w-full max-w-md">
-		<div class="login-card rounded-3xl p-8 shadow-2xl">
+		<div
+			class="rounded-2xl border border-slate-200/75 bg-white p-6 shadow-[0_8px_30px_-10px_rgba(15,23,42,0.1)] sm:p-8 dark:border-zinc-800 dark:bg-zinc-900"
+		>
 			<!-- Logo + title -->
 			<div class="mb-6 flex flex-col items-center gap-3 text-center">
-				<div class="flex h-20 w-20 items-center justify-center rounded-2xl border border-emerald-200/60 bg-white p-2 shadow-lg">
+				<div
+					class="flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200/80 bg-white p-2 shadow-xs dark:border-zinc-700 dark:bg-zinc-950"
+				>
 					<img src="/logo.png" alt="Logo SMK Pratama Mulya" class="h-full w-full object-contain" />
 				</div>
 				<div>
-					<h1 class="text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-200">
+					<h1
+						class="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-zinc-100"
+					>
 						e-Rapor SMK Pratama Mulya
 					</h1>
-					<p class="mt-1 text-sm font-medium text-emerald-700/80 dark:text-emerald-400/80">
+					<p class="mt-1 text-xs font-medium text-blue-600 sm:text-sm dark:text-blue-400">
 						Sistem Administrasi dan Pelaporan Hasil Belajar
 					</p>
 				</div>
@@ -115,84 +124,128 @@
 
 			<!-- Lockout alert -->
 			{#if isLocked}
-				<div class="mb-5 flex items-center gap-3 rounded-xl border border-error/30 bg-error/10 p-3 text-error" role="alert">
-					<div class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error/20">
-						<Icon name="lock" class="h-5 w-5" />
+				<div
+					class="mb-4 flex items-center gap-3 rounded-xl border border-red-300 bg-red-50 px-3.5 py-3 text-red-900 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-200"
+					role="alert"
+				>
+					<div
+						class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"
+					>
+						<Icon name="lock" class="h-4 w-4" />
 					</div>
-					<div>
-						<p class="text-sm font-semibold">Terlalu banyak percobaan gagal</p>
-						<p class="text-xs opacity-80">
+					<div class="min-w-0">
+						<p class="text-xs font-semibold">Terlalu banyak percobaan gagal</p>
+						<p class="mt-0.5 text-xs text-red-800 dark:text-red-300">
 							Coba lagi dalam
-							<span class="font-mono font-bold">{countdownLabel}</span>
+							<span class="font-mono font-bold tabular-nums">{countdownLabel}</span>
 						</p>
 					</div>
+				</div>
+			{:else if errorMessage}
+				<div
+					class="mb-4 flex items-start gap-2.5 rounded-xl border border-red-300 bg-red-50 px-3.5 py-3 text-xs font-medium text-red-900 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-200"
+					role="alert"
+				>
+					<span aria-hidden="true" class="mt-0.5 shrink-0 text-red-700 dark:text-red-400">
+						<Icon name="warning" class="h-4 w-4" />
+					</span>
+					<span>{errorMessage}</span>
 				</div>
 			{/if}
 
 			<!-- Login form -->
-			<FormEnhance action="?/login" onfailure={handleLoginFailure}>
-				{#snippet children({ submitting, invalid })}
+			<FormEnhance
+				action="?/login"
+				showToast={false}
+				submitStateChange={(sub) => {
+					if (sub) errorMessage = null;
+				}}
+				onfailure={handleLoginFailure}
+			>
+				{#snippet children({ submitting })}
 					<div class="space-y-4">
-						<!-- Username -->
+						<!-- Identifier -->
 						<div>
-							<label class="mb-1.5 block text-sm font-medium text-base-content/80" for="username">
-								NIK Guru
+							<label
+								class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-200"
+								for="username"
+							>
+								Nama Pengguna / NIK / NIP
 							</label>
 							<div class="relative">
-								<Icon name="user" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-base-content/40" />
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="user" class="h-4 w-4" />
+								</span>
 								<input
 									type="text"
 									id="username"
 									name="username"
 									required
 									autocomplete="username"
-									class="login-input h-12 w-full rounded-xl pl-11 pr-4"
-									placeholder="Masukkan NIK"
+									oninput={() => {
+										if (errorMessage) errorMessage = null;
+									}}
+									class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3.5 pl-10 text-sm text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+									placeholder="Masukkan NIK, NIP, atau Username"
 								/>
 							</div>
 						</div>
 
 						<!-- Password -->
 						<div>
-							<label class="mb-1.5 block text-sm font-medium text-base-content/80" for="password">
+							<label
+								class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-200"
+								for="password"
+							>
 								Kata Sandi
 							</label>
 							<div class="relative">
-								<Icon name="lock" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-base-content/40" />
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-500 dark:text-zinc-400"
+								>
+									<Icon name="lock" class="h-4 w-4" />
+								</span>
 								<input
 									type={showPassword ? 'text' : 'password'}
 									id="password"
 									name="password"
 									required
 									autocomplete="current-password"
-									class="login-input h-12 w-full rounded-xl pl-11 pr-12"
+									oninput={() => {
+										if (errorMessage) errorMessage = null;
+									}}
+									class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white pr-11 pl-10 text-sm text-slate-900 transition-colors placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 									placeholder="Masukkan kata sandi"
 								/>
 								<button
 									type="button"
-									class="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-base-content/50 hover:bg-base-200/70 hover:text-base-content"
+									class="absolute top-1/2 right-1.5 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 									onclick={() => (showPassword = !showPassword)}
-									aria-label="Lihat atau sembunyikan kata sandi"
+									aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Lihat kata sandi'}
 								>
-									<Icon name={showPassword ? 'eye-off' : 'eye'} class="h-5 w-5" />
+									<Icon name={showPassword ? 'eye-off' : 'eye'} class="h-4 w-4" />
 								</button>
 							</div>
 						</div>
 
 						<!-- Submit -->
 						<button
-							class="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 font-semibold text-white shadow-lg shadow-emerald-600/25 hover:from-emerald-700 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+							class="mt-1 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 							type="submit"
-							disabled={submitting || invalid || isLocked}
+							disabled={submitting || isLocked}
 						>
 							{#if submitting}
-								<svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" />
-									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-								</svg>
-								<span>Masuk…</span>
+								<span
+									class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+									aria-hidden="true"
+								></span>
+								<span>Masuk...</span>
 							{:else}
-								<Icon name="right" class="h-5 w-5" />
+								<span aria-hidden="true"><Icon name="right" class="h-4 w-4" /></span>
 								<span>Masuk</span>
 							{/if}
 						</button>
@@ -200,68 +253,17 @@
 				{/snippet}
 			</FormEnhance>
 
+			<p
+				class="mt-5 border-t border-slate-200 pt-4 text-center text-xs leading-relaxed text-slate-600 dark:border-zinc-800 dark:text-zinc-400"
+			>
+				Admin memakai username; guru, wali kelas, dan kepala sekolah memakai NIK, NIP, atau
+				username.
+			</p>
+
 			<!-- Footer -->
-			<p class="mt-6 text-center text-xs text-base-content/50">
+			<p class="mt-3 text-center text-xs font-medium text-slate-500 dark:text-zinc-400">
 				e-Rapor SMK Pratama Mulya Karawang v{data.appVersion}
 			</p>
 		</div>
 	</main>
 </div>
-
-<style>
-	/* Full-page gradient background */
-	.login-bg {
-		background: linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 45%, #d1fae5 100%);
-	}
-	:global(.dark) .login-bg,
-	:global([data-theme='dark']) .login-bg {
-		background: linear-gradient(135deg, #064e3b 0%, #0f172a 60%, #134e4a 100%);
-	}
-
-	/* Glass card */
-	.login-card {
-		background: rgba(255, 255, 255, 0.85);
-		backdrop-filter: blur(16px);
-		border: 1px solid rgba(16, 185, 129, 0.15);
-	}
-	:global(.dark) .login-card,
-	:global([data-theme='dark']) .login-card {
-		background: rgba(15, 23, 42, 0.75);
-		border-color: rgba(16, 185, 129, 0.2);
-	}
-
-	/* Soft static glow blobs (no motion). */
-	.blob-a {
-		background: rgba(16, 185, 129, 0.15);
-		filter: blur(80px);
-	}
-	.blob-b {
-		background: rgba(45, 212, 191, 0.12);
-		filter: blur(80px);
-	}
-
-	/* Input styling */
-	.login-input {
-		background: rgba(255, 255, 255, 0.9);
-		border: 1px solid rgba(16, 185, 129, 0.2);
-		color: var(--color-base-content, #1f2937);
-		outline: none;
-	}
-	.login-input::placeholder {
-		color: rgba(107, 114, 128, 0.7);
-	}
-	.login-input:focus {
-		border-color: #059669;
-		box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-	}
-	:global([data-theme='dark']) .login-input {
-		background: rgba(30, 41, 59, 0.9);
-		border-color: rgba(16, 185, 129, 0.25);
-	}
-
-	/* Keyboard navigation */
-	.login-card :focus-visible {
-		outline: 2px solid #059669;
-		outline-offset: 2px;
-	}
-</style>

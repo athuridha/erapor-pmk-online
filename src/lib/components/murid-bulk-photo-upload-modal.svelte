@@ -160,51 +160,59 @@
 	}
 </script>
 
-<!-- Modal Dialog using DaisyUI standard pattern -->
 <dialog
 	bind:this={dialogRef}
-	class="modal"
+	class="modal bg-slate-950/45 backdrop-blur-[2px]"
 	style="z-index: 9999"
 	onclose={() => {
 		isOpen = false;
 		resetModal();
 	}}
 >
-	<div class="modal-box max-w-md">
-		<h3 class="mb-6 text-lg font-bold">Unggah Semua Foto</h3>
+	<div
+		class="modal-box max-w-md rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+	>
+		<h3 class="mb-4 border-b border-slate-100 pb-3 text-base font-bold dark:border-zinc-800">
+			Unggah Semua Foto
+		</h3>
 
 		<div class="flex flex-col gap-4">
 			<!-- Instructions -->
-			<div class="alert alert-info alert-soft">
-				<Icon name="info" />
+			<div
+				class="flex items-start gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/70 p-3.5 text-xs text-blue-950 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200"
+			>
+				<Icon name="info" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 				<div>
-					<p class="mb-3 text-sm font-semibold">Cara menyiapkan file ZIP:</p>
-					<ol class="list-inside list-decimal space-y-2 text-xs opacity-80">
+					<p class="mb-2 font-semibold">Cara menyiapkan file ZIP:</p>
+					<ol class="list-inside list-decimal space-y-1.5 text-[11px] leading-relaxed">
 						<li>
 							<strong>Ubah nama semua foto</strong> menjadi NISN murid
 							<br />
-							<span class="ml-4 text-xs opacity-70">
-								Contoh: <code class="bg-base-200 rounded px-1">3142593492.jpg</code>
+							<span class="ml-4 text-slate-600 dark:text-zinc-300">
+								Contoh:
+								<code class="rounded bg-white/80 px-1 py-0.5 font-mono text-[11px] dark:bg-zinc-800"
+									>3142593492.jpg</code
+								>
 							</span>
 						</li>
 						<li>
 							<strong>Periksa ukuran foto</strong>
 							<br />
-							<span class="ml-4 text-xs opacity-70">
+							<span class="ml-4 text-slate-600 dark:text-zinc-300">
 								Setiap foto maksimal 500KB. Kompresi jika diperlukan.
 							</span>
 						</li>
 						<li>
 							<strong>Blok semua foto</strong> (jangan dalam folder)
 							<br />
-							<span class="ml-4 text-xs opacity-70">
-								ZIP hanya berisi file JPG/PNG, tidak ada folder di dalamnya
+							<span class="ml-4 text-slate-600 dark:text-zinc-300">
+								ZIP hanya berisi file JPG/PNG, tidak ada folder di dalamnya.
 							</span>
 						</li>
 						<li>
 							<strong>Buat file ZIP</strong>
 							<br />
-							<span class="ml-4 text-xs opacity-70">
+							<span class="ml-4 text-slate-600 dark:text-zinc-300">
 								Total ukuran ZIP maksimal 5MB. Upload di sini.
 							</span>
 						</li>
@@ -214,42 +222,48 @@
 			</div>
 
 			<!-- File Input -->
-			<fieldset class="fieldset">
-				<legend class="fieldset-legend">Pilih File ZIP</legend>
+			<div>
+				<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+					Pilih File ZIP
+				</span>
 				<input
 					bind:this={uploadInputRef}
 					type="file"
 					accept=".zip,application/zip"
-					class="file-input file-input-ghost w-full"
+					class="file-input file-input-bordered w-full rounded-xl border-[#7e8b9b] bg-white text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 					onchange={handleFileChange}
 					disabled={uploadingPhotos}
 					aria-label="Unggah ZIP foto massal"
 				/>
-				<p class="label text-xs">
+				<p class="mt-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
 					File ZIP dengan nama file = NISN (max 5MB). Setiap foto max 500KB.
 				</p>
-			</fieldset>
+			</div>
 
 			<!-- File Info -->
 			{#if selectedFile}
-				<div class="alert alert-success alert-soft">
-					<Icon name="check" />
-					<div class="text-sm">
+				<div
+					class="flex items-center gap-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3.5 py-2.5 text-xs text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200"
+				>
+					<Icon name="check" class="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+					<div>
 						<p class="font-semibold">{selectedFile.name}</p>
-						<p class="opacity-80">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+						<p class="text-[11px] opacity-80">
+							{(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+						</p>
 					</div>
 				</div>
 			{/if}
 
 			<!-- Upload Progress -->
 			{#if uploadProgress}
-				<div class="flex flex-col gap-2">
-					<div class="flex justify-between text-xs">
+				<div class="flex flex-col gap-1.5">
+					<div class="flex justify-between text-xs text-slate-600 dark:text-zinc-300">
 						<span>Proses upload...</span>
 						<span>{uploadProgress.current} / {uploadProgress.total}</span>
 					</div>
 					<progress
-						class="progress w-full"
+						class="progress progress-primary w-full"
 						value={uploadProgress.current}
 						max={uploadProgress.total}
 					></progress>
@@ -258,10 +272,10 @@
 		</div>
 
 		<!-- Action Buttons -->
-		<div class="modal-action gap-2">
+		<div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-zinc-800">
 			<button
 				type="button"
-				class="btn btn-soft btn-error mr-auto"
+				class="mr-auto inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				disabled={uploadingPhotos}
 				onclick={handleBatal}
 				aria-label="Tutup modal"
@@ -270,21 +284,21 @@
 			</button>
 			<button
 				type="button"
-				class="btn btn-primary btn-soft"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
 				disabled={uploadingPhotos || !selectedFile}
 				onclick={handleSave}
 				aria-label="Unggah foto"
 			>
 				{#if uploadingPhotos}
-					<div class="loading loading-spinner loading-sm"></div>
+					<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
 				{:else}
-					<Icon name="import" />
+					<Icon name="import" class="h-3.5 w-3.5" />
 				{/if}
 				Upload
 			</button>
 		</div>
 	</div>
-	<form method="dialog" class="modal-backdrop">
+	<form method="dialog" class="modal-backdrop bg-transparent">
 		<button>close</button>
 	</form>
 </dialog>

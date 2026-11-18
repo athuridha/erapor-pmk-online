@@ -154,162 +154,204 @@
 	<title>Buku Tamu</title>
 </svelte:head>
 
-<div class="card bg-base-100 w-full sm:max-w-lg sm:shadow-xl rounded-box">
-	<div class="card-body space-y-4 p-4 sm:p-6">
-		<header class="mb-2 space-y-2 text-center">
-			<h1 class="text-2xl font-bold">Buku Tamu</h1>
-			<p class="text-base-content/70 text-sm">
-				Silakan mengisi data diri Anda untuk keperluan kunjungan.
-			</p>
-		</header>
+<div
+	class="w-full rounded-2xl border border-slate-200/75 bg-white p-5 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:max-w-lg sm:p-6 dark:border-zinc-800 dark:bg-zinc-900"
+>
+	<header class="mb-5 border-b border-slate-100 pb-4 text-center dark:border-zinc-800">
+		<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">Buku Tamu</h1>
+		<p class="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+			Silakan mengisi data diri Anda untuk keperluan kunjungan.
+		</p>
+	</header>
 
-		{#if gated}
-			<FormEnhance action="?/unlock">
-				{#snippet children({ submitting, invalid })}
-					<div class="space-y-4">
-						<div class="alert alert-info">
-							<Icon name="info" />
-							<span
-								>Halaman ini dilindungi passkey. Hubungi pihak sekolah untuk mendapatkan passkey.</span
-							>
-						</div>
-						<div class="fieldset">
-							<label class="fieldset-legend" for="passkey">Passkey</label>
-							<input
-								type="password"
-								id="passkey"
-								name="passkey"
-								required
-								minlength={4}
-								maxlength={64}
-								placeholder="Masukkan passkey"
-								class="input input-bordered dark:bg-base-200 w-full dark:border-none"
-							/>
-						</div>
-						<button class="btn btn-primary w-full" type="submit" disabled={submitting || invalid}>
-							{#if submitting}
-								<span class="loading loading-spinner loading-sm"></span>
-							{/if}
-							Masuk
-						</button>
+	{#if gated}
+		<FormEnhance action="?/unlock">
+			{#snippet children({ submitting, invalid })}
+				<div class="space-y-4">
+					<div
+						class="flex items-start gap-2.5 rounded-xl border border-blue-200/80 bg-blue-50/70 px-4 py-3 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200"
+					>
+						<Icon name="info" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+						<span class="leading-relaxed">
+							Halaman ini dilindungi passkey. Hubungi pihak sekolah untuk mendapatkan passkey.
+						</span>
 					</div>
-				{/snippet}
-			</FormEnhance>
-		{:else if submitted}
-			<div class="space-y-4 text-center">
-				<div class="alert alert-success">
-					<Icon name="success" />
-					<span>Terima kasih! Data kunjungan Anda telah tersimpan.</span>
-				</div>
-				<button type="button" class="btn btn-primary shadow-none" onclick={submitAnother}>
-					<Icon name="plus" />
-					Tulis Lagi
-				</button>
-			</div>
-		{:else}
-			<form bind:this={formEl}>
-				<div class="fieldset">
-					<label class="fieldset-legend" for="nama">Nama <span class="text-error">*</span></label>
-					<input
-						type="text"
-						id="nama"
-						name="nama"
-						required
-						placeholder="Nama lengkap"
-						class="input input-bordered dark:bg-base-200 w-full dark:border-none"
-					/>
-				</div>
-
-				<div class="fieldset">
-					<label class="fieldset-legend" for="asalInstansi"
-						>Asal / Instansi <span class="text-error">*</span></label
+					<div>
+						<label
+							class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+							for="passkey">Passkey</label
+						>
+						<input
+							type="password"
+							id="passkey"
+							name="passkey"
+							required
+							minlength={4}
+							maxlength={64}
+							placeholder="Masukkan passkey"
+							class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+						/>
+					</div>
+					<button
+						class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+						type="submit"
+						disabled={submitting || invalid}
 					>
-					<input
-						type="text"
-						id="asalInstansi"
-						name="asalInstansi"
-						required
-						placeholder="Masukkan alamat atau asal instansi"
-						class="input input-bordered dark:bg-base-200 w-full dark:border-none"
-					/>
-				</div>
-
-				<div class="fieldset">
-					<label class="fieldset-legend" for="nip">NIP (opsional)</label>
-					<input
-						type="text"
-						id="nip"
-						name="nip"
-						placeholder="Masukkan NIP jika ada"
-						class="input input-bordered dark:bg-base-200 w-full dark:border-none"
-					/>
-				</div>
-
-				<div class="fieldset">
-					<label class="fieldset-legend" for="keperluan"
-						>Keperluan <span class="text-error">*</span></label
-					>
-					<textarea
-						id="keperluan"
-						name="keperluan"
-						required
-						rows="2"
-						placeholder="Isi keperluan kunjungan"
-						class="textarea textarea-bordered dark:bg-base-200 w-full dark:border-none"></textarea>
-				</div>
-
-				<div class="fieldset">
-					<label class="fieldset-legend" for="pesanKesan">Pesan & Kesan (opsional)</label>
-					<textarea
-						id="pesanKesan"
-						name="pesanKesan"
-						rows="2"
-						placeholder="Isi pesan atau kesan Anda"
-						class="textarea textarea-bordered dark:bg-base-200 w-full dark:border-none"></textarea>
-				</div>
-
-				<div class="fieldset">
-					<label class="fieldset-legend">
-						Tanda Tangan
-						{#if hasSignature}
-							<button
-								type="button"
-								class="btn btn-soft btn-xs text-error ml-2"
-								onclick={clearSignature}
-							>
-								Hapus
-							</button>
+						{#if submitting}
+							<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
 						{/if}
-					</label>
-					<div class="border-base-300 rounded-md border overflow-hidden">
-						<canvas
-							bind:this={canvasEl}
-							class="bg-white w-full cursor-crosshair touch-none"
-							style="height: 160px;"
-							onmousedown={startDraw}
-							onmousemove={draw}
-							onmouseup={endDraw}
-							onmouseleave={endDraw}
-							ontouchstart={startDraw}
-							ontouchmove={draw}
-							ontouchend={endDraw}
-						></canvas>
-					</div>
-					<p class="fieldset-label">Tanda tangan di atas (opsional)</p>
+						Masuk
+					</button>
 				</div>
-
-				<button
-					class="btn btn-primary mt-4 w-full"
-					type="button"
-					disabled={submitting}
-					onclick={handleSubmit}
+			{/snippet}
+		</FormEnhance>
+	{:else if submitted}
+		<div class="space-y-4 text-center">
+			<div
+				class="flex items-center justify-center gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 text-xs font-medium text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200"
+			>
+				<Icon name="success" class="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+				<span>Terima kasih! Data kunjungan Anda telah tersimpan.</span>
+			</div>
+			<button
+				type="button"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+				onclick={submitAnother}
+			>
+				<Icon name="plus" class="h-3.5 w-3.5" />
+				Tulis Lagi
+			</button>
+		</div>
+	{:else}
+		<form bind:this={formEl} class="space-y-3.5">
+			<div>
+				<label
+					class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					for="nama"
 				>
-					{#if submitting}
-						<span class="loading loading-spinner loading-sm"></span>
+					Nama <span class="text-red-500">*</span>
+				</label>
+				<input
+					type="text"
+					id="nama"
+					name="nama"
+					required
+					placeholder="Nama lengkap"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+				/>
+			</div>
+
+			<div>
+				<label
+					class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					for="asalInstansi"
+				>
+					Asal / Instansi <span class="text-red-500">*</span>
+				</label>
+				<input
+					type="text"
+					id="asalInstansi"
+					name="asalInstansi"
+					required
+					placeholder="Masukkan alamat atau asal instansi"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+				/>
+			</div>
+
+			<div>
+				<label
+					class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					for="nip"
+				>
+					NIP (opsional)
+				</label>
+				<input
+					type="text"
+					id="nip"
+					name="nip"
+					placeholder="Masukkan NIP jika ada"
+					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+				/>
+			</div>
+
+			<div>
+				<label
+					class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					for="keperluan"
+				>
+					Keperluan <span class="text-red-500">*</span>
+				</label>
+				<textarea
+					id="keperluan"
+					name="keperluan"
+					required
+					rows="2"
+					placeholder="Isi keperluan kunjungan"
+					class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+				></textarea>
+			</div>
+
+			<div>
+				<label
+					class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
+					for="pesanKesan"
+				>
+					Pesan & Kesan (opsional)
+				</label>
+				<textarea
+					id="pesanKesan"
+					name="pesanKesan"
+					rows="2"
+					placeholder="Isi pesan atau kesan Anda"
+					class="w-full rounded-xl border border-[#7e8b9b] bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+				></textarea>
+			</div>
+
+			<div>
+				<div class="mb-1.5 flex items-center justify-between">
+					<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Tanda Tangan</span>
+					{#if hasSignature}
+						<button
+							type="button"
+							class="inline-flex h-6 items-center rounded-lg border border-red-200/80 bg-red-50 px-2 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300"
+							onclick={clearSignature}
+						>
+							Hapus
+						</button>
 					{/if}
-					Kirim
-				</button>
-			</form>
-		{/if}
-	</div>
+				</div>
+				<div
+					class="overflow-hidden rounded-xl border border-[#7e8b9b] bg-white dark:border-zinc-600"
+				>
+					<canvas
+						bind:this={canvasEl}
+						class="w-full cursor-crosshair touch-none bg-white"
+						style="height: 160px;"
+						onmousedown={startDraw}
+						onmousemove={draw}
+						onmouseup={endDraw}
+						onmouseleave={endDraw}
+						ontouchstart={startDraw}
+						ontouchmove={draw}
+						ontouchend={endDraw}
+					></canvas>
+				</div>
+				<p class="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">
+					Tanda tangan di atas (opsional)
+				</p>
+			</div>
+
+			<button
+				class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+				type="button"
+				disabled={submitting}
+				onclick={handleSubmit}
+			>
+				{#if submitting}
+					<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+				{/if}
+				Kirim
+			</button>
+		</form>
+	{/if}
 </div>

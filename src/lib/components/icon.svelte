@@ -24,11 +24,19 @@
 		return map;
 	})();
 
-	const icon = $derived(iconMap[name]);
+	const renderedIcon = $derived.by(() => {
+		const raw = iconMap[name];
+		if (!raw) return null;
+		if (!classes) return raw;
+		if (/<svg\b[^>]*\bclass=/.test(raw)) {
+			return raw.replace(/(<svg\b[^>]*\bclass=")([^"]*)"/, `$1${classes} $2"`);
+		}
+		return raw.replace('<svg', `<svg class="${classes}"`);
+	});
 </script>
 
-{#if icon}
-	{@html classes ? icon.replace('<svg', `<svg class="${classes}" `) : icon}
+{#if renderedIcon}
+	{@html renderedIcon}
 {:else}
 	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5"> </svg>
 {/if}

@@ -12,75 +12,83 @@
 	<title>Verifikasi Rapor - e-Rapor SMK Pratama Mulya</title>
 </svelte:head>
 
-<div class="flex min-h-screen items-center justify-center bg-base-200 p-4">
-	<div class="card bg-base-100 w-full max-w-lg rounded-box shadow-md">
-		<div class="card-body gap-4 p-6">
-			<header class="flex items-center gap-3">
-				<div
-					class="flex h-12 w-12 items-center justify-center rounded-full {valid
-						? 'bg-success/15 text-success'
-						: 'bg-error/15 text-error'}"
-				>
-					<Icon name={valid ? 'success' : 'error'} class="h-6 w-6" />
-				</div>
-				<div>
-					<h1 class="text-xl font-bold">
-						{valid ? 'Rapor ini sah' : 'Rapor tidak dapat diverifikasi'}
-					</h1>
-					<p class="text-base-content/70 text-sm">
-						{valid
-							? 'Tanda tangan digital pada QR cocok dengan data rapor.'
-							: 'QR code tidak dikenali atau sudah diubah.'}
-					</p>
-				</div>
-			</header>
+<div class="app-canvas-bg flex min-h-screen items-center justify-center p-4">
+	<div
+		class="w-full max-w-lg rounded-2xl border border-slate-200/75 bg-white p-6 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-900"
+	>
+		<header
+			class="mb-5 flex items-center gap-3.5 border-b border-slate-100 pb-4 dark:border-zinc-800"
+		>
+			<div
+				class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl {valid
+					? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
+					: 'bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400'}"
+			>
+				<Icon name={valid ? 'success' : 'error'} class="h-6 w-6" />
+			</div>
+			<div>
+				<h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+					{valid ? 'Rapor ini sah' : 'Rapor tidak dapat diverifikasi'}
+				</h1>
+				<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+					{valid
+						? 'Tanda tangan digital pada QR cocok dengan data rapor.'
+						: 'QR code tidak dikenali atau sudah diubah.'}
+				</p>
+			</div>
+		</header>
 
-			{#if payload}
-				<div class="space-y-2 text-sm">
-					<div class="flex justify-between gap-4 border-b border-base-300 pb-2">
-						<span class="text-base-content/60">Nama Murid</span>
-						<span class="text-right font-semibold">{payload.nama}</span>
-					</div>
-					<div class="flex justify-between gap-4 border-b border-base-300 pb-2">
-						<span class="text-base-content/60">Kelas</span>
-						<span class="text-right font-semibold">
-							{payload.kelas}
-							{#if payload.fase}
-								· {payload.fase}{/if}
+		{#if payload}
+			<div class="mb-4 divide-y divide-slate-100 text-xs dark:divide-zinc-800">
+				<div class="flex justify-between gap-4 py-2.5">
+					<span class="text-slate-500 dark:text-zinc-400">Nama Murid</span>
+					<span class="text-right font-semibold text-slate-900 dark:text-zinc-100"
+						>{payload.nama}</span
+					>
+				</div>
+				<div class="flex justify-between gap-4 py-2.5">
+					<span class="text-slate-500 dark:text-zinc-400">Kelas</span>
+					<span class="text-right font-semibold text-slate-900 dark:text-zinc-100">
+						{payload.kelas}
+						{#if payload.fase}
+							· {payload.fase}{/if}
+					</span>
+				</div>
+				<div class="flex justify-between gap-4 py-2.5">
+					<span class="text-slate-500 dark:text-zinc-400">Sekolah</span>
+					<span class="text-right font-semibold text-slate-900 dark:text-zinc-100"
+						>{payload.sekolah}</span
+					>
+				</div>
+				<div class="flex justify-between gap-4 py-2.5">
+					<span class="text-slate-500 dark:text-zinc-400">Semester / Tahun Ajaran</span>
+					<span class="text-right font-semibold text-slate-900 dark:text-zinc-100">
+						{payload.semester}
+						{payload.tahunAjaran ? ` · ${payload.tahunAjaran}` : ''}
+					</span>
+				</div>
+				{#if payload.periode}
+					<div class="flex justify-between gap-4 py-2.5">
+						<span class="text-slate-500 dark:text-zinc-400">Periode</span>
+						<span class="text-right font-semibold text-slate-900 dark:text-zinc-100">
+							{payload.periode === 'rts' ? 'Rapor Tengah Semester' : 'Rapor Akhir Semester'}
 						</span>
 					</div>
-					<div class="flex justify-between gap-4 border-b border-base-300 pb-2">
-						<span class="text-base-content/60">Sekolah</span>
-						<span class="text-right font-semibold">{payload.sekolah}</span>
+				{/if}
+				{#if payload.tanggal}
+					<div class="flex justify-between gap-4 py-2.5">
+						<span class="text-slate-500 dark:text-zinc-400">Tanggal Rapor</span>
+						<span class="text-right font-semibold text-slate-900 dark:text-zinc-100"
+							>{payload.tanggal}</span
+						>
 					</div>
-					<div class="flex justify-between gap-4 border-b border-base-300 pb-2">
-						<span class="text-base-content/60">Semester / Tahun Ajaran</span>
-						<span class="text-right font-semibold">
-							{payload.semester}
-							{payload.tahunAjaran ? ` · ${payload.tahunAjaran}` : ''}
-						</span>
-					</div>
-					{#if payload.periode}
-						<div class="flex justify-between gap-4 border-b border-base-300 pb-2">
-							<span class="text-base-content/60">Periode</span>
-							<span class="text-right font-semibold">
-								{payload.periode === 'rts' ? 'Rapor Tengah Semester' : 'Rapor Akhir Semester'}
-							</span>
-						</div>
-					{/if}
-					{#if payload.tanggal}
-						<div class="flex justify-between gap-4">
-							<span class="text-base-content/60">Tanggal Rapor</span>
-							<span class="text-right font-semibold">{payload.tanggal}</span>
-						</div>
-					{/if}
-				</div>
-			{/if}
+				{/if}
+			</div>
+		{/if}
 
-			<p class="text-base-content/60 text-xs">
-				Verifikasi dilakukan secara offline dari tanda tangan digital pada QR code. Data yang
-				ditampilkan berasal dari rapor itu sendiri, bukan dari database sekolah.
-			</p>
-		</div>
+		<p class="text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
+			Verifikasi dilakukan secara offline dari tanda tangan digital pada QR code. Data yang
+			ditampilkan berasal dari rapor itu sendiri, bukan dari database sekolah.
+		</p>
 	</div>
 </div>

@@ -37,9 +37,14 @@ function sanitizeRedirect(value: string | null | undefined) {
 }
 
 export async function load({ parent, url, depends, locals }) {
-	// Permission check: Allow admin, wali_kelas, wali_asuh, and users with rapor_manage
+	// Permission check: Allow admin, wali_kelas, wali_asuh, pembina_eskul, and users with input_nilai_nilai_ekstrakurikuler
 	const userType = (locals.user as { type?: string } | null)?.type;
-	if (!isAdminUser(locals.user) && userType !== 'wali_kelas' && userType !== 'wali_asuh') {
+	if (
+		!isAdminUser(locals.user) &&
+		userType !== 'wali_kelas' &&
+		userType !== 'wali_asuh' &&
+		userType !== 'pembina_eskul'
+	) {
 		authority('input_nilai_nilai_ekstrakurikuler');
 	}
 
@@ -72,27 +77,38 @@ export async function load({ parent, url, depends, locals }) {
 	}
 
 	const ekstrak = await db.query.tableEkstrakurikuler.findFirst({
-		columns: { id: true, nama: true, kelasId: true, semuaKelas: true },
+		columns: {
+			id: true,
+			nama: true,
+			kelasId: true,
+			semuaKelas: true,
+			pembinaUserId: true
+		},
 		where: eq(tableEkstrakurikuler.id, ekstrakurikulerId)
 	});
 	if (!ekstrak) {
 		throw error(404, 'Data ekstrakurikuler tidak ditemukan');
 	}
 
-	// Ambil flag nilai_kosong per murid
+	const isPembinaOwner = userType === 'pembina_eskul' && ekstrak.pembinaUserId === locals.user?.id;
+	if (userType === 'pembina_eskul' && !isPembinaOwner) {
+		throw error(403, 'Ekstrakurikuler ini bukan binaan Anda');
+	}
+
+	// Ambil flag nilai_kosong per murid (sekaligus bukti keanggotaan lintas kelas)
 	const muridEkstrak = await db.query.tableMuridEkstrakurikuler.findFirst({
-		columns: { nilaiKosong: true },
+		columns: { id: true, nilaiKosong: true },
 		where: and(
 			eq(tableMuridEkstrakurikuler.muridId, murid.id),
 			eq(tableMuridEkstrakurikuler.ekstrakurikulerId, ekstrak.id)
 		)
 	});
 
-	if (murid.kelasId !== ekstrak.kelasId && !ekstrak.semuaKelas) {
+	if (murid.kelasId !== ekstrak.kelasId && !ekstrak.semuaKelas && !muridEkstrak) {
 		throw error(403, 'Murid dan ekstrakurikuler tidak berada pada kelas yang sama');
 	}
 
-	if (kelasAktif?.id && kelasAktif.id !== murid.kelasId) {
+	if (!isPembinaOwner && kelasAktif?.id && kelasAktif.id !== murid.kelasId) {
 		throw error(403, 'Murid tidak termasuk dalam kelas aktif');
 	}
 
@@ -139,9 +155,14 @@ export async function load({ parent, url, depends, locals }) {
 
 export const actions = {
 	save: async ({ request, locals }) => {
-		// Permission check: Allow admin, wali_kelas, wali_asuh, and users with input_nilai_nilai_ekstrakurikuler
+		// Permission check: Allow admin, wali_kelas, wali_asuh, pembina_eskul, and users with input_nilai_nilai_ekstrakurikuler
 		const userType = (locals.user as { type?: string } | null)?.type;
-		if (!isAdminUser(locals.user) && userType !== 'wali_kelas' && userType !== 'wali_asuh') {
+		if (
+			!isAdminUser(locals.user) &&
+			userType !== 'wali_kelas' &&
+			userType !== 'wali_asuh' &&
+			userType !== 'pembina_eskul'
+		) {
 			authority('input_nilai_nilai_ekstrakurikuler');
 		}
 
@@ -171,14 +192,30 @@ export const actions = {
 		}
 
 		const ekstrakRecord = await db.query.tableEkstrakurikuler.findFirst({
-			columns: { id: true, kelasId: true, semuaKelas: true },
+			columns: { id: true, kelasId: true, semuaKelas: true, pembinaUserId: true },
 			where: eq(tableEkstrakurikuler.id, ekstrakurikulerId)
 		});
 		if (!ekstrakRecord) {
 			return fail(404, { fail: 'Data ekstrakurikuler tidak ditemukan' });
 		}
 
-		if (muridRecord.kelasId !== ekstrakRecord.kelasId && !ekstrakRecord.semuaKelas) {
+		if (userType === 'pembina_eskul' && ekstrakRecord.pembinaUserId !== locals.user?.id) {
+			return fail(403, { fail: 'Ekstrakurikuler ini bukan binaan Anda' });
+		}
+
+		const enrolledMember = await db.query.tableMuridEkstrakurikuler.findFirst({
+			columns: { id: true },
+			where: and(
+				eq(tableMuridEkstrakurikuler.muridId, muridRecord.id),
+				eq(tableMuridEkstrakurikuler.ekstrakurikulerId, ekstrakRecord.id)
+			)
+		});
+
+		if (
+			muridRecord.kelasId !== ekstrakRecord.kelasId &&
+			!ekstrakRecord.semuaKelas &&
+			!enrolledMember
+		) {
 			return fail(400, { fail: 'Murid dan ekstrakurikuler tidak berada pada kelas yang sama' });
 		}
 

@@ -19,6 +19,7 @@ declare global {
 				AuthUser,
 				| 'id'
 				| 'username'
+				| 'namaLengkap'
 				| 'permissions'
 				| 'type'
 				| 'operatorLevel'
@@ -65,6 +66,7 @@ declare global {
 				AuthUser,
 				| 'id'
 				| 'username'
+				| 'namaLengkap'
 				| 'permissions'
 				| 'type'
 				| 'operatorLevel'

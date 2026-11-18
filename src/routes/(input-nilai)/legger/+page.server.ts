@@ -1,201 +1,21 @@
-import db from '$lib/server/db';
-import { daftarKelasSekolah } from '$lib/admin/rekap.server';
-import { resolveKelasKonten } from '$lib/server/kelas-akses';
-import { isKeluargaAgama, isKeluargaPks, namaVarianUntukMurid } from '$lib/server/mapel-picker';
-import { agamaParentName, pksParentName } from '$lib/statics';
 import { ensureAsesmenSumatifSchema } from '$lib/server/db/ensure-asesmen-sumatif';
-import { chunk } from '$lib/server/db/chunk';
+import { kelasKontenSet, resolveKelasKonten } from '$lib/server/kelas-akses';
 import {
-	hitungNilaiAkhirSumatif,
-	loadKonfigurasiNilai,
-	type BobotSumatif
-} from '$lib/server/nilai-sumatif';
+	buildLeggerKelas,
+	buildLeggerMurid,
+	listOpsiKelasLegger,
+	type BarisLegger,
+	type KolomLegger,
+	type LeggerMuridDetail,
+	type OpsiKelasLegger,
+	type OpsiMuridLegger
+} from '$lib/server/legger';
+import { loadKonfigurasiNilai, type BobotSumatif } from '$lib/server/nilai-sumatif';
 import { error } from '@sveltejs/kit';
-import { and, asc, eq, inArray } from 'drizzle-orm';
-import { tableAsesmenSumatif, tableMataPelajaran, tableMurid } from '$lib/server/db/schema';
 import { isAdminUser, isAuthorizedUser } from '../../pengguna/permissions';
 import type { PageServerLoad } from './$types';
 
-/** One grid column: a plain mapel or the per-agama variant family (merged). */
-type KolomLegger = {
-	key: string;
-	mapelId: number | null;
-	keluarga: 'agama' | 'pks' | null;
-	nama: string;
-	singkatan: string;
-};
-
-type BarisLegger = {
-	muridId: number;
-	nama: string;
-	nisn: string;
-	/** One final-grade value per column from `kolom`. */
-	sel: (number | null)[];
-};
-
-type MapelRow = {
-	id: number;
-	kelasId: number;
-	nama: string;
-	kode: string | null;
-	urutan: number | null;
-};
-
-type MuridRow = {
-	id: number;
-	kelasId: number;
-	nama: string;
-	nisn: string;
-	agama: string | null;
-};
-
-type SumatifRow = {
-	muridId: number;
-	mataPelajaranId: number;
-	naLingkup: number | null;
-	sts: number | null;
-	sas: number | null;
-	nilaiAkhir: number | null;
-};
-
-/** D1 parameter limit is 100 per statement; both id lists are chunked to fit. */
-const SUMATIF_CHUNK = 45;
-
-async function muatSumatifKelas(muridIds: number[], mapelIds: number[]): Promise<SumatifRow[]> {
-	const rows: SumatifRow[] = [];
-	for (const muridPart of chunk(muridIds, SUMATIF_CHUNK)) {
-		for (const mapelPart of chunk(mapelIds, SUMATIF_CHUNK)) {
-			rows.push(
-				...(await db.query.tableAsesmenSumatif.findMany({
-					columns: {
-						muridId: true,
-						mataPelajaranId: true,
-						naLingkup: true,
-						sts: true,
-						sas: true,
-						nilaiAkhir: true
-					},
-					where: and(
-						inArray(tableAsesmenSumatif.muridId, muridPart),
-						inArray(tableAsesmenSumatif.mataPelajaranId, mapelPart)
-					)
-				}))
-			);
-		}
-	}
-	return rows;
-}
-
-const normText = (v: string | null | undefined) => (v ?? '').trim().toLowerCase();
-
-/** Short column header: `mata_pelajaran.kode` if set, else initials of up to 3 words. */
-function singkatanMapel(row: MapelRow) {
-	const kode = (row.kode ?? '').trim();
-	if (kode) return kode;
-	const initials = row.nama
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 3)
-		.map((word) => word.charAt(0).toUpperCase())
-		.join('');
-	return initials || row.nama.slice(0, 6);
-}
-
-function urutanMapel(a: MapelRow, b: MapelRow) {
-	return (
-		(a.urutan ?? Number.POSITIVE_INFINITY) - (b.urutan ?? Number.POSITIVE_INFINITY) ||
-		a.nama.localeCompare(b.nama, 'id')
-	);
-}
-
-/** Column list for a class: agama/PKS variants merge into a single column each. */
-function kolomMapelKelas(rows: MapelRow[]): KolomLegger[] {
-	const terurut = [...rows].sort(urutanMapel);
-	const kolom: KolomLegger[] = [];
-	for (const row of terurut) {
-		if (isKeluargaAgama(row.nama)) {
-			if (!kolom.some((k) => k.keluarga === 'agama')) {
-				kolom.push({
-					key: 'keluarga-agama',
-					mapelId: null,
-					keluarga: 'agama',
-					nama: agamaParentName,
-					singkatan: 'AGM'
-				});
-			}
-			continue;
-		}
-		if (isKeluargaPks(row.nama)) {
-			if (!kolom.some((k) => k.keluarga === 'pks')) {
-				kolom.push({
-					key: 'keluarga-pks',
-					mapelId: null,
-					keluarga: 'pks',
-					nama: pksParentName,
-					singkatan: 'PKS'
-				});
-			}
-			continue;
-		}
-		kolom.push({
-			key: `mapel-${row.id}`,
-			mapelId: row.id,
-			keluarga: null,
-			nama: row.nama,
-			singkatan: singkatanMapel(row)
-		});
-	}
-	return kolom;
-}
-
-/** Variant mapel id for one murid's religion/PKS column (falls back like rekap). */
-function idVarianMurid(
-	familyRows: MapelRow[],
-	baseName: string,
-	agama: string | null | undefined
-): number | null {
-	if (!familyRows.length) return null;
-	const target = normText(namaVarianUntukMurid(baseName, agama));
-	return (
-		familyRows.find((row) => normText(row.nama) === target)?.id ??
-		familyRows.find((row) => normText(row.nama) === normText(baseName))?.id ??
-		familyRows[0]?.id ??
-		null
-	);
-}
-
-function barisLeggerKelas(
-	muridKelas: MuridRow[],
-	kolom: KolomLegger[],
-	mapelKelas: MapelRow[],
-	nilai: Map<string, number | null>
-): BarisLegger[] {
-	const agamaRows = mapelKelas.filter((row) => isKeluargaAgama(row.nama));
-	const pksRows = mapelKelas.filter((row) => isKeluargaPks(row.nama));
-	const terpetakan = muridKelas.map((murid) => ({
-		murid,
-		agamaId: idVarianMurid(agamaRows, agamaParentName, murid.agama),
-		pksId: idVarianMurid(pksRows, pksParentName, murid.agama)
-	}));
-	return terpetakan.map(({ murid, agamaId, pksId }) => ({
-		muridId: murid.id,
-		nama: murid.nama,
-		nisn: murid.nisn,
-		sel: kolom.map((col) => {
-			const mapelId =
-				col.keluarga === 'agama' ? agamaId : col.keluarga === 'pks' ? pksId : col.mapelId;
-			if (mapelId == null) return null;
-			return nilai.get(`${murid.id}|${mapelId}`) ?? null;
-		})
-	}));
-}
-
-function hitungKelengkapan(baris: BarisLegger[], kolom: KolomLegger[]) {
-	const terisi = baris.reduce((acc, row) => acc + row.sel.filter((v) => v != null).length, 0);
-	const total = baris.length * kolom.length;
-	const persentase = total > 0 ? Math.round((terisi / total) * 100) : null;
-	return { terisi, total, persentase };
-}
+export type LeggerMode = 'murid' | 'kelas';
 
 export const load: PageServerLoad = async ({ parent, locals, url, depends }) => {
 	depends('app:legger');
@@ -205,15 +25,23 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 		error(403, 'Kamu tidak memiliki izin membuka halaman Legger.');
 	}
 
+	const rawMode = url.searchParams.get('mode');
+	const mode: LeggerMode = rawMode === 'kelas' ? 'kelas' : 'murid';
+
 	const empty = {
 		meta,
-		kelasId: null,
-		kelas: null,
-		daftarKelas: [],
-		kolom: [],
+		mode,
+		sekolahNama: locals.sekolah?.nama ?? 'Sekolah',
+		bobot: { lingkup: 60, sts: 20, sas: 20 } as BobotSumatif,
+		kelasId: null as number | null,
+		kelas: null as { id: number; nama: string; fase: string | null; semesterLabel: string } | null,
+		daftarKelas: [] as OpsiKelasLegger[],
+		daftarMuridKelas: [] as OpsiMuridLegger[],
+		muridId: null as number | null,
+		muridDetail: null as LeggerMuridDetail | null,
+		kolom: [] as KolomLegger[],
 		baris: [] as BarisLegger[],
-		rekap: { terisi: 0, total: 0, persentase: null },
-		kelengkapanKelas: []
+		rekap: { terisi: 0, total: 0, persentase: null as number | null }
 	};
 
 	const sekolahId = locals.sekolah?.id ?? null;
@@ -223,120 +51,105 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 	const user = locals.user;
 	const semesterId = academicContext?.activeSemesterId ?? null;
 
-	const paramKelasId = Number(url.searchParams.get('kelas')) || null;
-	// ?kelas= per page without touching the global kelasAktif cookie
-	let kelasDipilih = await resolveKelasKonten(
-		user ?? undefined,
-		sekolahId,
-		paramKelasId,
-		kelasAktif ? { id: kelasAktif.id, nama: kelasAktif.nama, fase: kelasAktif.fase } : null,
-		semesterId
-	);
+	const rawKelasParam = url.searchParams.get('kelas') ?? url.searchParams.get('kelas_id');
+	const paramKelasId = Number(rawKelasParam) || null;
 
-	const semuaKelas = await daftarKelasSekolah(sekolahId);
-	if (!kelasDipilih) {
-		if (isAdminUser(user)) {
-			const aktif = semuaKelas.filter((k) => k.semesterId === semesterId);
-			kelasDipilih = aktif[0] ?? semuaKelas[0] ?? null;
-		}
+	const allowedSet = isAdminUser(user) ? null : await kelasKontenSet(user, sekolahId, null);
+	if (allowedSet && kelasAktif?.id) {
+		allowedSet.add(kelasAktif.id);
 	}
 
-	const daftarKelas = [...semuaKelas];
+	const daftarKelas = await listOpsiKelasLegger(sekolahId, semesterId, allowedSet);
+
+	// Resolve selected class without touching global kelas-aktif cookie
+	let kelasDipilihMeta: OpsiKelasLegger | null = null;
+	if (paramKelasId) {
+		kelasDipilihMeta = daftarKelas.find((k) => k.id === paramKelasId) ?? null;
+	}
+	if (!kelasDipilihMeta && kelasAktif?.id) {
+		kelasDipilihMeta = daftarKelas.find((k) => k.id === kelasAktif.id) ?? null;
+	}
+	if (!kelasDipilihMeta && paramKelasId) {
+		const fallbackResolved = await resolveKelasKonten(
+			user ?? undefined,
+			sekolahId,
+			paramKelasId,
+			kelasAktif ? { id: kelasAktif.id, nama: kelasAktif.nama, fase: kelasAktif.fase } : null,
+			null
+		);
+		if (fallbackResolved) {
+			kelasDipilihMeta = daftarKelas.find((k) => k.id === fallbackResolved.id) ?? null;
+		}
+	}
+	if (!kelasDipilihMeta) {
+		kelasDipilihMeta =
+			daftarKelas.find((k) => k.isSemesterAktif && k.jumlahMurid > 0) ??
+			daftarKelas.find((k) => k.jumlahMurid > 0) ??
+			daftarKelas.find((k) => k.isSemesterAktif) ??
+			daftarKelas[0] ??
+			null;
+	}
+
+	if (!kelasDipilihMeta) {
+		return { ...empty, daftarKelas };
+	}
 
 	await ensureAsesmenSumatifSchema();
 	const konfigurasi = await loadKonfigurasiNilai(sekolahId);
-	const bobot: BobotSumatif = konfigurasi.bobotAkhir;
+	const bobot = konfigurasi.bobotAkhir;
 
-	const muridRows = await db.query.tableMurid.findMany({
-		columns: { id: true, kelasId: true, nama: true, nisn: true, agama: true },
-		where: eq(tableMurid.sekolahId, sekolahId),
-		orderBy: asc(tableMurid.nama)
-	});
-	const sekolahKelasIds = semuaKelas.map((k) => k.id);
-	const mapelRows = sekolahKelasIds.length
-		? await db.query.tableMataPelajaran.findMany({
-				columns: { id: true, kelasId: true, nama: true, kode: true, urutan: true },
-				where: inArray(tableMataPelajaran.kelasId, sekolahKelasIds)
-			})
-		: [];
+	const kelasObj = {
+		id: kelasDipilihMeta.id,
+		nama: kelasDipilihMeta.nama,
+		fase: kelasDipilihMeta.fase,
+		semesterLabel: kelasDipilihMeta.semesterLabel
+	};
 
-	const muridPerKelas = new Map<number, MuridRow[]>();
-	for (const murid of muridRows) {
-		const list = muridPerKelas.get(murid.kelasId) ?? [];
-		list.push(murid);
-		muridPerKelas.set(murid.kelasId, list);
-	}
-	const mapelPerKelas = new Map<number, MapelRow[]>();
-	for (const mapel of mapelRows) {
-		const list = mapelPerKelas.get(mapel.kelasId) ?? [];
-		list.push(mapel);
-		mapelPerKelas.set(mapel.kelasId, list);
-	}
-
-	// Copied & adjusted from nilai-akhir/rekap-keseluruhan: recompute the final
-	// grade from lingkup/STS/SAS with school weights, falling back to the stored
-	// nilaiAkhir when components are empty.
-	//
-	// D1 rejects statements with more than 100 bound parameters, and the whole
-	// school has ~700 murid x ~460 mapel rows — far too many for one `inArray`
-	// pair. Sumatif rows are per (murid, mapel) inside one class, so fetch them
-	// class by class with small id lists and merge.
-	const sumatifRows: SumatifRow[] = [];
-	if (muridRows.length && mapelRows.length) {
-		const perKelas = await Promise.all(
-			semuaKelas.map((kelas) => {
-				const muridKelasIds = (muridPerKelas.get(kelas.id) ?? []).map((m) => m.id);
-				const mapelKelasIds = (mapelPerKelas.get(kelas.id) ?? []).map((m) => m.id);
-				return muatSumatifKelas(muridKelasIds, mapelKelasIds);
-			})
-		);
-		for (const rows of perKelas) sumatifRows.push(...rows);
-	}
-
-	const nilaiSel = new Map<string, number | null>();
-	for (const row of sumatifRows) {
-		const nilai =
-			hitungNilaiAkhirSumatif({ naLingkup: row.naLingkup, sts: row.sts, sas: row.sas }, bobot) ??
-			row.nilaiAkhir;
-		nilaiSel.set(`${row.muridId}|${row.mataPelajaranId}`, nilai ?? null);
-	}
-
-	const kelengkapanKelas = semuaKelas.map((kelas) => {
-		const kolomKelas = kolomMapelKelas(mapelPerKelas.get(kelas.id) ?? []);
-		const muridKelas = muridPerKelas.get(kelas.id) ?? [];
-		const baris = barisLeggerKelas(
-			muridKelas,
-			kolomKelas,
-			mapelPerKelas.get(kelas.id) ?? [],
-			nilaiSel
-		);
+	if (mode === 'kelas') {
+		const kelasGrid = await buildLeggerKelas({
+			sekolahId,
+			kelasId: kelasDipilihMeta.id,
+			bobot
+		});
 		return {
-			kelasId: kelas.id,
-			nama: kelas.nama,
-			...hitungKelengkapan(baris, kolomKelas)
+			...empty,
+			mode,
+			bobot,
+			kelasId: kelasDipilihMeta.id,
+			kelas: kelasObj,
+			daftarKelas,
+			daftarMuridKelas: kelasGrid.muridRows.map((m) => ({
+				id: m.id,
+				nama: m.nama,
+				nis: m.nis,
+				nisn: m.nisn,
+				agama: m.agama
+			})),
+			kolom: kelasGrid.kolom,
+			baris: kelasGrid.baris,
+			rekap: kelasGrid.rekap
 		};
+	}
+
+	const paramMuridId = Number(url.searchParams.get('murid')) || null;
+	const waktuParam = url.searchParams.get('waktu');
+	const { daftarMuridKelas, detail } = await buildLeggerMurid({
+		sekolahId,
+		kelasId: kelasDipilihMeta.id,
+		muridId: paramMuridId,
+		waktuParam,
+		bobot
 	});
-
-	if (!kelasDipilih) return { ...empty, daftarKelas, kelengkapanKelas };
-
-	const mapelSel = mapelPerKelas.get(kelasDipilih.id) ?? [];
-	const kolom = kolomMapelKelas(mapelSel);
-	const baris = barisLeggerKelas(
-		muridPerKelas.get(kelasDipilih.id) ?? [],
-		kolom,
-		mapelSel,
-		nilaiSel
-	);
-	const rekap = hitungKelengkapan(baris, kolom);
 
 	return {
-		meta,
-		kelasId: kelasDipilih.id,
-		kelas: { id: kelasDipilih.id, nama: kelasDipilih.nama, fase: kelasDipilih.fase ?? null },
+		...empty,
+		mode,
+		bobot,
+		kelasId: kelasDipilihMeta.id,
+		kelas: kelasObj,
 		daftarKelas,
-		kolom,
-		baris,
-		rekap,
-		kelengkapanKelas
+		daftarMuridKelas,
+		muridId: detail?.murid.id ?? null,
+		muridDetail: detail
 	};
 };

@@ -146,22 +146,25 @@
 	}
 </script>
 
-<!-- Modal Dialog using DaisyUI standard pattern -->
-<dialog bind:this={dialogRef} class="modal">
-	<div class="modal-box">
-		<h3 class="mb-6 text-lg font-bold">Unggah Foto {muridNama}</h3>
+<dialog bind:this={dialogRef} class="modal bg-slate-950/45 backdrop-blur-[2px]">
+	<div
+		class="modal-box max-w-lg rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+	>
+		<h3 class="mb-4 border-b border-slate-100 pb-3 text-base font-bold dark:border-zinc-800">
+			Unggah Foto {muridNama}
+		</h3>
 
 		<div class="flex flex-col gap-4 sm:flex-row">
 			<!-- Preview -->
 			<div class="flex justify-center">
 				<div
-					class="bg-base-200 flex aspect-3/4 w-48 items-center justify-center overflow-hidden rounded-lg"
+					class="flex aspect-3/4 w-44 items-center justify-center overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50 dark:border-zinc-800 dark:bg-zinc-800/60"
 				>
 					{#if previewUrl}
 						<img src={previewUrl} alt="Preview" class="h-full w-full object-cover" />
 					{:else}
-						<div class="p-4 text-center opacity-60">
-							<Icon name="image" class="mx-auto text-4xl" />
+						<div class="p-4 text-center text-slate-400 dark:text-zinc-500">
+							<Icon name="image" class="mx-auto h-8 w-8" />
 							<p class="mt-2 text-xs">Foto belum dipilih</p>
 						</div>
 					{/if}
@@ -169,28 +172,30 @@
 			</div>
 
 			<!-- File Input -->
-			<div>
-				<fieldset class="fieldset">
-					<legend class="fieldset-legend">Pilih File</legend>
-					<input
-						bind:this={uploadInputRef}
-						type="file"
-						accept="image/png,image/jpeg"
-						class="file-input file-input-ghost w-full"
-						onchange={handleFileChange}
-						disabled={uploadingFoto}
-						aria-label="Unggah foto murid"
-					/>
-					<p class="label">JPG atau PNG. Ukuran maks 500KB</p>
-				</fieldset>
+			<div class="flex-1">
+				<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+					Pilih File
+				</span>
+				<input
+					bind:this={uploadInputRef}
+					type="file"
+					accept="image/png,image/jpeg"
+					class="file-input file-input-bordered w-full rounded-xl border-[#7e8b9b] bg-white text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					onchange={handleFileChange}
+					disabled={uploadingFoto}
+					aria-label="Unggah foto murid"
+				/>
+				<p class="mt-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
+					JPG atau PNG. Ukuran maks 500KB.
+				</p>
 			</div>
 		</div>
 
 		<!-- Action Buttons -->
-		<div class="modal-action gap-2">
+		<div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-zinc-800">
 			<button
 				type="button"
-				class="btn btn-soft btn-error"
+				class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				disabled={uploadingFoto}
 				onclick={handleBatal}
 				aria-label="Tutup modal"
@@ -199,25 +204,24 @@
 			</button>
 			<button
 				type="button"
-				class="btn btn-primary"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
 				onclick={handleSave}
 				disabled={uploadingFoto || !selectedFile}
 				aria-label="Simpan foto"
 			>
 				{#if uploadingFoto}
-					<span class="loading loading-spinner"></span>
+					<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
 				{:else}
-					<Icon name="save" />
+					<Icon name="save" class="h-3.5 w-3.5" />
 				{/if}
 				Simpan
 			</button>
 		</div>
 	</div>
 
-	<!-- Close backdrop using standard DaisyUI pattern -->
 	<button
 		type="button"
-		class="modal-backdrop"
+		class="modal-backdrop bg-transparent"
 		onclick={closeModal}
 		aria-label="Close modal on backdrop click"
 	></button>

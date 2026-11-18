@@ -13,9 +13,10 @@ export const POST: RequestHandler = async ({ cookies, locals }) => {
 	// Hapus sesi impersonasi bila sedang dalam mode switch akun
 	cookies.delete(cookieNames.IMPERSONATOR_SESSION, { path: '/', secure });
 
-	// Hapus pilihan kelas supaya login berikutnya mulai dari default
-	// (admin & kepala sekolah -> mode "Semua Kelas").
+	// Hapus pilihan kelas & modul supaya login berikutnya mulai dari default role masing-masing
+	// (admin & kepala sekolah -> mode "Semua Kelas" & Mode Admin).
 	cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure });
+	cookies.delete(cookieNames.ACTIVE_MODUL, { path: '/', secure });
 
 	throw redirect(303, '/login');
 };

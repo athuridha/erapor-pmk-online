@@ -60,7 +60,7 @@
 
 {#if open && murid && kokurikuler}
 	<div
-		class="modal modal-open"
+		class="modal modal-open bg-slate-950/45 backdrop-blur-[2px]"
 		role="dialog"
 		aria-modal="true"
 		tabindex="-1"
@@ -68,22 +68,27 @@
 			if (event.key === 'Escape') onClose();
 		}}
 	>
-		<div class="modal-box max-w-2xl">
-			<h3 class="text-lg font-bold">Nilai Kokurikuler</h3>
-			<p class="text-base-content/80 mt-1 text-sm">
-				Ananda <span class="font-semibold">{murid.nama}</span>
-			</p>
-			<label class="form-control mt-4 overflow-hidden">
-				<span class="label-text text-base-content/80 text-sm font-semibold">
+		<div
+			class="modal-box max-w-2xl rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		>
+			<div class="border-b border-slate-100 pb-3 dark:border-zinc-800">
+				<h3 class="text-base font-bold text-slate-900 dark:text-zinc-100">Nilai Kokurikuler</h3>
+				<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+					Ananda <span class="font-semibold text-slate-800 dark:text-zinc-200">{murid.nama}</span>
+				</p>
+			</div>
+
+			<div class="mt-4 overflow-hidden">
+				<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
 					Kegiatan Kokurikuler
 				</span>
 				<select
-					class="select bg-base-200 dark:bg-base-300 mt-2 w-full truncate dark:border-none"
+					class="h-9 w-full truncate rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
 					disabled
 				>
 					<option>{capitalizeSentence(kokurikuler.tujuan)}</option>
 				</select>
-			</label>
+			</div>
 
 			<FormEnhance
 				id="form-nilai-kokurikuler"
@@ -97,46 +102,58 @@
 
 				<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
 					{#each kokurikuler.dimensi as dim (dim.key)}
-						<fieldset class="fieldset">
-							<legend class="fieldset-legend text-base-content/80 text-sm font-semibold">
+						<div>
+							<span class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300">
 								{dim.label}
-							</legend>
-							<select
-								class="select bg-base-200 dark:bg-base-300 w-full truncate dark:border-none"
-								name={`nilai.${dim.key}`}
-								aria-label={`Nilai ${dim.label}`}
-							>
-								<option value="">Belum dinilai</option>
-								{#each kategoriOptions as option (option.value)}
-									<option value={option.value}>{option.label}</option>
-								{/each}
-							</select>
-						</fieldset>
+							</span>
+							<div class="relative flex items-center">
+								<select
+									class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+									name={`nilai.${dim.key}`}
+									aria-label={`Nilai ${dim.label}`}
+								>
+									<option value="">Belum dinilai</option>
+									{#each kategoriOptions as option (option.value)}
+										<option value={option.value}>{option.label}</option>
+									{/each}
+								</select>
+								<span
+									aria-hidden="true"
+									class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
+								>
+									<Icon name="down" class="h-3.5 w-3.5" />
+								</span>
+							</div>
+						</div>
 					{/each}
 				</div>
 			</FormEnhance>
 
-			<div class="modal-action mt-6 flex gap-2">
-				<button type="button" class="btn btn-soft shadow-none" onclick={onClose}>
-					<Icon name="close" />
+			<div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-zinc-800">
+				<button
+					type="button"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+					onclick={onClose}
+				>
+					<Icon name="close" class="h-3.5 w-3.5" />
 					Batal
 				</button>
 				<button
-					class="btn btn-primary shadow-none"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
 					type="submit"
 					form="form-nilai-kokurikuler"
 					disabled={submitting}
 				>
 					{#if submitting}
-						<span class="loading loading-spinner"></span>
+						<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
 					{:else}
-						<Icon name="save" />
+						<Icon name="save" class="h-3.5 w-3.5" />
 					{/if}
 					Simpan
 				</button>
 			</div>
 		</div>
-		<form method="dialog" class="modal-backdrop">
+		<form method="dialog" class="modal-backdrop bg-transparent">
 			<button
 				type="submit"
 				onclick={(event) => {
