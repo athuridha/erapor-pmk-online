@@ -131,6 +131,7 @@
 	let previewLoading = $state(false);
 	let previewError = $state('');
 	let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+	let previewAbort: AbortController | null = null;
 
 	const daftarMurid = $derived(data.daftarMurid ?? []);
 	// svelte-ignore state_referenced_locally
@@ -154,6 +155,9 @@
 
 	async function refreshPreview() {
 		if (!muridId) return;
+		previewAbort?.abort();
+		const controller = new AbortController();
+		previewAbort = controller;
 		previewLoading = true;
 		previewError = '';
 		try {
@@ -165,19 +169,23 @@
 					muridId,
 					template: templatePiagam,
 					custom: form
-				})
+				}),
+				signal: controller.signal
 			});
+			if (controller.signal.aborted) return;
 			if (!res.ok) {
 				previewError = 'Preview gagal dimuat.';
 				return;
 			}
 			const payload = await res.json();
+			if (controller.signal.aborted) return;
 			previewHtml = payload.html ?? '';
 		} catch (error) {
+			if (controller.signal.aborted) return;
 			console.error('Preview kustomisasi gagal', error);
 			previewError = 'Preview gagal dimuat.';
 		} finally {
-			previewLoading = false;
+			if (previewAbort === controller) previewLoading = false;
 		}
 	}
 

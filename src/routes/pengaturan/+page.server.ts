@@ -11,83 +11,17 @@ import { eq } from 'drizzle-orm';
 import { getAppVersion } from '$lib/server/app-info';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { networkInterfaces } from 'node:os';
-import { isIPv4 } from 'node:net';
-import { updateEnvFile, envFilePath } from '$lib/server/env-file';
-import {
-	copyFileIfMissing,
-	copyMissingFiles,
-	effectiveDataRoot,
-	ensureStorageTree,
-	getStorageInfo,
-	launcherDataRootConfigPath,
-	normalizeStoragePath,
-	writeLauncherDataRootOverride
-} from '$lib/server/storage-settings';
-import { dataRoot, soundsDir, uploadsDir } from '$lib/server/data-dirs';
 import { isAdminUser, isFullAdmin } from '../pengguna/permissions';
 import { validatePasswordStrength } from '$lib/server/password-policy';
 import { isBukuTamuPasskeySet, setBukuTamuPasskey } from '$lib/server/buku-tamu-pass';
 import {
 	clearAiSettings,
-	clearUserAiSettings,
 	DEFAULT_AI_MODEL,
 	getStoredAiSettings,
-	getStoredUserAiSettings,
 	maskApiKey,
-	saveAiSettings,
-	saveUserAiSettings
+	saveAiSettings
 } from '$lib/server/ai';
-import path from 'node:path';
 import { isAuthorizedUser } from '../pengguna/permissions';
-
-interface AddressEntry {
-	name: string;
-	address: string;
-	raw: string;
-}
-
-function collectIpv4Addresses(port: string | null): AddressEntry[] {
-	const interfaces = networkInterfaces();
-	const collected: AddressEntry[] = [];
-
-	for (const [name, entries] of Object.entries(interfaces)) {
-		for (const entry of entries ?? []) {
-			if (entry.family === 'IPv4' && !entry.internal && entry.address) {
-				const address = port ? `${entry.address}:${port}` : entry.address;
-				collected.push({ name, address, raw: entry.address });
-			}
-		}
-	}
-
-	return collected;
-}
-
-function filterAddresses(entries: AddressEntry[], currentHost: string) {
-	const hostIpv4 = isIPv4(currentHost) ? currentHost : null;
-
-	if (hostIpv4) {
-		const primaryInterfaces = new Set(
-			entries.filter((entry) => entry.raw === hostIpv4).map((entry) => entry.name)
-		);
-		if (primaryInterfaces.size > 0) {
-			const filtered = entries.filter((entry) => primaryInterfaces.has(entry.name));
-			if (filtered.length) return filtered;
-		}
-	}
-
-	const privateRanges = entries.filter((entry) => {
-		if (entry.raw.startsWith('192.168.')) return true;
-		const match172 = entry.raw.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./);
-		return Boolean(match172);
-	});
-
-	if (privateRanges.length) {
-		return privateRanges;
-	}
-
-	return entries;
-}
 
 export const load: PageServerLoad = async ({ url, locals }) => {
 	const meta: PageMeta = {
@@ -95,28 +29,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		description: 'Pengaturan Aplikasi Administrasi Guru Terpadu'
 	};
 
-	const secure = locals.requestIsSecure ?? url.protocol === 'https:';
-	const protocol = secure ? 'https:' : 'http:';
-	const port = url.port || (secure ? '443' : '80');
-	const collected = collectIpv4Addresses(port);
-	const filtered = filterAddresses(collected, url.hostname);
-	const seen = new Set<string>();
-	const addresses = filtered
-		.map((entry) => entry.address)
-		.filter((address) => {
-			if (seen.has(address)) return false;
-			seen.add(address);
-			return true;
-		});
-
-	const hostWithPort = url.port ? url.host : `${url.hostname}:${port}`;
-	if (isIPv4(url.hostname) && hostWithPort && !addresses.includes(hostWithPort)) {
-		addresses.push(hostWithPort);
-	}
-
 	const isAdmin = isFullAdmin(locals.user);
 	const isAdminOrKepalaSekolah = isAdminUser(locals.user);
-	const storage = isAdmin ? await getStorageInfo() : undefined;
 
 	const forcePasswordChange =
 		url.searchParams.get('force') === '1' || Boolean(locals.user?.mustChangePassword);
@@ -126,32 +40,19 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 			? await isBukuTamuPasskeySet(locals.sekolah.id)
 			: false;
 
-	const storedGemini = isAdminOrKepalaSekolah ? await getStoredAiSettings() : null;
-
-	// Personal AI key card is offered to every non-admin role (guru mapel,
-	// wali kelas, wali asuh) — each user must bring their own key.
-	const isGuruOrUser =
-		locals.user?.type === 'user' ||
-		locals.user?.type === 'wali_kelas' ||
-		locals.user?.type === 'wali_asuh';
-	const storedPersonalAi =
-		isGuruOrUser && locals.user ? await getStoredUserAiSettings(locals.user.id) : null;
+	const storedGemini = isAdmin ? await getStoredAiSettings() : null;
 
 	return {
 		meta,
-		appAddresses: addresses,
-		protocol,
 		appVersion: getAppVersion(),
 		// Server-side role flags: admin-only cards below must never render for a
 		// non-admin account even if client state is stale (B7).
 		canManageUsers: isAdminOrKepalaSekolah,
 		canManageDatabase: isAdminOrKepalaSekolah,
 		canManageBukuTamu: isAdminOrKepalaSekolah,
-		canManageAi: isAdminOrKepalaSekolah,
-		canViewStorage: isAdmin,
+		canManageAi: isAdmin,
 		canCheckUpdate: isAuthorizedUser(['app_check_update'], locals.user),
 		canManageUpdate: isAdminUser(locals.user),
-		storage,
 		forcePasswordChange,
 		bukuTamuPasskeySet,
 		gemini: {
@@ -160,13 +61,6 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 			envKeyPresent: Boolean(process.env.GEMINI_API_KEY),
 			model: storedGemini?.model ?? DEFAULT_AI_MODEL,
 			baseUrl: storedGemini?.baseUrl ?? ''
-		},
-		personalAi: {
-			keySet: Boolean(storedPersonalAi),
-			maskedKey: storedPersonalAi ? maskApiKey(storedPersonalAi.apiKey) : null,
-			model: storedPersonalAi?.model ?? '',
-			baseUrl: storedPersonalAi?.baseUrl ?? '',
-			envKeyPresent: Boolean(process.env.GEMINI_API_KEY)
 		}
 	};
 };
@@ -287,106 +181,6 @@ export const actions: Actions = {
 
 		return { message: 'Username berhasil diperbarui.' };
 	},
-	'update-storage-location': async ({ request, locals }) => {
-		if (!isFullAdmin(locals.user)) {
-			return fail(403, { message: 'Hanya admin yang dapat mengubah lokasi data.' });
-		}
-
-		const form = await request.formData();
-		const rawRoot = String(form.get('dataRoot') ?? '').trim();
-		const rawUploads = String(form.get('uploads') ?? '').trim();
-		const rawSounds = String(form.get('sounds') ?? '').trim();
-
-		let rootValue: string | null;
-		let uploadsValue: string | null;
-		let soundsValue: string | null;
-		try {
-			rootValue = normalizeStoragePath(rawRoot);
-			uploadsValue = normalizeStoragePath(rawUploads);
-			soundsValue = normalizeStoragePath(rawSounds);
-		} catch (err) {
-			return fail(400, { message: (err as Error).message });
-		}
-
-		const oldRoot = dataRoot();
-		const oldUploads = uploadsDir();
-		const oldSounds = soundsDir();
-		// On Windows the launcher (start-erapor-pmk.mjs) forces the root on every
-		// start, so the setting is persisted there instead of `.env`; uploads and
-		// sounds still go through `.env`. On other platforms ERAPOR_PMK_DATA_DIR is
-		// written to `.env` directly.
-		const launcherManagedRoot =
-			process.platform === 'win32' && Boolean(process.env.ERAPOR_PMK_DATA_DIR);
-		const newRoot = effectiveDataRoot(rootValue);
-		const newUploads = uploadsValue ?? path.join(newRoot, 'uploads');
-		const newSounds = soundsValue ?? path.join(newRoot, 'sounds');
-
-		try {
-			const envUpdates: Record<string, string> = {
-				photo: uploadsValue ? `file:${uploadsValue}` : '',
-				sounds: soundsValue ? `file:${soundsValue}` : ''
-			};
-			if (!launcherManagedRoot) {
-				envUpdates.ERAPOR_PMK_DATA_DIR = rootValue ?? '';
-			}
-			// Persist `.env` first — on launcher installs `{app}\.env` is the more
-			// likely write to fail — then the launcher override, so a failure never
-			// leaves the root pointing at a location whose data was not copied.
-			await updateEnvFile(envUpdates);
-		} catch {
-			return fail(500, {
-				message: `Gagal menulis file .env (${envFilePath()}). Periksa izin tulis lalu coba lagi.`
-			});
-		}
-
-		if (launcherManagedRoot) {
-			try {
-				await writeLauncherDataRootOverride(rootValue);
-			} catch {
-				return fail(500, {
-					message: `Gagal menulis konfigurasi peluncur (${launcherDataRootConfigPath()}). Periksa izin tulis lalu coba lagi.`
-				});
-			}
-		}
-
-		// Move existing data to the new locations (only files missing in the
-		// target are copied; nothing is deleted). Uses the values the new .env
-		// will resolve to after restart, so relative DB paths keep working.
-		let copied = 0;
-		try {
-			// Create the standard tree (ttd/{guru,tamu}, dinas-luar, uploads,
-			// sounds) so picking a root once is enough.
-			await ensureStorageTree(newRoot, newUploads, newSounds);
-			if (oldRoot !== newRoot) {
-				copied += await copyMissingFiles(path.join(oldRoot, 'ttd'), path.join(newRoot, 'ttd'));
-				copied += await copyMissingFiles(
-					path.join(oldRoot, 'dinas-luar'),
-					path.join(newRoot, 'dinas-luar')
-				);
-				copied += await copyFileIfMissing(
-					path.join(oldRoot, 'csrf-origins.txt'),
-					path.join(newRoot, 'csrf-origins.txt')
-				);
-			}
-			if (oldUploads !== newUploads) {
-				copied += await copyMissingFiles(oldUploads, newUploads);
-			}
-			if (oldSounds !== newSounds) {
-				copied += await copyMissingFiles(oldSounds, newSounds);
-			}
-		} catch (err) {
-			return fail(500, {
-				message: launcherManagedRoot
-					? `Lokasi tersimpan di konfigurasi peluncur, tetapi sebagian file gagal dipindahkan: ${(err as Error).message}`
-					: `Lokasi tersimpan di .env, tetapi sebagian file gagal dipindahkan: ${(err as Error).message}`
-			});
-		}
-
-		const movedNote = copied > 0 ? ` ${copied} file dipindahkan ke lokasi baru.` : '';
-		return {
-			message: `Lokasi data berhasil disimpan.${movedNote} Mulai ulang server agar perubahan berlaku.`
-		};
-	},
 	'buku-tamu-passkey': async ({ request, locals }) => {
 		if (!isAdminUser(locals.user)) {
 			return fail(403, {
@@ -430,9 +224,9 @@ export const actions: Actions = {
 		return { message: 'Passkey buku tamu berhasil dinonaktifkan.' };
 	},
 	'save-gemini-key': async ({ request, locals }) => {
-		if (!isAdminUser(locals.user)) {
+		if (!isFullAdmin(locals.user)) {
 			return fail(403, {
-				message: 'Hanya admin/kepala sekolah yang dapat mengatur kunci API.'
+				message: 'Hanya admin yang dapat mengatur integrasi AI.'
 			});
 		}
 
@@ -455,56 +249,13 @@ export const actions: Actions = {
 		return { message: 'Kunci API berhasil disimpan.' };
 	},
 	'clear-gemini-key': async ({ locals }) => {
-		if (!isAdminUser(locals.user)) {
+		if (!isFullAdmin(locals.user)) {
 			return fail(403, {
-				message: 'Hanya admin/kepala sekolah yang dapat mengatur kunci API.'
+				message: 'Hanya admin yang dapat mengatur integrasi AI.'
 			});
 		}
 
 		await clearAiSettings();
 		return { message: 'Kunci API berhasil dihapus.' };
-	},
-	'save-my-ai-key': async ({ request, locals }) => {
-		if (
-			locals.user?.type !== 'user' &&
-			locals.user?.type !== 'wali_kelas' &&
-			locals.user?.type !== 'wali_asuh'
-		) {
-			return fail(403, {
-				message:
-					'Hanya guru (guru mapel/wali kelas/wali asuh) yang dapat mengatur kunci API pribadi.'
-			});
-		}
-		const userId = locals.user.id;
-
-		const form = await request.formData();
-		const apiKey = String(form.get('apiKey') ?? '').trim();
-		if (!apiKey) {
-			return fail(400, { message: 'Kunci API wajib diisi.' });
-		}
-		if (apiKey.length < 10) {
-			return fail(400, { message: 'Kunci API tidak valid.' });
-		}
-
-		const model = String(form.get('model') ?? '').trim();
-		const baseUrl = String(form.get('baseUrl') ?? '').trim();
-
-		await saveUserAiSettings(userId, apiKey, model, baseUrl);
-		return { message: 'Kunci API pribadi berhasil disimpan.' };
-	},
-	'clear-my-ai-key': async ({ locals }) => {
-		if (
-			locals.user?.type !== 'user' &&
-			locals.user?.type !== 'wali_kelas' &&
-			locals.user?.type !== 'wali_asuh'
-		) {
-			return fail(403, {
-				message:
-					'Hanya guru (guru mapel/wali kelas/wali asuh) yang dapat mengatur kunci API pribadi.'
-			});
-		}
-
-		await clearUserAiSettings(locals.user.id);
-		return { message: 'Kunci API pribadi berhasil dihapus.' };
 	}
 };

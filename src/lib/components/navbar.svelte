@@ -3,7 +3,6 @@
 	import { page } from '$app/state';
 	import DarkMode from '$lib/components/dark-mode.svelte';
 	import Icon from '$lib/components/icon.svelte';
-	import KelasPickerLokal from '$lib/components/kelas-picker-lokal.svelte';
 	import TasksModal from '$lib/components/modal-tasks.svelte';
 	import SwitchUserModal from '$lib/components/switch-user-modal.svelte';
 	import { toast } from '$lib/components/toast.svelte';
@@ -47,25 +46,10 @@
 	const kelasAktif = $derived(page.data.kelasAktif ?? null);
 	const user = $derived(page.data.user ?? null);
 	const impersonator = $derived(page.data.impersonator ?? null);
-	const kelasPicker = $derived(
-		(page.data as { kelasPicker?: { tampil?: boolean; pilihan?: unknown[] } | null })
-			?.kelasPicker ?? null
-	);
-	const hasLocalPicker = $derived(
-		Boolean(kelasPicker?.tampil && (kelasPicker.pilihan?.length ?? 0) > 0)
-	);
-
 	const canSwitchUser = $derived.by(() => {
 		if (!user) return false;
 		if (impersonator) return true;
 		return isAdminUser(user as UserLike);
-	});
-
-	const bolehSemuaKelas = $derived(isAdminUser(user as UserLike | null));
-
-	const kelasAktifLabel = $derived.by(() => {
-		if (!kelasAktif) return bolehSemuaKelas ? 'Semua Kelas' : 'Pilih Kelas';
-		return kelasAktif.fase ? `${kelasAktif.nama} - ${kelasAktif.fase}` : kelasAktif.nama;
 	});
 
 	const displayUserName = $derived.by(() => {
@@ -253,17 +237,17 @@
 			type="button"
 			onclick={onOpenMobileMenu}
 			aria-label="Buka menu navigasi"
-			class="app-mobile-menu-trigger inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+			class="app-mobile-menu-trigger inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white p-0 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 sm:h-9 sm:w-auto sm:gap-1.5 sm:px-2.5 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 		>
 			<span aria-hidden="true"><Icon name="menu-drawer" class="h-4 w-4" /></span>
-			<span>Menu</span>
+			<span class="hidden sm:inline">Menu</span>
 		</button>
 
 		<div class="flex min-w-0 flex-1 items-center gap-1.5">
 			{#if currentTitle && page.url.pathname !== '/'}
 				<button
 					type="button"
-					class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-zinc-800 {isFavorited
+					class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors max-sm:hidden hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-zinc-800 {isFavorited
 						? 'text-blue-600 dark:text-blue-400'
 						: 'text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100'}"
 					title={isFavorited ? 'Hapus halaman dari favorit' : 'Simpan halaman ke favorit'}
@@ -287,30 +271,11 @@
 		</div>
 
 		<div class="flex shrink-0 items-center gap-1 sm:gap-1.5">
-			<!-- Unified Class Context on >= sm (hidden on / where hero banner shows active class) -->
-			<div class="hidden items-center sm:flex">
-				{#if hasLocalPicker}
-					<KelasPickerLokal variant="navbar" />
-				{:else if (kelasAktif || bolehSemuaKelas) && page.url.pathname !== '/'}
-					<div
-						class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-2xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-						title={kelasAktif
-							? `Konteks kelas aktif: ${kelasAktifLabel}`
-							: 'Mode Semua Kelas aktif'}
-					>
-						<span aria-hidden="true" class="text-blue-600 dark:text-blue-400">
-							<Icon name="users" class="h-3.5 w-3.5" />
-						</span>
-						<span class="max-w-[140px] truncate">{kelasAktifLabel}</span>
-					</div>
-				{/if}
-			</div>
-
 			<!-- Menu Favorit Popover -->
 			<div class="navbar-favorites-dropdown relative">
 				<button
 					type="button"
-					class="inline-flex h-8.5 items-center gap-1.5 rounded-xl px-2 text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+					class="inline-flex h-10 items-center gap-1.5 rounded-xl px-2 text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 sm:h-8.5 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 					title="Menu Favorit"
 					aria-label="Menu Favorit"
 					aria-expanded={favoritesOpen}
@@ -331,7 +296,7 @@
 					<span class="hidden text-xs font-medium md:inline">Favorit</span>
 					{#if favoritesStore.items.length > 0}
 						<span
-							class="rounded-md bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700 tabular-nums dark:bg-blue-950/60 dark:text-blue-300"
+							class="hidden rounded-md bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700 tabular-nums sm:inline dark:bg-blue-950/60 dark:text-blue-300"
 						>
 							{favoritesStore.items.length}
 						</span>
@@ -413,7 +378,7 @@
 			<!-- Daftar Tugas Slide-over Drawer Trigger -->
 			<button
 				type="button"
-				class="inline-flex h-8.5 items-center gap-1.5 rounded-xl px-2 text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+				class="inline-flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 max-sm:justify-center max-sm:px-0 sm:h-8.5 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 				aria-label="Buka panel daftar tugas"
 				title="Daftar Tugas"
 				onclick={() => tasksModalRef?.open()}
@@ -425,7 +390,7 @@
 			<!-- Petunjuk Penggunaan (Desktop) -->
 			<button
 				type="button"
-				class="hidden h-8.5 w-8.5 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 sm:inline-flex dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+				class="hidden h-8.5 w-8.5 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 sm:inline-flex"
 				aria-label="Petunjuk penggunaan"
 				title="Petunjuk penggunaan"
 				onclick={showHelp}
@@ -443,7 +408,7 @@
 					title="Profil dan akun pengguna"
 					aria-label="Menu akun pengguna"
 					aria-expanded={profileDropdownOpen}
-					class="inline-flex h-8.5 items-center gap-2 rounded-full border border-slate-200/80 bg-white pr-2.5 pl-1 shadow-2xs transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700/70"
+					class="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200/80 bg-white pr-2.5 pl-1 shadow-2xs transition-colors hover:bg-slate-50 sm:h-8.5 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700/70"
 					onclick={(e) => {
 						e.stopPropagation();
 						favoritesOpen = false;
@@ -583,14 +548,6 @@
 			</div>
 		</div>
 	</div>
-
-	{#if hasLocalPicker}
-		<div
-			class="border-t border-slate-200 bg-slate-50 px-3 py-2 sm:hidden dark:border-zinc-800 dark:bg-zinc-800/60"
-		>
-			<KelasPickerLokal variant="mobile" />
-		</div>
-	{/if}
 </header>
 
 <TasksModal bind:this={tasksModalRef} />

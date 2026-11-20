@@ -1,5 +1,5 @@
 import db from '$lib/server/db';
-import { tableAiSettings, tableAuthUser } from '$lib/server/db/schema';
+import { tableAiSettings } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { isIP } from 'node:net';
 
@@ -34,32 +34,14 @@ export async function getStoredAiSettings(): Promise<AiSettings | null> {
 export const ADMIN_TYPES = ['admin', 'kepala_sekolah'];
 
 /**
- * Resolve the active AI settings for a user. Admins/kepala sekolah use the
- * school-wide key (DB, then GEMINI_API_KEY env for development). All other
- * roles must set their own personal key; the school key is never exposed to
- * them. Personal model/baseUrl fall back to the school-wide values, then
- * defaults — only the API key is per-user.
+ * Resolve the active AI settings. Only the admin-configured school-wide key is
+ * used; every role shares it (no per-user keys anymore).
  */
-export async function getAiSettings(user: {
+export async function getAiSettings(_user?: {
 	id: number;
 	type: string;
 }): Promise<AiSettings | null> {
-	if (ADMIN_TYPES.includes(user.type)) {
-		return getGlobalAiSettings();
-	}
-	const fallback = await getGlobalAiSettings();
-	const row = await db.query.tableAuthUser.findFirst({
-		where: eq(tableAuthUser.id, user.id),
-		columns: { aiApiKey: true, aiModel: true, aiBaseUrl: true }
-	});
-	if (row?.aiApiKey) {
-		return {
-			apiKey: row.aiApiKey,
-			model: row.aiModel || fallback?.model || DEFAULT_AI_MODEL,
-			baseUrl: row.aiBaseUrl || fallback?.baseUrl || 'https://generativelanguage.googleapis.com'
-		};
-	}
-	return null;
+	return getGlobalAiSettings();
 }
 
 async function getGlobalAiSettings(): Promise<AiSettings | null> {
@@ -80,46 +62,6 @@ async function getGlobalAiSettings(): Promise<AiSettings | null> {
 		};
 	}
 	return null;
-}
-
-/** Read the raw per-user AI settings (no resolution/fallback). Used by /pengaturan. */
-export async function getStoredUserAiSettings(
-	userId: number
-): Promise<{ apiKey: string; model: string; baseUrl: string } | null> {
-	const user = await db.query.tableAuthUser.findFirst({
-		where: eq(tableAuthUser.id, userId),
-		columns: { aiApiKey: true, aiModel: true, aiBaseUrl: true }
-	});
-	if (!user?.aiApiKey) return null;
-	return {
-		apiKey: user.aiApiKey,
-		model: user.aiModel ?? '',
-		baseUrl: user.aiBaseUrl ?? ''
-	};
-}
-
-export async function saveUserAiSettings(
-	userId: number,
-	apiKey: string,
-	model: string,
-	baseUrl: string
-) {
-	await db
-		.update(tableAuthUser)
-		.set({
-			aiApiKey: apiKey,
-			aiModel: model.trim() || null,
-			aiBaseUrl: baseUrl.trim() || null,
-			updatedAt: new Date().toISOString()
-		})
-		.where(eq(tableAuthUser.id, userId));
-}
-
-export async function clearUserAiSettings(userId: number) {
-	await db
-		.update(tableAuthUser)
-		.set({ aiApiKey: null, aiModel: null, aiBaseUrl: null, updatedAt: new Date().toISOString() })
-		.where(eq(tableAuthUser.id, userId));
 }
 
 export async function saveAiSettings(apiKey: string, model: string, baseUrl?: string) {

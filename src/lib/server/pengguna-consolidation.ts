@@ -133,7 +133,7 @@ export async function ensurePegawaiConsolidation() {
 					// Now safe to delete duplicate pegawai
 					await db.delete(tablePegawai).where(eq(tablePegawai.id, dup.id));
 					console.warn(
-						`[pengguna:consolidate] ✓ Deleted duplicate pegawai: ID=${dup.id}, nama="${nameKey}"`
+						`[pengguna:consolidate] Deleted duplicate pegawai: ID=${dup.id}, nama="${nameKey}"`
 					);
 				}
 			}
@@ -182,7 +182,7 @@ export async function ensurePegawaiConsolidation() {
 					);
 					await db.delete(tableAuthUser).where(eq(tableAuthUser.id, dup.id));
 					console.warn(
-						`[pengguna:consolidate] ✓ Deleted duplicate wali_kelas account: ID=${dup.id}, username="${dup.username}", pegawaiId=${pegawaiId}`
+						`[pengguna:consolidate] Deleted duplicate wali_kelas account: ID=${dup.id}, username="${dup.username}", pegawaiId=${pegawaiId}`
 					);
 				}
 			}

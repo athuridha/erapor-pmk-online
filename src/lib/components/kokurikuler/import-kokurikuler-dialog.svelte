@@ -9,10 +9,12 @@
 	} from '$lib/statics';
 
 	interface Props {
+		kelasId?: number | null;
+		kelasOptions?: Array<{ id: number; nama: string; fase: string | null }>;
 		onSuccess?: () => void;
 	}
 
-	let { onSuccess }: Props = $props();
+	let { kelasId = null, kelasOptions = [], onSuccess }: Props = $props();
 
 	const fileInputId = 'import-kokurikuler-file';
 	let fileInput: HTMLInputElement | null = null;
@@ -100,6 +102,25 @@
 		}}
 	>
 		{#snippet children({ submitting })}
+			{#if kelasId != null}
+				<input type="hidden" name="kelasId" value={kelasId} />
+			{:else}
+				<label class="mb-3 block space-y-1.5">
+					<span class="block text-xs font-medium text-slate-700 dark:text-zinc-300">Kelas</span>
+					<select
+						name="kelasId"
+						required
+						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						disabled={submitting}
+					>
+						<option value="" disabled selected>Pilih kelas...</option>
+						{#each kelasOptions as kelas (kelas.id)}
+							<option value={kelas.id}>{kelas.nama}{kelas.fase ? ` - ${kelas.fase}` : ''}</option>
+						{/each}
+					</select>
+				</label>
+			{/if}
+
 			<fieldset class="space-y-1.5">
 				<label class="block text-xs font-medium text-slate-700 dark:text-zinc-300" for={fileInputId}
 					>Pilih File Excel (.xlsx)</label

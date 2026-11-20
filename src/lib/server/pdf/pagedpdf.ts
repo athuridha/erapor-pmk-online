@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer-core';
+import puppeteer, { type Page } from 'puppeteer-core';
 import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { isVercel } from '$lib/server/vercel-env';
@@ -173,11 +173,7 @@ function cacheSet(key: string, pdf: Uint8Array): void {
 	pdfCache.set(key, { pdf, createdAt: Date.now() });
 }
 
-export async function renderPDF(html: string): Promise<Uint8Array> {
-	const key = htmlHash(html);
-	const cached = cacheGet(key);
-	if (cached) return cached;
-
+async function openPaginatedPage(html: string): Promise<Page> {
 	const b = await getBrowser();
 	const page = await b.newPage();
 
@@ -359,6 +355,20 @@ Paged.registerHandlers(RepeatTableHeadersHandler);
 		await page.waitForSelector('.pagedjs_pages', { timeout: 30000 });
 		await page.evaluate(() => document.fonts.ready);
 
+		return page;
+	} catch (error) {
+		await page.close();
+		throw error;
+	}
+}
+
+export async function renderPDF(html: string): Promise<Uint8Array> {
+	const key = htmlHash(html);
+	const cached = cacheGet(key);
+	if (cached) return cached;
+
+	const page = await openPaginatedPage(html);
+	try {
 		const pdf = await page.pdf({
 			printBackground: true,
 			preferCSSPageSize: true,
@@ -371,6 +381,67 @@ Paged.registerHandlers(RepeatTableHeadersHandler);
 	} finally {
 		await page.close();
 	}
+}
+
+const previewCache = new Map<string, string>();
+const PREVIEW_CACHE_MAX = 8;
+
+/**
+ * HTML hasil paginasi PagedJS yang sama dengan jalur PDF, untuk live preview.
+ * Script dibuang (polyfill ikut terbuang), lalu ditambah skrip fit-to-width.
+ */
+export async function renderPaginatedHTML(html: string): Promise<string> {
+	const key = htmlHash(html);
+	const cached = previewCache.get(key);
+	if (cached) return cached;
+
+	const page = await openPaginatedPage(html);
+	let result: string;
+	try {
+		result = await page.evaluate(() => {
+			document.querySelectorAll('script').forEach((el) => el.remove());
+
+			const style = document.createElement('style');
+			style.textContent = `
+				html, body { background: #e2e8f0; }
+				body { margin: 0; padding: 16px 0; }
+				.pagedjs_pages { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+				.pagedjs_page { box-shadow: 0 2px 12px rgba(15, 23, 42, 0.18); }
+			`;
+			document.head.appendChild(style);
+
+			const fit = document.createElement('script');
+			fit.textContent = `(function () {
+				function fit() {
+					var pages = document.querySelector('.pagedjs_pages');
+					if (!pages) return;
+					pages.style.zoom = '1';
+					var pageEl = pages.querySelector('.pagedjs_page');
+					if (!pageEl) return;
+					var width = pageEl.getBoundingClientRect().width;
+					var available = document.documentElement.clientWidth - 32;
+					if (width > 0 && available > 0) pages.style.zoom = String(Math.min(1, available / width));
+				}
+				fit();
+				window.addEventListener('resize', fit);
+			})();`;
+			document.body.appendChild(fit);
+
+			const doctype = document.doctype
+				? new XMLSerializer().serializeToString(document.doctype)
+				: '<!DOCTYPE html>';
+			return `${doctype} ${document.documentElement.outerHTML}`;
+		});
+	} finally {
+		await page.close();
+	}
+
+	if (previewCache.size >= PREVIEW_CACHE_MAX) {
+		const oldest = previewCache.keys().next().value;
+		if (oldest) previewCache.delete(oldest);
+	}
+	previewCache.set(key, result);
+	return result;
 }
 
 /**

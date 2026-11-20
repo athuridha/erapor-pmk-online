@@ -8,11 +8,17 @@ import { writeAoaToBuffer } from '$lib/utils/excel.js';
 import { asc, eq } from 'drizzle-orm';
 import { cookieNames } from '$lib/utils';
 
-export async function GET({ cookies }) {
+export async function GET({ cookies, url }) {
+	const kelasIdParam = Number(url.searchParams.get('kelas_id'));
 	const kelasIdCookie = cookies.get(cookieNames.ACTIVE_KELAS_ID) || null;
-	const kelasId = kelasIdCookie ? Number(kelasIdCookie) : null;
+	const kelasId =
+		Number.isInteger(kelasIdParam) && kelasIdParam > 0
+			? kelasIdParam
+			: kelasIdCookie && kelasIdCookie !== 'semua'
+				? Number(kelasIdCookie)
+				: null;
 	if (!kelasId || !Number.isFinite(kelasId)) {
-		return new Response(JSON.stringify({ fail: 'Pilih kelas aktif terlebih dahulu.' }), {
+		return new Response(JSON.stringify({ fail: 'Pilih satu kelas terlebih dahulu.' }), {
 			status: 400
 		});
 	}

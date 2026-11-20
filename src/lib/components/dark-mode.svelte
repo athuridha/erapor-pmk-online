@@ -65,7 +65,7 @@
 	aria-pressed={isDark}
 	title={isDark ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'}
 	aria-label={isDark ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'}
-	class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+	class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 sm:h-9 sm:w-9 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 >
 	<span aria-hidden="true">
 		<Icon name={isDark ? 'sun' : 'moon'} class="h-4 w-4" />

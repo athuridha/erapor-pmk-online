@@ -14,6 +14,7 @@
 		title,
 		action,
 		kelasId,
+		kelasOptions,
 		tableReady,
 		canManage,
 		isEditMode,
@@ -32,6 +33,7 @@
 		title: string;
 		action: string;
 		kelasId: number | null;
+		kelasOptions: Array<{ id: number; nama: string; fase: string | null }>;
 		tableReady: boolean;
 		canManage: boolean;
 		isEditMode: boolean;
@@ -48,6 +50,11 @@
 	}>();
 
 	let submitting = $state(false);
+	let kelasDipilih = $state<number[]>([]);
+
+	$effect(() => {
+		if (open) kelasDipilih = [];
+	});
 </script>
 
 {#if open}
@@ -85,7 +92,39 @@
 					onsuccess={onSuccess}
 					submitStateChange={(v) => (submitting = v)}
 				>
-					<input name="kelasId" value={kelasId ?? ''} hidden />
+					{#if kelasId == null}
+						<fieldset class="space-y-1.5">
+							<legend class="block text-xs font-medium text-slate-700 dark:text-zinc-300">
+								Kelas (bisa lebih dari satu)
+							</legend>
+							<div
+								class="max-h-44 space-y-0.5 overflow-y-auto rounded-xl border border-[#7e8b9b] bg-white p-1.5 dark:border-zinc-600 dark:bg-zinc-900"
+							>
+								{#each kelasOptions as kelas (kelas.id)}
+									<label
+										class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
+									>
+										<input
+											type="checkbox"
+											class="checkbox checkbox-sm"
+											name="kelasId"
+											value={kelas.id}
+											bind:group={kelasDipilih}
+											disabled={!canManage}
+										/>
+										<span class="truncate">{kelas.nama}{kelas.fase ? ` - ${kelas.fase}` : ''}</span>
+									</label>
+								{/each}
+							</div>
+							{#if kelasDipilih.length > 1}
+								<p class="text-[11px] text-slate-500 dark:text-zinc-400">
+									Kode pada kelas berikutnya otomatis diberi akhiran -2, -3, dst.
+								</p>
+							{/if}
+						</fieldset>
+					{:else}
+						<input name="kelasId" value={kelasId} hidden />
+					{/if}
 					{#if isEditMode && modalItem}
 						<input name="id" value={modalItem.id} hidden />
 					{/if}
@@ -164,7 +203,7 @@
 					form="form-kokurikuler"
 					disabled={submitting ||
 						!selectedDimensions.length ||
-						!kelasId ||
+						(!kelasId && !kelasDipilih.length) ||
 						!tableReady ||
 						!kodeInput.trim() ||
 						!tujuanInput.trim()}

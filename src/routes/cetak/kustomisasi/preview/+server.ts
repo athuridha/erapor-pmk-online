@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { renderHTMLWithCustom } from '$lib/server/pdf/generate';
+import { renderPaginatedHTML } from '$lib/server/pdf/pagedpdf';
 import { normalisasiCustomCetak, type CustomCetak } from '$lib/server/cetak/customization';
 import { getBiodataPreviewPayload } from '../../biodata/preview-data';
 import { getCoverPreviewPayload } from '../../cover/preview-data';
@@ -66,5 +67,7 @@ export const POST = (async ({ request, locals, url }) => {
 		html = renderHTMLWithCustom('rapor', payload.raporData as never, undefined, custom);
 	}
 
-	return json({ html });
+	// Pakai pipeline yang sama dengan PDF (PagedJS + print media) agar preview
+	// benar-benar sama dengan hasil cetak, bukan perkiraan.
+	return json({ html: await renderPaginatedHTML(html) });
 }) satisfies RequestHandler;

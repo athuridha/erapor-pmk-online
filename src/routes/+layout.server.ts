@@ -56,11 +56,23 @@ const KELAS_PICKER_PREFIXES = [
 	'/cetak',
 	'/murid',
 	'/poin-siswa',
-	'/rpm'
+	'/rpm',
+	'/legger',
+	'/p5',
+	'/prakerin',
+	'/kunci-nilai'
 ];
 
 /** Sub-path yang sudah punya pemilih/filter kelas sendiri → jangan gandakan. */
 const KELAS_PICKER_EXCLUDE_PREFIXES = ['/nilai-akhir/impor-nilai', '/murid/form'];
+
+/** Halaman yang sudah menyediakan pemilih/filter kelasnya sendiri di konten. */
+const KELAS_PICKER_SENDIRI_PREFIXES = [
+	'/asesmen-formatif',
+	'/asesmen-sumatif',
+	'/kokurikuler',
+	'/intrakurikuler'
+];
 
 type WaliKelasUser = {
 	type?: string;
@@ -130,7 +142,6 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	}
 
 	depends('app:presensi-guru-enabled');
-	const secure = locals.requestIsSecure ?? false;
 
 	const meta: PageMeta = {
 		title:
@@ -327,7 +338,6 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	}
 
 	const kelasIdParam = url.searchParams.get('kelas_id');
-	const kelasCookie = cookies.get(cookieNames.ACTIVE_KELAS_ID);
 
 	const pathKonteks = url.pathname.replace(/\/+$/, '') || '/';
 	const diKelasKonten = KELAS_KONTEN_PREFIXES.some(
@@ -340,6 +350,18 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		!KELAS_PICKER_EXCLUDE_PREFIXES.some(
 			(p) => pathKonteks === p || pathKonteks.startsWith(p + '/')
 		);
+	// Pemilih kelas di konten juga dipakai halaman kelas-konten, kecuali yang
+	// sudah punya pemilih sendiri.
+	const punyaPickerSendiri = KELAS_PICKER_SENDIRI_PREFIXES.some(
+		(p) => pathKonteks === p || pathKonteks.startsWith(p + '/')
+	);
+	const butuhKelasPicker =
+		sekolah?.id != null &&
+		user != null &&
+		!punyaPickerSendiri &&
+		(pakaiPickerLokal || diKelasKonten);
+	// Halaman yang punya tampilan "Semua Kelas" sendiri (ekstrakurikuler umum).
+	const halamanSemuaKelas = pathKonteks === '/ekstrakurikuler';
 
 	// Override kelas lewat URL untuk pemilih kelas lokal: `?kelas_id=` (utama)
 	// atau `?kelas=` (alias pada halaman non-kelas-konten). Override ini TIDAK
@@ -357,12 +379,10 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		} else if (kelasIdParam != null) {
 			const kelasIdNumber = Number(kelasIdParam);
 			pilihSemuaKelas = !Number.isInteger(kelasIdNumber);
-		} else if (user?.type === 'admin') {
-			// Akun Admin defaultnya selalu Semua Kelas kecuali ada param kelas_id eksplisit
-			pilihSemuaKelas = true;
 		} else {
-			// Tanpa param: pakai cookie kalau ada, selain itu default semua kelas.
-			pilihSemuaKelas = kelasCookie == null || kelasCookie === SEMUA_KELAS;
+			// Halaman dengan pemilih kelas memakai satu kelas agar fiturnya langsung
+			// jalan; halaman tanpa pemilih (mis. kokurikuler) menampilkan semua kelas.
+			pilihSemuaKelas = !butuhKelasPicker || halamanSemuaKelas;
 		}
 	}
 
@@ -441,33 +461,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		}
 	}
 
-	// 2) Fall back to cookie candidate
-	if (!kelasAktif && kelasCookie && !pilihSemuaKelas) {
-		const kelasCookieNumber = Number(kelasCookie);
-		if (Number.isInteger(kelasCookieNumber)) {
-			kelasAktif = daftarKelas.find((kelas) => kelas.id === kelasCookieNumber) ?? null;
-
-			// For wali_kelas: verify cookie kelas is allowed (same rules as param)
-			if (kelasAktif && user) {
-				const userWithType = user as WaliKelasUser;
-				if (userWithType.type === 'wali_kelas' && Number.isInteger(Number(userWithType.kelasId))) {
-					try {
-						const isAllowed = await verifyWaliKelasAccess(
-							userWithType,
-							kelasCookieNumber,
-							resolvedWaliOwnKelasIds,
-							sekolah!.id,
-							allUserAllowedKelasIds
-						);
-						if (!isAllowed) kelasAktif = null;
-					} catch (err) {
-						console.warn('[layout] cookie kelas verification failed', err);
-						kelasAktif = null;
-					}
-				}
-			}
-		}
-	}
+	// 2) Tanpa parameter: pakai default per peran di bawah (tanpa cookie global).
 
 	// 3) If no cookie match, and the user is in Modul Wali-Kelas, prefer their assigned homeroom kelas
 	if (!kelasAktif && user && !pilihSemuaKelas && activeModul === 'wali_kelas') {
@@ -545,13 +539,6 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 			const candidate = daftarKelas.find((k) => teachingKelasIds.has(k.id));
 			if (candidate) {
 				kelasAktif = candidate;
-				cookies.set(cookieNames.ACTIVE_KELAS_ID, String(candidate.id), {
-					path: '/',
-					maxAge: 31536000,
-					sameSite: 'lax',
-					httpOnly: false,
-					secure
-				});
 			}
 		}
 	}
@@ -619,26 +606,23 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 			!!u.mataPelajaranId || (hasMapelRecords ? hasMapelRecords.length > 0 : false);
 	}
 
-	// Set cookies AFTER all async operations are complete. Saat ada override URL
-	// (pemilih kelas lokal), cookie sengaja TIDAK diubah agar konteks kelas
-	// halaman lain tetap seperti sebelumnya.
-	if (kelasOverrideRaw == null) {
-		if (pilihSemuaKelas) {
-			// Mode "di luar kelas": simpan penanda agar tetap aktif di halaman lain.
-			cookies.set(cookieNames.ACTIVE_KELAS_ID, SEMUA_KELAS, {
-				path: '/',
-				httpOnly: false,
-				secure
-			});
-		} else if (kelasAktif) {
-			cookies.set(cookieNames.ACTIVE_KELAS_ID, String(kelasAktif.id), {
-				path: '/',
-				httpOnly: false,
-				secure
-			});
-		} else {
-			cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure });
-		}
+	// Kompatibilitas: aksi impor/ekspor lama masih membaca cookie ini. Cookie
+	// TIDAK lagi dipakai untuk menentukan konteks halaman (itu hanya `?kelas_id`).
+	const secureCookie = locals.requestIsSecure ?? url.protocol === 'https:';
+	if (pilihSemuaKelas) {
+		cookies.set(cookieNames.ACTIVE_KELAS_ID, SEMUA_KELAS, {
+			path: '/',
+			httpOnly: false,
+			secure: secureCookie
+		});
+	} else if (kelasAktif) {
+		cookies.set(cookieNames.ACTIVE_KELAS_ID, String(kelasAktif.id), {
+			path: '/',
+			httpOnly: false,
+			secure: secureCookie
+		});
+	} else {
+		cookies.delete(cookieNames.ACTIVE_KELAS_ID, { path: '/', secure: secureCookie });
 	}
 
 	const setupNeeded = false;
@@ -719,9 +703,9 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		}
 	}
 	const kelasPicker = {
-		tampil: pakaiPickerLokal && pilihanPicker.length > 0,
+		tampil: butuhKelasPicker && pilihanPicker.length > 0,
 		currentId: kelasAktif?.id ?? null,
-		bolehSemuaKelas,
+		bolehSemuaKelas: bolehSemuaKelas && (!butuhKelasPicker || halamanSemuaKelas),
 		pilihan: pilihanPicker.map(({ id, nama, fase }) => ({ id, nama, fase }))
 	};
 

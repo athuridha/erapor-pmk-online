@@ -227,7 +227,7 @@
 				</p>
 			{:else}
 				<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
-					Pilih kelas di navbar untuk melihat mata pelajaran intrakurikuler.
+					Pilih kelas pada pemilih kelas untuk melihat mata pelajaran intrakurikuler.
 				</p>
 			{/if}
 		</div>

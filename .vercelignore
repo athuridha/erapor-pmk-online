@@ -1,0 +1,5 @@
+.agents
+.claude
+strix_runs
+.tmp-*
+lint-audit.log

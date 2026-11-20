@@ -704,12 +704,16 @@
 			>
 				<Icon name="warning" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
 				<span>
-					Fitur AI belum aktif. Setel kunci API {isAdminUserState ? '' : 'pribadi Anda '}di
-					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- deep link to settings page AI key card -->
-					<a
-						class="font-semibold underline hover:text-amber-700 dark:hover:text-amber-100"
-						href="/pengaturan#ai-key">Pengaturan</a
-					>.
+					{#if isAdminUserState}
+						Fitur AI belum aktif. Setel kunci API di
+						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- deep link to settings page AI key card -->
+						<a
+							class="font-semibold underline hover:text-amber-700 dark:hover:text-amber-100"
+							href="/pengaturan#ai-key">Pengaturan</a
+						>.
+					{:else}
+						Fitur AI belum aktif. Hubungi admin sekolah untuk mengaktifkannya.
+					{/if}
 				</span>
 			</div>
 		{/if}

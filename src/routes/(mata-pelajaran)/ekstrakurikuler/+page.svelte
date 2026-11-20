@@ -310,7 +310,7 @@
 				</p>
 			{:else}
 				<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
-					Pilih kelas di navbar untuk melihat ekstrakurikuler.
+					Pilih kelas pada pemilih kelas untuk melihat ekstrakurikuler.
 				</p>
 			{/if}
 		</div>
@@ -445,7 +445,7 @@
 			class="mt-4 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
 		>
 			<Icon name="info" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-			<span>Silakan pilih kelas di navbar sebelum menambah ekstrakurikuler.</span>
+			<span>Silakan pilih kelas pada pemilih kelas sebelum menambah ekstrakurikuler.</span>
 		</div>
 	{/if}
 

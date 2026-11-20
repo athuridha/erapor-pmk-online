@@ -1,11 +1,12 @@
 import db from '$lib/server/db';
-import { isWaliOfKelas, isWaliKelasAccount, ownedKelasIdSet } from '$lib/server/kelas-akses';
-import { tableKelas, tableKokurikuler, tableMataPelajaran, tablePegawai } from '$lib/server/db/schema';
+import { isWaliKelasAccount, kelasKontenSet, ownedKelasIdSet } from '$lib/server/kelas-akses';
+import { tableKokurikuler, tableMataPelajaran, tablePegawai } from '$lib/server/db/schema';
 import { profilPelajarPancasilaDimensions, type DimensiProfilLulusanKey } from '$lib/statics';
 import { fail } from '@sveltejs/kit';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { readBufferToAoA } from '$lib/utils/excel.js';
 import { cookieNames } from '$lib/utils';
+import { isAdminUser } from '../../pengguna/permissions';
 
 const DIMENSION_KEY_SET = new Set<DimensiProfilLulusanKey>(
 	profilPelajarPancasilaDimensions.map((dimension) => dimension.key)
@@ -32,20 +33,36 @@ function isTableMissingError(error: unknown) {
 	);
 }
 
-export async function load({ depends, parent }) {
+export async function load({ depends, parent, locals, url }) {
 	depends('app:kokurikuler');
-	const { kelasAktif } = await parent();
+	const { kelasAktif, daftarKelas, sekolah } = await parent();
 	const kelasId = kelasAktif?.id ?? null;
+	// Admin di mode "Semua Kelas" tidak punya kelas aktif; tampilkan semua kelas
+	// dan biarkan kelas dipilih langsung di form.
+	const semuaKelas = kelasId == null && isAdminUser(locals.user);
+	// Filter multi-kelas khusus halaman ini (tidak memakai `kelas_id` global).
+	const filterKelasIds = (url.searchParams.get('kelas_ids') ?? '')
+		.split(',')
+		.map((value) => Number(value))
+		.filter((id) => Number.isInteger(id) && id > 0);
 
-	let kokurikulerRaw: Awaited<ReturnType<typeof db.query.tableKokurikuler.findMany>> = [];
+	const ambilKokurikuler = () =>
+		db.query.tableKokurikuler.findMany({
+			where: semuaKelas
+				? filterKelasIds.length
+					? inArray(tableKokurikuler.kelasId, filterKelasIds)
+					: undefined
+				: eq(tableKokurikuler.kelasId, kelasId ?? -1),
+			with: { kelas: { columns: { id: true, nama: true, fase: true } } },
+			orderBy: asc(tableKokurikuler.createdAt)
+		});
+
+	let kokurikulerRaw: Awaited<ReturnType<typeof ambilKokurikuler>> = [];
 	let tableReady = true;
 
-	if (kelasId) {
+	if (kelasId || semuaKelas) {
 		try {
-			kokurikulerRaw = await db.query.tableKokurikuler.findMany({
-				where: eq(tableKokurikuler.kelasId, kelasId),
-				orderBy: asc(tableKokurikuler.createdAt)
-			});
+			kokurikulerRaw = await ambilKokurikuler();
 		} catch (error) {
 			if (isTableMissingError(error)) {
 				tableReady = false;
@@ -64,7 +81,7 @@ export async function load({ depends, parent }) {
 		jenis: string;
 		pengampu: string | null;
 	}> = [];
-	if (kelasId) {
+	if (kelasId || semuaKelas) {
 		const rows = await db
 			.select({
 				id: tableMataPelajaran.id,
@@ -76,17 +93,34 @@ export async function load({ depends, parent }) {
 			.from(tableMataPelajaran)
 			.leftJoin(tablePegawai, eq(tableMataPelajaran.pengampuId, tablePegawai.id))
 			.where(
-				and(
-					eq(tableMataPelajaran.kelasId, kelasId),
-					eq(tableMataPelajaran.kategori, 'kokurikuler')
-				)
+				semuaKelas
+					? eq(tableMataPelajaran.kategori, 'kokurikuler')
+					: and(
+							eq(tableMataPelajaran.kelasId, kelasId ?? -1),
+							eq(tableMataPelajaran.kategori, 'kokurikuler')
+						)
 			)
 			.orderBy(asc(tableMataPelajaran.nama));
 		mapelKokurikuler = rows;
 	}
 
+	// Kelas yang boleh dikelola akun ini: semua kelas untuk admin, kelas wali +
+	// kelas diampu untuk guru/wali kelas.
+	let bisaKelolaKelasIds: number[] = [];
+	if (locals.user) {
+		if (isAdminUser(locals.user)) {
+			bisaKelolaKelasIds = (daftarKelas ?? []).map((kelas) => kelas.id);
+		} else if (sekolah?.id) {
+			bisaKelolaKelasIds = [...(await kelasKontenSet(locals.user, sekolah.id, null))];
+		}
+	}
+
 	return {
 		kelasId,
+		semuaKelas,
+		filterKelasIds: semuaKelas ? filterKelasIds : [],
+		bisaKelolaKelasIds,
+		kelasOptions: (daftarKelas ?? []).map(({ id, nama, fase }) => ({ id, nama, fase })),
 		tableReady,
 		mapelKokurikuler,
 		kokurikuler: kokurikulerRaw.map((item) => ({
@@ -113,36 +147,33 @@ export async function load({ depends, parent }) {
 export const actions = {
 	add: async ({ request, locals }) => {
 		const formData = await request.formData();
-		const kelasIdRaw = formData.get('kelasId');
 		const kode = formData.get('kode')?.toString().trim().toUpperCase() ?? '';
 		const tujuan = formData.get('kokurikuler')?.toString().trim() ?? '';
 		const dimensi = sanitizeDimensions(
 			formData.getAll('dimensi').map((value) => value?.toString() ?? '')
 		);
+		const kelasIds = [
+			...new Set(
+				formData
+					.getAll('kelasId')
+					.map((value) => Number(value))
+					.filter((id) => Number.isInteger(id) && id > 0)
+			)
+		];
 
-		if (!kelasIdRaw) {
-			return fail(400, { fail: 'Kelas aktif tidak ditemukan' });
+		if (!kelasIds.length) {
+			return fail(400, { fail: 'Pilih minimal satu kelas' });
 		}
 
-		const kelasId = Number(kelasIdRaw);
-		if (!Number.isInteger(kelasId)) {
-			return fail(400, { fail: 'Kelas tidak valid' });
-		}
-
-		// Server-side permission: wali kelas (termasuk guru merangkap wali)
-		// may only add for their own kelas
-		if (locals?.user && (await isWaliKelasAccount(locals.user))) {
-			const u = locals.user as { pegawaiId?: number | null };
-
-			const owned = u.pegawaiId
-				? await db.query.tableKelas.findFirst({
-						columns: { id: true },
-						where: and(eq(tableKelas.id, kelasId), eq(tableKelas.waliKelasId, u.pegawaiId))
-					})
-				: null;
-			if (!owned) {
+		// Hanya admin atau guru/wali yang mengampu kelas-kelas ini yang boleh menambah.
+		if (!isAdminUser(locals.user)) {
+			const bolehSet =
+				locals.user && locals.sekolah?.id
+					? await kelasKontenSet(locals.user, locals.sekolah.id, null)
+					: new Set<number>();
+			if (kelasIds.some((id) => !bolehSet.has(id))) {
 				return fail(403, {
-					fail: 'Anda tidak memiliki izin untuk menambah kokurikuler di kelas ini.'
+					fail: 'Anda tidak memiliki izin untuk menambah kokurikuler di kelas tersebut.'
 				});
 			}
 		}
@@ -160,22 +191,37 @@ export const actions = {
 		}
 
 		try {
-			const existing = await db.query.tableKokurikuler.findFirst({
-				columns: { id: true },
-				where: eq(tableKokurikuler.kode, kode)
+			const existing = await db.query.tableKokurikuler.findMany({
+				columns: { kode: true }
 			});
-			if (existing) {
+			const existingCodes = new Set(existing.map((row) => row.kode.toLowerCase()));
+
+			if (kelasIds.length === 1 && existingCodes.has(kode.toLowerCase())) {
 				return fail(400, { fail: 'Kode sudah digunakan' });
 			}
 
-			await db.insert(tableKokurikuler).values({
-				kelasId,
-				kode,
-				dimensi,
-				tujuan
+			// shortcut: kode unik per sekolah, jadi kelas kedua dst diberi akhiran
+			// -2, -3, ...; upgrade ke unique (kelasId, kode) bila perlu kode sama.
+			const rows = kelasIds.map((kelasId) => {
+				let kodeFinal = kode;
+				let urutan = 2;
+				while (existingCodes.has(kodeFinal.toLowerCase())) {
+					kodeFinal = `${kode}-${urutan}`;
+					urutan += 1;
+				}
+				existingCodes.add(kodeFinal.toLowerCase());
+				return { kelasId, kode: kodeFinal, dimensi, tujuan };
 			});
 
-			return { message: 'Kokurikuler berhasil ditambahkan', kode };
+			await db.insert(tableKokurikuler).values(rows);
+
+			return {
+				message:
+					rows.length > 1
+						? `Kokurikuler ditambahkan ke ${rows.length} kelas`
+						: 'Kokurikuler berhasil ditambahkan',
+				kode
+			};
 		} catch (error) {
 			if (isTableMissingError(error)) {
 				return fail(500, { fail: TABLE_MISSING_MESSAGE });
@@ -253,13 +299,17 @@ export const actions = {
 			return fail(400, { fail: 'Kelas tidak valid' });
 		}
 
-		// Server-side permission: wali_kelas (termasuk guru merangkap wali)
-		// may only update for their own kelas
-		const updateUser = locals.user as { type?: string; pegawaiId?: number | null } | null;
-		if ((await isWaliKelasAccount(updateUser)) && !(await isWaliOfKelas(updateUser, kelasId))) {
-			return fail(403, {
-				fail: 'Anda tidak memiliki izin untuk mengubah di kelas ini.'
-			});
+		// Hanya admin atau guru/wali yang mengampu kelas ini yang boleh mengubah.
+		if (!isAdminUser(locals.user)) {
+			const boleh =
+				locals.user && locals.sekolah?.id
+					? (await kelasKontenSet(locals.user, locals.sekolah.id, null)).has(kelasId)
+					: false;
+			if (!boleh) {
+				return fail(403, {
+					fail: 'Anda tidak memiliki izin untuk mengubah di kelas ini.'
+				});
+			}
 		}
 
 		if (!dimensi.length) {
@@ -303,17 +353,29 @@ export const actions = {
 	},
 
 	import_kokurikuler: async ({ request, cookies, locals }) => {
+		const formData = await request.formData();
+		// Kelas bisa datang dari form (mode Semua Kelas) atau cookie (perilaku lama).
+		const kelasIdForm = Number(formData.get('kelasId'));
 		const kelasIdCookie = cookies.get(cookieNames.ACTIVE_KELAS_ID) || null;
-		const kelasId = kelasIdCookie ? Number(kelasIdCookie) : null;
-		if (!kelasId || !Number.isFinite(kelasId)) {
-			return fail(400, { fail: 'Pilih kelas aktif terlebih dahulu.' });
+		const kelasId =
+			Number.isInteger(kelasIdForm) && kelasIdForm > 0
+				? kelasIdForm
+				: kelasIdCookie && kelasIdCookie !== 'semua'
+					? Number(kelasIdCookie)
+					: NaN;
+		if (!Number.isInteger(kelasId) || kelasId <= 0) {
+			return fail(400, { fail: 'Pilih kelas terlebih dahulu.' });
 		}
 
-		// Server-side permission: wali_kelas (termasuk guru merangkap wali)
-		// may only import for their own kelas
-		const importUser = locals.user as { type?: string; pegawaiId?: number | null } | null;
-		if ((await isWaliKelasAccount(importUser)) && !(await isWaliOfKelas(importUser, kelasId))) {
-			return fail(403, { fail: 'Anda tidak memiliki izin untuk mengimpor di kelas ini.' });
+		// Hanya admin atau guru/wali yang mengampu kelas ini yang boleh mengimpor.
+		if (!isAdminUser(locals.user)) {
+			const boleh =
+				locals.user && locals.sekolah?.id
+					? (await kelasKontenSet(locals.user, locals.sekolah.id, null)).has(kelasId)
+					: false;
+			if (!boleh) {
+				return fail(403, { fail: 'Anda tidak memiliki izin untuk mengimpor di kelas ini.' });
+			}
 		}
 
 		const MAX_IMPORT_FILE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -330,7 +392,6 @@ export const actions = {
 			return type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 		}
 
-		const formData = await request.formData();
 		const file = formData.get('file');
 		if (!(file instanceof File) || file.size === 0) {
 			return fail(400, { fail: 'File Excel belum dipilih.' });

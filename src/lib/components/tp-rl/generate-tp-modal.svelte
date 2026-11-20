@@ -194,9 +194,13 @@
 <dialog class="modal bg-slate-950/45 backdrop-blur-[2px]" open onclose={handleCancel}>
 	{#snippet UnconfiguredMessage()}
 		<span>
-			Fitur AI belum aktif. Setel kunci API {isAdminUser ? '' : 'pribadi Anda '}di halaman
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- deep link to settings page AI key card -->
-			<a class="font-medium underline hover:opacity-80" href="/pengaturan#ai-key">Pengaturan</a>.
+			{#if isAdminUser}
+				Fitur AI belum aktif. Setel kunci API di halaman
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- deep link to settings page AI key card -->
+				<a class="font-medium underline hover:opacity-80" href="/pengaturan#ai-key">Pengaturan</a>.
+			{:else}
+				Fitur AI belum aktif. Hubungi admin sekolah untuk mengaktifkannya.
+			{/if}
 		</span>
 	{/snippet}
 	<div

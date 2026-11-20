@@ -6,6 +6,7 @@
 	import Icon from '$lib/components/icon.svelte';
 	import ForcedPasswordChangeBody from '$lib/components/settings/forced-password-change-body.svelte';
 	import Menu from '$lib/components/menu.svelte';
+	import KelasPickerLokal from '$lib/components/kelas-picker-lokal.svelte';
 	import Navbar from '$lib/components/navbar.svelte';
 	import KodeKegiatan from '$lib/components/jadwal-bell/kode-kegiatan.svelte';
 	import TambahKegiatanModal from '$lib/components/jadwal-bell/tambah-kegiatan-modal.svelte';
@@ -334,7 +335,7 @@
 
 		<aside
 			aria-label="Navigasi samping"
-			class="app-sidebar-panel fixed inset-y-0 left-0 z-50 flex h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200/80 bg-white px-3.5 py-4 transition-transform duration-200 lg:visible lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none dark:border-zinc-800 dark:bg-zinc-900 {mobileMenuOpen
+			class="app-sidebar-panel fixed inset-y-0 left-0 z-50 flex h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200/80 bg-white px-3.5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-transform duration-200 lg:visible lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none dark:border-zinc-800 dark:bg-zinc-900 {mobileMenuOpen
 				? 'visible translate-x-0 shadow-xl'
 				: 'invisible -translate-x-full'}"
 		>
@@ -367,7 +368,7 @@
 					type="button"
 					onclick={() => (mobileMenuOpen = false)}
 					aria-label="Tutup menu navigasi"
-					class="app-mobile-menu-trigger absolute top-1 right-0 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+					class="app-mobile-menu-trigger absolute -top-1 -right-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 				>
 					<span aria-hidden="true"><Icon name="close" class="h-4 w-4" /></span>
 				</button>
@@ -459,9 +460,19 @@
 				</div>
 			{/if}
 
-			<main id="main-content" class="flex-1 px-4 py-5 sm:px-6 lg:px-8">
-				<div class="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-5 xl:flex-row">
+			<main
+				id="main-content"
+				class="flex-1 px-3 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-5 lg:px-8"
+			>
+				<div class="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-4 sm:gap-5 xl:flex-row">
 					<div class="min-w-0 flex-1 {disableInteraction ? 'is-readonly' : ''}">
+						{#if data.kelasPicker?.tampil}
+							<div
+								class="mb-3 flex items-center gap-2 rounded-xl border border-slate-200/75 bg-white px-2.5 py-1.5 shadow-2xs sm:max-w-sm dark:border-zinc-800 dark:bg-zinc-900"
+							>
+								<KelasPickerLokal variant="mobile" />
+							</div>
+						{/if}
 						{@render children()}
 					</div>
 

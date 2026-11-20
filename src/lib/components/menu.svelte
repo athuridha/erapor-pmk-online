@@ -76,11 +76,6 @@
 			});
 			if (!res.ok) {
 				document.cookie = `${cookieNames.ACTIVE_MODUL}=${modul}; path=/; max-age=31536000; SameSite=Lax`;
-				if (modul === 'admin') {
-					document.cookie = `${cookieNames.ACTIVE_KELAS_ID}=semua; path=/; max-age=31536000; SameSite=Lax`;
-				} else {
-					document.cookie = `${cookieNames.ACTIVE_KELAS_ID}=; path=/; max-age=0; SameSite=Lax`;
-				}
 			}
 
 			const pathname = window.location.pathname;
@@ -306,7 +301,7 @@
 				}}
 			>
 				<summary
-					class="flex list-none items-center justify-between gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-slate-600 transition-colors select-none hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 [&::-webkit-details-marker]:hidden"
+					class="flex list-none items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm font-medium lg:py-2 lg:text-[13px] text-slate-600 transition-colors select-none hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 [&::-webkit-details-marker]:hidden"
 				>
 					<span class="flex min-w-0 items-center gap-2.5">
 						{#if item.icon}
@@ -341,7 +336,7 @@
 			<a
 				href={item.path}
 				aria-current={active ? 'page' : undefined}
-				class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] transition-colors {active
+				class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors lg:py-2 lg:text-[13px] {active
 					? 'bg-[#ebf3fe] font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
 					: 'font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'}"
 			>
@@ -368,7 +363,7 @@
 			<div class="relative flex items-center">
 				<select
 					id="sidebar-modul-select"
-					class="h-8.5 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/90 pr-8 pl-3 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-100 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700/80 dark:focus:border-blue-400 {isSwitchingModul
+					class="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/90 pr-8 pl-3 text-sm font-semibold lg:h-8.5 lg:text-xs text-slate-800 transition-colors hover:bg-slate-100 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700/80 dark:focus:border-blue-400 {isSwitchingModul
 						? 'cursor-wait opacity-70'
 						: ''}"
 					value={activeDisplayModul}
@@ -401,7 +396,7 @@
 
 	<div class="mb-2.5 flex shrink-0 items-center gap-1.5">
 		<div
-			class="flex h-8.5 grow items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 transition-colors focus-within:border-blue-600 focus-within:bg-white dark:border-zinc-700 dark:bg-zinc-800 dark:focus-within:border-blue-400 dark:focus-within:bg-zinc-900"
+			class="flex h-10 grow items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 lg:h-8.5 transition-colors focus-within:border-blue-600 focus-within:bg-white dark:border-zinc-700 dark:bg-zinc-800 dark:focus-within:border-blue-400 dark:focus-within:bg-zinc-900"
 		>
 			<label for="sidebar-menu-search" class="sr-only">Cari menu</label>
 			<span aria-hidden="true" class="flex shrink-0 items-center text-slate-400 dark:text-zinc-400">
@@ -421,7 +416,7 @@
 			aria-pressed={bukaSemua}
 			title={bukaSemua ? 'Tutup semua kelompok menu' : 'Buka semua kelompok menu'}
 			aria-label={bukaSemua ? 'Tutup semua kelompok menu' : 'Buka semua kelompok menu'}
-			class="inline-flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+			class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white lg:h-8.5 lg:w-8.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 		>
 			<span aria-hidden="true">
 				<Icon name={bukaSemua ? 'expand-all' : 'collapse-all'} class="h-4 w-4" />

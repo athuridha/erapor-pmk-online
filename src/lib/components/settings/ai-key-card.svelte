@@ -30,10 +30,44 @@
 	// Password visibility toggle
 	let showKey = $state(false);
 	let clearingKey = $state(false);
+	let apiKeyInput = $state('');
+	let models = $state<string[]>([]);
+	let fetchingModels = $state(false);
+	let modelsError = $state('');
 	// svelte-ignore state_referenced_locally
 	let aiModel = $state(data.model);
 	// svelte-ignore state_referenced_locally
 	let aiBaseUrl = $state(data.baseUrl);
+	const bisaMuatModel = $derived(apiKeyInput.trim().length > 0 && aiBaseUrl.trim().length > 0);
+
+	function resetModels() {
+		models = [];
+		modelsError = '';
+	}
+
+	async function muatModel() {
+		if (fetchingModels) return;
+		fetchingModels = true;
+		modelsError = '';
+		try {
+			const response = await fetch('/api/ai/models', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ baseUrl: aiBaseUrl, apiKey: apiKeyInput })
+			});
+			const body = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				modelsError = body?.message || 'Gagal memuat daftar model.';
+				return;
+			}
+			models = Array.isArray(body?.models) ? body.models : [];
+			if (!models.length) modelsError = 'Tidak ada model yang tersedia di base URL ini.';
+		} catch {
+			modelsError = 'Gagal menghubungi penyedia AI.';
+		} finally {
+			fetchingModels = false;
+		}
+	}
 </script>
 
 <section
@@ -107,6 +141,8 @@
 							minlength={10}
 							placeholder="AIzaSy… / sk-… / ds-…"
 							autocomplete="off"
+							bind:value={apiKeyInput}
+							oninput={resetModels}
 						/>
 						<button
 							type="button"
@@ -124,35 +160,57 @@
 
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<label class="flex flex-col gap-1.5">
-						<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Model</span>
-						<input
-							class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
-							type="text"
-							name="model"
-							bind:value={aiModel}
-							placeholder={isPersonal ? 'ikut setelan sekolah' : 'gemini-3.6-flash'}
-							list="{idPrefix}-model-list"
-						/>
-						<datalist id="{idPrefix}-model-list">
-							<option value="gemini-3.6-flash"></option>
-							<option value="gemini-3.1-pro"></option>
-							<option value="gemini-3.7-flash"></option>
-							<option value="claude-opus-4.8"></option>
-							<option value="claude-opus-5"></option>
-							<option value="claude-sonnet-5"></option>
-							<option value="gpt-5.6-sol"></option>
-							<option value="gpt-5.6-terra"></option>
-							<option value="deepseek-v4-flash"></option>
-							<option value="deepseek-v4-pro"></option>
-							<option value="glm-5.2"></option>
-							<option value="glm-5.3"></option>
-							<option value="kimi-k3"></option>
-							<option value="qwen3.8-max"></option>
-						</datalist>
+						<span class="flex items-center justify-between gap-2">
+							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Model</span>
+							<button
+								type="button"
+								class="inline-flex h-6 items-center gap-1 rounded-md px-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+								onclick={muatModel}
+								disabled={fetchingModels || !bisaMuatModel}
+								title={bisaMuatModel
+									? 'Ambil daftar model dari base URL'
+									: 'Isi kunci API dan base URL terlebih dahulu'}
+								aria-busy={fetchingModels}
+							>
+								{#if fetchingModels}
+									<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+								{:else}
+									<Icon name="repeat" class="h-3 w-3" />
+								{/if}
+								Muat model
+							</button>
+						</span>
+						{#if models.length}
+							<input
+								class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+								type="text"
+								name="model"
+								bind:value={aiModel}
+								placeholder="Pilih model"
+								list="{idPrefix}-model-list"
+								required
+							/>
+							<datalist id="{idPrefix}-model-list">
+								{#each models as model (model)}
+									<option value={model}></option>
+								{/each}
+							</datalist>
+						{:else}
+							<input type="hidden" name="model" value={aiModel} />
+							<div
+								class="flex h-9 w-full items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs text-slate-500 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-400"
+							>
+								{aiModel || 'Isi kunci API dan base URL, lalu muat model'}
+							</div>
+						{/if}
 						<span class="text-xs text-slate-500 dark:text-zinc-400">
-							{isPersonal
-								? 'Kosongkan untuk mengikuti model setelan sekolah.'
-								: 'Nama model sesuai penyedia API yang digunakan.'}
+							{modelsError
+								? modelsError
+								: isPersonal
+									? 'Kosongkan untuk mengikuti model setelan sekolah.'
+									: bisaMuatModel
+										? 'Klik "Muat dari base URL" untuk mengambil daftar model.'
+										: 'Isi kunci API dan base URL terlebih dahulu, lalu muat model.'}
 						</span>
 					</label>
 
@@ -163,6 +221,7 @@
 							type="text"
 							name="baseUrl"
 							bind:value={aiBaseUrl}
+							oninput={resetModels}
 							placeholder={isPersonal
 								? 'ikut setelan sekolah'
 								: 'contoh: https://generativelanguage.googleapis.com'}

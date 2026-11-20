@@ -135,6 +135,54 @@
 		return rows.filter((r) => r.nama.toLowerCase().includes(q));
 	});
 
+	// ---- Tampilan mobile: isi satu kolom sekaligus ----
+	type KolomMobile = {
+		key: string;
+		type: 'tp' | 'sts' | 'sas';
+		tpId?: number;
+		label: string;
+		sub: string;
+	};
+
+	const kolomMobile = $derived.by<KolomMobile[]>(() => {
+		const cols: KolomMobile[] = tujuanList.map((t, idx) => ({
+			key: `tp:${t.id}`,
+			type: 'tp',
+			tpId: t.id,
+			label: `TP ${idx + 1}`,
+			sub: getTeknikBadge(t.teknikSingkatan, t.teknikNama).label
+		}));
+		cols.push({ key: 'sts', type: 'sts', label: 'STS', sub: `${sumatifWeights.sts}%` });
+		cols.push({ key: 'sas', type: 'sas', label: 'SAS', sub: `${sumatifWeights.sas}%` });
+		return cols;
+	});
+
+	let kolomAktifKey = $state('');
+
+	const kolomAktif = $derived(
+		kolomMobile.find((c) => c.key === kolomAktifKey) ?? kolomMobile[0] ?? null
+	);
+
+	function nilaiSel(r: RowState, kolom: KolomMobile | null): string {
+		if (!kolom) return '';
+		if (kolom.type === 'tp' && kolom.tpId != null) return r.tp[kolom.tpId] ?? '';
+		if (kolom.type === 'sts') return r.sts;
+		return r.sas;
+	}
+
+	function ubahNilaiSel(r: RowState, kolom: KolomMobile | null, value: string) {
+		if (!kolom) return;
+		if (kolom.type === 'tp' && kolom.tpId != null) r.tp[kolom.tpId] = value;
+		else if (kolom.type === 'sts') r.sts = value;
+		else r.sas = value;
+	}
+
+	const terisiAktif = $derived(
+		kolomAktif
+			? filteredRows.filter((r) => r.canNilai && nilaiSel(r, kolomAktif).trim() !== '').length
+			: 0
+	);
+
 	// Calculation helpers for real-time preview
 	function calcNaLingkup(r: RowState): number | null {
 		const validScores: number[] = [];
@@ -399,14 +447,14 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
-	class="space-y-3"
+	class="space-y-3 pb-20 md:pb-0"
 	onkeydown={handleKeyDown}
 	role="region"
 	aria-label="Matriks Penilaian Sumatif"
 >
-	<!-- Action / Status Toolbar -->
+	<!-- Action / Status Toolbar (desktop) -->
 	<div
-		class="sticky top-14 z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-white/95 p-3 shadow-xs backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/95"
+		class="sticky top-14 z-30 max-md:hidden flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-white/95 p-3 shadow-xs backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/95"
 	>
 		<!-- Left: Status & Search -->
 		<div class="flex flex-wrap items-center gap-3">
@@ -494,9 +542,9 @@
 		</div>
 	</div>
 
-	<!-- Instructions / Keyboard Hint Pill -->
+	<!-- Instructions / Keyboard Hint Pill (desktop) -->
 	<div
-		class="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-500 dark:text-zinc-400"
+		class="flex max-md:hidden flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-500 dark:text-zinc-400"
 	>
 		<div class="flex items-center gap-2">
 			<span>
@@ -533,9 +581,172 @@
 		</div>
 	</div>
 
+	<!-- Mobile: input per kolom nilai -->
+	<div class="space-y-2.5 md:hidden">
+		<div class="flex items-center gap-2">
+			<div class="relative flex min-w-0 flex-1 items-center">
+				<span
+					aria-hidden="true"
+					class="pointer-events-none absolute left-3 flex items-center text-slate-400 dark:text-zinc-400"
+				>
+					<Icon name="search" class="h-4 w-4" />
+				</span>
+				<input
+					type="text"
+					placeholder="Cari nama murid..."
+					bind:value={searchFilter}
+					aria-label="Cari nama murid"
+					class="h-10 w-full rounded-xl border border-[#7e8b9b] bg-white pr-9 pl-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+				/>
+				{#if searchFilter}
+					<button
+						type="button"
+						class="absolute right-2 flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 dark:text-zinc-400"
+						onclick={() => (searchFilter = '')}
+						aria-label="Bersihkan pencarian"
+					>
+						<Icon name="close" class="h-4 w-4" />
+					</button>
+				{/if}
+			</div>
+			{#if isDirty}
+				<span
+					class="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-2.5 text-xs font-bold text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
+					title="{dirtyCount} nilai belum disimpan"
+				>
+					<span class="h-2 w-2 rounded-full bg-amber-500"></span>
+					{dirtyCount}
+				</span>
+			{:else}
+				<span
+					class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+					title="Semua nilai tersimpan"
+				>
+					<Icon name="check" class="h-4 w-4" />
+				</span>
+			{/if}
+		</div>
+
+		{#if isTerkunci}
+			<div
+				class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+			>
+				<Icon name="alert" class="h-4 w-4 shrink-0" />
+				Nilai sudah terkunci dan tidak dapat diubah.
+			</div>
+		{/if}
+
+		<div>
+			<p
+				class="mb-1 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-zinc-400"
+			>
+				<span>Pilih kolom yang diisi</span>
+				<span class="tabular-nums">{terisiAktif}/{filteredRows.length} terisi</span>
+			</p>
+			<div class="-mx-1 flex snap-x gap-1.5 overflow-x-auto px-1 pb-1">
+				{#each kolomMobile as kolom (kolom.key)}
+					<button
+						type="button"
+						class="snap-start shrink-0 rounded-xl border px-3 py-1.5 text-left transition-colors {kolomAktif?.key ===
+						kolom.key
+							? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+							: 'border-slate-200 bg-white text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'}"
+						onclick={() => (kolomAktifKey = kolom.key)}
+						aria-pressed={kolomAktif?.key === kolom.key}
+					>
+						<span class="block text-xs font-bold leading-tight">{kolom.label}</span>
+						<span class="block text-[10px] font-medium leading-tight opacity-80">{kolom.sub}</span>
+					</button>
+				{/each}
+			</div>
+		</div>
+
+		<div
+			class="flex items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-zinc-400"
+		>
+			<span class="truncate">{mapelNama} · KKM {kkm}</span>
+			{#if kolomAktif}
+				<button
+					type="button"
+					class="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 font-semibold text-slate-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+					onclick={() => openBulkModal(kolomAktif.type, kolomAktif.tpId, kolomAktif.label)}
+					disabled={isTerkunci || !canEdit}
+				>
+					<Icon name="copy" class="h-3 w-3" />
+					Isi semua
+				</button>
+			{/if}
+		</div>
+
+		<div class="space-y-2">
+			{#if filteredRows.length === 0}
+				<p
+					class="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-500 dark:border-zinc-700 dark:text-zinc-400"
+				>
+					{searchFilter
+						? `Tidak ditemukan murid dengan nama "${searchFilter}".`
+						: 'Belum ada data murid untuk kelas ini.'}
+				</p>
+			{:else}
+				{#each filteredRows as r (r.id)}
+					{@const na = calcNilaiAkhir(r)}
+					{@const lulus = na != null && na >= kkm}
+					<div
+						class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900"
+					>
+						<span
+							class="w-5 shrink-0 text-center text-[11px] font-semibold text-slate-400 tabular-nums dark:text-zinc-500"
+							>{r.no}</span
+						>
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-sm font-semibold text-slate-900 dark:text-zinc-100">
+								{r.nama}
+							</p>
+							<p class="mt-0.5 flex items-center gap-1 text-[11px] tabular-nums">
+								<span
+									class="font-bold {na == null
+										? 'text-slate-400 dark:text-zinc-500'
+										: lulus
+											? 'text-emerald-600 dark:text-emerald-400'
+											: 'text-amber-600 dark:text-amber-400'}">NA {formatScore(na)}</span
+								>
+								<span class="text-slate-300 dark:text-zinc-600">·</span>
+								<span class="text-slate-500 dark:text-zinc-400">
+									Rata TP {formatScore(calcNaLingkup(r))}
+								</span>
+							</p>
+						</div>
+						<input
+							type="text"
+							inputmode="decimal"
+							maxlength="6"
+							value={nilaiSel(r, kolomAktif)}
+							oninput={(event) => ubahNilaiSel(r, kolomAktif, event.currentTarget.value)}
+							onfocus={(event) => event.currentTarget.select()}
+							disabled={!r.canNilai || isTerkunci}
+							placeholder="-"
+							aria-label="{kolomAktif?.label ?? 'Nilai'} {r.nama}"
+							class="h-11 w-18 shrink-0 rounded-xl border border-slate-300 bg-white text-center font-mono text-base font-bold text-slate-900 placeholder:text-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 focus:outline-none disabled:bg-slate-100 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:disabled:bg-zinc-800"
+						/>
+						<a
+							href={`/asesmen-sumatif/formulir-asesmen?kelas=${kelasId ?? r.mapelId}&murid_id=${r.id}&mapel_id=${r.mapelId}`}
+							class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-zinc-400 dark:hover:bg-blue-950/50"
+							title="Buka form rincian murid {r.nama}"
+							aria-label="Buka form rincian murid {r.nama}"
+							target="_blank"
+							rel="noreferrer"
+						>
+							<Icon name="edit" class="h-4 w-4" />
+						</a>
+					</div>
+				{/each}
+			{/if}
+		</div>
+	</div>
+
 	<!-- Main Spreadsheet Matrix Table Container -->
 	<div
-		class="max-h-[calc(100vh-250px)] overflow-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+		class="max-md:hidden max-h-[calc(100vh-250px)] overflow-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 	>
 		<table class="min-w-full border-collapse text-center text-xs">
 			<thead>
@@ -570,8 +781,9 @@
 										class="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:bg-blue-100 hover:text-blue-700 dark:text-zinc-400 dark:hover:bg-blue-950 dark:hover:text-blue-300"
 										onclick={() => openBulkModal('tp', t.id, `TP ${idx + 1}`)}
 										title="Isi seluruh kolom TP {idx + 1} sekaligus"
+										aria-label="Isi seluruh kolom TP {idx + 1} sekaligus"
 									>
-										⚡
+										<Icon name="copy" class="h-3 w-3" />
 									</button>
 								</div>
 								<div
@@ -612,8 +824,9 @@
 									class="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:bg-blue-100 hover:text-blue-700 dark:text-zinc-400 dark:hover:bg-blue-950 dark:hover:text-blue-300"
 									onclick={() => openBulkModal('sts', undefined, 'STS')}
 									title="Isi seluruh kolom STS sekaligus"
+									aria-label="Isi seluruh kolom STS sekaligus"
 								>
-									⚡
+									<Icon name="copy" class="h-3 w-3" />
 								</button>
 							</div>
 							<span class="text-[10px] font-normal text-slate-400 dark:text-zinc-400"
@@ -634,8 +847,9 @@
 									class="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:bg-blue-100 hover:text-blue-700 dark:text-zinc-400 dark:hover:bg-blue-950 dark:hover:text-blue-300"
 									onclick={() => openBulkModal('sas', undefined, 'SAS')}
 									title="Isi seluruh kolom SAS sekaligus"
+									aria-label="Isi seluruh kolom SAS sekaligus"
 								>
-									⚡
+									<Icon name="copy" class="h-3 w-3" />
 								</button>
 							</div>
 							<span class="text-[10px] font-normal text-slate-400 dark:text-zinc-400"
@@ -815,6 +1029,62 @@
 	</div>
 </div>
 
+<!-- Mobile: action bar melekat di bawah -->
+<div
+	class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm md:hidden dark:border-zinc-800 dark:bg-zinc-900/95"
+>
+	<div
+		class="mx-auto flex max-w-3xl items-center gap-2 px-3 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))]"
+	>
+		<div class="min-w-0 flex-1">
+			{#if isDirty}
+				<p
+					class="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300"
+				>
+					<span class="h-2 w-2 rounded-full bg-amber-500"></span>
+					{dirtyCount} nilai belum disimpan
+				</p>
+			{:else}
+				<p
+					class="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400"
+				>
+					<Icon name="check" class="h-3.5 w-3.5" />
+					Semua tersimpan
+				</p>
+			{/if}
+			{#if isTerkunci}
+				<p class="mt-0.5 text-[11px] font-semibold text-red-600 dark:text-red-400">
+					Nilai terkunci
+				</p>
+			{/if}
+		</div>
+		{#if isDirty}
+			<button
+				type="button"
+				class="inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
+				onclick={resetChanges}
+				disabled={saving}
+			>
+				Batal
+			</button>
+		{/if}
+		<button
+			type="button"
+			class="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500"
+			onclick={saveAll}
+			disabled={saving || !isDirty || isTerkunci || !canEdit}
+		>
+			{#if saving}
+				<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+				Menyimpan...
+			{:else}
+				<Icon name="save" class="h-4 w-4" />
+				Simpan
+			{/if}
+		</button>
+	</div>
+</div>
+
 <!-- Modal Quick Bulk Fill Column -->
 {#if bulkModalCol}
 	<div
@@ -827,7 +1097,9 @@
 			<h3
 				class="flex items-center gap-2 border-b border-slate-100 pb-3 text-base font-bold dark:border-zinc-800"
 			>
-				<span>⚡</span>
+				<span aria-hidden="true" class="text-blue-600 dark:text-blue-400">
+					<Icon name="copy" class="h-4 w-4" />
+				</span>
 				<span>Isi Nilai Kolom {bulkModalCol.label} Sekaligus</span>
 			</h3>
 			<p class="mt-3 text-xs leading-relaxed text-slate-500 dark:text-zinc-400">

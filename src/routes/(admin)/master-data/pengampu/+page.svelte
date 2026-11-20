@@ -1063,7 +1063,7 @@
 															? 'bg-white font-black text-blue-600'
 															: 'border border-slate-300 dark:border-zinc-600'}"
 													>
-														{#if isChecked}✓{/if}
+														{#if isChecked}<Icon name="check" class="h-2.5 w-2.5" />{/if}
 													</span>
 													<span>{m.kelasNama}</span>
 													{#if otherTeacher}

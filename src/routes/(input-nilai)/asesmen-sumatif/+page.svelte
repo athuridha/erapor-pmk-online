@@ -526,6 +526,14 @@
 		return value.toFixed(2);
 	}
 
+	function alasanTidakBisaNilai(murid: MuridRow): string {
+		if (!canEdit) return 'Anda tidak memiliki izin untuk menilai';
+		if (murid.canNilai) return 'Pilih mata pelajaran';
+		if (data.allowedAgamaForUser?.length)
+			return `Hanya untuk murid beragama ${data.allowedAgamaForUser.join(' / ')}`;
+		return 'Anda tidak memiliki izin untuk menilai murid ini';
+	}
+
 	// ── Isi massal: centang beberapa murid lalu isi satu komponen sekaligus ──
 	let terpilihMurid = $state<number[]>([]);
 	let massalTerbuka = $state(false);
@@ -661,50 +669,33 @@
 </script>
 
 <div
-	class="cursor-default rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+	class="cursor-default rounded-2xl border border-slate-200/75 bg-white p-3 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
 >
-	<div
-		class="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-4 dark:border-zinc-800"
-	>
-		<div>
-			<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
-				Daftar Nilai Sumatif
-				{#if selectedMapelLabel}
-					: {selectedMapelLabel}
-				{/if}
-			</h1>
-
-			{#if kelasLabel}
-				<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">
-					Kelas: <span class="font-medium text-slate-800 dark:text-zinc-200">{kelasLabel}</span>
-				</p>
-			{:else}
-				<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
-					Pilih kelas di navbar atau pemilih kelas untuk melihat mata pelajaran intrakurikuler.
-				</p>
-			{/if}
-		</div>
-		<div>
-			<button
-				type="button"
-				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-				onclick={openBobotModal}
-				disabled={!canEdit}
-				aria-disabled={!canEdit}
-				title={!canEdit ? 'Anda tidak memiliki izin untuk mengatur bobot' : ''}
-			>
-				<Icon name="gear" class="h-4 w-4" />
-				Atur Bobot
-			</button>
-		</div>
+	<div class="mb-3 border-b border-slate-200 pb-3 sm:mb-4 sm:pb-4 dark:border-zinc-800">
+		<h1
+			class="text-lg font-bold leading-snug tracking-tight text-slate-900 sm:text-xl dark:text-zinc-100"
+		>
+			Daftar Nilai Sumatif{#if selectedMapelLabel}<span class="text-slate-600 dark:text-zinc-300">
+					: {selectedMapelLabel}</span
+				>{/if}
+		</h1>
+		{#if kelasLabel}
+			<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">
+				Kelas: <span class="font-medium text-slate-800 dark:text-zinc-200">{kelasLabel}</span>
+			</p>
+		{:else}
+			<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+				Pilih kelas untuk melihat mata pelajaran intrakurikuler.
+			</p>
+		{/if}
 	</div>
 
-	<div class="flex flex-col justify-between gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-		<div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+	<div class="flex flex-col gap-2.5">
+		<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
 			<KelasKontenPicker
 				currentId={((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id ?? null}
 			/>
-			<form class="w-full sm:w-64 md:w-72" method="get" use:autoSubmit>
+			<form class="w-full sm:w-56 md:w-72" method="get" use:autoSubmit>
 				{#if ((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id != null}
 					<input
 						type="hidden"
@@ -714,7 +705,7 @@
 				{/if}
 				<div class="relative flex items-center">
 					<select
-						class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+						class="h-10 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 						title="Pilih mata pelajaran"
 						name="mapel_id"
 						bind:value={selectedMapelValue}
@@ -743,68 +734,74 @@
 				{/if}
 			</form>
 		</div>
-		<div class="flex flex-wrap items-center gap-2">
+		<div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
 			<!-- Mode View Switcher -->
 			<div
-				class="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-0.5 dark:border-zinc-700 dark:bg-zinc-800"
+				class="grid w-full grid-cols-2 gap-0.5 rounded-xl border border-slate-200 bg-slate-100 p-0.5 sm:flex sm:w-auto dark:border-zinc-700 dark:bg-zinc-800"
 			>
 				<button
 					type="button"
-					class="inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors {tampilanMode ===
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors sm:h-7 sm:px-2.5 {tampilanMode ===
 					'matriks'
 						? 'bg-blue-600 text-white shadow-sm'
 						: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-zinc-100'}"
 					onclick={() => (tampilanMode = 'matriks')}
 					title="Tampilan Matriks Spreadsheet Excel"
+					aria-pressed={tampilanMode === 'matriks'}
 				>
-					<Icon name="table" class="h-3.5 w-3.5" />
-					<span class="hidden sm:inline">Matriks Excel</span>
+					<Icon name="table" class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+					<span>Matriks</span>
 				</button>
 				<button
 					type="button"
-					class="inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors {tampilanMode ===
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors sm:h-7 sm:px-2.5 {tampilanMode ===
 					'ringkas'
 						? 'bg-blue-600 text-white shadow-sm'
 						: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-zinc-100'}"
 					onclick={() => (tampilanMode = 'ringkas')}
 					title="Tampilan Ringkasan"
+					aria-pressed={tampilanMode === 'ringkas'}
 				>
-					<Icon name="edit" class="h-3.5 w-3.5" />
-					<span class="hidden sm:inline">Ringkasan</span>
+					<Icon name="edit" class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+					<span>Ringkasan</span>
 				</button>
 			</div>
 
-			<button
-				type="button"
-				class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-				onclick={() => (showBobotModal = true)}
-				title="Atur Bobot Nilai"
-			>
-				Bobot Nilai
-			</button>
-
-			<button
-				type="button"
-				class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-				onclick={downloadTemplate}
-				disabled={!canEdit}
-				aria-disabled={!canEdit}
-				title={!canEdit ? 'Anda tidak memiliki izin' : ''}
-			>
-				<Icon name="download" class="h-3.5 w-3.5" />
-				<span class="hidden md:inline">Unduh Excel</span>
-			</button>
-			<button
-				type="button"
-				class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-				onclick={openImportModal}
-				disabled={!canEdit}
-				aria-disabled={!canEdit}
-				title={!canEdit ? 'Anda tidak memiliki izin' : ''}
-			>
-				<Icon name="import" class="h-3.5 w-3.5" />
-				<span class="hidden md:inline">Import Excel</span>
-			</button>
+			<div class="grid grid-cols-3 gap-2 sm:flex sm:items-center">
+				<button
+					type="button"
+					class="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-2 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:px-3 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+					onclick={openBobotModal}
+					disabled={!canEdit}
+					aria-disabled={!canEdit}
+					title={!canEdit ? 'Anda tidak memiliki izin untuk mengatur bobot' : 'Atur bobot nilai'}
+				>
+					<Icon name="gear" class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+					<span>Bobot</span>
+				</button>
+				<button
+					type="button"
+					class="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-2 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:px-3 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+					onclick={downloadTemplate}
+					disabled={!canEdit}
+					aria-disabled={!canEdit}
+					title={!canEdit ? 'Anda tidak memiliki izin' : 'Unduh template Excel'}
+				>
+					<Icon name="download" class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+					<span>Unduh</span>
+				</button>
+				<button
+					type="button"
+					class="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-2 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:px-3 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+					onclick={openImportModal}
+					disabled={!canEdit}
+					aria-disabled={!canEdit}
+					title={!canEdit ? 'Anda tidak memiliki izin' : 'Import nilai dari Excel'}
+				>
+					<Icon name="import" class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+					<span>Import</span>
+				</button>
+			</div>
 		</div>
 	</div>
 
@@ -885,7 +882,7 @@
 				<input
 					type="search"
 					name="q"
-					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+					class="h-10 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 					value={searchTerm}
 					spellcheck="false"
 					autocomplete="name"
@@ -900,13 +897,13 @@
 				class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/40"
 			>
 				<p class="text-xs text-slate-600 dark:text-zinc-400">
-					Centang murid pada tabel untuk mengisi satu komponen nilai sekaligus.
+					Centang murid untuk mengisi satu komponen nilai sekaligus.
 				</p>
-				<div class="flex items-center gap-2">
+				<div class="flex w-full items-center gap-2 sm:w-auto">
 					{#if muridTerpilih.length}
 						<button
 							type="button"
-							class="inline-flex h-8 items-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+							class="inline-flex h-10 flex-1 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:h-8 sm:flex-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 							onclick={() => togglePilihSemua(false)}
 						>
 							Kosongkan
@@ -914,7 +911,7 @@
 					{/if}
 					<button
 						type="button"
-						class="inline-flex h-8 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+						class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:flex-none"
 						onclick={bukaMassal}
 						disabled={!canEdit || !muridTerpilih.length}
 						aria-disabled={!canEdit || !muridTerpilih.length}
@@ -928,8 +925,125 @@
 				</div>
 			</div>
 		{/if}
+		<!-- Mobile: kartu ringkasan per murid -->
+		<div class="mt-3 space-y-2 sm:hidden">
+			{#each data.daftarMurid as murid (murid.id)}
+				{@const bisaDipilih = murid.mapelId != null && murid.canNilai && canEdit}
+				<div
+					class="rounded-xl border border-slate-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
+				>
+					<div class="flex items-start gap-2.5">
+						<input
+							type="checkbox"
+							class="checkbox checkbox-sm mt-0.5"
+							checked={terpilihMurid.includes(murid.id)}
+							disabled={!bisaDipilih}
+							onchange={(event) => togglePilihMurid(murid.id, event.currentTarget.checked)}
+							aria-label="Pilih {murid.nama}"
+						/>
+						<div class="min-w-0 flex-1">
+							<p class="text-sm font-semibold leading-snug text-slate-900 dark:text-zinc-100">
+								<span class="mr-1 text-[11px] text-slate-400 tabular-nums dark:text-zinc-500"
+									>{murid.no}.</span
+								>
+								{@html searchQueryMarker(data.page.search, murid.nama)}
+							</p>
+							{#if murid.agamaLabel}
+								<p class="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
+									{murid.agamaLabel}
+								</p>
+							{/if}
+						</div>
+						{#if murid.nilaiHref && murid.canNilai && canEdit}
+							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- intentional prebuilt href -->
+							<a
+								class="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+								href={murid.nilaiHref}
+							>
+								<Icon name="edit" class="h-3.5 w-3.5" />
+								Nilai
+							</a>
+						{:else}
+							<button
+								type="button"
+								class="inline-flex h-9 shrink-0 cursor-not-allowed items-center gap-1 rounded-xl border border-slate-200 bg-slate-100 px-3 text-xs font-semibold text-slate-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500"
+								disabled
+								aria-disabled="true"
+								title={alasanTidakBisaNilai(murid)}
+							>
+								<Icon name="edit" class="h-3.5 w-3.5" />
+								Nilai
+							</button>
+						{/if}
+					</div>
+					<div class="mt-2.5 grid grid-cols-2 gap-2">
+						<div class="rounded-lg bg-slate-50 px-2.5 py-2 dark:bg-zinc-800/50">
+							<p
+								class="text-[10px] font-semibold tracking-wide text-slate-500 uppercase dark:text-zinc-400"
+							>
+								Tengah Semester
+							</p>
+							{#if murid.diisiUserLain}
+								<p class="mt-0.5 text-[11px] text-slate-500 italic dark:text-zinc-400">
+									Data diisi user lain
+								</p>
+							{:else if murid.nilaiAkhirRts != null}
+								<p
+									class="mt-0.5 text-base font-bold text-slate-900 tabular-nums dark:text-zinc-100"
+								>
+									{formatScore(murid.nilaiAkhirRts)}
+								</p>
+								<p class="text-[10px] text-slate-500 tabular-nums dark:text-zinc-400">
+									{#if murid.naLingkup != null}Lingkup {formatScore(murid.naLingkup)}{/if}
+									{#if murid.sts != null}
+										· STS {formatScore(murid.sts)}{/if}
+								</p>
+							{:else}
+								<p class="mt-0.5 text-[11px] text-slate-500 italic dark:text-zinc-400">
+									Belum dinilai
+								</p>
+							{/if}
+						</div>
+						<div class="rounded-lg bg-slate-50 px-2.5 py-2 dark:bg-zinc-800/50">
+							<p
+								class="text-[10px] font-semibold tracking-wide text-slate-500 uppercase dark:text-zinc-400"
+							>
+								Rapor Semester
+							</p>
+							{#if murid.diisiUserLain}
+								<p class="mt-0.5 text-[11px] text-slate-500 italic dark:text-zinc-400">
+									Data diisi user lain
+								</p>
+							{:else if murid.nilaiAkhir != null}
+								<p
+									class="mt-0.5 text-base font-bold text-slate-900 tabular-nums dark:text-zinc-100"
+								>
+									{formatScore(murid.nilaiAkhir)}
+								</p>
+								<p class="text-[10px] text-slate-500 tabular-nums dark:text-zinc-400">
+									{#if murid.naLingkup != null}Lingkup {formatScore(
+											murid.naLingkup
+										)}{/if}{#if murid.sts != null}{#if murid.naLingkup != null}
+											·
+										{/if}STS {formatScore(
+											murid.sts
+										)}{/if}{#if murid.sas != null}{#if murid.naLingkup != null || murid.sts != null}
+											·
+										{/if}SAS {formatScore(murid.sas)}{/if}
+								</p>
+							{:else}
+								<p class="mt-0.5 text-[11px] text-slate-500 italic dark:text-zinc-400">
+									Belum dinilai
+								</p>
+							{/if}
+						</div>
+					</div>
+				</div>
+			{/each}
+		</div>
+
 		<div
-			class="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+			class="mt-4 hidden overflow-x-auto rounded-xl border border-slate-200 bg-white sm:block dark:border-zinc-800 dark:bg-zinc-900"
 		>
 			<table class="w-full min-w-140 border-collapse text-xs">
 				<thead>
@@ -1049,13 +1163,7 @@
 										class="inline-flex h-8 cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 px-3 text-xs font-semibold text-slate-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500"
 										disabled
 										aria-disabled="true"
-										title={!canEdit
-											? 'Anda tidak memiliki izin untuk menilai'
-											: murid.canNilai
-												? 'Pilih mata pelajaran'
-												: data.allowedAgamaForUser
-													? `Hanya untuk murid beragama ${data.allowedAgamaForUser.join(' / ')}`
-													: 'Anda tidak memiliki izin untuk menilai murid ini'}
+										title={alasanTidakBisaNilai(murid)}
 									>
 										<Icon name="edit" class="h-3.5 w-3.5" />
 										Nilai
@@ -1072,7 +1180,7 @@
 				{#each pages as pageNumber (pageNumber)}
 					<button
 						type="button"
-						class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors {pageNumber ===
+						class="inline-flex h-9 min-w-9 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors sm:h-8 sm:min-w-8 {pageNumber ===
 						currentPage
 							? 'border-blue-600 bg-blue-600 text-white shadow-sm'
 							: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
@@ -1089,12 +1197,12 @@
 
 {#if massalTerbuka && muridTerpilih.length}
 	<dialog
-		class="modal bg-slate-950/45 backdrop-blur-[2px]"
+		class="modal modal-bottom bg-slate-950/45 backdrop-blur-[2px] sm:modal-middle"
 		open
 		onclose={() => (massalTerbuka = false)}
 	>
 		<div
-			class="modal-box max-w-lg rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+			class="modal-box max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-slate-200/80 bg-white p-4 text-slate-900 shadow-2xl sm:rounded-2xl sm:p-5 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
 		>
 			<h3 class="mb-1 text-lg font-bold">Isi Nilai Sekaligus</h3>
 			<p class="mb-3 text-xs text-slate-600 dark:text-zinc-400">

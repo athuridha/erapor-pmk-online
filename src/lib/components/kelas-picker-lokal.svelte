@@ -57,7 +57,7 @@
 			<div class="relative min-w-0 flex-1">
 				<select
 					id={selectId}
-					class="h-9 w-full appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-semibold text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+					class="h-10 w-full appearance-none rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-semibold text-slate-900 transition-colors focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					title="Pilih kelas untuk halaman ini"
 					onchange={pilihKelas}
 					value={picker.currentId == null

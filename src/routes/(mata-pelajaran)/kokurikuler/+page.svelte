@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidate } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '$lib/components/icon.svelte';
 	import KokurikulerFormModal from '$lib/components/kokurikuler/form-modal.svelte';
@@ -18,6 +18,10 @@
 	}: {
 		data: {
 			kelasId: number | null;
+			semuaKelas: boolean;
+			filterKelasIds: number[];
+			kelasOptions: Array<{ id: number; nama: string; fase: string | null }>;
+			bisaKelolaKelasIds: number[];
 			mapelKokurikuler: Array<{
 				id: number;
 				nama: string | null;
@@ -25,7 +29,12 @@
 				jenis: string;
 				pengampu: string | null;
 			}>;
-			kokurikuler: Array<Kokurikuler & { dimensi: DimensiProfilLulusanKey[] }>;
+			kokurikuler: Array<
+				Kokurikuler & {
+					dimensi: DimensiProfilLulusanKey[];
+					kelas?: { id: number; nama: string; fase: string | null } | null;
+				}
+			>;
 			dimensiPilihan: typeof profilPelajarPancasilaDimensions;
 			tableReady: boolean;
 		};
@@ -62,22 +71,14 @@
 	});
 	const anySelected = $derived.by(() => selectedIds.length > 0);
 	const allSelected = $derived.by(() => totalData > 0 && selectedIds.length === totalData);
-	const canManage = $derived.by(() => data.tableReady && !!data.kelasId);
-	// Restrict editing for wali_asuh dan guru mapel murni; guru merangkap wali
-	// kelas boleh mengelola di kelas yang diwalikan.
+	const canManage = $derived.by(() => data.tableReady);
+	// Guru/wali hanya boleh mengelola kelas wali + kelas diampu (dari server).
 	const canEdit = $derived.by(() => {
-		const u = page.data.user as
-			{ type?: string; kelasId?: number | null; ownKelasIds?: number[] | null } | null | undefined;
+		const u = page.data.user as { type?: string } | null | undefined;
 		if (u?.type === 'wali_asuh') return false;
-		if (u?.type === 'user') {
-			return data.kelasId != null && (u.ownKelasIds ?? []).includes(data.kelasId);
-		}
-		// Wali kelas di kelas bukan miliknya: turun ke level guru (tidak bisa menambah).
-		if (u?.type === 'wali_kelas' && data.kelasId != null) {
-			const ownIds = u.ownKelasIds?.length ? u.ownKelasIds : u.kelasId != null ? [u.kelasId] : [];
-			if (ownIds.length > 0 && !ownIds.includes(data.kelasId)) return false;
-		}
-		return true;
+		// Mode semua kelas: kelas dipilih di form, izin dicek server per kelas.
+		if (data.semuaKelas) return true;
+		return data.kelasId != null && data.bisaKelolaKelasIds.includes(data.kelasId);
 	});
 	const dimensionOptions = $derived.by(() => [...data.dimensiPilihan]);
 	const isModalOpen = $derived.by(() => modalState !== null);
@@ -169,6 +170,30 @@
 		deleteDialogState = { source: 'single', ids: [item.id], item };
 	}
 
+	function toggleFilterKelas(id: number, checked: boolean) {
+		const next = checked
+			? [...new Set([...data.filterKelasIds, id])]
+			: data.filterKelasIds.filter((existing) => existing !== id);
+		const params = new URLSearchParams(page.url.search);
+		if (next.length) params.set('kelas_ids', next.join(','));
+		else params.delete('kelas_ids');
+		const query = params.toString();
+		void goto(`${page.url.pathname}${query ? `?${query}` : ''}`, {
+			noScroll: true,
+			keepFocus: true
+		});
+	}
+
+	function resetFilterKelas() {
+		const params = new URLSearchParams(page.url.search);
+		params.delete('kelas_ids');
+		const query = params.toString();
+		void goto(`${page.url.pathname}${query ? `?${query}` : ''}`, {
+			noScroll: true,
+			keepFocus: true
+		});
+	}
+
 	function closeModal() {
 		if (modalState === null && !selectedDimensions.length && !kodeInput && !tujuanInput) return;
 		modalState = null;
@@ -201,7 +226,8 @@
 	open={isModalOpen}
 	title={modalTitle}
 	action={modalAction}
-	kelasId={data.kelasId}
+	kelasId={isEditMode ? (modalItem?.kelasId ?? data.kelasId) : data.kelasId}
+	kelasOptions={data.kelasOptions}
 	tableReady={data.tableReady}
 	{canManage}
 	{isEditMode}
@@ -258,17 +284,66 @@
 				<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">
 					Kelas aktif: {kelasAktifLabel}
 				</p>
+			{:else if data.semuaKelas}
+				<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+					Menampilkan semua kelas. Pilih kelas pada form saat menambah.
+				</p>
 			{:else}
 				<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
-					Pilih kelas di navbar untuk melihat kegiatan kokurikuler.
+					Kelas belum ditentukan untuk akun ini.
 				</p>
 			{/if}
 		</div>
 		<div class="flex flex-row max-sm:w-full">
+			{#if data.semuaKelas}
+				<div class="dropdown dropdown-end mr-2">
+					<button
+						tabindex="0"
+						type="button"
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+						title="Pilih satu atau beberapa kelas"
+					>
+						<Icon name="users" class="h-3.5 w-3.5" />
+						{data.filterKelasIds.length ? `${data.filterKelasIds.length} kelas` : 'Semua kelas'}
+						<Icon name="down" class="h-3 w-3" />
+					</button>
+					<ul
+						tabindex="-1"
+						class="dropdown-content menu z-50 mt-2 max-h-80 w-60 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+					>
+						{#each data.kelasOptions as kelas (kelas.id)}
+							<li>
+								<label
+									class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 font-medium text-slate-700 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
+								>
+									<input
+										type="checkbox"
+										class="checkbox checkbox-sm"
+										checked={data.filterKelasIds.includes(kelas.id)}
+										onchange={(event) => toggleFilterKelas(kelas.id, event.currentTarget.checked)}
+									/>
+									<span class="truncate">{kelas.nama}{kelas.fase ? ` - ${kelas.fase}` : ''}</span>
+								</label>
+							</li>
+						{/each}
+						{#if data.filterKelasIds.length}
+							<li>
+								<button
+									type="button"
+									class="w-full rounded-lg px-2 py-1.5 text-left text-[11px] font-semibold text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+									onclick={resetFilterKelas}
+								>
+									Tampilkan semua kelas
+								</button>
+							</li>
+						{/if}
+					</ul>
+				</div>
+			{/if}
 			{#if anySelected}
 				<button
 					type="button"
-					class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-red-300 bg-red-50 px-3.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950/80"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-red-300 bg-red-50 px-3.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 max-sm:flex-1 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950/80"
 					aria-disabled={bulkDeleteDisabled || !canEdit}
 					disabled={bulkDeleteDisabled || !canEdit}
 					onclick={openBulkDeleteModal}
@@ -317,6 +392,10 @@
 									showModal({
 										title: 'Impor Kokurikuler',
 										body: ImportKokurikulerDialog,
+										bodyProps: {
+											kelasId: data.kelasId,
+											kelasOptions: data.kelasOptions
+										},
 										dismissible: true
 									})}
 							>
@@ -327,12 +406,18 @@
 						<li>
 							<button
 								type="button"
-								class={`w-full text-left ${!canManage ? 'pointer-events-none opacity-50' : ''}`}
-								disabled={!canManage}
-								aria-disabled={!canManage}
+								class={`w-full text-left ${!canManage || data.kelasId == null ? 'pointer-events-none opacity-50' : ''}`}
+								disabled={!canManage || data.kelasId == null}
+								aria-disabled={!canManage || data.kelasId == null}
+								title={data.kelasId == null
+									? 'Pilih satu kelas untuk mengekspor'
+									: 'Ekspor kokurikuler'}
 								onclick={async () => {
 									try {
-										const resp = await fetch('/kokurikuler/export_kokurikuler', { method: 'GET' });
+										const resp = await fetch(
+											`/kokurikuler/export_kokurikuler?kelas_id=${data.kelasId ?? ''}`,
+											{ method: 'GET' }
+										);
 										if (!resp.ok) {
 											const body = await resp.json().catch(() => ({}));
 											return toast({
@@ -382,12 +467,12 @@
 		</div>
 	</div>
 
-	{#if !data.kelasId}
+	{#if !data.kelasId && !data.semuaKelas}
 		<div
 			class="mt-4 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
 		>
 			<Icon name="info" class="h-4 w-4 shrink-0" />
-			<span>Silakan pilih kelas di navbar sebelum menambah kokurikuler.</span>
+			<span>Kelas belum ditentukan untuk akun ini.</span>
 		</div>
 	{/if}
 
@@ -485,6 +570,9 @@
 					</th>
 					<th class="px-3 py-2.5" style="width: 56px;">No</th>
 					<th class="px-3 py-2.5" style="width: 100px; min-width: 80px;">Kode</th>
+					{#if data.semuaKelas}
+						<th class="px-3 py-2.5" style="min-width: 120px;">Kelas</th>
+					{/if}
 					<th class="px-3 py-2.5" style="min-width: 200px;">8 DPL</th>
 					<th class="w-full px-3 py-2.5" style="min-width: 260px;">Kegiatan Kokurikuler</th>
 					<th class="px-3 py-2.5 text-right" style="width: 120px;">Aksi</th>
@@ -508,6 +596,14 @@
 						<td class="px-3 py-2.5 align-top font-mono text-xs text-slate-700 dark:text-zinc-300"
 							>{item.kode}</td
 						>
+						{#if data.semuaKelas}
+							<td class="px-3 py-2.5 align-top text-slate-700 dark:text-zinc-300">
+								{item.kelas?.nama ?? '-'}{#if item.kelas?.fase}
+									<span class="block text-[11px] text-slate-500 dark:text-zinc-400"
+										>{item.kelas.fase}</span
+									>{/if}
+							</td>
+						{/if}
 						<td class="px-3 py-2.5 align-top text-slate-700 dark:text-zinc-300">
 							{#if item.dimensi.length}
 								{item.dimensi
@@ -549,7 +645,10 @@
 					</tr>
 				{:else}
 					<tr>
-						<td class="px-3 py-8 text-center text-slate-500 dark:text-zinc-400" colspan="6">
+						<td
+							class="px-3 py-8 text-center text-slate-500 dark:text-zinc-400"
+							colspan={data.semuaKelas ? 7 : 6}
+						>
 							Belum ada data kokurikuler
 						</td>
 					</tr>
