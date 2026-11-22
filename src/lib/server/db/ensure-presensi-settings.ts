@@ -12,7 +12,7 @@ export async function ensurePresensiSettingsSchema() {
       "jam_masuk" text NOT NULL DEFAULT '07:30',
       "jam_pulang" text NOT NULL DEFAULT '15:00',
       "hari_sekolah" integer NOT NULL DEFAULT 6,
-      "tipe_presensi" text NOT NULL DEFAULT 'masuk_pulang',
+      "tipe_presensi" text NOT NULL DEFAULT 'masuk_saja',
       "libur_nasional" text NOT NULL DEFAULT '[]',
       "libur_semester" text NOT NULL DEFAULT '[]',
       "created_at" text NOT NULL,
@@ -25,13 +25,6 @@ export async function ensurePresensiSettingsSchema() {
 	try {
 		await db.$client.execute(
 			`ALTER TABLE "${TABLE}" ADD COLUMN "jenis_presensi" text NOT NULL DEFAULT 'wali_kelas_saja'`
-		);
-	} catch {
-		// column already exists
-	}
-	try {
-		await db.$client.execute(
-			`ALTER TABLE "${TABLE}" ADD COLUMN "presensi_guru_enabled" integer NOT NULL DEFAULT 1`
 		);
 	} catch {
 		// column already exists
@@ -56,6 +49,15 @@ export async function ensurePresensiSettingsSchema() {
 		);
 	} catch {
 		// column already exists
+	}
+
+	// Mode masuk-pulang dihapus: data lama dianggap masuk saja.
+	try {
+		await db.$client.execute(
+			`UPDATE "${TABLE}" SET "tipe_presensi" = 'masuk_saja' WHERE "tipe_presensi" = 'masuk_pulang'`
+		);
+	} catch {
+		// table may not exist yet on first run
 	}
 
 	// Drop old unique index on (sekolah_id) alone that may exist from Drizzle or prior schema

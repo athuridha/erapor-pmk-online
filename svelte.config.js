@@ -21,6 +21,9 @@ const config = {
 					// Node runtime (butuh fs/child_process untuk puppeteer-core);
 					// nodejs22.x tersedia di semua plan Vercel.
 					runtime: 'nodejs22.x',
+					// Fungsi & database D1 sama-sama di APAC (Singapore); hindari
+					// round-trip ke default iad1 (US) tiap query.
+					regions: ['sin1'],
 					// Render PDF (PagedJS + Chromium) bisa makan waktu; 60s aman
 					// untuk Hobby, naikkan di Pro bila perlu.
 					maxDuration: 60

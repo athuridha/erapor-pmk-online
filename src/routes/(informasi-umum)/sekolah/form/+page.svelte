@@ -321,6 +321,8 @@
 						{#if kunciKepalaSekolah}
 							Otomatis dari Dapodik. Menambahkan gelar dilakukan melalui menu Pengaturan - Edit
 							profil.
+						{:else if pakaiSelectPegawai}
+							Pilih dari daftar guru sekolah ini.
 						{:else}
 							Masukkan nama Kepala Sekolah lengkap dengan gelar.
 						{/if}

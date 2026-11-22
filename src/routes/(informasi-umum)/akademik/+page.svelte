@@ -268,7 +268,6 @@
 				hariSekolahCustom: existing?.hariSekolahCustom ?? null,
 				tipePresensi: existing?.tipePresensi ?? 'masuk_pulang',
 				jenisPresensi: existing?.jenisPresensi ?? 'wali_kelas_saja',
-				presensiGuruEnabled: existing?.presensiGuruEnabled ?? true,
 				liburNasional: existing?.liburNasional ?? '[]',
 				liburSemester: existing?.liburSemester ?? '[]',
 				onAction: (a: { submit: () => Promise<void>; cancel: () => void }) => {

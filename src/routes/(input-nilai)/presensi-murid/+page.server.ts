@@ -1,4 +1,5 @@
 import { redirect, type RequestEvent } from '@sveltejs/kit';
+import { isAdminUser } from '../../pengguna/permissions';
 import type { PageServerLoad } from './$types';
 import { isValidDate, todayDateString } from '$lib/server/absen/utils';
 import { checkPresensiReadiness } from '$lib/server/absen/presensi';
@@ -81,6 +82,21 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 	const { presensiReady, presensiWarningMessage, presensiSettings, bellSettings, kegiatanCustom } =
 		await checkPresensiReadiness(sekolahId, kelasAktif?.id ?? null, tahunAjaranId, academicContext);
 
+	// Presensi harian diatur wali kelas; guru mapel hanya untuk mode tiap mapel.
+	const bolehPresensi =
+		isAdminUser(locals.user) ||
+		locals.user.type === 'wali_kelas' ||
+		(locals.user.type === 'user' && presensiSettings?.jenisPresensi === 'tiap_mapel');
+	if (!bolehPresensi) {
+		throw redirect(303, '/forbidden?required=administrasi_absen');
+	}
+
+	// Mode masuk-pulang dihapus; data lama diperlakukan sebagai masuk saja.
+	const tipePresensiEfektif =
+		presensiSettings?.tipePresensi === 'masuk_pulang'
+			? 'masuk_saja'
+			: presensiSettings?.tipePresensi;
+
 	const searchParam = url.searchParams.get('q');
 	const search = searchParam?.trim() ? searchParam.trim() : null;
 	const requestedPage = Number(url.searchParams.get('page')) || 1;
@@ -122,7 +138,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 				presensiReady,
 				presensiWarningMessage,
 				presensiSettings?.jenisPresensi ?? 'wali_kelas_saja',
-				presensiSettings?.tipePresensi
+				tipePresensiEfektif
 			);
 		}
 		const bulanParam = url.searchParams.get('bulan');
@@ -140,7 +156,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 				presensiReady,
 				presensiWarningMessage,
 				presensiSettings?.jenisPresensi ?? 'wali_kelas_saja',
-				presensiSettings?.tipePresensi
+				tipePresensiEfektif
 			);
 		}
 		if (!Number.isInteger(tahun) || tahun < 2000 || tahun > 2099) {
@@ -153,7 +169,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 				presensiReady,
 				presensiWarningMessage,
 				presensiSettings?.jenisPresensi ?? 'wali_kelas_saja',
-				presensiSettings?.tipePresensi
+				tipePresensiEfektif
 			);
 		}
 		if (!presensiSettings) {
@@ -193,7 +209,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 				presensiReady,
 				presensiWarningMessage,
 				presensiSettings?.jenisPresensi ?? 'wali_kelas_saja',
-				presensiSettings?.tipePresensi
+				tipePresensiEfektif
 			);
 		}
 		const bulanParam = url.searchParams.get('bulan');
@@ -211,7 +227,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 				presensiReady,
 				presensiWarningMessage,
 				presensiSettings?.jenisPresensi ?? 'wali_kelas_saja',
-				presensiSettings?.tipePresensi
+				tipePresensiEfektif
 			);
 		}
 		if (!Number.isInteger(tahun) || tahun < 2000 || tahun > 2099) {
@@ -224,7 +240,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 				presensiReady,
 				presensiWarningMessage,
 				presensiSettings?.jenisPresensi ?? 'wali_kelas_saja',
-				presensiSettings?.tipePresensi
+				tipePresensiEfektif
 			);
 		}
 		if (!presensiSettings) {
@@ -264,7 +280,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 				presensiReady,
 				presensiWarningMessage,
 				presensiSettings?.jenisPresensi ?? 'wali_kelas_saja',
-				presensiSettings?.tipePresensi
+				tipePresensiEfektif
 			);
 		}
 		if (!presensiSettings) {
@@ -289,7 +305,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 				false,
 				'Kelas belum memiliki tahun ajaran atau semester. Atur di halaman /akademik.',
 				presensiSettings.jenisPresensi ?? 'wali_kelas_saja',
-				presensiSettings.tipePresensi
+				tipePresensiEfektif
 			);
 		}
 		return loadPersentaseSemester({
@@ -318,7 +334,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 				presensiReady,
 				presensiWarningMessage,
 				presensiSettings?.jenisPresensi ?? 'wali_kelas_saja',
-				presensiSettings?.tipePresensi
+				tipePresensiEfektif
 			);
 		}
 		if (!presensiSettings) {
@@ -343,7 +359,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 				false,
 				'Kelas belum memiliki tahun ajaran atau semester. Atur di halaman /akademik.',
 				presensiSettings.jenisPresensi ?? 'wali_kelas_saja',
-				presensiSettings.tipePresensi
+				tipePresensiEfektif
 			);
 		}
 		return loadRapor({
@@ -372,7 +388,7 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 			presensiReady,
 			presensiWarningMessage,
 			presensiSettings?.jenisPresensi ?? 'wali_kelas_saja',
-			presensiSettings?.tipePresensi
+			tipePresensiEfektif
 		);
 	}
 	if (!presensiSettings) {

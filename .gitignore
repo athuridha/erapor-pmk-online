@@ -69,3 +69,7 @@ openclaw.json
 
 # artefak sementara (snapshot backup, skrip uji lokal)
 .tmp-*
+
+# local agent symlinks & large third-party skill bundle
+.claude/
+.agents/skills/design-taste-frontend/

@@ -23,9 +23,7 @@
 		showBgLogo = false,
 		onToggleBgLogo = () => {},
 		isJurnalMengajar = false,
-		isBukuTamu = false,
-		isPresensiGuru = false,
-		isLaporanTpp = false
+		isBukuTamu = false
 	}: {
 		hasMurid: boolean;
 		muridCount: number;
@@ -44,8 +42,6 @@
 		onToggleBgLogo?: (value: boolean) => void;
 		isJurnalMengajar?: boolean;
 		isBukuTamu?: boolean;
-		isPresensiGuru?: boolean;
-		isLaporanTpp?: boolean;
 	} = $props();
 
 	async function handleDeleteBg() {
@@ -140,15 +136,6 @@
 	{:else if isBukuTamu}
 		<p class="text-slate-600 dark:text-zinc-400">
 			Preview daftar buku tamu berdasarkan rentang tanggal yang dipilih.
-		</p>
-	{:else if isPresensiGuru}
-		<p class="text-slate-600 dark:text-zinc-400">
-			Preview daftar hadir guru (format bulanan) berdasarkan bulan dan tahun yang dipilih.
-		</p>
-	{:else if isLaporanTpp}
-		<p class="text-slate-600 dark:text-zinc-400">
-			Unduh Laporan TPP (format Excel) berdasarkan bulan, tahun, dan status kepegawaian yang
-			dipilih.
 		</p>
 	{:else if hasMurid}
 		<p class="text-slate-600 dark:text-zinc-400">

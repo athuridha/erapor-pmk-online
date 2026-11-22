@@ -5,7 +5,6 @@
 	import FormEnhance from '$lib/components/form-enhance.svelte';
 	import { toast } from '$lib/components/toast.svelte';
 	import { buildPageNumbers, OPSI_BARIS_PER_HALAMAN } from '$lib/utils/pagination';
-	import PindahMuridModal from '$lib/components/murid/pindah-murid-modal.svelte';
 	import AnggotaEkstrakurikulerModal from '$lib/components/ekstrakurikuler/anggota-modal.svelte';
 	import { selectAll, semuaTerpilih, toggleId } from '$lib/utils/bulk-select';
 	import { jenjangPendidikanSederajat } from '$lib/statics';
@@ -17,7 +16,6 @@
 	let searchTerm = $state(data.filter?.q ?? '');
 	let formTerbuka = $state(false);
 	let bulkTerbuka = $state(false);
-	let pindahMuridTerbuka = $state(false);
 	let anggotaEkstra = $state<{ id: number; nama: string } | null>(null);
 	let kelasTerpilihMassal = $state<number[]>([]);
 	let barisEdit = $state<Record<string, string | number | null> | null>(null);
@@ -305,16 +303,6 @@
 							Tambah Massal
 						</button>
 					{/if}
-					{#if entitas.key === 'kelas'}
-						<button
-							type="button"
-							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 max-sm:w-full dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-							onclick={() => (pindahMuridTerbuka = true)}
-						>
-							<Icon name="move" class="h-4 w-4" />
-							Pindah Murid
-						</button>
-					{/if}
 				{/if}
 			</div>
 		{/if}
@@ -345,7 +333,9 @@
 			<dl class="grid gap-4 sm:grid-cols-2">
 				{#each entitas.fields.filter((field) => field.key !== 'jenjang_variant') as field (field.key)}
 					<div>
-						<dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-zinc-400">
+						<dt
+							class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-zinc-400"
+						>
 							{field.label}
 						</dt>
 						<dd class="mt-0.5 text-xs font-medium text-slate-900 dark:text-zinc-100">
@@ -1055,9 +1045,7 @@
 	</dialog>
 {/if}
 
-{#if entitas?.key === 'kelas'}
-	<PindahMuridModal bind:isOpen={pindahMuridTerbuka} daftarKelas={data.daftarKelasMurid ?? []} />
-{/if}
+{#if entitas?.key === 'kelas'}{/if}
 
 {#if anggotaEkstra && data.anggotaEkstrakurikuler}
 	<AnggotaEkstrakurikulerModal

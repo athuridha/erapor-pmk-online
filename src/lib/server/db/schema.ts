@@ -126,6 +126,22 @@ export const tablePegawai = sqliteTable('pegawai', {
 	// Tanda tangan (PNG data URL) yang diunggah di /tanda-tangan. Disimpan di
 	// database supaya ikut terbawa saat backup/restore .sqlite3.
 	tandaTangan: text(),
+	// Profil guru (identitas & kepegawaian). Foto disimpan sebagai data URL agar
+	// ikut backup database, sama seperti tanda tangan.
+	fotoProfil: text(),
+	jenisKelamin: text({ enum: ['L', 'P'] }),
+	tempatLahir: text(),
+	tanggalLahir: text(),
+	alamat: text(),
+	noHp: text(),
+	email: text(),
+	statusKepegawaian: text(),
+	jabatan: text(),
+	pangkatGolongan: text(),
+	statusAktif: text().default('aktif'),
+	tanggalMulaiTugas: text(),
+	pendidikanTerakhir: text(),
+	programStudi: text(),
 	...audit
 });
 
@@ -1066,13 +1082,12 @@ export const tablePresensiSettings = sqliteTable(
 		hariSekolahCustom: text(),
 		tipePresensi: text({ enum: ['masuk_pulang', 'masuk_saja', 'awal_mapel', 'awal_akhir_mapel'] })
 			.notNull()
-			.default('masuk_pulang'),
+			.default('masuk_saja'),
 		liburNasional: text().notNull().default('[]'),
 		liburSemester: text().notNull().default('[]'),
 		jenisPresensi: text({ enum: ['wali_kelas_saja', 'tiap_mapel'] })
 			.notNull()
 			.default('wali_kelas_saja'),
-		presensiGuruEnabled: int({ mode: 'boolean' }).notNull().default(true),
 		...audit
 	},
 	(table) => [unique().on(table.sekolahId, table.tahunAjaranId)]
@@ -1315,61 +1330,6 @@ export const tableJadwalPelajaran = sqliteTable(
 		)
 	]
 );
-
-export const tablePresensiGuru = sqliteTable(
-	'presensi_guru',
-	{
-		id: int().primaryKey({ autoIncrement: true }),
-		sekolahId: int()
-			.references(() => tableSekolah.id, { onDelete: 'cascade' })
-			.notNull(),
-		tahunAjaranId: int()
-			.references(() => tableTahunAjaran.id, { onDelete: 'cascade' })
-			.notNull(),
-		semesterId: int()
-			.references(() => tableSemester.id, { onDelete: 'cascade' })
-			.notNull(),
-		authUserId: int()
-			.references(() => tableAuthUser.id, { onDelete: 'cascade' })
-			.notNull(),
-		tanggal: text().notNull(),
-		status: text({ enum: ['hadir', 'izin', 'sakit', 'dinas_luar', 'cuti'] }).notNull(),
-		// ISO timestamp saat presensi dicatat
-		waktu: text()
-			.$defaultFn(() => new Date().toISOString())
-			.notNull(),
-		tandaTangan: text(),
-		keterangan: text(),
-		...audit
-	},
-	(table) => [
-		uniqueIndex('presensi_guru_sekolah_user_tanggal_idx').on(
-			table.sekolahId,
-			table.authUserId,
-			table.tanggal
-		),
-		index('presensi_guru_sekolah_tanggal_idx').on(table.sekolahId, table.tanggal)
-	]
-);
-
-export const tablePresensiGuruRelations = relations(tablePresensiGuru, ({ one }) => ({
-	sekolah: one(tableSekolah, {
-		fields: [tablePresensiGuru.sekolahId],
-		references: [tableSekolah.id]
-	}),
-	tahunAjaran: one(tableTahunAjaran, {
-		fields: [tablePresensiGuru.tahunAjaranId],
-		references: [tableTahunAjaran.id]
-	}),
-	semester: one(tableSemester, {
-		fields: [tablePresensiGuru.semesterId],
-		references: [tableSemester.id]
-	}),
-	authUser: one(tableAuthUser, {
-		fields: [tablePresensiGuru.authUserId],
-		references: [tableAuthUser.id]
-	})
-}));
 
 export const tableBukuTamu = sqliteTable(
 	'buku_tamu',

@@ -110,7 +110,7 @@
 
 	/**
 	 * Escape di dalam dialog:
-	 * - modal wajib (dismissible: false, mis. Presensi Guru) → jangan tutup;
+	 * - modal wajib (dismissible: false) → jangan tutup;
 	 * - ada dropdown/combobox terbuka → tutup dropdown itu saja, form tetap.
 	 * `preventDefault` di fase capture mencegah aksi bawaan <dialog> menutup diri.
 	 */
@@ -143,13 +143,13 @@
 {#if modalShown}
 	<dialog
 		bind:this={modal}
-		class="modal bg-slate-950/45 backdrop-blur-[2px]"
+		class="modal modal-bottom bg-slate-950/45 backdrop-blur-[2px] sm:modal-middle"
 		onkeydowncapture={handleDialogKeydown}
 		oncancel={handleDialogCancel}
 		onclose={clearModal}
 	>
 		<div
-			class="modal-box flex max-h-[85vh] flex-col rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl sm:w-full sm:max-w-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+			class="modal-box flex max-h-[88dvh] w-full flex-col rounded-t-2xl border border-slate-200/80 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-slate-900 shadow-2xl sm:max-h-[85vh] sm:max-w-2xl sm:rounded-2xl sm:p-5 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
 		>
 			{#if modalProps.title}
 				<h3
@@ -179,7 +179,7 @@
 				>
 					{#if modalProps.spreadActions && modalProps.onNeutral}
 						<button
-							class="btn btn-sm rounded-xl {modalProps.onNeutral.class ??
+							class="btn btn-sm min-h-10 rounded-xl sm:min-h-0 {modalProps.onNeutral.class ??
 								'border border-[#7e8b9b] bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'} gap-2 shadow-none"
 							type="button"
 							onclick={() => {
@@ -200,7 +200,7 @@
 					<div class="flex flex-wrap justify-end gap-2">
 						{#if modalProps.onNegative}
 							<button
-								class="btn btn-sm rounded-xl {modalProps.onNegative.class ??
+								class="btn btn-sm min-h-10 rounded-xl sm:min-h-0 {modalProps.onNegative.class ??
 									'border border-[#7e8b9b] bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'} gap-2 shadow-none"
 								type="button"
 								onclick={() => {
@@ -220,7 +220,7 @@
 
 						{#if !modalProps.spreadActions && modalProps.onNeutral}
 							<button
-								class="btn btn-sm rounded-xl {modalProps.onNeutral.class ??
+								class="btn btn-sm min-h-10 rounded-xl sm:min-h-0 {modalProps.onNeutral.class ??
 									'border border-[#7e8b9b] bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'} gap-2 shadow-none"
 								type="button"
 								onclick={() => {
@@ -240,7 +240,7 @@
 
 						{#if modalProps.onExtra}
 							<a
-								class="btn btn-sm rounded-xl {modalProps.onExtra.class ??
+								class="btn btn-sm min-h-10 rounded-xl sm:min-h-0 {modalProps.onExtra.class ??
 									'border border-[#7e8b9b] bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'} gap-2 shadow-none"
 								href={modalProps.onExtra.href}
 								target="_blank"
@@ -255,7 +255,7 @@
 
 						{#if modalProps.onPositive}
 							<button
-								class="btn btn-sm rounded-xl {modalProps.onPositive.class ??
+								class="btn btn-sm min-h-10 rounded-xl sm:min-h-0 {modalProps.onPositive.class ??
 									'border-0 bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'} gap-2 shadow-none"
 								type="button"
 								disabled={isLoading}

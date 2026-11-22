@@ -72,7 +72,6 @@ export const groupedUserPermissions = {
 			['legger', 'Legger'],
 			['keputusan', 'Keputusan'],
 			['buku_tamu', 'Buku Tamu'],
-			['presensi_guru', 'Presensi Guru'],
 			['sppd', 'SPPD'],
 			['dinas_luar', 'Dinas Luar']
 		],
@@ -116,7 +115,6 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'administrasi_poin_siswa',
 		'administrasi_legger',
 		'administrasi_keputusan',
-		'administrasi_presensi_guru',
 		'administrasi_dinas_luar',
 		'cetak_dokumen'
 	],
@@ -139,7 +137,6 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'administrasi_rekap_nilai',
 		'administrasi_poin_siswa',
 		'administrasi_legger',
-		'administrasi_presensi_guru',
 		'administrasi_dinas_luar',
 		'cetak_dokumen'
 	]
@@ -166,7 +163,9 @@ export const removedLegacyPermissionKeys = new Set([
 	// Keasramaan dihapus (sekolah tanpa program asrama).
 	'mata_pelajaran_keasramaan',
 	'input_nilai_asesmen_keasramaan',
-	'administrasi_sinkronisasi'
+	'administrasi_sinkronisasi',
+	// Presensi guru dihapus dari produk.
+	'administrasi_presensi_guru'
 ]);
 
 /**
@@ -174,13 +173,13 @@ export const removedLegacyPermissionKeys = new Set([
  * halaman (server) dan menyembunyikan item di drawer (client).
  */
 export const menuRoutePermissions: { path: string; permission: UserPermission }[] = [
+	{ path: '/wali-kelas', permission: 'overview_semua_kelas' },
+	{ path: '/master-data/kelas', permission: 'overview_semua_kelas' },
+	{ path: '/master-data/murid', permission: 'informasi_umum_murid' },
 	{ path: '/master-data', permission: 'overview_semua_kelas' },
-	{ path: '/semua-kelas', permission: 'overview_semua_kelas' },
 	{ path: '/import-data', permission: 'informasi_umum_sekolah' },
 	{ path: '/sekolah', permission: 'informasi_umum_sekolah' },
 	{ path: '/akademik', permission: 'informasi_umum_akademik' },
-	{ path: '/kelas', permission: 'informasi_umum_kelas' },
-	{ path: '/murid', permission: 'informasi_umum_murid' },
 	{ path: '/intrakurikuler', permission: 'mata_pelajaran_intrakurikuler' },
 	{ path: '/teknik-penilaian', permission: 'mata_pelajaran_intrakurikuler' },
 	{ path: '/kokurikuler', permission: 'mata_pelajaran_kokurikuler' },
@@ -202,7 +201,6 @@ export const menuRoutePermissions: { path: string; permission: UserPermission }[
 	{ path: '/keputusan', permission: 'administrasi_keputusan' },
 	{ path: '/buku-tamu', permission: 'administrasi_buku_tamu' },
 	{ path: '/poin-siswa', permission: 'administrasi_poin_siswa' },
-	{ path: '/presensi-guru', permission: 'administrasi_presensi_guru' },
 	{ path: '/sppd', permission: 'administrasi_sppd' },
 	{ path: '/dinas-luar', permission: 'administrasi_dinas_luar' },
 	{ path: '/portal-orang-tua', permission: 'portal_orang_tua' },

@@ -3,9 +3,9 @@ import path from 'node:path';
 import { eq, like } from 'drizzle-orm';
 import db from '$lib/server/db';
 import { dataRoot } from '$lib/server/data-dirs';
-import { tableBukuTamu, tablePegawai, tablePresensiGuru } from '$lib/server/db/schema';
+import { tableBukuTamu, tablePegawai } from '$lib/server/db/schema';
 
-export type TtdKategori = 'guru' | 'tamu' | 'pegawai';
+export type TtdKategori = 'tamu' | 'pegawai';
 
 // Signatures are stored as transparent PNG files under <root>/ttd/<kategori>/,
 // alongside the other user data (database, uploads, dinas-luar).
@@ -200,27 +200,6 @@ export async function migrateLegacySignatures(): Promise<void> {
 	if (legacyMigrated) return;
 
 	try {
-		// Each branch is guarded on table existence: on a fresh install only one of
-		// the two tables may exist yet (they are created by separate ensure-* scripts).
-		if (await tableExists('presensi_guru')) {
-			const guruRows = await db.query.tablePresensiGuru.findMany({
-				columns: { id: true, authUserId: true, tanggal: true, tandaTangan: true },
-				where: like(tablePresensiGuru.tandaTangan, 'data:image%')
-			});
-			for (const row of guruRows) {
-				if (!row.tandaTangan) continue;
-				const rel = await saveSignatureFile(
-					'guru',
-					`${row.authUserId}_${row.tanggal}.png`,
-					row.tandaTangan
-				);
-				await db
-					.update(tablePresensiGuru)
-					.set({ tandaTangan: rel })
-					.where(eq(tablePresensiGuru.id, row.id));
-			}
-		}
-
 		if (await tableExists('buku_tamu')) {
 			const tamuRows = await db.query.tableBukuTamu.findMany({
 				columns: { id: true, tandaTangan: true },

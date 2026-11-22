@@ -26,7 +26,7 @@
 	const kelasAktifId = $derived(page.data.kelasAktif?.id ?? null);
 	const kelasLabel = $derived.by(() => {
 		const kelas = page.data.kelasAktif ?? null;
-		if (!kelas) return null;
+		if (!kelas) return 'Semua kelas';
 		return kelas.fase ? `${kelas.nama} - ${kelas.fase}` : kelas.nama;
 	});
 
@@ -38,17 +38,16 @@
 	let hasLoaded = $state(false);
 	let isProcessing = $state(false);
 	let errorMessage = $state('');
-	let previousKelasId = $state<number | null>(null);
+	let previousKelasId = $state<number | null | undefined>(undefined);
 	let activeListRef = $state<{ focusInput: () => Promise<void> | void } | null>(null);
 
 	const showInitialSpinner = $derived(isLoading && !hasLoaded);
 	const hasActiveTasks = $derived(Boolean(activeTasks.length));
 	const hasCompletedTasks = $derived(Boolean(completedTasks.length));
 	const hasAnyTasks = $derived(hasActiveTasks || hasCompletedTasks);
-	const canManageTasks = $derived(Boolean(kelasAktifId));
-	const hasAnyTasksLoaded = $derived(canManageTasks && hasLoaded);
+	const canManageTasks = $derived(true);
+	const hasAnyTasksLoaded = $derived(hasLoaded);
 	const showEmptyState = $derived(hasAnyTasksLoaded && !isAdding && !hasActiveTasks);
-	const showNoClass = $derived(!canManageTasks);
 
 	const resetBuckets = () => {
 		activeTasks = [];
@@ -66,25 +65,11 @@
 		completedTasks = completed;
 	};
 
-	const ensureKelasAvailable = () => {
-		if (!kelasAktifId) {
-			errorMessage = 'Pilih kelas untuk mengelola tugas.';
-			return false;
-		}
-		return true;
-	};
-
 	const loadTasks = async ({
 		kelasId = kelasAktifId,
 		showSpinner = false
 	}: { kelasId?: number | null; showSpinner?: boolean } = {}) => {
 		const targetKelasId = kelasId ?? null;
-		if (!targetKelasId) {
-			resetBuckets();
-			hasLoaded = false;
-			isLoading = false;
-			return;
-		}
 		if (showSpinner) isLoading = true;
 		errorMessage = '';
 		try {
@@ -108,13 +93,6 @@
 		if (kelasAktifId === previousKelasId) return;
 		previousKelasId = kelasAktifId;
 		resetInput();
-		if (!kelasAktifId) {
-			resetBuckets();
-			hasLoaded = false;
-			isLoading = false;
-			errorMessage = '';
-			return;
-		}
 		hasLoaded = false;
 		void loadTasks({ kelasId: kelasAktifId, showSpinner: true });
 	});
@@ -125,7 +103,6 @@
 			resetInput();
 			return;
 		}
-		if (!ensureKelasAvailable()) return;
 		isAdding = true;
 		await activeListRef?.focusInput();
 	};
@@ -133,8 +110,7 @@
 	const saveTask = async () => {
 		const title = newTaskTitle.trim();
 		if (!title || isProcessing) return;
-		if (!ensureKelasAvailable()) return;
-		const kelasId = kelasAktifId!;
+		const kelasId = kelasAktifId;
 		isProcessing = true;
 		errorMessage = '';
 		try {
@@ -151,8 +127,7 @@
 
 	const updateTask = async (taskId: number, status: 'active' | 'completed') => {
 		if (isProcessing) return;
-		if (!ensureKelasAvailable()) return;
-		const kelasId = kelasAktifId!;
+		const kelasId = kelasAktifId;
 		isProcessing = true;
 		errorMessage = '';
 		try {
@@ -176,8 +151,7 @@
 
 	const removeTasks = async (payload: { id?: number; scope?: 'completed' | 'all' }) => {
 		if (isProcessing) return;
-		if (!ensureKelasAvailable()) return;
-		const kelasId = kelasAktifId!;
+		const kelasId = kelasAktifId;
 		isProcessing = true;
 		errorMessage = '';
 		try {
@@ -243,13 +217,6 @@
 				></span>
 				<span class="text-slate-600 dark:text-zinc-400">Memuat daftar tugas...</span>
 			</div>
-		{:else if showNoClass}
-			<div class="flex flex-1 flex-col items-center justify-center gap-1.5 px-6 py-8 text-center">
-				<p class="text-sm font-semibold text-slate-900 dark:text-zinc-100">Belum ada kelas aktif</p>
-				<p class="text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
-					Pilih satu kelas terlebih dahulu untuk melihat atau menambah daftar tugas kelas.
-				</p>
-			</div>
 		{:else}
 			<TaskActiveList
 				bind:this={activeListRef}
@@ -276,17 +243,15 @@
 			{/if}
 		{/if}
 
-		{#if !showNoClass}
-			<div class="mt-auto p-3">
-				<TaskCompletedList
-					tasks={completedTasks}
-					{isProcessing}
-					{showInitialSpinner}
-					canManage={canManageTasks}
-					onRestore={(id) => void moveToActive(id)}
-					onRemove={(id) => void removeTask(id)}
-				/>
-			</div>
-		{/if}
+		<div class="mt-auto p-3">
+			<TaskCompletedList
+				tasks={completedTasks}
+				{isProcessing}
+				{showInitialSpinner}
+				canManage={canManageTasks}
+				onRestore={(id) => void moveToActive(id)}
+				onRemove={(id) => void removeTask(id)}
+			/>
+		</div>
 	</div>
 </div>

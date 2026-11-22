@@ -8,7 +8,7 @@ import {
 	tableSppdPengikut
 } from '$lib/server/db/schema';
 import db from '$lib/server/db';
-import { listGuruBySekolah } from '$lib/server/presensi-guru';
+import { listGuruBySekolah } from '$lib/server/pegawai';
 import { redirect } from '@sveltejs/kit';
 import { and, desc, eq, inArray, like, sql } from 'drizzle-orm';
 import { isAdminUser } from '../pengguna/permissions';

@@ -132,6 +132,9 @@ export const MASTER_DATA: MasterData[] = [
 		deskripsi: 'Rombongan belajar beserta semester, fase, dan wali kelasnya.',
 		ikon: 'users',
 		tabel: 'kelas',
+		path: '/master-data/kelas',
+		readOnly: true,
+		editorPath: '/master-data/kelas',
 		fields: [
 			{ key: 'nama', label: 'Nama Kelas', tipe: 'teks', wajib: true, placeholder: 'XII TSM' },
 			{
@@ -305,9 +308,9 @@ export const MASTER_DATA: MasterData[] = [
 			'Data induk murid: identitas, kelas, alamat, dan orang tua/wali. Bergabung dengan rapor & portal.',
 		ikon: 'user',
 		tabel: 'murid',
-		/** Satu halaman Murid lengkap (identitas + aksi) ada di /murid. */
+		/** Satu halaman Murid lengkap (identitas + aksi) ada di /master-data/murid. */
 		readOnly: true,
-		editorPath: '/murid',
+		editorPath: '/master-data/murid',
 		fields: [
 			{ key: 'nis', label: 'NIS', tipe: 'teks', wajib: true },
 			{ key: 'nisn', label: 'NISN', tipe: 'teks', wajib: true },

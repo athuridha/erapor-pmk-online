@@ -101,7 +101,7 @@
 		</span>
 		<input
 			type="search"
-			class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-8 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+			class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-8 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none sm:h-9 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 			placeholder="Ketik nama murid atau pilih di sini"
 			autocomplete="off"
 			role="combobox"
@@ -134,7 +134,7 @@
 				<li id={`picker-murid-opsi-${i}`} role="option" aria-selected={i === indeksSorot}>
 					<button
 						type="button"
-						class="flex w-full items-center truncate rounded-lg px-2.5 py-2 text-left text-xs text-slate-800 transition-colors hover:bg-blue-50/70 hover:text-blue-700 dark:text-zinc-200 dark:hover:bg-blue-950/40 dark:hover:text-blue-300 {i ===
+						class="flex w-full items-center truncate rounded-lg px-2.5 py-2.5 text-left text-sm text-slate-800 transition-colors hover:bg-blue-50/70 hover:text-blue-700 sm:py-2 sm:text-xs dark:text-zinc-200 dark:hover:bg-blue-950/40 dark:hover:text-blue-300 {i ===
 						indeksSorot
 							? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
 							: ''}"

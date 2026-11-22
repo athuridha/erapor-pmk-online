@@ -5,15 +5,7 @@
 	import { toast } from '$lib/components/toast.svelte';
 	import { DEFAULT_RAPOR_CRITERIA, type RaporPeriode } from '$lib/rapor-params';
 
-	type DocumentType =
-		| 'cover'
-		| 'biodata'
-		| 'rapor'
-		| 'piagam'
-		| 'jurnal-mengajar'
-		| 'buku-tamu'
-		| 'presensi-guru'
-		| 'laporan-tpp';
+	type DocumentType = 'cover' | 'biodata' | 'rapor' | 'piagam' | 'jurnal-mengajar' | 'buku-tamu';
 	type MuridData = {
 		id: number;
 		nama: string;
@@ -29,10 +21,6 @@
 			(userType === 'user' ? 'guru' : userType === 'wali_kelas' ? 'wali_kelas' : 'admin')
 	);
 
-	const presensiGuruEnabled = $derived(
-		(page.data as { presensiGuruEnabled?: boolean } | null)?.presensiGuruEnabled ?? true
-	);
-
 	const documentOptions = $derived.by<Array<{ value: DocumentType; label: string }>>(() => {
 		const all: Array<{ value: DocumentType; label: string }> = [
 			{ value: 'cover', label: 'Cover' },
@@ -40,22 +28,15 @@
 			{ value: 'rapor', label: 'Rapor' },
 			{ value: 'piagam', label: 'Piagam' },
 			{ value: 'jurnal-mengajar', label: 'Jurnal Mengajar' },
-			{ value: 'buku-tamu', label: 'Buku Tamu' },
-			{ value: 'presensi-guru', label: 'Presensi Guru' },
-			{ value: 'laporan-tpp', label: 'Laporan TPP' }
+			{ value: 'buku-tamu', label: 'Buku Tamu' }
 		];
-		const visible = all.filter(
-			(o) => !((o.value === 'presensi-guru' || o.value === 'laporan-tpp') && !presensiGuruEnabled)
-		);
 		if (activeModul === 'guru' || (userType === 'user' && activeModul !== 'wali_kelas')) {
-			return visible.filter((o) => o.value === 'jurnal-mengajar');
+			return all.filter((o) => o.value === 'jurnal-mengajar');
 		}
 		if (activeModul === 'wali_kelas' || (userType !== 'admin' && userType !== 'kepala_sekolah')) {
-			return visible.filter(
-				(o) => o.value !== 'presensi-guru' && o.value !== 'buku-tamu' && o.value !== 'laporan-tpp'
-			);
+			return all.filter((o) => o.value !== 'buku-tamu');
 		}
-		return visible;
+		return all;
 	});
 
 	let selectedDocument = $state<DocumentType | ''>('');
@@ -113,15 +94,6 @@
 	let bukuTamuTanggalMulai = $state('');
 	let bukuTamuTanggalSelesai = $state('');
 
-	// Presensi guru month/year
-	let presensiBulan = $state(new Date().getMonth() + 1);
-	let presensiTahun = $state(new Date().getFullYear());
-
-	// Laporan TPP month/year/status
-	let laporanBulan = $state(new Date().getMonth() + 1);
-	let laporanTahun = $state(new Date().getFullYear());
-	let statusKepegawaian = $state<'PNS' | 'PPPK'>('PNS');
-
 	$effect(() => {
 		jurnalTanggalMulai = data.tanggalMasuk || '';
 		jurnalTanggalSelesai = data.tanggalBagiRaport || '';
@@ -131,8 +103,6 @@
 	const isJurnalMengajar = $derived(selectedDocument === 'jurnal-mengajar');
 	const isBukuTamu = $derived(selectedDocument === 'buku-tamu');
 	const isPiagamSelected = $derived(selectedDocument === 'piagam');
-	const isPresensiGuru = $derived(selectedDocument === 'presensi-guru');
-	const isLaporanTpp = $derived(selectedDocument === 'laporan-tpp');
 
 	const academicContext = $derived(data.academicContext ?? null);
 	const kelasAktif = $derived(page.data.kelasAktif ?? null);
@@ -154,22 +124,7 @@
 				? Boolean(bukuTamuTanggalMulai && bukuTamuTanggalSelesai)
 				: isPiagamSelected
 					? hasPiagamRankingOptions
-					: isPresensiGuru
-						? Boolean(
-								presensiBulan >= 1 &&
-								presensiBulan <= 12 &&
-								presensiTahun >= 2000 &&
-								presensiTahun <= 2099
-							)
-						: isLaporanTpp
-							? Boolean(
-									laporanBulan >= 1 &&
-									laporanBulan <= 12 &&
-									laporanTahun >= 2000 &&
-									laporanTahun <= 2099 &&
-									statusKepegawaian
-								)
-							: hasMurid
+					: hasMurid
 	);
 
 	const downloadDisabled = $derived(!selectedDocument || !hasSelectionOptions || downloadLoading);
@@ -209,39 +164,6 @@
 			tanggal_selesai: bukuTamuTanggalSelesai
 		});
 		window.open(`/api/pdf/buku-tamu?${params}`, '_blank', 'noopener,noreferrer');
-	}
-
-	async function handleDownloadLaporanTpp() {
-		if (!isLaporanTpp) return;
-
-		downloadLoading = true;
-		try {
-			const params = new URLSearchParams({
-				bulan: String(laporanBulan),
-				tahun: String(laporanTahun),
-				status: statusKepegawaian
-			});
-			const res = await fetch(`/api/cetak/laporan-tpp?${params}`);
-			if (!res.ok) {
-				const errBody = await res.json().catch(() => ({}));
-				throw new Error(errBody?.error || 'Gagal membuat Laporan TPP');
-			}
-			const blob = await res.blob();
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = `Laporan-TPP-${laporanTahun}-${String(laporanBulan).padStart(2, '0')}-${statusKepegawaian}.xlsx`;
-			document.body.appendChild(a);
-			a.click();
-			document.body.removeChild(a);
-			URL.revokeObjectURL(url);
-			toast('Laporan TPP berhasil diunduh.', 'success');
-		} catch (err) {
-			console.error('Laporan TPP download error:', err);
-			toast(err instanceof Error ? err.message : 'Gagal mengunduh Laporan TPP.', 'error');
-		} finally {
-			downloadLoading = false;
-		}
 	}
 
 	async function handleDownloadBulk() {
@@ -336,12 +258,6 @@
 		bind:jurnalTanggalSelesai
 		bind:bukuTamuTanggalMulai
 		bind:bukuTamuTanggalSelesai
-		bind:presensiBulan
-		bind:presensiTahun
-		bind:laporanBulan
-		bind:laporanTahun
-		bind:statusKepegawaian
-		onDownloadLaporanTpp={handleDownloadLaporanTpp}
 		muridCount={daftarMurid.length}
 		isRaporSelected={selectedDocument === 'rapor'}
 		isBiodataSelected={selectedDocument === 'biodata'}

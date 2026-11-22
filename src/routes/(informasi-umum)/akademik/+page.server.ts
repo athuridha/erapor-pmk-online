@@ -1285,9 +1285,8 @@ export const actions: Actions = {
 			}
 		}
 
-		const validTipe = ['masuk_pulang', 'masuk_saja', 'awal_mapel', 'awal_akhir_mapel'];
-		const tipePresensiEnum = tipePresensi as
-			'masuk_pulang' | 'masuk_saja' | 'awal_mapel' | 'awal_akhir_mapel';
+		const validTipe = ['masuk_saja', 'awal_mapel', 'awal_akhir_mapel'];
+		const tipePresensiEnum = tipePresensi as 'masuk_saja' | 'awal_mapel' | 'awal_akhir_mapel';
 		if (!validTipe.includes(tipePresensiEnum)) {
 			return fail(400, { fail: 'Tipe presensi tidak valid' });
 		}
@@ -1297,8 +1296,6 @@ export const actions: Actions = {
 		if (!['wali_kelas_saja', 'tiap_mapel'].includes(jenisPresensiEnum)) {
 			return fail(400, { fail: 'Jenis presensi tidak valid' });
 		}
-
-		const presensiGuruEnabled = formData.get('presensiGuruEnabled') === '1';
 
 		if (jenisPresensiEnum === 'tiap_mapel') {
 			const jadwalCount = await db.$client.execute({
@@ -1330,7 +1327,6 @@ export const actions: Actions = {
 				hariSekolahCustom,
 				tipePresensi: tipePresensiEnum,
 				jenisPresensi: jenisPresensiEnum,
-				presensiGuruEnabled,
 				liburNasional,
 				liburSemester,
 				updatedAt: new Date().toISOString()
@@ -1344,7 +1340,6 @@ export const actions: Actions = {
 					hariSekolahCustom,
 					tipePresensi: tipePresensiEnum,
 					jenisPresensi: jenisPresensiEnum,
-					presensiGuruEnabled,
 					liburNasional,
 					liburSemester,
 					updatedAt: new Date().toISOString()

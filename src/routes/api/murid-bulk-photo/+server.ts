@@ -4,7 +4,9 @@ import { Readable } from 'stream';
 import db from '$lib/server/db/index.js';
 import { tableMurid } from '$lib/server/db/schema.js';
 import { uploadsDir } from '$lib/server/data-dirs';
+import { json } from '@sveltejs/kit';
 import { eq, inArray } from 'drizzle-orm';
+import { isAdminUser } from '../../pengguna/permissions';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let unzipper: any;
 
@@ -122,6 +124,7 @@ export async function POST({
 	request: Request;
 	locals: App.Locals;
 }): Promise<Response> {
+	if (!isAdminUser(locals.user)) return json({ message: 'Hanya operator/admin.' }, { status: 403 });
 	const sekolahId = locals.sekolah?.id;
 	if (!sekolahId) {
 		return new Response(JSON.stringify({ message: 'Unauthorized - no sekolah' }), { status: 401 });

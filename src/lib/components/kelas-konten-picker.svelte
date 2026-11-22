@@ -35,7 +35,7 @@
 {#if tampil}
 	<div class="relative flex w-full items-center sm:w-56 md:w-64">
 		<select
-			class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-semibold text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+			class="h-11 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-semibold text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 			title="Pilih kelas"
 			onchange={pilihKelas}
 			value={String(currentId ?? '')}

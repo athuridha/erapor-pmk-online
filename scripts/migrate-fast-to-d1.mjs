@@ -27,7 +27,11 @@ async function queryD1(sql, params = []) {
 
 function serializeValue(v) {
 	if (v === null || v === undefined) return null;
-	if (Buffer.isBuffer(v) || v instanceof Uint8Array || (typeof v === 'object' && v.type === 'Buffer')) {
+	if (
+		Buffer.isBuffer(v) ||
+		v instanceof Uint8Array ||
+		(typeof v === 'object' && v.type === 'Buffer')
+	) {
 		// D1 supports blobs via Uint8Array or array of numbers
 		return Array.from(new Uint8Array(v.data || v));
 	}
@@ -113,7 +117,9 @@ const TABLE_ORDER = [
 ];
 
 async function main() {
-	const client = createClient({ url: 'file:D:/amar/pratamamulya/rapkumer-main/data/database.sqlite3' });
+	const client = createClient({
+		url: 'file:D:/amar/pratamamulya/rapkumer-main/data/database.sqlite3'
+	});
 
 	console.log(`Starting migration in FK dependency order...`);
 
@@ -148,9 +154,9 @@ async function main() {
 
 		for (const r of rows) {
 			const cols = Object.keys(r);
-			const colNames = cols.map(c => `"${c}"`).join(', ');
+			const colNames = cols.map((c) => `"${c}"`).join(', ');
 			const placeholders = cols.map(() => '?').join(', ');
-			const vals = cols.map(c => serializeValue(r[c]));
+			const vals = cols.map((c) => serializeValue(r[c]));
 
 			const sql = `INSERT OR REPLACE INTO "${tableName}" (${colNames}) VALUES (${placeholders})`;
 			try {

@@ -3,13 +3,11 @@ import {
 	hapusMasterData,
 	loadAnggotaEkstrakurikuler,
 	loadBarisMaster,
-	loadDaftarKelasMurid,
 	loadOpsiRelasi,
 	simpanAnggotaEkstrakurikuler,
 	simpanMasterData,
 	simpanMasterDataMassal
 } from '$lib/admin/master-data.server';
-import { pindahkanMuridKelas } from '$lib/server/murid-pindah-kelas';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 import { isAdminUser } from '../../../pengguna/permissions';
@@ -25,6 +23,14 @@ export const load = async ({ params, locals, url, depends }) => {
 	}
 	if (!user || !isAdminUser(user)) {
 		throw error(403, 'Master data hanya bisa dikelola admin dan kepala sekolah.');
+	}
+
+	// Kelas dikelola di satu halaman: ringkasan + detail + pindah murid.
+	if (params.entitas === 'kelas') {
+		throw redirect(303, '/master-data/kelas');
+	}
+	if (params.entitas === 'murid') {
+		throw redirect(303, '/master-data/murid');
 	}
 
 	const entitas = cariMasterData(params.entitas ?? '');
@@ -44,7 +50,6 @@ export const load = async ({ params, locals, url, depends }) => {
 		loadBarisMaster(sekolahId, entitas.key, { q, page, perPage: perHalaman }),
 		loadOpsiRelasi(sekolahId)
 	]);
-	const daftarKelasMurid = entitas.key === 'kelas' ? await loadDaftarKelasMurid(sekolahId) : [];
 	const anggotaEkstrakurikuler =
 		entitas.key === 'ekstrakurikuler' ? await loadAnggotaEkstrakurikuler(sekolahId) : null;
 
@@ -57,7 +62,6 @@ export const load = async ({ params, locals, url, depends }) => {
 		totalHalaman: daftarBaris.totalHalaman,
 		perHalaman: daftarBaris.perHalaman,
 		relasi,
-		daftarKelasMurid,
 		anggotaEkstrakurikuler,
 		filter: { q, page, perHalaman }
 	};
@@ -143,49 +147,6 @@ export const actions = {
 		return {
 			message: `${terhapus} data dihapus${gagal.length ? `, ${gagal.length} gagal: ${gagal[0]}` : ''}.`
 		};
-	},
-
-	async pindahMurid({ request, locals }) {
-		const sekolahId = locals.sekolah?.id;
-		if (!sekolahId) {
-			return fail(401, { fail: 'Sekolah tidak ditemukan' });
-		}
-		const user = locals.user;
-		if (!user || !isAdminUser(user)) {
-			return fail(403, { fail: 'Hanya admin/kepala sekolah yang bisa memindahkan murid.' });
-		}
-
-		const formData = await request.formData();
-		const mentah = String(formData.get('pindah') ?? '[]');
-		let daftar: Array<{ muridId: number; kelasId: number }> = [];
-		try {
-			const parsed = JSON.parse(mentah);
-			if (Array.isArray(parsed)) {
-				daftar = parsed
-					.map((item) => ({
-						muridId: Number(item?.muridId),
-						kelasId: Number(item?.kelasId)
-					}))
-					.filter((item) => Number.isInteger(item.muridId) && Number.isInteger(item.kelasId));
-			}
-		} catch {
-			return fail(400, { fail: 'Data perpindahan tidak valid.' });
-		}
-		if (!daftar.length) {
-			return fail(400, { fail: 'Tidak ada murid yang dipindahkan.' });
-		}
-
-		for (const item of daftar) {
-			const hasil = await pindahkanMuridKelas({
-				sekolahId,
-				muridIds: [item.muridId],
-				kelasId: item.kelasId
-			});
-			if (hasil.fail) {
-				return fail(400, { fail: hasil.fail });
-			}
-		}
-		return { message: `${daftar.length} murid dipindahkan.` };
 	},
 
 	async hapus({ request, locals, params }) {

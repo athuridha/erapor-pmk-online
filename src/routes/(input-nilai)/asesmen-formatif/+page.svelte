@@ -250,7 +250,7 @@
 	{#if murid.nilaiHref && canEdit && murid.hasTujuan}
 		<a
 			class="inline-flex items-center justify-center gap-1 rounded-xl bg-blue-600 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 {ringkas
-				? 'h-9 w-9'
+				? 'h-10 w-10'
 				: 'h-8 px-3'}"
 			href={murid.nilaiHref}
 			aria-label={ringkas ? `Nilai ${murid.nama}` : undefined}
@@ -262,7 +262,7 @@
 		<button
 			type="button"
 			class="inline-flex cursor-not-allowed items-center justify-center gap-1 rounded-lg border border-slate-200 bg-slate-100 text-xs font-semibold text-slate-400 {ringkas
-				? 'h-9 w-9'
+				? 'h-10 w-10'
 				: 'h-8 px-3'} dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500"
 			disabled
 			aria-disabled="true"
@@ -313,7 +313,7 @@
 		<form class="w-full sm:w-64 md:w-72" method="get" use:autoSubmit>
 			<div class="relative flex items-center">
 				<select
-					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+					class="h-11 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					title="Pilih mata pelajaran"
 					name="mapel_id"
 					bind:value={selectedMapelValue}
@@ -355,7 +355,7 @@
 				<input
 					type="search"
 					name="q"
-					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+					class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 					value={searchTerm}
 					spellcheck="false"
 					autocomplete="name"
@@ -373,11 +373,19 @@
 			<p class="text-xs text-slate-600 dark:text-zinc-400">
 				Centang murid pada tabel untuk menilai satu lingkup materi sekaligus.
 			</p>
-			<div class="flex items-center gap-2">
+			<div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+				<button
+					type="button"
+					class="inline-flex h-10 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 sm:hidden dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+					onclick={() => togglePilihSemua(!semuaTerpilih)}
+					disabled={!canEdit || !muridBisaDipilih.length}
+				>
+					{semuaTerpilih ? 'Batal semua' : 'Pilih semua'}
+				</button>
 				{#if muridTerpilih.length}
 					<button
 						type="button"
-						class="inline-flex h-8 items-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+						class="inline-flex h-10 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:h-8 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 						onclick={() => togglePilihSemua(false)}
 					>
 						Kosongkan
@@ -385,7 +393,7 @@
 				{/if}
 				<button
 					type="button"
-					class="inline-flex h-8 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+					class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:flex-none"
 					onclick={bukaMassal}
 					disabled={!canEdit || !muridTerpilih.length || !bulkLingkupList.length}
 					aria-disabled={!canEdit || !muridTerpilih.length || !bulkLingkupList.length}
@@ -430,14 +438,16 @@
 					class="rounded-xl border border-slate-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
 				>
 					<div class="flex items-start gap-2.5">
-						<input
-							type="checkbox"
-							class="checkbox checkbox-sm mt-0.5"
-							checked={terpilihMurid.includes(murid.id)}
-							disabled={!bisaDipilih}
-							onchange={(event) => togglePilihMurid(murid.id, event.currentTarget.checked)}
-							aria-label="Pilih {murid.nama}"
-						/>
+						<label class="-m-1.5 flex h-10 w-10 shrink-0 items-center justify-center">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								checked={terpilihMurid.includes(murid.id)}
+								disabled={!bisaDipilih}
+								onchange={(event) => togglePilihMurid(murid.id, event.currentTarget.checked)}
+								aria-label="Pilih {murid.nama}"
+							/>
+						</label>
 						<div class="min-w-0 flex-1">
 							<p class="text-sm font-semibold leading-snug text-slate-900 dark:text-zinc-100">
 								<span class="mr-1 text-[11px] text-slate-400 tabular-nums dark:text-zinc-500"
@@ -551,7 +561,7 @@
 				{#each pages as pageNumber (pageNumber)}
 					<button
 						type="button"
-						class="inline-flex h-9 min-w-9 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors sm:h-8 sm:min-w-8 {pageNumber ===
+						class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors sm:h-8 sm:min-w-8 {pageNumber ===
 						currentPage
 							? 'border-blue-600 bg-blue-600 text-white shadow-sm'
 							: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
@@ -568,12 +578,12 @@
 
 {#if massalTerbuka && muridTerpilih.length}
 	<dialog
-		class="modal bg-slate-950/45 backdrop-blur-[2px]"
+		class="modal modal-bottom bg-slate-950/45 backdrop-blur-[2px] sm:modal-middle"
 		open
 		onclose={() => (massalTerbuka = false)}
 	>
 		<div
-			class="modal-box max-w-lg rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+			class="modal-box max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-slate-200/80 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-slate-900 shadow-2xl sm:rounded-2xl sm:p-5 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
 		>
 			<h3 class="mb-1 text-lg font-bold">Isi Penguasaan Sekaligus</h3>
 			<p class="mb-3 text-xs text-slate-600 dark:text-zinc-400">
@@ -608,7 +618,7 @@
 							<div class="relative flex items-center">
 								<select
 									name="lingkupMateri"
-									class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+									class="h-11 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 									bind:value={massalLingkup}
 									required
 									disabled={submitting}
@@ -634,7 +644,7 @@
 								Penguasaan
 							</span>
 							<div class="flex flex-wrap gap-4">
-								<label class="flex cursor-pointer items-center gap-2 text-xs">
+								<label class="flex min-h-9 cursor-pointer items-center gap-2 text-xs">
 									<input
 										type="radio"
 										name="status"
@@ -645,7 +655,7 @@
 									/>
 									<span>Tuntas (YA)</span>
 								</label>
-								<label class="flex cursor-pointer items-center gap-2 text-xs">
+								<label class="flex min-h-9 cursor-pointer items-center gap-2 text-xs">
 									<input
 										type="radio"
 										name="status"
@@ -667,7 +677,7 @@
 					>
 						<button
 							type="button"
-							class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+							class="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-50 sm:h-9 sm:flex-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							onclick={() => (massalTerbuka = false)}
 							disabled={submitting}
 						>
@@ -675,7 +685,7 @@
 						</button>
 						<button
 							type="submit"
-							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+							class="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:flex-none"
 							disabled={submitting}
 						>
 							<Icon name="save" class="h-4 w-4" />

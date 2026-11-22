@@ -54,7 +54,7 @@
 			</div>
 		</div>
 		<a
-			href="/semua-kelas"
+			href="/master-data/kelas"
 			class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
 		>
 			<span aria-hidden="true" class="text-slate-400 dark:text-zinc-400">

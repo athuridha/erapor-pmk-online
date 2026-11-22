@@ -5,6 +5,11 @@ import db from '$lib/server/db/index.js';
 import { tableMurid } from '$lib/server/db/schema.js';
 import { uploadsDir } from '$lib/server/data-dirs';
 import { and, eq } from 'drizzle-orm';
+import { isAdminUser } from '../../../pengguna/permissions';
+
+function bolehUbahFoto(user: App.Locals['user']) {
+	return isAdminUser(user) || user?.type === 'wali_kelas';
+}
 
 function contentTypeFor(filename: string) {
 	if (filename.endsWith('.png')) return 'image/png';
@@ -96,6 +101,7 @@ export async function DELETE({
 	if (!murid) return new Response(JSON.stringify({ message: 'Not found' }), { status: 404 });
 
 	// ensure sekolah ownership
+	if (!bolehUbahFoto(locals.user)) return error(403, 'Tidak memiliki izin mengubah foto murid.');
 	const sekolahId = locals.sekolah?.id;
 	if (!sekolahId || murid.sekolahId !== sekolahId)
 		return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
@@ -137,6 +143,7 @@ export async function POST({
 	if (!murid) return new Response(JSON.stringify({ message: 'Murid not found' }), { status: 404 });
 
 	// ensure sekolah ownership
+	if (!bolehUbahFoto(locals.user)) return error(403, 'Tidak memiliki izin mengubah foto murid.');
 	const sekolahId = locals.sekolah?.id;
 	if (!sekolahId || murid.sekolahId !== sekolahId)
 		return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });

@@ -246,23 +246,6 @@
 				</span>
 			</div>
 		{/if}
-		{#if isWaliKelasMasukPulang}
-			<div class="relative flex items-center">
-				<select
-					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-					bind:value={presensiType}
-				>
-					<option value="masuk">Presensi Masuk</option>
-					<option value="pulang">Presensi Pulang</option>
-				</select>
-				<span
-					aria-hidden="true"
-					class="pointer-events-none absolute right-2.5 flex items-center text-slate-400 dark:text-zinc-400"
-				>
-					<Icon name="down" class="h-3.5 w-3.5" />
-				</span>
-			</div>
-		{/if}
 		{#if namaMataPelajaran}
 			<p class="text-sm font-medium text-slate-800 dark:text-zinc-100">
 				Apakah hadir semua pada mata pelajaran {namaMataPelajaran}

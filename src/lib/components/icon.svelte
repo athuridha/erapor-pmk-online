@@ -1,6 +1,4 @@
-<script lang="ts">
-	let { name, class: classes }: { name: IconName; class?: string } = $props();
-
+<script lang="ts" module>
 	const iconModules = {
 		...import.meta.glob('../icons/*.svg', {
 			query: '?raw',
@@ -23,6 +21,10 @@
 		}
 		return map;
 	})();
+</script>
+
+<script lang="ts">
+	let { name, class: classes }: { name: IconName; class?: string } = $props();
 
 	const renderedIcon = $derived.by(() => {
 		const raw = iconMap[name];

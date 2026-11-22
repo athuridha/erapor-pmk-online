@@ -10,7 +10,7 @@ import {
 } from '$lib/server/db/schema';
 import db from '$lib/server/db';
 import { deleteBuktiFile, deleteUndanganFile } from '$lib/server/dinas-luar';
-import { listGuruBySekolah } from '$lib/server/presensi-guru';
+import { listGuruBySekolah } from '$lib/server/pegawai';
 import { eq, desc } from 'drizzle-orm';
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';

@@ -29,7 +29,7 @@
 		onUpdateSuccess,
 		onSubmitStateChange,
 		jenisPresensi = 'wali_kelas_saja',
-		tipePresensi = 'masuk_pulang',
+		tipePresensi = 'masuk_saja',
 		harianMapelId = null,
 		selectable = false,
 		selectedIds = [],

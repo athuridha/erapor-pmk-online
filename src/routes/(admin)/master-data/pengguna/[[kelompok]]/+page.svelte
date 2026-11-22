@@ -5,6 +5,8 @@
 	import FormEnhance from '$lib/components/form-enhance.svelte';
 	import { toast } from '$lib/components/toast.svelte';
 	import { buildPageNumbers, OPSI_BARIS_PER_HALAMAN } from '$lib/utils/pagination';
+	import { modalRoute } from '$lib/utils';
+	import PenggunaModals from '$lib/components/pengguna/modals.svelte';
 	import { selectAll, semuaTerpilih, toggleId } from '$lib/utils/bulk-select';
 
 	type Baris = {
@@ -14,6 +16,7 @@
 		rawType: string;
 		operatorLevel?: string | null;
 		username: string;
+		pegawaiId?: number | null;
 		bisaHapus: boolean;
 		nik: string | null;
 		nik_username: string;
@@ -518,13 +521,24 @@
 										<Icon name="eye" class="h-3.5 w-3.5" />
 										Kelola
 									</a>
-									<a
-										class="inline-flex h-8 items-center gap-1 rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium whitespace-nowrap text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-										href={`/pengguna/form/${row.id}`}
-									>
-										<Icon name="edit" class="h-3.5 w-3.5" />
-										Ubah
-									</a>
+									{#if row.pegawaiId}
+										<a
+											class="inline-flex h-8 items-center gap-1 rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium whitespace-nowrap text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+											href={`/master-data/pegawai/${row.pegawaiId}`}
+											use:modalRoute={'profil-guru'}
+										>
+											<Icon name="edit" class="h-3.5 w-3.5" />
+											Profil
+										</a>
+									{:else}
+										<a
+											class="inline-flex h-8 items-center gap-1 rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium whitespace-nowrap text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+											href={`/pengguna/form/${row.id}`}
+										>
+											<Icon name="edit" class="h-3.5 w-3.5" />
+											Ubah akun
+										</a>
+									{/if}
 									<button
 										type="button"
 										class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-red-300 bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/50"
@@ -1005,3 +1019,5 @@
 		</div>
 	</dialog>
 {/if}
+
+<PenggunaModals />

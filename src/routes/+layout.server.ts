@@ -5,8 +5,7 @@ import {
 	tablePegawai,
 	tableAuthUserKelas,
 	tableAuthUserMataPelajaran,
-	tableMataPelajaran,
-	tablePresensiSettings
+	tableMataPelajaran
 } from '$lib/server/db/schema';
 import { cookieNames, findTitleByPath } from '$lib/utils.js';
 import { redirect } from '@sveltejs/kit';
@@ -54,7 +53,6 @@ const KELAS_PICKER_PREFIXES = [
 	'/catatan-wali-kelas',
 	'/keputusan',
 	'/cetak',
-	'/murid',
 	'/poin-siswa',
 	'/rpm',
 	'/legger',
@@ -64,7 +62,7 @@ const KELAS_PICKER_PREFIXES = [
 ];
 
 /** Sub-path yang sudah punya pemilih/filter kelas sendiri → jangan gandakan. */
-const KELAS_PICKER_EXCLUDE_PREFIXES = ['/nilai-akhir/impor-nilai', '/murid/form'];
+const KELAS_PICKER_EXCLUDE_PREFIXES = ['/nilai-akhir/impor-nilai'];
 
 /** Halaman yang sudah menyediakan pemilih/filter kelasnya sendiri di konten. */
 const KELAS_PICKER_SENDIRI_PREFIXES = [
@@ -130,7 +128,7 @@ async function verifyWaliKelasAccess(
 	return false;
 }
 
-export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) => {
+export const load: LayoutServerLoad = async ({ url, locals, cookies }) => {
 	const isServerLimitActive = process.env.SERVER_LIMIT_ENABLED === 'true';
 	const bypassQuery = url.searchParams.get('bypass');
 	const bypassCookie = cookies.get('bypass_limit');
@@ -140,8 +138,6 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	if (isServerLimitActive && !hasBypass && !isLimitRoute) {
 		throw redirect(307, '/server-limit');
 	}
-
-	depends('app:presensi-guru-enabled');
 
 	const meta: PageMeta = {
 		title:
@@ -155,18 +151,6 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	const academicContext = sekolah?.id ? await resolveSekolahAcademicContext(sekolah.id) : null;
 
 	// Started early as Promises so they run in parallel with other queries below.
-	let presensiGuruEnabled = true;
-	const presensiPromise =
-		sekolah?.id && academicContext?.activeTahunAjaranId
-			? db.query.tablePresensiSettings.findFirst({
-					columns: { presensiGuruEnabled: true },
-					where: and(
-						eq(tablePresensiSettings.sekolahId, sekolah.id),
-						eq(tablePresensiSettings.tahunAjaranId, academicContext.activeTahunAjaranId)
-					)
-				})
-			: null;
-
 	const pegawaiPromise = user?.pegawaiId
 		? db.query.tablePegawai.findFirst({
 				columns: { id: true, nama: true },
@@ -562,12 +546,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 	let hasMataPelajaran = false;
 
 	// Resolve all parallel promises at once
-	const [presensiSetting, pegawaiRecord, hasMapelRecords] = await Promise.all([
-		presensiPromise,
-		pegawaiPromise,
-		hasMapelPromise
-	]);
-	if (presensiSetting) presensiGuruEnabled = presensiSetting.presensiGuruEnabled ?? true;
+	const [pegawaiRecord, hasMapelRecords] = await Promise.all([pegawaiPromise, hasMapelPromise]);
 
 	if (user) {
 		const userType = (user as { type?: string }).type;
@@ -720,7 +699,6 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies, depends }) 
 		user: userForClient,
 		impersonator: locals.impersonator ?? null,
 		hasMataPelajaran,
-		presensiGuruEnabled,
 		activeSemesterTipe: academicContext?.activeSemesterTipe ?? null,
 		activeSemesterNama,
 		academicContext,

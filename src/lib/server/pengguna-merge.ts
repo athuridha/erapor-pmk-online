@@ -4,11 +4,9 @@ import {
 	tableAuthUser,
 	tableKelas,
 	tablePegawai,
-	tablePresensiGuru,
 	tableSekolah
 } from '$lib/server/db/schema';
 import { and, eq, inArray, ne } from 'drizzle-orm';
-import type { PresensiGuruStatusValue } from './presensi-guru';
 
 /**
  * Shared helpers for merging duplicate person records / auth accounts.
@@ -17,7 +15,7 @@ import type { PresensiGuruStatusValue } from './presensi-guru';
  * is also a wali kelas / guru mapel. The sekolah form and the kelas form each
  * store their own `pegawai` row and each receives its own auth account
  * (`kepala_sekolah` + `wali_kelas`), producing two accounts with the same name
- * in `/pengguna` and duplicate rows in presensi guru.
+ * in `/pengguna` and duplicate rows in attendance.
  *
  * Strategy: keep a single pegawai + a single `kepala_sekolah` account (the role
  * with the widest access). Other guru accounts for the same person are merged
@@ -91,80 +89,6 @@ export async function findGuruPegawaiForKepalaSekolah(
 	return nameMatches.length === 1 ? nameMatches[0] : null;
 }
 
-/**
- * Move `presensi_guru` rows from one account to another. When a row already
- * exists for the target account on the same day, the more recently updated one
- * wins. The source rows are deleted afterwards.
- */
-export async function migratePresensiGuruRecords(
-	fromUserId: number,
-	toUserId: number
-): Promise<void> {
-	if (fromUserId === toUserId) return;
-
-	const rows = await db.query.tablePresensiGuru.findMany({
-		columns: {
-			sekolahId: true,
-			tahunAjaranId: true,
-			semesterId: true,
-			tanggal: true,
-			status: true,
-			waktu: true,
-			tandaTangan: true,
-			keterangan: true,
-			updatedAt: true
-		},
-		where: eq(tablePresensiGuru.authUserId, fromUserId)
-	});
-	if (!rows.length) return;
-
-	const existing = await db.query.tablePresensiGuru.findMany({
-		columns: { sekolahId: true, tanggal: true, waktu: true, updatedAt: true },
-		where: eq(tablePresensiGuru.authUserId, toUserId)
-	});
-	const existingKey = new Map(existing.map((r) => [`${r.sekolahId}:${r.tanggal}`, r]));
-
-	const timestamp = new Date().toISOString();
-	for (const r of rows) {
-		const key = `${r.sekolahId}:${r.tanggal}`;
-		const ex = existingKey.get(key);
-		const incomingTime = new Date(r.updatedAt ?? r.waktu ?? 0).getTime();
-		const existingTime = ex ? new Date(ex.updatedAt ?? ex.waktu ?? 0).getTime() : -Infinity;
-		if (ex && existingTime >= incomingTime) continue;
-
-		await db
-			.insert(tablePresensiGuru)
-			.values({
-				sekolahId: r.sekolahId,
-				tahunAjaranId: r.tahunAjaranId,
-				semesterId: r.semesterId,
-				authUserId: toUserId,
-				tanggal: r.tanggal,
-				status: r.status as PresensiGuruStatusValue,
-				waktu: r.waktu ?? timestamp,
-				tandaTangan: r.tandaTangan,
-				keterangan: r.keterangan,
-				updatedAt: timestamp
-			})
-			.onConflictDoUpdate({
-				target: [
-					tablePresensiGuru.sekolahId,
-					tablePresensiGuru.authUserId,
-					tablePresensiGuru.tanggal
-				],
-				set: {
-					status: r.status as PresensiGuruStatusValue,
-					waktu: r.waktu ?? timestamp,
-					tandaTangan: r.tandaTangan,
-					keterangan: r.keterangan,
-					updatedAt: timestamp
-				}
-			});
-	}
-
-	await db.delete(tablePresensiGuru).where(eq(tablePresensiGuru.authUserId, fromUserId));
-}
-
 /** Repoint active sessions from one account to another (best-effort). */
 export async function migrateSessions(fromUserId: number, toUserId: number): Promise<void> {
 	if (fromUserId === toUserId) return;
@@ -179,13 +103,12 @@ export async function migrateSessions(fromUserId: number, toUserId: number): Pro
 }
 
 /**
- * Merge `deleteUserId` into `keepUserId`: move presensi + sessions, then remove
+ * Merge `deleteUserId` into `keepUserId`: move sessions, then remove
  * the deleted account.
  */
 export async function mergeAccountInto(keepUserId: number, deleteUserId: number): Promise<void> {
 	if (keepUserId === deleteUserId) return;
 	console.info(`[pengguna-merge] Merging account ${deleteUserId} into ${keepUserId}`);
-	await migratePresensiGuruRecords(deleteUserId, keepUserId);
 	await migrateSessions(deleteUserId, keepUserId);
 	await db.delete(tableAuthUser).where(eq(tableAuthUser.id, deleteUserId));
 }

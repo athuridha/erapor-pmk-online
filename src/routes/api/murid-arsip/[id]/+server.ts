@@ -6,7 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import db from '$lib/server/db';
 import { tableMurid, tableMuridLampiran } from '$lib/server/db/schema';
 import { arsipDir } from '$lib/server/data-dirs';
-import { isAuthorizedUser } from '../../../pengguna/permissions';
+import { isAdminUser, isAuthorizedUser } from '../../../pengguna/permissions';
 
 const JENIS = new Set(['kk', 'akta', 'ijazah_terakhir', 'ijazah_sekolah']);
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -140,7 +140,9 @@ export async function POST({
 	locals: App.Locals;
 }) {
 	if (!locals.user) return fail(401, 'Silakan masuk terlebih dahulu.');
-	if (!canManage(locals.user)) return fail(403, 'Tidak memiliki akses ke arsip murid.');
+	if (!isAdminUser(locals.user) && locals.user?.type !== 'wali_kelas') {
+		return fail(403, 'Tidak memiliki akses mengubah arsip murid.');
+	}
 
 	const muridId = Number(params.id);
 	const murid = await getMurid(muridId);
@@ -234,7 +236,9 @@ export async function DELETE({
 	locals: App.Locals;
 }) {
 	if (!locals.user) return fail(401, 'Silakan masuk terlebih dahulu.');
-	if (!canManage(locals.user)) return fail(403, 'Tidak memiliki akses ke arsip murid.');
+	if (!isAdminUser(locals.user) && locals.user?.type !== 'wali_kelas') {
+		return fail(403, 'Tidak memiliki akses mengubah arsip murid.');
+	}
 
 	const muridId = Number(params.id);
 	const jenis = url.searchParams.get('jenis') ?? '';

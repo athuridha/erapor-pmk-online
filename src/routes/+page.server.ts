@@ -259,7 +259,7 @@ export async function load(event) {
 		const uniqueSubjectValues = Array.from(uniqueSubjects.values());
 		statistikDashboard.mapel.total = uniqueSubjectValues.length;
 		// Jumlah baris mapel (tanpa menggabungkan varian agama) — angka yang sama
-		// dengan tabel "Mapel" per kelas di /semua-kelas dan /semua-kelas/[id].
+		// dengan tabel "Mapel" per kelas di /master-data/kelas dan /master-data/kelas/[id].
 		statistikDashboard.mapel.baris = mataPelajaranRows.length;
 		statistikDashboard.mapel.wajib = uniqueSubjectValues.filter(
 			(item) => item.jenis === 'wajib'
@@ -332,7 +332,7 @@ export async function load(event) {
 			}
 			akademikCompleted = completedPairs.size;
 		}
-		// Denominator mengikuti jumlah baris mapel (sama dengan /semua-kelas/[id]:
+		// Denominator mengikuti jumlah baris mapel (sama dengan /master-data/kelas/[id]:
 		// murid × baris mapel), bukan jumlah mapel unik hasil penggabungan varian
 		// agama — supaya persentase tidak bertentangan dengan kartu/daftar mapel.
 		const expectedAcademic = totalStudents * totalMapelBaris;
@@ -526,7 +526,7 @@ export async function load(event) {
 		const hasil = await getRingkasanKelas(sekolahId, activeSemesterId);
 		ringkasanKelas = { ringkasan: hasil.ringkasan, daftarKelas: hasil.daftarKelas };
 		// Satu sumber hitungan: progress nilai akademik memakai angka yang sama
-		// dengan kartu "Ringkasan Semua Kelas" / halaman /semua-kelas, supaya
+		// dengan kartu "Ringkasan Semua Kelas" / halaman /master-data/kelas, supaya
 		// dashboard tidak menampilkan persentase yang berbeda untuk data yang sama.
 		const nilaiTerisi = ringkasanKelas.daftarKelas.reduce(
 			(total, kelas) => total + kelas.nilaiTerisi,

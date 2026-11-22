@@ -295,8 +295,10 @@
 			<p class="font-semibold">Belum ada nomor HP orang tua/wali.</p>
 			<p class="mt-0.5">
 				Isi kolom kontak pada data orang tua/wali di menu
-				<a class="font-semibold text-blue-700 underline dark:text-blue-400" href="/murid">Murid</a>,
-				lalu gunakan tombol <strong>Buat dari Data Wali</strong>. Untuk uji coba, akun juga bisa
+				<a
+					class="font-semibold text-blue-700 underline dark:text-blue-400"
+					href="/master-data/murid">Murid</a
+				>, lalu gunakan tombol <strong>Buat dari Data Wali</strong>. Untuk uji coba, akun juga bisa
 				dibuat manual di samping.
 			</p>
 		</div>

@@ -2,9 +2,9 @@
 	import { page } from '$app/state';
 	import { invalidate } from '$app/navigation';
 	import Icon from '$lib/components/icon.svelte';
-	import DeleteMurid from '../../../routes/(informasi-umum)/murid/[id]/delete/+page.svelte';
-	import DetailMurid from '../../../routes/(informasi-umum)/murid/[id]/+page.svelte';
-	import FormMurid from '../../../routes/(informasi-umum)/murid/form/[[id]]/+page.svelte';
+	import DeleteMurid from '../../../routes/(admin)/master-data/murid/[id]/delete/+page.svelte';
+	import DetailMurid from '../../../routes/(admin)/master-data/murid/[id]/+page.svelte';
+	import FormMurid from '../../../routes/(admin)/master-data/murid/form/[[id]]/+page.svelte';
 	import MuridBulkPhotoUploadModal from '$lib/components/murid-bulk-photo-upload-modal.svelte';
 
 	type BulkModalData = {

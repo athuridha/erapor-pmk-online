@@ -8,7 +8,7 @@ import {
 } from '$lib/server/pengguna-merge.js';
 import { getDapodikSettings } from '$lib/server/dapodik';
 import { error, fail } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { eq, isNull, or } from 'drizzle-orm';
 import { authority } from '../../../pengguna/utils.server';
 
 export async function load({ url, locals }) {
@@ -63,7 +63,7 @@ export async function load({ url, locals }) {
 	// GTK hasil Sinkron Dapodik tersedia → pilih dari daftar, selain itu teks bebas).
 	// Difilter per sekolah pemilik pegawai supaya data Dapodik antar sekolah
 	// tidak bocor ke form sekolah lain.
-	const pegawaiRaw = dapodikAktif
+	const pegawaiRaw = targetSekolahId
 		? await db
 				.select({
 					id: tablePegawai.id,
@@ -72,7 +72,7 @@ export async function load({ url, locals }) {
 					dapodikPtkId: tablePegawai.dapodikPtkId
 				})
 				.from(tablePegawai)
-				.where(eq(tablePegawai.sekolahId, targetSekolahId!))
+				.where(or(eq(tablePegawai.sekolahId, targetSekolahId), isNull(tablePegawai.sekolahId)))
 		: [];
 	const seenNama = new Set<string>();
 	const pegawaiList = pegawaiRaw.filter((p) => {

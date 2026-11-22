@@ -2,6 +2,7 @@ import db from '$lib/server/db';
 import { tableKelas, tableTasks } from '$lib/server/db/schema';
 import { and, desc, eq } from 'drizzle-orm';
 import { json, type RequestHandler } from '@sveltejs/kit';
+import { isAdminUser } from '../../pengguna/permissions';
 
 const TASK_STATUSES = ['active', 'completed'] as const;
 
@@ -54,12 +55,14 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	if (sekolahError) return sekolahError;
 
 	const kelasId = parsePositiveInteger(url.searchParams.get('kelasId'));
-	if (!kelasId) {
+	if (!kelasId && !isAdminUser(locals.user)) {
 		return json({ message: 'Kelas tidak valid.' }, { status: 400 });
 	}
 
 	const tasks = await db.query.tableTasks.findMany({
-		where: and(eq(tableTasks.sekolahId, locals.sekolah!.id), eq(tableTasks.kelasId, kelasId)),
+		where: kelasId
+			? and(eq(tableTasks.sekolahId, locals.sekolah!.id), eq(tableTasks.kelasId, kelasId))
+			: eq(tableTasks.sekolahId, locals.sekolah!.id),
 		orderBy: [desc(tableTasks.createdAt), desc(tableTasks.id)]
 	});
 
@@ -78,17 +81,19 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		return json({ message: 'Judul tugas wajib diisi.' }, { status: 400 });
 	}
 
-	if (!normalizedKelasId) {
+	if (!normalizedKelasId && !isAdminUser(locals.user)) {
 		return json({ message: 'Kelas tidak valid.' }, { status: 400 });
 	}
 
-	const kelas = await db.query.tableKelas.findFirst({
-		columns: { id: true },
-		where: and(eq(tableKelas.id, normalizedKelasId), eq(tableKelas.sekolahId, locals.sekolah!.id))
-	});
+	if (normalizedKelasId) {
+		const kelas = await db.query.tableKelas.findFirst({
+			columns: { id: true },
+			where: and(eq(tableKelas.id, normalizedKelasId), eq(tableKelas.sekolahId, locals.sekolah!.id))
+		});
 
-	if (!kelas) {
-		return json({ message: 'Kelas tidak ditemukan.' }, { status: 404 });
+		if (!kelas) {
+			return json({ message: 'Kelas tidak ditemukan.' }, { status: 404 });
+		}
 	}
 
 	const now = new Date().toISOString();
@@ -116,7 +121,7 @@ export const PATCH: RequestHandler = async ({ locals, request }) => {
 	const normalizedStatus = TASK_STATUSES.find((item) => item === status) ?? null;
 	const normalizedKelasId = parsePositiveInteger(kelasId);
 
-	if (!normalizedId || !normalizedStatus || !normalizedKelasId) {
+	if (!normalizedId || !normalizedStatus || (!normalizedKelasId && !isAdminUser(locals.user))) {
 		return json({ message: 'Data tugas tidak valid.' }, { status: 400 });
 	}
 
@@ -129,7 +134,7 @@ export const PATCH: RequestHandler = async ({ locals, request }) => {
 			and(
 				eq(tableTasks.id, normalizedId),
 				eq(tableTasks.sekolahId, locals.sekolah!.id),
-				eq(tableTasks.kelasId, normalizedKelasId)
+				...(normalizedKelasId ? [eq(tableTasks.kelasId, normalizedKelasId)] : [])
 			)
 		)
 		.returning();
@@ -149,22 +154,18 @@ export const DELETE: RequestHandler = async ({ locals, request }) => {
 	const normalizedId = Number(id || 0);
 	const normalizedKelasId = parsePositiveInteger(kelasId);
 
-	if (!normalizedKelasId) {
+	if (!normalizedKelasId && !isAdminUser(locals.user)) {
 		return json({ message: 'Kelas tidak valid.' }, { status: 400 });
 	}
 
+	const kelasConditions = normalizedKelasId ? [eq(tableTasks.kelasId, normalizedKelasId)] : [];
 	let deleted: number;
 
 	try {
 		if (scope === 'all') {
 			const result = await db
 				.delete(tableTasks)
-				.where(
-					and(
-						eq(tableTasks.sekolahId, locals.sekolah!.id),
-						eq(tableTasks.kelasId, normalizedKelasId)
-					)
-				);
+				.where(and(eq(tableTasks.sekolahId, locals.sekolah!.id), ...kelasConditions));
 			deleted = result.rowsAffected ?? 0;
 		} else if (scope === 'completed') {
 			const result = await db
@@ -172,7 +173,7 @@ export const DELETE: RequestHandler = async ({ locals, request }) => {
 				.where(
 					and(
 						eq(tableTasks.sekolahId, locals.sekolah!.id),
-						eq(tableTasks.kelasId, normalizedKelasId),
+						...kelasConditions,
 						eq(tableTasks.status, 'completed')
 					)
 				);
@@ -184,7 +185,7 @@ export const DELETE: RequestHandler = async ({ locals, request }) => {
 					and(
 						eq(tableTasks.id, normalizedId),
 						eq(tableTasks.sekolahId, locals.sekolah!.id),
-						eq(tableTasks.kelasId, normalizedKelasId)
+						...kelasConditions
 					)
 				);
 			deleted = result.rowsAffected ?? 0;

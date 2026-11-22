@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { dev } from '$app/environment';
 	import SekolahOverviewCard from '$lib/components/dashboard/sekolah-overview-card.svelte';
 	import RombelMuridStats from '$lib/components/dashboard/rombel-murid-stats.svelte';
 	import MapelEkstrakurikulerStats from '$lib/components/dashboard/mapel-ekstrakurikuler-stats.svelte';
@@ -10,8 +8,6 @@
 	import RingkasanKelasCard from '$lib/components/dashboard/ringkasan-kelas-card.svelte';
 	import { computeNextEventMessage } from '$lib/utils/next-event-message';
 	import Icon from '$lib/components/icon.svelte';
-	import { showModal } from '$lib/components/global-modal.svelte';
-	import PresensiGuruModal from '$lib/components/presensi-guru/presensi-guru-modal.svelte';
 	import { isSchoolDay } from '$lib/hari-sekolah';
 
 	let { data } = $props();
@@ -265,95 +261,9 @@
 		return `${hariNama}, ${tgl} (${status})`;
 	});
 
-	let presensiWarningVisible = $state(false);
-	const SIMULASI_STORAGE_KEY = 'erapor-pmk-simulasi-tanggal-jam';
-
-	function presensiApiUrl() {
-		const override =
-			page.url.searchParams.get('tanggal-jam') ??
-			(dev ? sessionStorage.getItem(SIMULASI_STORAGE_KEY) : null);
-		return {
-			override,
-			url: `/api/presensi-guru${override ? `?tanggal-jam=${encodeURIComponent(override)}` : ''}`
-		};
-	}
-
-	function checkPresensiFallback() {
-		if (presensiWarningVisible || !data.user) return;
-		if (document.querySelector('dialog.modal[open]')) return;
-		const userId = data.user.id;
-		const { override, url } = presensiApiUrl();
-		fetch(url)
-			.then((res) => (res.ok ? res.json() : null))
-			.then((status) => {
-				if (!status?.shouldPrompt) return;
-				const today = new Date().toISOString().slice(0, 10);
-				const simulatedDate = override ? override.slice(0, 10) : null;
-				const effectiveDate =
-					simulatedDate && /^\d{4}-\d{2}-\d{2}$/.test(simulatedDate) ? simulatedDate : today;
-				const promptKey = `erapor-pmk-presensi-guru-prompted-${userId}-${effectiveDate}`;
-				if (!sessionStorage.getItem(promptKey)) return;
-				presensiWarningVisible = true;
-			})
-			.catch(() => {});
-	}
-
-	async function openPresensiGuruModal() {
-		if (!data.user) return;
-		const { override, url } = presensiApiUrl();
-		let jamMasuk: string | null = null;
-		let jamPulang: string | null = null;
-		try {
-			const res = await fetch(url);
-			const status = await res.json().catch(() => null);
-			jamMasuk = status?.jamMasuk ?? null;
-			jamPulang = status?.jamPulang ?? null;
-		} catch {
-			// fall through with unknown jam window
-		}
-		presensiWarningVisible = false;
-		showModal({
-			title: 'Presensi Guru',
-			body: PresensiGuruModal,
-			bodyProps: {
-				jamMasuk,
-				jamPulang,
-				tanggalJam: override
-			},
-			dismissible: false
-		});
-	}
-
-	onMount(() => {
-		checkPresensiFallback();
-		const onDialogClose = () => checkPresensiFallback();
-		document.addEventListener('close', onDialogClose, true);
-		return () => document.removeEventListener('close', onDialogClose, true);
-	});
 </script>
 
 <div class="space-y-5">
-	{#if presensiWarningVisible}
-		<div
-			class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200/80 bg-amber-50/95 px-4 py-3 text-sm text-amber-950 shadow-xs dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
-			role="alert"
-		>
-			<div class="flex items-center gap-2.5">
-				<span aria-hidden="true" class="shrink-0 text-amber-600 dark:text-amber-400">
-					<Icon name="warning" class="h-5 w-5" />
-				</span>
-				<span>Bapak/Ibu belum melakukan presensi guru hari ini.</span>
-			</div>
-			<button
-				type="button"
-				onclick={openPresensiGuruModal}
-				class="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
-			>
-				<span aria-hidden="true"><Icon name="pen" class="h-3.5 w-3.5" /></span>
-				<span>Presensi Sekarang</span>
-			</button>
-		</div>
-	{/if}
 
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 		<div>

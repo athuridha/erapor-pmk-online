@@ -37,7 +37,6 @@
 		hariSekolahCustom?: string | null;
 		tipePresensi?: string;
 		jenisPresensi?: string;
-		presensiGuruEnabled?: boolean;
 		liburNasional?: string;
 		liburSemester?: string;
 		kelasList?: Array<{ id: number; nama: string }>;
@@ -51,9 +50,8 @@
 		jamPulang = '15:00',
 		hariSekolah = 6,
 		hariSekolahCustom = null,
-		tipePresensi = 'masuk_pulang',
+		tipePresensi = 'masuk_saja',
 		jenisPresensi = 'wali_kelas_saja',
-		presensiGuruEnabled = true,
 		liburNasional = '[]',
 		liburSemester = '[]',
 		kelasList = [],
@@ -98,8 +96,6 @@
 	let tipePresensiValue = $state(tipePresensi);
 	// svelte-ignore state_referenced_locally
 	let jenisPresensiValue = $state(jenisPresensi);
-	// svelte-ignore state_referenced_locally
-	let presensiGuruEnabledValue = $state(presensiGuruEnabled);
 
 	// Intentional one-time init from props (parsed via IIFE closure per Svelte guidance).
 	let liburDates = $state<string[]>(
@@ -194,20 +190,15 @@
 		if (!['5', '6', 'custom'].includes(hariSekolahValue)) return 'Pilih hari sekolah';
 		if (hariSekolahValue === 'custom' && customDays.length === 0)
 			return 'Pilih minimal satu hari belajar';
-		if (
-			!['masuk_pulang', 'masuk_saja', 'awal_mapel', 'awal_akhir_mapel'].includes(tipePresensiValue)
-		)
+		if (!['masuk_saja', 'awal_mapel', 'awal_akhir_mapel'].includes(tipePresensiValue))
 			return 'Pilih tipe presensi';
 		if (
 			['awal_mapel', 'awal_akhir_mapel'].includes(tipePresensiValue) &&
 			jenisPresensiValue !== 'tiap_mapel'
 		)
 			return 'Tipe presensi Awal/Awal & Akhir Mapel hanya tersedia untuk jenis presensi Tiap Mapel';
-		if (
-			['masuk_pulang', 'masuk_saja'].includes(tipePresensiValue) &&
-			jenisPresensiValue !== 'wali_kelas_saja'
-		)
-			return 'Tipe presensi Masuk Pulang/Masuk Saja hanya tersedia untuk jenis presensi Wali Kelas Saja';
+		if (tipePresensiValue === 'masuk_saja' && jenisPresensiValue !== 'wali_kelas_saja')
+			return 'Tipe presensi Masuk Saja hanya tersedia untuk jenis presensi Wali Kelas Saja';
 		if (!['wali_kelas_saja', 'tiap_mapel'].includes(jenisPresensiValue))
 			return 'Pilih jenis presensi';
 		for (const row of kelasRows) {
@@ -246,9 +237,7 @@
 			toast('Pilih minimal satu hari belajar', 'warning');
 			return false;
 		}
-		if (
-			!['masuk_pulang', 'masuk_saja', 'awal_mapel', 'awal_akhir_mapel'].includes(tipePresensiValue)
-		) {
+		if (!['masuk_saja', 'awal_mapel', 'awal_akhir_mapel'].includes(tipePresensiValue)) {
 			toast('Pilih tipe presensi', 'warning');
 			return false;
 		}
@@ -262,12 +251,9 @@
 			);
 			return false;
 		}
-		if (
-			['masuk_pulang', 'masuk_saja'].includes(tipePresensiValue) &&
-			jenisPresensiValue !== 'wali_kelas_saja'
-		) {
+		if (tipePresensiValue === 'masuk_saja' && jenisPresensiValue !== 'wali_kelas_saja') {
 			toast(
-				'Tipe presensi Masuk Pulang/Masuk Saja hanya tersedia untuk jenis presensi Wali Kelas Saja',
+				'Tipe presensi Masuk Saja hanya tersedia untuk jenis presensi Wali Kelas Saja',
 				'warning'
 			);
 			return false;
@@ -317,7 +303,6 @@
 		);
 		formData.append('tipePresensi', tipePresensiValue);
 		formData.append('jenisPresensi', jenisPresensiValue);
-		formData.append('presensiGuruEnabled', presensiGuruEnabledValue ? '1' : '0');
 		formData.append('liburNasional', JSON.stringify(liburDates));
 		formData.append(
 			'liburSemester',
@@ -356,7 +341,6 @@
 			hideModal();
 			toast('Pengaturan presensi berhasil disimpan', 'success');
 			await invalidate('app:akademik');
-			await invalidate('app:presensi-guru-enabled');
 		} catch (e) {
 			const message = e instanceof Error ? e.message : 'Gagal menyimpan pengaturan presensi';
 			toast(message, 'error');
@@ -381,40 +365,12 @@
 				tipePresensiValue = 'awal_mapel';
 			}
 		} else if (['awal_mapel', 'awal_akhir_mapel'].includes(tipePresensiValue)) {
-			tipePresensiValue = 'masuk_pulang';
+			tipePresensiValue = 'masuk_saja';
 		}
 	});
 </script>
 
 <div class="not-prose flex flex-col gap-4">
-	<div
-		class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200/80 bg-blue-50/75 p-3.5 dark:border-blue-900/60 dark:bg-blue-950/35"
-	>
-		<div>
-			<span class="block text-xs font-semibold text-slate-900 dark:text-zinc-100"
-				>Presensi Guru</span
-			>
-			<p class="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">
-				Aktifkan agar guru dapat melakukan presensi dan menu Presensi Guru tampil.
-			</p>
-		</div>
-		<label class="flex cursor-pointer items-center gap-2">
-			<input
-				type="checkbox"
-				class="toggle toggle-success"
-				bind:checked={presensiGuruEnabledValue}
-				disabled={submitting}
-			/>
-			<span class="text-xs font-semibold">
-				{#if presensiGuruEnabledValue}
-					<span class="text-emerald-600 dark:text-emerald-400">Aktif</span>
-				{:else}
-					<span class="text-red-600 dark:text-red-400">Nonaktif</span>
-				{/if}
-			</span>
-		</label>
-	</div>
-
 	<div class="my-1 flex items-center gap-3 text-xs font-semibold text-slate-600 dark:text-zinc-300">
 		<div class="h-px flex-1 bg-slate-200/80 dark:bg-zinc-800"></div>
 		<span>Presensi Murid</span>
@@ -512,9 +468,6 @@
 						class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						bind:value={tipePresensiValue}
 					>
-						<option value="masuk_pulang" disabled={jenisPresensiValue === 'tiap_mapel'}>
-							Masuk Pulang
-						</option>
 						<option value="masuk_saja" disabled={jenisPresensiValue === 'tiap_mapel'}>
 							Masuk Saja
 						</option>

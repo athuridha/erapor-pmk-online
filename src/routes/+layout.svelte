@@ -16,7 +16,6 @@
 
 	import NavIndicator from '$lib/components/nav-indicator.svelte';
 	import ScrollToTop from '$lib/components/scroll-to-top.svelte';
-	import PresensiGuruModal from '$lib/components/presensi-guru/presensi-guru-modal.svelte';
 	import { isAdminUser } from './pengguna/permissions';
 	import '../app.css';
 
@@ -26,6 +25,31 @@
 	let loggingOut = $state(false);
 	let isStoppingImpersonation = $state(false);
 	let mobileMenuOpen = $state(false);
+	let sidebarCollapsed = $state(false);
+	let sidebarPreferenceLoaded = false;
+
+	$effect(() => {
+		if (typeof window === 'undefined' || sidebarPreferenceLoaded) return;
+		sidebarPreferenceLoaded = true;
+		try {
+			sidebarCollapsed = window.localStorage.getItem('erapor-pmk-sidebar-collapsed') === '1';
+		} catch {
+			// ignore storage errors
+		}
+	});
+
+	function setSidebarCollapsed(next: boolean) {
+		sidebarCollapsed = next;
+		try {
+			window.localStorage.setItem('erapor-pmk-sidebar-collapsed', next ? '1' : '0');
+		} catch {
+			// ignore storage errors
+		}
+	}
+
+	function toggleSidebar() {
+		setSidebarCollapsed(!sidebarCollapsed);
+	}
 
 	let _isOnline = $state(true);
 
@@ -78,17 +102,6 @@
 		(page.data as { activeSemesterNama?: string | null } | null)?.activeSemesterNama ?? null
 	);
 
-	const skipPresensiGuruPrompt = $derived(
-		isLoginPage ||
-			isTamuPage ||
-			isJadwalPublikPage ||
-			isLimitPage ||
-			page.url.pathname.startsWith('/logout') ||
-			data.presensiGuruEnabled === false
-	);
-	let presensiGuruPromptChecked = $state(false);
-	let presensiGuruShown = $state(false);
-
 	const SIMULASI_STORAGE_KEY = 'erapor-pmk-simulasi-tanggal-jam';
 	let simulasiTanggalJam = $state<string | null>(null);
 
@@ -105,50 +118,6 @@
 		sessionStorage.removeItem(SIMULASI_STORAGE_KEY);
 		simulasiTanggalJam = null;
 	}
-
-	$effect(() => {
-		const user = data.user;
-		if (!user || skipPresensiGuruPrompt || presensiGuruPromptChecked || presensiGuruShown) return;
-
-		const override =
-			page.url.searchParams.get('tanggal-jam') ??
-			(dev ? sessionStorage.getItem(SIMULASI_STORAGE_KEY) : null);
-		if (override) {
-			sessionStorage.setItem(SIMULASI_STORAGE_KEY, override);
-		}
-
-		presensiGuruPromptChecked = true;
-
-		const today = new Date().toISOString().slice(0, 10);
-		const simulatedDate = override ? override.slice(0, 10) : null;
-		const effectiveDate =
-			simulatedDate && /^\d{4}-\d{2}-\d{2}$/.test(simulatedDate) ? simulatedDate : today;
-		const storageKey = `erapor-pmk-presensi-guru-prompted-${user.id}-${effectiveDate}`;
-		if (sessionStorage.getItem(storageKey)) return;
-
-		const apiUrl = `/api/presensi-guru${override ? `?tanggal-jam=${encodeURIComponent(override)}` : ''}`;
-
-		fetch(apiUrl)
-			.then((res) => (res.ok ? res.json() : null))
-			.then((status) => {
-				if (!status?.shouldPrompt) return;
-				presensiGuruShown = true;
-				sessionStorage.setItem(storageKey, '1');
-				showModal({
-					title: 'Presensi Guru',
-					body: PresensiGuruModal,
-					bodyProps: {
-						jamMasuk: status.jamMasuk ?? null,
-						jamPulang: status.jamPulang ?? null,
-						tanggalJam: override
-					},
-					dismissible: false
-				});
-			})
-			.catch(() => {
-				presensiGuruPromptChecked = false;
-			});
-	});
 
 	const jadwalCanManage = $derived(
 		((page.data.user as { permissions?: string[] })?.permissions ?? []).includes(
@@ -297,7 +266,9 @@
 	<title>{appName}{page.data.meta.title ? ' - ' + page.data.meta.title : ''}</title>
 </svelte:head>
 
-{#if isLoginPage || isTamuPage || isUnauthenticatedError}
+{#if isLoginPage}
+	{@render children()}
+{:else if isTamuPage || isUnauthenticatedError}
 	<div
 		class="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-6 dark:bg-zinc-950"
 	>
@@ -334,15 +305,25 @@
 		{/if}
 
 		<aside
+			id="app-sidebar"
 			aria-label="Navigasi samping"
-			class="app-sidebar-panel fixed inset-y-0 left-0 z-50 flex h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200/80 bg-white px-3.5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-transform duration-200 lg:visible lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none dark:border-zinc-800 dark:bg-zinc-900 {mobileMenuOpen
+			class="app-sidebar-panel fixed inset-y-0 left-0 z-50 flex h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200/80 bg-white px-3.5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-transform duration-200 ease-out lg:visible lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none lg:transition-[width,padding] lg:duration-300 dark:border-zinc-800 dark:bg-zinc-900 {mobileMenuOpen
 				? 'visible translate-x-0 shadow-xl'
-				: 'invisible -translate-x-full'}"
+				: 'invisible -translate-x-full'} {sidebarCollapsed
+				? 'lg:w-18 lg:overflow-visible lg:px-2'
+				: ''}"
 		>
-			<div class="relative mb-4 flex items-center justify-center px-1 pt-1">
+			<div
+				class="relative flex items-center justify-center px-1 pt-1 {sidebarCollapsed
+					? 'mb-4 lg:mb-2'
+					: 'mb-4'}"
+			>
 				<a
 					href="/"
-					class="flex flex-col items-center rounded-xl px-3 py-1.5 text-center transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/60"
+					title="Beranda"
+					class="flex flex-col items-center rounded-xl text-center transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/60 {sidebarCollapsed
+						? 'px-3 py-1.5 lg:px-1.5 lg:py-1'
+						: 'px-3 py-1.5'}"
 				>
 					<img
 						class="h-11 w-11 shrink-0 object-contain"
@@ -351,17 +332,19 @@
 						width="44"
 						height="44"
 					/>
-					<p
-						class="mt-1.5 text-[14px] leading-tight font-bold tracking-tight text-slate-900 dark:text-zinc-100"
-					>
-						SMK Pratama Mulya
-					</p>
-					<p
-						class="mt-0.5 truncate text-[11px] font-medium text-slate-500 dark:text-zinc-400"
-						title={activeSemesterNama ?? 'Karawang'}
-					>
-						{activeSemesterNama ?? 'Karawang'}
-					</p>
+					<div class={sidebarCollapsed ? 'lg:hidden' : ''}>
+						<p
+							class="mt-1.5 text-[14px] leading-tight font-bold tracking-tight text-slate-900 dark:text-zinc-100"
+						>
+							SMK Pratama Mulya
+						</p>
+						<p
+							class="mt-0.5 truncate text-[11px] font-medium text-slate-500 dark:text-zinc-400"
+							title={activeSemesterNama ?? 'Karawang'}
+						>
+							{activeSemesterNama ?? 'Karawang'}
+						</p>
+					</div>
 				</a>
 
 				<button
@@ -374,15 +357,19 @@
 				</button>
 			</div>
 
-			<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-				<Menu />
+			<div class="flex min-h-0 flex-1 flex-col {sidebarCollapsed ? 'lg:overflow-visible' : ''}">
+				<Menu collapsed={sidebarCollapsed} />
 			</div>
 
 			<div class="mt-3 shrink-0 border-t border-slate-200/80 pt-3 dark:border-zinc-800">
 				<a
 					href="/pengaturan"
+					title={sidebarCollapsed ? undefined : 'Pengaturan'}
+					aria-label="Pengaturan"
 					aria-current={isPengaturanActive ? 'page' : undefined}
-					class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] transition-colors {isPengaturanActive
+					class="group/rail relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] transition-colors {sidebarCollapsed
+						? 'lg:mx-auto lg:h-9 lg:w-9 lg:justify-center lg:px-0 lg:py-0'
+						: ''} {isPengaturanActive
 						? 'bg-[#ebf3fe] font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
 						: 'font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'}"
 				>
@@ -394,7 +381,15 @@
 					>
 						<Icon name="gear" class="h-4 w-4" />
 					</span>
-					<span>Pengaturan</span>
+					<span class={sidebarCollapsed ? 'lg:hidden' : ''}>Pengaturan</span>
+					{#if sidebarCollapsed}
+						<span
+							aria-hidden="true"
+							class="pointer-events-none invisible absolute top-1/2 left-full z-50 ml-3 hidden -translate-y-1/2 whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 opacity-0 shadow-md transition-opacity duration-150 group-hover/rail:visible group-hover/rail:opacity-100 group-focus-visible/rail:visible group-focus-visible/rail:opacity-100 lg:block dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+						>
+							Pengaturan
+						</span>
+					{/if}
 				</a>
 			</div>
 		</aside>
@@ -407,7 +402,13 @@
 				Langsung ke konten utama
 			</a>
 
-			<Navbar {logout} {loggingOut} onOpenMobileMenu={() => (mobileMenuOpen = true)} />
+			<Navbar
+				{logout}
+				{loggingOut}
+				onOpenMobileMenu={() => (mobileMenuOpen = true)}
+				{sidebarCollapsed}
+				onToggleSidebar={toggleSidebar}
+			/>
 
 			{#if data.impersonator}
 				<div

@@ -303,7 +303,7 @@
 			{@const isActive = (data.page.status ?? 'all') === tab.key}
 			<button
 				type="button"
-				class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors {isActive
+				class="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors sm:min-h-0 {isActive
 					? 'bg-white text-blue-700 shadow-xs dark:bg-zinc-900 dark:text-blue-300'
 					: 'text-slate-600 hover:bg-white/60 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800'}"
 				onclick={() => setStatusFilter(tab.key)}
@@ -331,7 +331,7 @@
 			<input
 				type="search"
 				name="q"
-				class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+				class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
 				value={searchTerm}
 				spellcheck="false"
 				placeholder="Cari nama murid..."
@@ -339,10 +339,10 @@
 				oninput={handleSearchInput}
 			/>
 		</div>
-		<div class="flex flex-wrap items-center gap-2">
+		<div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
 			<div class="relative flex items-center">
 				<select
-					class="h-9 appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					class="h-11 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 sm:w-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 					title="Filter kelas"
 					aria-label="Filter kelas"
 					onchange={(event) => setKelasFilter((event.currentTarget as HTMLSelectElement).value)}
@@ -363,7 +363,7 @@
 			</div>
 			<div class="relative flex items-center">
 				<select
-					class="h-9 appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+					class="h-11 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 sm:w-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 					value={data.page.perPage}
 					title="Baris per halaman"
 					onchange={(event) =>
@@ -384,129 +384,129 @@
 	</form>
 
 	<div
-		class="mt-4 overflow-x-auto rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+		class="mt-4 overflow-hidden rounded-xl border border-slate-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900"
 	>
-		<table class="w-full min-w-[720px] border-collapse text-xs">
-			<thead>
-				<tr
-					class="border-b border-slate-200/80 bg-slate-50/80 text-left font-semibold text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+		<div
+			class="hidden border-b border-slate-200/80 bg-slate-50/80 px-3 py-2.5 text-xs font-semibold text-slate-600 md:grid md:grid-cols-[3.5rem_14rem_1fr_8.5rem] md:gap-3 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300"
+		>
+			<div>No</div>
+			<div>Nama</div>
+			<div>Catatan</div>
+			<div class="text-right">Aksi</div>
+		</div>
+
+		<div class="divide-y divide-slate-100 dark:divide-zinc-800/80">
+			{#each data.daftarCatatan as item (item.id)}
+				{@const formId = `edit-catatan-form-${item.id}`}
+				<div
+					class="flex flex-col gap-2.5 p-3.5 transition-colors md:grid md:grid-cols-[3.5rem_14rem_1fr_8.5rem] md:items-start md:gap-3 md:px-3 md:py-2.5 {editingRowId ===
+					item.id
+						? 'bg-blue-50/50 dark:bg-blue-950/20'
+						: 'hover:bg-slate-50/80 dark:hover:bg-zinc-800/40'}"
 				>
-					<th style="width: 56px;" class="px-3 py-2.5">No</th>
-					<th style="width: 30%;" class="px-3 py-2.5">Nama</th>
-					<th class="w-full px-3 py-2.5">Catatan</th>
-					<th style="width: 140px; min-width: 120px;" class="px-3 py-2.5 text-right">Aksi</th>
-				</tr>
-			</thead>
-			<tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80">
-				{#each data.daftarCatatan as item (item.id)}
-					{@const formId = `edit-catatan-form-${item.id}`}
-					<tr
-						class={editingRowId === item.id
-							? 'bg-blue-50/50 dark:bg-blue-950/20'
-							: 'transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40'}
+					<div class="hidden text-xs text-slate-600 tabular-nums md:block dark:text-zinc-400">
+						{item.no}
+					</div>
+					<div
+						class="text-sm font-semibold text-slate-900 md:text-xs md:font-medium dark:text-zinc-100"
 					>
-						<td class="px-3 py-2.5 align-top tabular-nums text-slate-600 dark:text-zinc-400">
-							{item.no}
-						</td>
-						<td class="px-3 py-2.5 align-top font-medium text-slate-900 dark:text-zinc-100">
-							{@html searchQueryMarker(data.page.search, item.nama)}
-						</td>
-						<td class="px-3 py-2.5 align-top">
-							{#if editingRowId === item.id}
-								<FormEnhance
-									id={formId}
-									action="?/save"
-									submitStateChange={(value) => (editingSubmitting = value)}
-									onsuccess={() => {
-										void handleSaveSuccess();
-									}}
-								>
-									{#snippet children({ submitting, invalid })}
-										<input name="muridId" value={item.id} hidden />
-										<label class="flex flex-col gap-1.5" aria-busy={submitting}>
-											<textarea
-												bind:this={editingTextarea}
-												class="w-full rounded-xl border border-[#7e8b9b] bg-white p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
-												name="catatan"
-												rows="4"
-												bind:value={editingCatatan}
-												placeholder={`Tuliskan catatan untuk ${item.nama}`}
-												spellcheck="false"
-												aria-invalid={invalid}></textarea>
-											<small class="text-[11px] text-slate-500 dark:text-zinc-400">
-												Kosongkan catatan dan simpan untuk menghapus.
-											</small>
-										</label>
-									{/snippet}
-								</FormEnhance>
-							{:else if item.catatan}
-								<p class="whitespace-pre-line text-slate-800 dark:text-zinc-200">{item.catatan}</p>
-							{:else}
-								<span class="italic text-slate-400 dark:text-zinc-500">Belum ada catatan</span>
-							{/if}
-						</td>
-						<td class="px-3 py-2.5 align-top text-right">
-							{#if editingRowId === item.id}
-								<div class="inline-flex items-center justify-end gap-1.5">
-									<button
-										type="button"
-										class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-red-300 bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
-										onclick={cancelEdit}
-										disabled={editingSubmitting}
-										title="Batalkan edit catatan"
-									>
-										<Icon name="close" class="h-3.5 w-3.5" />
-									</button>
-									<button
-										class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
-										form={formId}
-										type="submit"
-										disabled={editingSaveDisabled}
-										title="Simpan catatan"
-									>
-										{#if editingSubmitting}
-											<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-										{:else}
-											<Icon name="save" class="h-3.5 w-3.5" />
-										{/if}
-									</button>
-								</div>
-							{:else}
-								<div class="flex justify-end">
-									<button
-										type="button"
-										class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-										onclick={() => startEdit(item)}
-										disabled={editingRowId !== null || !canEdit}
-										aria-disabled={editingRowId !== null || !canEdit}
-										title={!canEdit ? 'Anda tidak memiliki izin untuk mengedit' : ''}
-									>
-										<Icon name="edit" class="h-3.5 w-3.5" />
-										Edit
-									</button>
-								</div>
-							{/if}
-						</td>
-					</tr>
-				{:else}
-					<tr>
-						<td
-							class="p-8 text-center text-xs italic text-slate-500 dark:text-zinc-400"
-							colspan="4"
+						<span
+							class="mr-1.5 text-xs font-semibold text-slate-400 tabular-nums md:hidden dark:text-zinc-500"
 						>
-							Belum ada murid pada kelas ini
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+							{item.no}.
+						</span>
+						{@html searchQueryMarker(data.page.search, item.nama)}
+					</div>
+					<div class="min-w-0 text-xs">
+						{#if editingRowId === item.id}
+							<FormEnhance
+								id={formId}
+								action="?/save"
+								submitStateChange={(value) => (editingSubmitting = value)}
+								onsuccess={() => {
+									void handleSaveSuccess();
+								}}
+							>
+								{#snippet children({ submitting, invalid })}
+									<input name="muridId" value={item.id} hidden />
+									<label class="flex flex-col gap-1.5" aria-busy={submitting}>
+										<textarea
+											bind:this={editingTextarea}
+											class="w-full rounded-xl border border-[#7e8b9b] bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none md:p-2.5 md:text-xs dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+											name="catatan"
+											rows="4"
+											bind:value={editingCatatan}
+											placeholder={`Tuliskan catatan untuk ${item.nama}`}
+											spellcheck="false"
+											aria-invalid={invalid}></textarea>
+										<small class="text-[11px] text-slate-500 dark:text-zinc-400">
+											Kosongkan catatan dan simpan untuk menghapus.
+										</small>
+									</label>
+								{/snippet}
+							</FormEnhance>
+						{:else if item.catatan}
+							<p class="leading-relaxed whitespace-pre-line text-slate-800 dark:text-zinc-200">
+								{item.catatan}
+							</p>
+						{:else}
+							<span class="italic text-slate-400 dark:text-zinc-500">Belum ada catatan</span>
+						{/if}
+					</div>
+					<div class="flex items-center justify-end gap-2">
+						{#if editingRowId === item.id}
+							<button
+								type="button"
+								class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-300 bg-red-50 px-3.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 md:h-8 md:w-8 md:flex-none md:px-0 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
+								onclick={cancelEdit}
+								disabled={editingSubmitting}
+								title="Batalkan edit catatan"
+							>
+								<Icon name="close" class="h-3.5 w-3.5" />
+								<span class="md:hidden">Batal</span>
+							</button>
+							<button
+								class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50 md:h-8 md:w-8 md:flex-none md:px-0 dark:bg-blue-500 dark:hover:bg-blue-600"
+								form={formId}
+								type="submit"
+								disabled={editingSaveDisabled}
+								title="Simpan catatan"
+							>
+								{#if editingSubmitting}
+									<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+								{:else}
+									<Icon name="save" class="h-3.5 w-3.5" />
+								{/if}
+								<span class="md:hidden">{editingSubmitting ? 'Menyimpan...' : 'Simpan'}</span>
+							</button>
+						{:else}
+							<button
+								type="button"
+								class="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 max-md:w-full md:h-8 md:px-3 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+								onclick={() => startEdit(item)}
+								disabled={editingRowId !== null || !canEdit}
+								aria-disabled={editingRowId !== null || !canEdit}
+								title={!canEdit ? 'Anda tidak memiliki izin untuk mengedit' : ''}
+							>
+								<Icon name="edit" class="h-3.5 w-3.5" />
+								Edit
+							</button>
+						{/if}
+					</div>
+				</div>
+			{:else}
+				<div class="p-8 text-center text-xs italic text-slate-500 dark:text-zinc-400">
+					Belum ada murid pada kelas ini
+				</div>
+			{/each}
+		</div>
 	</div>
 
 	{#if totalPages > 1}
 		<div class="mt-4 flex flex-wrap items-center justify-center gap-1">
 			<button
 				type="button"
-				class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+				class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:min-w-8 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 				disabled={currentPage <= 1}
 				onclick={() => handlePageClick(currentPage - 1)}
 			>
@@ -514,11 +514,12 @@
 			</button>
 			{#each nomorHalaman as nomor, index (index)}
 				{#if nomor === '…'}
-					<span class="inline-flex h-8 items-center px-1.5 text-xs text-slate-400">...</span>
+					<span class="inline-flex h-10 items-center px-1.5 text-xs text-slate-400 sm:h-8">...</span
+					>
 				{:else}
 					<button
 						type="button"
-						class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors {nomor ===
+						class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors sm:h-8 sm:min-w-8 {nomor ===
 						currentPage
 							? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
 							: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
@@ -531,7 +532,7 @@
 			{/each}
 			<button
 				type="button"
-				class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+				class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:min-w-8 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 				disabled={currentPage >= totalPages}
 				onclick={() => handlePageClick(currentPage + 1)}
 			>

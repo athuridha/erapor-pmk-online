@@ -22,7 +22,7 @@
 	onsuccess={async () => {
 		await invalidate('app:kelas');
 
-		await goto('/kelas');
+		await goto('/master-data/kelas');
 		hideModal();
 	}}
 >

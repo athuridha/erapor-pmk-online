@@ -1077,50 +1077,6 @@ export interface KelasDenganMurid {
 }
 
 /** Daftar kelas beserta muridnya (untuk fitur pindah murid antar kelas). */
-export async function loadDaftarKelasMurid(sekolahId: number): Promise<KelasDenganMurid[]> {
-	const kelas = await db
-		.select({
-			id: tableKelas.id,
-			nama: tableKelas.nama,
-			semesterId: tableKelas.semesterId,
-			semesterNama: tableSemester.nama
-		})
-		.from(tableKelas)
-		.innerJoin(tableSemester, eq(tableKelas.semesterId, tableSemester.id))
-		.where(eq(tableKelas.sekolahId, sekolahId))
-		.orderBy(asc(tableKelas.nama));
-
-	const murid = await db
-		.select({
-			id: tableMurid.id,
-			nama: tableMurid.nama,
-			nis: tableMurid.nis,
-			kelasId: tableMurid.kelasId
-		})
-		.from(tableMurid)
-		.where(eq(tableMurid.sekolahId, sekolahId))
-		.orderBy(asc(tableMurid.nama));
-
-	const perKelas = new Map<number, Array<{ id: number; nama: string; nis: string }>>();
-	for (const row of murid) {
-		const list = perKelas.get(row.kelasId) ?? [];
-		list.push({ id: row.id, nama: row.nama, nis: row.nis });
-		perKelas.set(row.kelasId, list);
-	}
-
-	return kelas.map((row) => ({
-		id: row.id,
-		nama: row.nama,
-		semesterId: row.semesterId,
-		semesterNama: row.semesterNama,
-		murid: perKelas.get(row.id) ?? []
-	}));
-}
-
-/**
- * Tambah banyak baris sekaligus untuk satu entitas (mis. satu mata pelajaran
- * untuk beberapa kelas). Baris yang sudah ada dilewati.
- */
 export async function simpanMasterDataMassal(
 	sekolahId: number,
 	key: string,

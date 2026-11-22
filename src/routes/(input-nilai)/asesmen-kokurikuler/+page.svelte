@@ -321,7 +321,7 @@
 			<span class="sr-only">Pilih kokurikuler</span>
 			<div class="relative flex items-center">
 				<select
-					class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+					class="h-11 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 					title={!canEdit
 						? 'Anda tidak memiliki izin untuk mengubah'
 						: (selectedKokurikulerLabel ?? 'Pilih kokurikuler')}
@@ -366,7 +366,7 @@
 				<input
 					type="search"
 					name="q"
-					class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+					class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 					value={searchTerm}
 					autocomplete="name"
 					placeholder="Cari nama murid..."
@@ -415,8 +415,51 @@
 			<span>Tidak ada murid yang cocok dengan pencarian.</span>
 		</div>
 	{:else}
+		<!-- Mobile: kartu per murid -->
+		<div class="mt-3 space-y-2 sm:hidden">
+			{#each data.daftarMurid as murid (murid.id)}
+				<div
+					class="rounded-xl border border-slate-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
+				>
+					<div class="flex items-start justify-between gap-2.5">
+						<p
+							class="min-w-0 flex-1 text-sm font-semibold leading-snug text-slate-900 dark:text-zinc-100"
+						>
+							<span
+								class="mr-1 text-xs font-semibold text-slate-400 tabular-nums dark:text-zinc-500"
+								>{murid.no}.</span
+							>
+							{@html searchQueryMarker(data.search, murid.nama)}
+						</p>
+						<button
+							type="button"
+							class="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+							onclick={() => openModalFor(murid)}
+							disabled={!canEdit}
+							aria-disabled={!canEdit}
+							title={!canEdit ? 'Anda tidak memiliki izin untuk menilai' : ''}
+						>
+							<Icon name="edit" class="h-3.5 w-3.5" />
+							Nilai
+						</button>
+					</div>
+					<div class="mt-2.5 border-t border-slate-100 pt-2 dark:border-zinc-800/80">
+						{#if murid.deskripsi}
+							<p class="text-xs leading-relaxed text-slate-800 dark:text-zinc-200">
+								{murid.deskripsi}
+							</p>
+						{:else}
+							<span class="text-xs italic text-slate-500 dark:text-zinc-400">
+								Belum ada nilai
+							</span>
+						{/if}
+					</div>
+				</div>
+			{/each}
+		</div>
+
 		<div
-			class="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+			class="mt-4 hidden overflow-x-auto rounded-xl border border-slate-200 bg-white sm:block dark:border-zinc-800 dark:bg-zinc-900"
 		>
 			<table class="w-full min-w-150 border-collapse text-xs">
 				<thead>
@@ -470,7 +513,7 @@
 				{#each pages as pageNumber (pageNumber)}
 					<button
 						type="button"
-						class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors {pageNumber ===
+						class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors sm:h-8 sm:min-w-8 {pageNumber ===
 						currentPage
 							? 'border-blue-600 bg-blue-600 text-white shadow-sm'
 							: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"

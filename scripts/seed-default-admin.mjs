@@ -34,7 +34,6 @@ const REQUIRED_PERMISSIONS = [
 	'administrasi_rekap_nilai',
 	'administrasi_keputusan',
 	'administrasi_buku_tamu',
-	'administrasi_presensi_guru',
 	'administrasi_sppd',
 	'administrasi_dinas_luar',
 	'administrasi_sinkronisasi',

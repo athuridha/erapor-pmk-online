@@ -17,6 +17,8 @@
 		logout?: () => void;
 		loggingOut?: boolean;
 		onOpenMobileMenu?: () => void;
+		sidebarCollapsed?: boolean;
+		onToggleSidebar?: () => void;
 	};
 
 	type UserLike = {
@@ -34,7 +36,9 @@
 	let {
 		logout = () => {},
 		loggingOut = false,
-		onOpenMobileMenu = () => {}
+		onOpenMobileMenu = () => {},
+		sidebarCollapsed = false,
+		onToggleSidebar = () => {}
 	}: NavbarProps = $props();
 
 	let tasksModalRef: { open: () => void } | null = null;
@@ -243,6 +247,18 @@
 			<span class="hidden sm:inline">Menu</span>
 		</button>
 
+		<button
+			type="button"
+			onclick={onToggleSidebar}
+			class="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 lg:inline-flex dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+			title={sidebarCollapsed ? 'Tampilkan menu samping' : 'Sembunyikan menu samping'}
+			aria-label={sidebarCollapsed ? 'Tampilkan menu samping' : 'Sembunyikan menu samping'}
+			aria-controls="app-sidebar"
+			aria-expanded={!sidebarCollapsed}
+		>
+			<span aria-hidden="true"><Icon name="menu-drawer" class="h-4 w-4" /></span>
+		</button>
+
 		<div class="flex min-w-0 flex-1 items-center gap-1.5">
 			{#if currentTitle && page.url.pathname !== '/'}
 				<button
@@ -261,7 +277,7 @@
 					</span>
 				</button>
 			{/if}
-			{#if page.url.pathname !== '/'}
+			{#if navbarTitle}
 				<span
 					class="truncate text-sm font-semibold tracking-tight text-slate-900 sm:text-base dark:text-zinc-100"
 				>
@@ -275,7 +291,7 @@
 			<div class="navbar-favorites-dropdown relative">
 				<button
 					type="button"
-					class="inline-flex h-10 items-center gap-1.5 rounded-xl px-2 text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 sm:h-8.5 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+					class="inline-flex h-10 items-center gap-1.5 rounded-xl px-2 text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 max-sm:w-10 max-sm:justify-center max-sm:px-0 sm:h-8.5 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 					title="Menu Favorit"
 					aria-label="Menu Favorit"
 					aria-expanded={favoritesOpen}
@@ -378,7 +394,7 @@
 			<!-- Daftar Tugas Slide-over Drawer Trigger -->
 			<button
 				type="button"
-				class="inline-flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 max-sm:justify-center max-sm:px-0 sm:h-8.5 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+				class="inline-flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-900 max-sm:w-10 max-sm:justify-center max-sm:px-0 sm:h-8.5 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 				aria-label="Buka panel daftar tugas"
 				title="Daftar Tugas"
 				onclick={() => tasksModalRef?.open()}
@@ -408,7 +424,7 @@
 					title="Profil dan akun pengguna"
 					aria-label="Menu akun pengguna"
 					aria-expanded={profileDropdownOpen}
-					class="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200/80 bg-white pr-2.5 pl-1 shadow-2xs transition-colors hover:bg-slate-50 sm:h-8.5 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700/70"
+					class="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200/80 bg-white pr-2.5 pl-1 shadow-2xs transition-colors hover:bg-slate-50 max-sm:px-1.5 sm:h-8.5 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700/70"
 					onclick={(e) => {
 						e.stopPropagation();
 						favoritesOpen = false;

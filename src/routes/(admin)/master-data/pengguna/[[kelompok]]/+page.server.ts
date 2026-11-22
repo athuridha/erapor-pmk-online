@@ -234,10 +234,16 @@ export const load = async ({ params, locals, url }) => {
 			role: tableAuthUser.type,
 			operatorLevel: tableAuthUser.operatorLevel,
 			roles: tableAuthUser.roles,
+			pegawaiId: tableAuthUser.pegawaiId,
+			guruAktif: sql<number>`exists(select 1 from mata_pelajaran mp3 where mp3.pengampu_id = auth_user.pegawai_id)`,
+			waliAktif: sql<number>`exists(select 1 from kelas k3 where k3.wali_kelas_id = auth_user.pegawai_id)`,
+			kepsekAktif: sql<number>`exists(select 1 from sekolah s3 where s3.kepala_sekolah_id = auth_user.pegawai_id)`,
 			pegawaiNama: tablePegawai.nama,
 			nik: tablePegawai.nik,
 			// Kelas ampu = kolom legacy auth_user.kelas_id (kelas pada akun).
-			kelasDiampu: sql<string | null>`(select k.nama from kelas k where k.id = auth_user.kelas_id)`,
+			kelasDiampu: sql<
+				string | null
+			>`(select group_concat(distinct k.nama) from mata_pelajaran mp inner join kelas k on k.id = mp.kelas_id where mp.pengampu_id = auth_user.pegawai_id)`,
 			// Wali kelas = relasi wali_kelas_id pada tabel kelas (sumber kebenaran
 			// yang sama dengan halaman /kelas). Dipisah dari kelas ampu agar dua
 			// peran ini tidak lagi tampil tercampur di satu kolom "Kelas".
@@ -246,7 +252,7 @@ export const load = async ({ params, locals, url }) => {
 			>`(select group_concat(k2.nama, ', ') from kelas k2 where k2.wali_kelas_id = auth_user.pegawai_id)`,
 			mapel: sql<
 				string | null
-			>`(select mp.nama from mata_pelajaran mp where mp.id = auth_user.mata_pelajaran_id)`,
+			>`(select group_concat(distinct mp.nama) from mata_pelajaran mp where mp.pengampu_id = auth_user.pegawai_id)`,
 			ekskulDibina: sql<
 				string | null
 			>`(select group_concat(e.nama, ', ') from ekstrakurikuler e where e.pembina_user_id = auth_user.id)`,
@@ -262,12 +268,15 @@ export const load = async ({ params, locals, url }) => {
 
 	const baris = rows.map((row) => {
 		// Role gabungan dari daftar roles tersimpan (mis. Guru + Admin).
-		const savedRoles = Array.isArray(row.roles)
-			? row.roles.filter((r) => typeof r === 'string')
-			: [];
-		const roleLabel = savedRoles.length
-			? savedRoles.map((r) => labelRole(r) ?? r).join(' + ')
-			: labelRole(row.role);
+		const savedRoles = (
+			Array.isArray(row.roles) ? row.roles.filter((r) => typeof r === 'string') : []
+		).filter((r) => r !== 'guru' && r !== 'wali_kelas' && r !== 'kepala_sekolah');
+		const derivedRoles: string[] = [];
+		if (row.guruAktif) derivedRoles.push('Guru');
+		if (row.waliAktif) derivedRoles.push('Wali Kelas');
+		if (row.kepsekAktif) derivedRoles.push('Kepala Sekolah');
+		const manualRoles = savedRoles.map((r) => labelRole(r) ?? r);
+		const roleLabel = [...manualRoles, ...derivedRoles].join(' + ') || 'Belum ada peran';
 		return {
 			id: row.id,
 			nama: row.namaLengkap ?? row.pegawaiNama ?? row.username,
@@ -275,6 +284,7 @@ export const load = async ({ params, locals, url }) => {
 			rawType: row.role,
 			operatorLevel: row.operatorLevel,
 			username: row.username,
+			pegawaiId: row.pegawaiId,
 			bisaHapus: row.id !== 1 && row.username.trim().toLowerCase() !== 'admin',
 			nik: row.nik,
 			nik_username: row.nik || row.username,

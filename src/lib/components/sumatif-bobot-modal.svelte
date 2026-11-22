@@ -97,7 +97,7 @@
 
 <input id="sumatif-bobot-modal" type="checkbox" class="modal-toggle" bind:checked={open} hidden />
 <div
-	class="modal bg-slate-950/45 backdrop-blur-[2px]"
+	class="modal modal-bottom bg-slate-950/45 backdrop-blur-[2px] sm:modal-middle"
 	class:modal-open={open}
 	aria-hidden={!open}
 	onclick={(e) => {
@@ -105,7 +105,7 @@
 	}}
 >
 	<div
-		class="modal-box max-w-lg rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+		class="modal-box max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-slate-200/80 bg-white p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-slate-900 shadow-2xl sm:rounded-2xl sm:p-5 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
 	>
 		<div class="border-b border-slate-100 pb-3 dark:border-zinc-800">
 			<h3 class="text-base font-bold text-slate-900 dark:text-zinc-100">
@@ -124,7 +124,7 @@
 				type="button"
 				role="tab"
 				aria-selected={activeTab === 'ras'}
-				class="flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors {activeTab ===
+				class="min-h-10 flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors sm:min-h-0 {activeTab ===
 				'ras'
 					? 'bg-blue-600 text-white shadow-xs dark:bg-blue-500'
 					: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'}"
@@ -136,7 +136,7 @@
 				type="button"
 				role="tab"
 				aria-selected={activeTab === 'rts'}
-				class="flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors {activeTab ===
+				class="min-h-10 flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors sm:min-h-0 {activeTab ===
 				'rts'
 					? 'bg-blue-600 text-white shadow-xs dark:bg-blue-500'
 					: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'}"
@@ -160,7 +160,7 @@
 						type="number"
 						min="0"
 						max="100"
-						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-sm text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						bind:value={lingkupLocal}
 						disabled={loading || saving}
 					/>
@@ -177,7 +177,7 @@
 						type="number"
 						min="0"
 						max="100"
-						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-sm text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						bind:value={stsLocal}
 						disabled={loading || saving}
 					/>
@@ -194,7 +194,7 @@
 						type="number"
 						min="0"
 						max="100"
-						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-sm text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						bind:value={sasLocal}
 						disabled={loading || saving}
 					/>
@@ -212,7 +212,7 @@
 						type="number"
 						min="0"
 						max="100"
-						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-sm text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						bind:value={lingkupRtsLocal}
 						disabled={loading || saving}
 					/>
@@ -229,7 +229,7 @@
 						type="number"
 						min="0"
 						max="100"
-						class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+						class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-sm text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						bind:value={stsRtsLocal}
 						disabled={loading || saving}
 					/>
@@ -258,7 +258,7 @@
 		>
 			<button
 				type="button"
-				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 max-sm:me-auto dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+				class="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 max-sm:me-auto sm:h-9 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				onclick={close}
 			>
 				<Icon name="left" class="h-3.5 w-3.5" />
@@ -266,13 +266,13 @@
 			</button>
 			<button
 				type="button"
-				class="inline-flex h-9 items-center justify-center rounded-xl border border-red-200/80 bg-red-50 px-3.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 sm:ml-auto dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
+				class="inline-flex h-11 items-center justify-center rounded-xl border border-red-200/80 bg-red-50 px-3.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 sm:ml-auto sm:h-9 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950"
 				onclick={reset}
 				disabled={saving}>Reset</button
 			>
 			<button
 				type="button"
-				class="inline-flex h-9 items-center justify-center rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+				class="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 dark:bg-blue-500 dark:hover:bg-blue-600"
 				onclick={save}
 				disabled={saving || !isComplete}
 			>

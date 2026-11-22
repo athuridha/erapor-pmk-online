@@ -14,8 +14,8 @@ import { ensureDinasLuarSchema } from './ensure-dinas-luar';
 import { ensureJurnalMengajarSchema } from './ensure-jurnal-mengajar';
 import { ensureKetidakhadiranHarianSchema } from './ensure-ketidakhadiran-harian';
 import { ensureKetidakhadiranRaporSchema } from './ensure-ketidakhadiran-rapor';
-import { ensurePresensiGuruSchema } from './ensure-presensi-guru';
 import { ensurePegawaiTtdSchema } from './ensure-pegawai-ttd';
+import { ensurePegawaiProfilSchema } from './ensure-pegawai-profil';
 import { ensurePegawaiNikSchema } from './ensure-pegawai-nik';
 import { ensureMuridArsipSchema } from './ensure-murid-arsip';
 import { ensureSppdSchema } from './ensure-sppd';
@@ -50,6 +50,7 @@ export async function runStartupEnsures() {
 	await ensureCoreSchema();
 	// Kolom tanda tangan pegawai (database lama) + pindahkan berkas lama ke DB.
 	await ensurePegawaiTtdSchema();
+	await ensurePegawaiProfilSchema();
 	await ensurePegawaiNikSchema();
 	await ensureMuridArsipSchema();
 	await ensureAcademicModulesSchema();
@@ -79,7 +80,6 @@ export async function runStartupEnsures() {
 	await ensureJurnalMengajarSchema();
 	await ensureKetidakhadiranHarianSchema();
 	await ensureKetidakhadiranRaporSchema();
-	await ensurePresensiGuruSchema();
 	await ensureSppdSchema();
 	await ensurePortalOrangtuaSchema();
 	await ensureAuditLogSchema();

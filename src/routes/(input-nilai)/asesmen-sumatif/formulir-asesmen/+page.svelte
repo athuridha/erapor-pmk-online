@@ -371,8 +371,8 @@
 
 	function getInputClass(value: string) {
 		return isScoreValid(value)
-			? 'h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100'
-			: 'h-9 w-full rounded-xl border border-red-400 bg-red-50/40 px-3 text-xs text-red-900 focus:border-red-600 focus:outline-none dark:border-red-700 dark:bg-red-950/30 dark:text-red-200';
+			? 'h-11 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-sm text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100'
+			: 'h-11 w-full rounded-xl border border-red-400 bg-red-50/40 px-3 text-sm text-red-900 focus:border-red-600 focus:outline-none sm:h-9 sm:text-xs dark:border-red-700 dark:bg-red-950/30 dark:text-red-200';
 	}
 
 	function handleEntryNilaiChange(event: CustomEvent<{ index: number; value: string }>) {
@@ -451,7 +451,7 @@
 </script>
 
 <div
-	class="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+	class="rounded-2xl border border-slate-200/75 bg-white p-4 pb-24 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.06)] sm:p-5 sm:pb-5 dark:border-zinc-800 dark:bg-zinc-900"
 >
 	<FormEnhance action="?/save" onsuccess={handleSuccess} showToast>
 		{#snippet children({ submitting })}
@@ -472,11 +472,11 @@
 			{/if}
 
 			<div
-				class="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-center dark:border-zinc-800"
+				class="grid grid-cols-2 gap-2 border-b border-slate-200 pb-4 sm:flex sm:items-center dark:border-zinc-800"
 			>
 				<a
 					href={kembaliHref}
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+					class="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 sm:h-9 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				>
 					<Icon name="left" class="h-4 w-4" />
 					Kembali
@@ -491,7 +491,7 @@
 				/>
 				<button
 					type="submit"
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto"
+					class="hidden h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto sm:inline-flex"
 					disabled={!data.hasTujuan || !data.hasLingkupComplete || submitting || data.terkunci}
 				>
 					<Icon name="save" class="h-4 w-4" />
@@ -502,7 +502,7 @@
 			<div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
 				<div class="relative flex items-center">
 					<select
-						class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+						class="h-11 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 						title="Pilih mata pelajaran"
 						aria-label="Pilih mata pelajaran"
 						value={data.pickerMapelId}
@@ -655,6 +655,48 @@
 						{formatScore}
 						sumatifWeights={effectiveSumatifWeights}
 					/>
+				</div>
+			</div>
+
+			<!-- Mobile: sticky save bar -->
+			<div
+				class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm sm:hidden dark:border-zinc-800 dark:bg-zinc-900/95"
+			>
+				<div
+					class="mx-auto flex max-w-3xl items-center gap-3 px-4 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))]"
+				>
+					<div class="min-w-0 flex-1">
+						{#if data.terkunci}
+							<p
+								class="flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400"
+							>
+								<Icon name="lock" class="h-3.5 w-3.5 shrink-0" />
+								Nilai terkunci
+							</p>
+						{:else if isDirty}
+							<p
+								class="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300"
+							>
+								<span class="h-2 w-2 shrink-0 rounded-full bg-amber-500"></span>
+								Ada perubahan belum disimpan
+							</p>
+						{:else}
+							<p
+								class="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400"
+							>
+								<Icon name="check" class="h-3.5 w-3.5 shrink-0" />
+								Tersimpan
+							</p>
+						{/if}
+					</div>
+					<button
+						type="submit"
+						class="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+						disabled={!data.hasTujuan || !data.hasLingkupComplete || submitting || data.terkunci}
+					>
+						<Icon name="save" class="h-4 w-4" />
+						{submitting ? 'Menyimpan...' : 'Simpan'}
+					</button>
 				</div>
 			</div>
 		{/snippet}

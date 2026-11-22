@@ -1,7 +1,7 @@
 export const appMenuItems: MenuItem[] = [
 	{
 		title: 'Beranda',
-		icon: 'grid',
+		icon: 'home',
 		path: '/',
 		tags: ['dashboard', 'statistik', 'ringkasan', 'home', 'beranda']
 	},
@@ -20,19 +20,19 @@ export const appMenuItems: MenuItem[] = [
 				tags: ['akademik', 'jadwal', 'bell', 'sound']
 			},
 			{
-				title: 'Semua Kelas',
-				path: '/semua-kelas',
-				tags: ['rekap', 'ringkasan', 'overview', 'seluruh kelas', 'guru', 'murid', 'pindah']
-			},
-			{
-				title: 'Kelola Kelas',
-				path: '/kelas',
-				tags: ['rombel', 'kelas', 'kelola', 'tambah', 'hapus']
+				title: 'Kelas',
+				path: '/master-data/kelas',
+				tags: ['rekap', 'ringkasan', 'kelas', 'rombel', 'murid', 'pindah', 'kelola']
 			},
 			{
 				title: 'Data Murid',
-				path: '/murid',
+				path: '/master-data/murid',
 				tags: ['murid', 'siswa', 'rombel']
+			},
+			{
+				title: 'Wali Kelas',
+				path: '/wali-kelas',
+				tags: ['wali kelas', 'homeroom', 'guru', 'penugasan']
 			}
 		]
 	},
@@ -165,11 +165,6 @@ export const appMenuItems: MenuItem[] = [
 		icon: 'users',
 		subMenu: [
 			{
-				title: 'Presensi Guru',
-				path: '/presensi-guru',
-				tags: ['presensi', 'guru', 'hadir', 'sakit', 'izin']
-			},
-			{
 				title: 'Tanda Tangan',
 				path: '/tanda-tangan',
 				tags: ['tanda tangan', 'paraf', 'ttd', 'signature', 'kepala sekolah', 'wali kelas']
@@ -227,16 +222,6 @@ export const appMenuItems: MenuItem[] = [
 				tags: ['semester', 'ganjil', 'genap', 'referensi']
 			},
 			{
-				title: 'Kelas',
-				path: '/master-data/kelas',
-				tags: ['kelas', 'rombel', 'wali kelas', 'referensi']
-			},
-			{
-				title: 'Murid',
-				path: '/master-data/murid',
-				tags: ['murid', 'siswa', 'data induk', 'referensi']
-			},
-			{
 				title: 'Mata Pelajaran',
 				path: '/master-data/mata_pelajaran',
 				tags: ['mapel', 'mata pelajaran', 'kkm', 'pengampu', 'referensi']
@@ -289,7 +274,7 @@ export const appMenuItems: MenuItem[] = [
 export const menuModulGuru: MenuItem[] = [
 	{
 		title: 'Beranda',
-		icon: 'grid',
+		icon: 'home',
 		path: '/',
 		tags: ['dashboard', 'home', 'beranda']
 	},
@@ -340,11 +325,6 @@ export const menuModulGuru: MenuItem[] = [
 		icon: 'check',
 		subMenu: [
 			{
-				title: 'Presensi Murid',
-				path: '/presensi-murid',
-				tags: ['presensi', 'absen', 'kehadiran', 'mapel', 'siswa']
-			},
-			{
 				title: 'Jurnal Mengajar',
 				path: '/jurnal-mengajar',
 				tags: ['jurnal', 'materi', 'pertemuan']
@@ -366,11 +346,6 @@ export const menuModulGuru: MenuItem[] = [
 		icon: 'briefcase',
 		subMenu: [
 			{
-				title: 'Presensi Guru',
-				path: '/presensi-guru',
-				tags: ['presensi', 'kehadiran', 'guru']
-			},
-			{
 				title: 'Permohonan Dinas Luar',
 				path: '/dinas-luar',
 				tags: ['dinas luar', 'tugas', 'permohonan']
@@ -382,7 +357,7 @@ export const menuModulGuru: MenuItem[] = [
 export const menuModulWaliKelas: MenuItem[] = [
 	{
 		title: 'Beranda',
-		icon: 'grid',
+		icon: 'home',
 		path: '/',
 		tags: ['dashboard', 'home', 'beranda']
 	},
@@ -392,7 +367,7 @@ export const menuModulWaliKelas: MenuItem[] = [
 		subMenu: [
 			{
 				title: 'Data Murid',
-				path: '/murid',
+				path: '/master-data/murid',
 				tags: ['murid', 'siswa', 'data induk', 'kelas']
 			},
 			{
@@ -490,11 +465,6 @@ export const menuModulWaliKelas: MenuItem[] = [
 		icon: 'briefcase',
 		subMenu: [
 			{
-				title: 'Presensi Guru',
-				path: '/presensi-guru',
-				tags: ['presensi', 'guru']
-			},
-			{
 				title: 'Permohonan Dinas Luar',
 				path: '/dinas-luar',
 				tags: ['dinas luar', 'tugas', 'permohonan']
@@ -506,7 +476,7 @@ export const menuModulWaliKelas: MenuItem[] = [
 export const menuModulPembinaEskul: MenuItem[] = [
 	{
 		title: 'Beranda',
-		icon: 'grid',
+		icon: 'home',
 		path: '/',
 		tags: ['dashboard', 'home', 'beranda']
 	},

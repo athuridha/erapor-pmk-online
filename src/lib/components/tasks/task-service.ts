@@ -38,20 +38,25 @@ const requestJson = async <T>(
 	return { response, payload };
 };
 
-const ensureKelasId = (kelasId: number | null | undefined) => {
-	if (!kelasId || !Number.isInteger(kelasId) || kelasId <= 0) {
+const normalizeKelasId = (kelasId: number | null | undefined) => {
+	if (kelasId == null) return null;
+	if (!Number.isInteger(kelasId) || kelasId <= 0) {
 		throw new Error('Kelas tidak valid.');
 	}
 	return kelasId;
 };
 
-const buildListUrl = (kelasId: number) => {
-	const params = new URLSearchParams({ kelasId: String(kelasId) });
-	return `/api/tasks?${params.toString()}`;
+const withKelas = (kelasId: number | null) => (kelasId ? { kelasId } : {});
+
+const buildListUrl = (kelasId: number | null) => {
+	const params = new URLSearchParams();
+	if (kelasId) params.set('kelasId', String(kelasId));
+	const query = params.toString();
+	return query ? `/api/tasks?${query}` : '/api/tasks';
 };
 
-export const listTasks = async (kelasId: number) => {
-	const validKelasId = ensureKelasId(kelasId);
+export const listTasks = async (kelasId: number | null) => {
+	const validKelasId = normalizeKelasId(kelasId);
 	const { response, payload } = await requestJson<TaskRecord[]>(buildListUrl(validKelasId));
 	if (!response.ok) {
 		throw new Error(payload.message ?? 'Gagal memuat tugas.');
@@ -59,12 +64,12 @@ export const listTasks = async (kelasId: number) => {
 	return Array.isArray(payload.data) ? payload.data : [];
 };
 
-export const createTask = async (kelasId: number, title: string) => {
-	const validKelasId = ensureKelasId(kelasId);
+export const createTask = async (kelasId: number | null, title: string) => {
+	const validKelasId = normalizeKelasId(kelasId);
 	const { response, payload } = await requestJson<TaskRecord>(`/api/tasks`, {
 		method: 'POST',
 		headers: jsonHeaders,
-		body: JSON.stringify({ title, kelasId: validKelasId })
+		body: JSON.stringify({ title, ...withKelas(validKelasId) })
 	});
 	if (!response.ok) {
 		throw new Error(payload.message ?? 'Gagal menyimpan tugas.');
@@ -75,12 +80,12 @@ export const createTask = async (kelasId: number, title: string) => {
 	return payload.data;
 };
 
-export const updateTaskStatus = async (kelasId: number, id: number, status: TaskStatus) => {
-	const validKelasId = ensureKelasId(kelasId);
+export const updateTaskStatus = async (kelasId: number | null, id: number, status: TaskStatus) => {
+	const validKelasId = normalizeKelasId(kelasId);
 	const { response, payload } = await requestJson<TaskRecord>(`/api/tasks`, {
 		method: 'PATCH',
 		headers: jsonHeaders,
-		body: JSON.stringify({ id, status, kelasId: validKelasId })
+		body: JSON.stringify({ id, status, ...withKelas(validKelasId) })
 	});
 	if (!response.ok) {
 		throw new Error(payload.message ?? 'Gagal memperbarui tugas.');
@@ -93,12 +98,12 @@ export const updateTaskStatus = async (kelasId: number, id: number, status: Task
 
 type DeleteScope = { id?: number; scope?: 'completed' | 'all' };
 
-export const deleteTasks = async (kelasId: number, payload: DeleteScope) => {
-	const validKelasId = ensureKelasId(kelasId);
+export const deleteTasks = async (kelasId: number | null, payload: DeleteScope) => {
+	const validKelasId = normalizeKelasId(kelasId);
 	const { response, payload: result } = await requestJson<{ deleted: number }>(`/api/tasks`, {
 		method: 'DELETE',
 		headers: jsonHeaders,
-		body: JSON.stringify({ ...payload, kelasId: validKelasId })
+		body: JSON.stringify({ ...payload, ...withKelas(validKelasId) })
 	});
 	if (!response.ok) {
 		throw new Error(result.message ?? 'Gagal menghapus tugas.');

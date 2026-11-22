@@ -705,7 +705,7 @@
 				{/if}
 				<div class="relative flex items-center">
 					<select
-						class="h-10 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+						class="h-11 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 						title="Pilih mata pelajaran"
 						name="mapel_id"
 						bind:value={selectedMapelValue}
@@ -741,7 +741,7 @@
 			>
 				<button
 					type="button"
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors sm:h-7 sm:px-2.5 {tampilanMode ===
+					class="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors sm:h-8 sm:px-2.5 {tampilanMode ===
 					'matriks'
 						? 'bg-blue-600 text-white shadow-sm'
 						: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-zinc-100'}"
@@ -754,7 +754,7 @@
 				</button>
 				<button
 					type="button"
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors sm:h-7 sm:px-2.5 {tampilanMode ===
+					class="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors sm:h-8 sm:px-2.5 {tampilanMode ===
 					'ringkas'
 						? 'bg-blue-600 text-white shadow-sm'
 						: 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-zinc-100'}"
@@ -770,35 +770,35 @@
 			<div class="grid grid-cols-3 gap-2 sm:flex sm:items-center">
 				<button
 					type="button"
-					class="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-2 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:px-3 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+					class="inline-flex h-11 items-center justify-center gap-1 rounded-xl border border-[#7e8b9b] bg-white px-2 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:gap-1.5 sm:px-3 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					onclick={openBobotModal}
 					disabled={!canEdit}
 					aria-disabled={!canEdit}
 					title={!canEdit ? 'Anda tidak memiliki izin untuk mengatur bobot' : 'Atur bobot nilai'}
 				>
-					<Icon name="gear" class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+					<Icon name="gear" class="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" />
 					<span>Bobot</span>
 				</button>
 				<button
 					type="button"
-					class="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-2 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:px-3 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+					class="inline-flex h-11 items-center justify-center gap-1 rounded-xl border border-[#7e8b9b] bg-white px-2 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:gap-1.5 sm:px-3 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					onclick={downloadTemplate}
 					disabled={!canEdit}
 					aria-disabled={!canEdit}
 					title={!canEdit ? 'Anda tidak memiliki izin' : 'Unduh template Excel'}
 				>
-					<Icon name="download" class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+					<Icon name="download" class="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" />
 					<span>Unduh</span>
 				</button>
 				<button
 					type="button"
-					class="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-2 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:px-3 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+					class="inline-flex h-11 items-center justify-center gap-1 rounded-xl border border-[#7e8b9b] bg-white px-2 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:gap-1.5 sm:px-3 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					onclick={openImportModal}
 					disabled={!canEdit}
 					aria-disabled={!canEdit}
 					title={!canEdit ? 'Anda tidak memiliki izin' : 'Import nilai dari Excel'}
 				>
-					<Icon name="import" class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+					<Icon name="import" class="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" />
 					<span>Import</span>
 				</button>
 			</div>
@@ -882,7 +882,7 @@
 				<input
 					type="search"
 					name="q"
-					class="h-10 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+					class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white pr-3 pl-9 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 					value={searchTerm}
 					spellcheck="false"
 					autocomplete="name"
@@ -899,11 +899,19 @@
 				<p class="text-xs text-slate-600 dark:text-zinc-400">
 					Centang murid untuk mengisi satu komponen nilai sekaligus.
 				</p>
-				<div class="flex w-full items-center gap-2 sm:w-auto">
+				<div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+					<button
+						type="button"
+						class="inline-flex h-10 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 sm:hidden dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+						onclick={() => togglePilihSemua(!semuaTerpilih)}
+						disabled={!canEdit || !muridBisaDipilih.length}
+					>
+						{semuaTerpilih ? 'Batal semua' : 'Pilih semua'}
+					</button>
 					{#if muridTerpilih.length}
 						<button
 							type="button"
-							class="inline-flex h-10 flex-1 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:h-8 sm:flex-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+							class="inline-flex h-10 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:h-8 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
 							onclick={() => togglePilihSemua(false)}
 						>
 							Kosongkan
@@ -933,14 +941,16 @@
 					class="rounded-xl border border-slate-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
 				>
 					<div class="flex items-start gap-2.5">
-						<input
-							type="checkbox"
-							class="checkbox checkbox-sm mt-0.5"
-							checked={terpilihMurid.includes(murid.id)}
-							disabled={!bisaDipilih}
-							onchange={(event) => togglePilihMurid(murid.id, event.currentTarget.checked)}
-							aria-label="Pilih {murid.nama}"
-						/>
+						<label class="-m-1.5 flex h-10 w-10 shrink-0 items-center justify-center">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								checked={terpilihMurid.includes(murid.id)}
+								disabled={!bisaDipilih}
+								onchange={(event) => togglePilihMurid(murid.id, event.currentTarget.checked)}
+								aria-label="Pilih {murid.nama}"
+							/>
+						</label>
 						<div class="min-w-0 flex-1">
 							<p class="text-sm font-semibold leading-snug text-slate-900 dark:text-zinc-100">
 								<span class="mr-1 text-[11px] text-slate-400 tabular-nums dark:text-zinc-500"
@@ -957,7 +967,7 @@
 						{#if murid.nilaiHref && murid.canNilai && canEdit}
 							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- intentional prebuilt href -->
 							<a
-								class="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+								class="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-blue-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
 								href={murid.nilaiHref}
 							>
 								<Icon name="edit" class="h-3.5 w-3.5" />
@@ -966,7 +976,7 @@
 						{:else}
 							<button
 								type="button"
-								class="inline-flex h-9 shrink-0 cursor-not-allowed items-center gap-1 rounded-xl border border-slate-200 bg-slate-100 px-3 text-xs font-semibold text-slate-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500"
+								class="inline-flex h-10 shrink-0 cursor-not-allowed items-center gap-1 rounded-xl border border-slate-200 bg-slate-100 px-3.5 text-xs font-semibold text-slate-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500"
 								disabled
 								aria-disabled="true"
 								title={alasanTidakBisaNilai(murid)}
@@ -1180,7 +1190,7 @@
 				{#each pages as pageNumber (pageNumber)}
 					<button
 						type="button"
-						class="inline-flex h-9 min-w-9 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors sm:h-8 sm:min-w-8 {pageNumber ===
+						class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-2.5 text-xs font-semibold tabular-nums transition-colors sm:h-8 sm:min-w-8 {pageNumber ===
 						currentPage
 							? 'border-blue-600 bg-blue-600 text-white shadow-sm'
 							: 'border-[#7e8b9b] bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
@@ -1202,7 +1212,7 @@
 		onclose={() => (massalTerbuka = false)}
 	>
 		<div
-			class="modal-box max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-slate-200/80 bg-white p-4 text-slate-900 shadow-2xl sm:rounded-2xl sm:p-5 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+			class="modal-box max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-slate-200/80 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-slate-900 shadow-2xl sm:rounded-2xl sm:p-5 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
 		>
 			<h3 class="mb-1 text-lg font-bold">Isi Nilai Sekaligus</h3>
 			<p class="mb-3 text-xs text-slate-600 dark:text-zinc-400">
@@ -1237,7 +1247,7 @@
 							<div class="relative flex items-center">
 								<select
 									name="komponen"
-									class="h-9 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
+									class="h-11 w-full appearance-none truncate rounded-xl border border-[#7e8b9b] bg-white pr-8 pl-3 text-xs font-medium text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-blue-400"
 									bind:value={massalKomponen}
 									required
 									disabled={submitting}
@@ -1264,7 +1274,7 @@
 								min="0"
 								max="100"
 								step="0.01"
-								class="h-9 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-xs text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
+								class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-blue-400"
 								placeholder="Contoh: 85"
 								bind:value={massalNilai}
 								required
@@ -1280,7 +1290,7 @@
 					>
 						<button
 							type="button"
-							class="inline-flex h-9 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+							class="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-50 sm:h-9 sm:flex-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 							onclick={() => (massalTerbuka = false)}
 							disabled={submitting}
 						>
@@ -1288,7 +1298,7 @@
 						</button>
 						<button
 							type="submit"
-							class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+							class="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:flex-none"
 							disabled={submitting}
 						>
 							<Icon name="save" class="h-4 w-4" />

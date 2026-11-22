@@ -361,6 +361,9 @@ export async function handleIsiSekaligus({
 	const simHari = formData.get('simHari')?.toString() ?? null;
 	const simJam = formData.get('simJam')?.toString() ?? null;
 	const presensiType = formData.get('presensiType')?.toString() ?? 'masuk';
+	if (presensiType === 'pulang') {
+		return fail(400, { fail: 'Presensi pulang tidak lagi digunakan' });
+	}
 
 	const allSettings = await db.query.tablePresensiSettings.findFirst({
 		columns: { jenisPresensi: true, jamMasuk: true, tipePresensi: true },

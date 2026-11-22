@@ -297,9 +297,9 @@ a[data-preloading] {
 /* Crisp custom selects and high-contrast backward-compatible DaisyUI form controls */
 select.appearance-none,
 .app-select {
-	-webkit-appearance: none !important;
-	-moz-appearance: none !important;
-	appearance: none !important;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
 	background-image: none;
 }
 
@@ -309,9 +309,146 @@ select.appearance-none::-ms-expand,
 }
 
 @supports (appearance: base-select) {
+	select.appearance-none,
+	.app-select,
+	select.select,
+	select.appearance-none::picker(select),
+	.app-select::picker(select),
+	select.select::picker(select) {
+		appearance: base-select;
+	}
+
+	select.appearance-none,
+	.app-select,
+	select.select {
+		display: inline-flex;
+		align-items: center;
+		line-height: 1.25;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
 	select.appearance-none::picker-icon,
-	.app-select::picker-icon {
-		display: none !important;
+	.app-select::picker-icon,
+	select.select::picker-icon {
+		display: none;
+	}
+
+	select.appearance-none::picker(select),
+	.app-select::picker(select),
+	select.select::picker(select) {
+		margin-block: 0.375rem;
+		padding: 0.375rem;
+		border-radius: 0.875rem;
+		border: 1px solid #e2e8f0;
+		background-color: #ffffff;
+		color: #0f172a;
+		box-shadow:
+			0 12px 32px -8px rgba(15, 23, 42, 0.14),
+			0 4px 10px -4px rgba(15, 23, 42, 0.06);
+		min-width: anchor-size(width);
+		max-width: min(26rem, calc(100vw - 1.5rem));
+		max-height: min(19rem, 45dvh);
+		overflow-y: auto;
+		box-sizing: border-box;
+	}
+
+	[data-theme='dark'] select.appearance-none::picker(select),
+	[data-theme='dark'] .app-select::picker(select),
+	[data-theme='dark'] select.select::picker(select) {
+		border-color: #3f3f46;
+		background-color: #18181b;
+		color: #f4f4f5;
+		box-shadow:
+			0 16px 36px -8px rgba(0, 0, 0, 0.55),
+			0 4px 12px -4px rgba(0, 0, 0, 0.35);
+	}
+
+	select.appearance-none option,
+	.app-select option,
+	select.select option {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-height: 2.375rem;
+		padding: 0.5rem 0.625rem;
+		border-radius: 0.5rem;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		line-height: 1.35;
+		white-space: normal;
+		color: #1e293b;
+		transition:
+			background-color 120ms ease,
+			color 120ms ease;
+	}
+
+	select.appearance-none option:hover,
+	select.appearance-none option:focus-visible,
+	.app-select option:hover,
+	.app-select option:focus-visible,
+	select.select option:hover,
+	select.select option:focus-visible {
+		background-color: #f1f5f9;
+		outline-offset: -2px !important;
+	}
+
+	select.appearance-none option:checked,
+	.app-select option:checked,
+	select.select option:checked {
+		background-color: #eff6ff;
+		color: #1d4ed8;
+		font-weight: 600;
+	}
+
+	select.appearance-none option:disabled,
+	.app-select option:disabled,
+	select.select option:disabled {
+		color: #94a3b8;
+		cursor: not-allowed;
+	}
+
+	select.appearance-none option::checkmark,
+	.app-select option::checkmark,
+	select.select option::checkmark {
+		order: 1;
+		margin-inline-start: auto;
+		color: #2563eb;
+	}
+
+	[data-theme='dark'] select.appearance-none option,
+	[data-theme='dark'] .app-select option,
+	[data-theme='dark'] select.select option {
+		color: #e4e4e7;
+	}
+
+	[data-theme='dark'] select.appearance-none option:hover,
+	[data-theme='dark'] select.appearance-none option:focus-visible,
+	[data-theme='dark'] .app-select option:hover,
+	[data-theme='dark'] .app-select option:focus-visible,
+	[data-theme='dark'] select.select option:hover,
+	[data-theme='dark'] select.select option:focus-visible {
+		background-color: #27272a;
+	}
+
+	[data-theme='dark'] select.appearance-none option:checked,
+	[data-theme='dark'] .app-select option:checked,
+	[data-theme='dark'] select.select option:checked {
+		background-color: rgba(37, 99, 235, 0.22);
+		color: #93c5fd;
+	}
+
+	[data-theme='dark'] select.appearance-none option:disabled,
+	[data-theme='dark'] .app-select option:disabled,
+	[data-theme='dark'] select.select option:disabled {
+		color: #71717a;
+	}
+
+	[data-theme='dark'] select.appearance-none option::checkmark,
+	[data-theme='dark'] .app-select option::checkmark,
+	[data-theme='dark'] select.select option::checkmark {
+		color: #60a5fa;
 	}
 }
 
@@ -424,6 +561,10 @@ html.erapor-dragging * {
 
 [data-theme='dark'] :focus-visible {
 	outline-color: #60a5fa !important;
+}
+
+#app-sidebar :focus-visible {
+	outline-offset: -2px !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
