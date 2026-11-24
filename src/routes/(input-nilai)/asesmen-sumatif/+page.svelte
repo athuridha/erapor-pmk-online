@@ -27,6 +27,8 @@
 		agamaLabel?: string | null;
 		/** mapelId efektif baris ini (varian agama/PKS sudah di-resolve server). */
 		mapelId: number | null;
+		nilaiAkhirAsli?: number | null;
+		nilaiRevisi?: number | null;
 		nilaiAkhir: number | null;
 		nilaiAkhirRts: number | null;
 		naLingkup: number | null;
@@ -49,6 +51,7 @@
 		mapelList: MapelOption[];
 		selectedMapelValue: string | null;
 		selectedMapel: { id: number | null; nama: string } | null;
+		relevantMapelIds?: number[];
 		kelasKontenAktif?: { id: number; nama?: string; fase?: string } | null;
 		kelasAktif?: { nama?: string; fase?: string } | null;
 		daftarMurid: MuridRow[];
@@ -59,13 +62,22 @@
 			deskripsi: string;
 			lingkupMateri: string;
 			bobot: number;
+			jenisAsesmen: 'formatif' | 'sumatif' | 'as';
 			teknikPenilaianId: number | null;
 			teknikNama: string | null;
 			teknikSingkatan: string | null;
 		}>;
+		teknikList?: Array<{ id: number; nama: string; singkatan: string }>;
 		kkm?: number;
 		isTerkunci?: boolean;
-		sumatifWeights?: { lingkup: number; sts: number; sas: number };
+		sumatifWeights?: {
+			lingkup: number;
+			sts: number;
+			sas: number;
+			isCustom?: boolean;
+			sekolahDefault?: { lingkup: number; sts: number; sas: number };
+			rts?: { lingkup: number; sts: number };
+		};
 		allowedAgamaForUser?: string[];
 		page: PageState;
 	};
@@ -79,6 +91,7 @@
 	let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
 	let tampilanMode = $state<'matriks' | 'ringkas'>('matriks');
+	let mapelBobotModalOpen = $state(false);
 
 	// Restrict editing for wali_asuh
 	const canEdit = $derived.by(() => {
@@ -392,6 +405,10 @@
 	}
 
 	async function openBobotModal() {
+		if (tampilanMode === 'matriks' && (data.selectedMapel?.id || data.relevantMapelIds?.length)) {
+			mapelBobotModalOpen = true;
+			return;
+		}
 		bobotLoading = true;
 		bobotError = null;
 		try {
@@ -541,9 +558,9 @@
 	let massalNilai = $state('');
 
 	const KOMPONEN_LABEL: Record<'lingkup' | 'sts' | 'sas', string> = {
-		lingkup: 'Lingkup Materi',
-		sts: 'STS',
-		sas: 'SAS'
+		lingkup: 'Formatif (F)',
+		sts: 'Sumatif (S)',
+		sas: 'Sumatif AS (AS)'
 	};
 
 	// Hanya baris dengan mapelId efektif & boleh dinilai yang bisa dicentang.
@@ -675,7 +692,7 @@
 		<h1
 			class="text-lg font-bold leading-snug tracking-tight text-slate-900 sm:text-xl dark:text-zinc-100"
 		>
-			Daftar Nilai Sumatif{#if selectedMapelLabel}<span class="text-slate-600 dark:text-zinc-300">
+			Penilaian{#if selectedMapelLabel}<span class="text-slate-600 dark:text-zinc-300">
 					: {selectedMapelLabel}</span
 				>{/if}
 		</h1>
@@ -837,35 +854,22 @@
 			</div>
 		{/if}
 	{:else if tampilanMode === 'matriks'}
-		{#if data.tujuanList && data.tujuanList.length > 0}
-			<div class="mt-4">
-				<MatriksTable
-					muridList={data.daftarMurid}
-					tujuanList={data.tujuanList}
-					kelasId={((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.id ?? null}
-					kkm={data.kkm ?? 75}
-					isTerkunci={data.isTerkunci ?? false}
-					{canEdit}
-					sumatifWeights={data.sumatifWeights ?? { lingkup: 60, sts: 20, sas: 20 }}
-					mapelNama={data.selectedMapel?.nama ?? 'Mata Pelajaran'}
-				/>
-			</div>
-		{:else}
-			<div
-				class="mt-5 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-200"
-			>
-				<Icon name="alert" class="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-				<div class="flex flex-col gap-1">
-					<span class="font-bold">Mata Pelajaran ini belum memiliki Tujuan Pembelajaran (TP).</span>
-					<span>
-						Untuk menggunakan input Matriks Excel, silakan buat Tujuan Pembelajaran terlebih dahulu
-						di menu
-						<strong>Persiapan Penilaian &gt; Capaian Kompetensi &amp; TP</strong>, atau beralih ke
-						mode <strong>Ringkasan</strong> di atas.
-					</span>
-				</div>
-			</div>
-		{/if}
+		<div class="mt-4">
+			<MatriksTable
+				muridList={data.daftarMurid}
+				tujuanList={data.tujuanList ?? []}
+				teknikList={data.teknikList ?? []}
+				kelasFase={((data as any).kelasKontenAktif ?? (data as any).kelasAktif)?.fase ?? null}
+				mapelId={data.selectedMapel?.id ?? null}
+				relevantMapelIds={data.relevantMapelIds ?? []}
+				kkm={data.kkm ?? 75}
+				isTerkunci={data.isTerkunci ?? false}
+				{canEdit}
+				sumatifWeights={data.sumatifWeights ?? { lingkup: 60, sts: 20, sas: 20 }}
+				mapelNama={data.selectedMapel?.nama ?? 'Mata Pelajaran'}
+				bind:bobotModalOpen={mapelBobotModalOpen}
+			/>
+		</div>
 	{:else}
 		<form
 			class="mt-3 w-full"
@@ -1004,9 +1008,9 @@
 									{formatScore(murid.nilaiAkhirRts)}
 								</p>
 								<p class="text-[10px] text-slate-500 tabular-nums dark:text-zinc-400">
-									{#if murid.naLingkup != null}Lingkup {formatScore(murid.naLingkup)}{/if}
+									{#if murid.naLingkup != null}F {formatScore(murid.naLingkup)}{/if}
 									{#if murid.sts != null}
-										· STS {formatScore(murid.sts)}{/if}
+										· S {formatScore(murid.sts)}{/if}
 								</p>
 							{:else}
 								<p class="mt-0.5 text-[11px] text-slate-500 italic dark:text-zinc-400">
@@ -1026,20 +1030,27 @@
 								</p>
 							{:else if murid.nilaiAkhir != null}
 								<p
-									class="mt-0.5 text-base font-bold text-slate-900 tabular-nums dark:text-zinc-100"
+									class="mt-0.5 flex items-center gap-1.5 text-base font-bold text-slate-900 tabular-nums dark:text-zinc-100"
 								>
-									{formatScore(murid.nilaiAkhir)}
+									<span>{formatScore(murid.nilaiAkhir)}</span>
+									{#if murid.nilaiRevisi != null}
+										<span
+											class="rounded bg-teal-100 px-1 py-0.5 text-[9px] font-semibold text-teal-800 uppercase dark:bg-teal-950/60 dark:text-teal-300"
+										>
+											Revisi
+										</span>
+									{/if}
 								</p>
 								<p class="text-[10px] text-slate-500 tabular-nums dark:text-zinc-400">
-									{#if murid.naLingkup != null}Lingkup {formatScore(
+									{#if murid.naLingkup != null}F {formatScore(
 											murid.naLingkup
 										)}{/if}{#if murid.sts != null}{#if murid.naLingkup != null}
 											·
-										{/if}STS {formatScore(
+										{/if}S {formatScore(
 											murid.sts
 										)}{/if}{#if murid.sas != null}{#if murid.naLingkup != null || murid.sts != null}
 											·
-										{/if}SAS {formatScore(murid.sas)}{/if}
+										{/if}AS {formatScore(murid.sas)}{/if}
 								</p>
 							{:else}
 								<p class="mt-0.5 text-[11px] text-slate-500 italic dark:text-zinc-400">
@@ -1117,10 +1128,10 @@
 										class="mt-1 space-y-0.5 text-[11px] text-slate-500 tabular-nums dark:text-zinc-400"
 									>
 										{#if murid.naLingkup != null}
-											<p>Lingkup Materi: {formatScore(murid.naLingkup)}</p>
+											<p>Formatif (F): {formatScore(murid.naLingkup)}</p>
 										{/if}
 										{#if murid.sts != null}
-											<p>STS: {formatScore(murid.sts)}</p>
+											<p>Sumatif (S): {formatScore(murid.sts)}</p>
 										{/if}
 									</div>
 								{:else}
@@ -1134,20 +1145,29 @@
 										Data diisi oleh user lain
 									</span>
 								{:else if murid.nilaiAkhir != null}
-									<p class="font-semibold text-slate-900 tabular-nums dark:text-zinc-100">
-										{formatScore(murid.nilaiAkhir)}
+									<p
+										class="flex items-center gap-1.5 font-semibold text-slate-900 tabular-nums dark:text-zinc-100"
+									>
+										<span>{formatScore(murid.nilaiAkhir)}</span>
+										{#if murid.nilaiRevisi != null}
+											<span
+												class="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 uppercase dark:bg-teal-950/60 dark:text-teal-300"
+											>
+												Revisi
+											</span>
+										{/if}
 									</p>
 									<div
 										class="mt-1 space-y-0.5 text-[11px] text-slate-500 tabular-nums dark:text-zinc-400"
 									>
 										{#if murid.naLingkup != null}
-											<p>Lingkup Materi: {formatScore(murid.naLingkup)}</p>
+											<p>Formatif (F): {formatScore(murid.naLingkup)}</p>
 										{/if}
 										{#if murid.sts != null}
-											<p>STS: {formatScore(murid.sts)}</p>
+											<p>Sumatif (S): {formatScore(murid.sts)}</p>
 										{/if}
 										{#if murid.sas != null}
-											<p>SAS: {formatScore(murid.sas)}</p>
+											<p>Sumatif AS (AS): {formatScore(murid.sas)}</p>
 										{/if}
 									</div>
 

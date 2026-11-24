@@ -67,14 +67,19 @@ export const appMenuItems: MenuItem[] = [
 		icon: 'pen',
 		subMenu: [
 			{
-				title: 'Asesmen Formatif',
-				path: '/asesmen-formatif',
-				tags: ['nilai', 'formatif', 'intrakurikuler']
-			},
-			{
-				title: 'Asesmen Sumatif',
+				title: 'Penilaian Mapel',
 				path: '/asesmen-sumatif',
-				tags: ['nilai', 'sumatif', 'sts', 'sas', 'intrakurikuler']
+				tags: [
+					'penilaian',
+					'nilai',
+					'formatif',
+					'sumatif',
+					'sts',
+					'sas',
+					'as',
+					'revisi',
+					'intrakurikuler'
+				]
 			},
 			{
 				title: 'Kokurikuler',
@@ -304,14 +309,9 @@ export const menuModulGuru: MenuItem[] = [
 		icon: 'pen',
 		subMenu: [
 			{
-				title: 'Asesmen Formatif',
-				path: '/asesmen-formatif',
-				tags: ['formatif', 'tugas', 'kuis', 'nilai']
-			},
-			{
-				title: 'Asesmen Sumatif',
+				title: 'Input Nilai Mapel',
 				path: '/asesmen-sumatif',
-				tags: ['sumatif', 'sts', 'sas', 'ulangan', 'nilai']
+				tags: ['penilaian', 'formatif', 'sumatif', 'sts', 'sas', 'as', 'revisi', 'ulangan', 'nilai']
 			},
 			{
 				title: 'Nilai Akhir Mapel',

@@ -328,8 +328,8 @@ export function buildNilaiMap(
 	const map = new Map<string, NilaiDetail>();
 	for (const row of rows) {
 		const nilaiAkhir =
-			hitungNilaiAkhirSumatif({ naLingkup: row.naLingkup, sts: row.sts, sas: row.sas }, bobot) ??
-			row.nilaiAkhir;
+			row.nilaiAkhir ??
+			hitungNilaiAkhirSumatif({ naLingkup: row.naLingkup, sts: row.sts, sas: row.sas }, bobot);
 		map.set(`${row.muridId}|${row.mataPelajaranId}`, {
 			nilaiAkhir: nilaiAkhir != null ? round2(nilaiAkhir) : null,
 			naLingkup: row.naLingkup != null ? round2(row.naLingkup) : null,

@@ -619,6 +619,10 @@ export const tableMataPelajaran = sqliteTable(
 		dapodikMataPelajaranId: text(),
 		// Pembelajaran induk pilihan (Sub Pembelajaran) saat kirim matev ke Dapodik.
 		dapodikIndukPembelajaranId: text(),
+		// Bobot kelompok penilaian per mapel (NULL = ikuti bobot default sekolah)
+		bobotFormatif: int(),
+		bobotSumatif: int(),
+		bobotAs: int(),
 		...audit
 	},
 	(table) => [unique().on(table.kelasId, table.nama)]
@@ -648,6 +652,9 @@ export const tableTujuanPembelajaran = sqliteTable('tujuan_pembelajaran', {
 	deskripsi: text().notNull(),
 	lingkupMateri: text().notNull(),
 	bobot: real().default(0).notNull(),
+	jenisAsesmen: text({ enum: ['formatif', 'sumatif', 'as'] })
+		.default('formatif')
+		.notNull(),
 	teknikPenilaianId: int().references(() => tableTeknikPenilaian.id, { onDelete: 'set null' }),
 	...audit
 });
@@ -669,6 +676,8 @@ export const tableAsesmenSumatif = sqliteTable(
 		sasTes: real(),
 		sasNonTes: real(),
 		sas: real(),
+		nilaiAkhirAsli: real(),
+		nilaiRevisi: real(),
 		nilaiAkhir: real(),
 		nilaiAkhirRts: real(),
 		...audit

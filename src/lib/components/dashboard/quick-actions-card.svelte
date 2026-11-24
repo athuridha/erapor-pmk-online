@@ -99,8 +99,8 @@
 			permission: 'administrasi_jurnal_mengajar'
 		},
 		{
-			title: 'Asesmen Sumatif',
-			desc: 'Input nilai lingkup materi, STS, SAS, dan capaian',
+			title: 'Penilaian Mapel',
+			desc: 'Input nilai formatif, sumatif, AS, dan revisi',
 			href: '/asesmen-sumatif',
 			icon: 'pen',
 			permission: 'input_nilai_asesmen_sumatif'

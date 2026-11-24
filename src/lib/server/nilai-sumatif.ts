@@ -1,14 +1,23 @@
 import db from '$lib/server/db';
-import { tableSekolah } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { queryInChunks } from '$lib/server/db/chunk';
+import {
+	tableAsesmenSumatif,
+	tableAsesmenSumatifTujuan,
+	tableMataPelajaran,
+	tableSekolah,
+	tableTujuanPembelajaran
+} from '$lib/server/db/schema';
+import { eq, inArray } from 'drizzle-orm';
 
 /**
- * Perhitungan nilai akhir sumatif dan RTS.
+ * Perhitungan nilai akhir penilaian terpadu (Formatif F, Sumatif S, Sumatif AS,
+ * Revisi) dan RTS.
  *
- * Semua bobot dan ambang kriteria diambil dari database (tabel `sekolah` dan
- * `kelas`), jadi mengubah pengaturan di halaman sekolah/akademik langsung
- * memengaruhi nilai yang tampil di rapor maupun rekap.
+ * Bobot default diambil dari tabel `sekolah`, sedangkan tiap `mata_pelajaran`
+ * dapat menyimpan bobot sendiri (bobotFormatif / bobotSumatif / bobotAs).
  */
+
+export type JenisAsesmen = 'formatif' | 'sumatif' | 'as';
 
 export interface BobotSumatif {
 	lingkup: number;
@@ -33,7 +42,7 @@ export const DEFAULT_BOBOT_SUMATIF_RTS: BobotSumatifRts = { lingkup: 70, sts: 30
 export const DEFAULT_KRITERIA_CUKUP = 85;
 export const DEFAULT_KRITERIA_BAIK = 95;
 
-type SekolahConfig = {
+export type SekolahConfig = {
 	sumatifBobotLingkup?: number | null;
 	sumatifBobotSts?: number | null;
 	sumatifBobotSas?: number | null;
@@ -41,6 +50,12 @@ type SekolahConfig = {
 	sumatifBobotRtsSts?: number | null;
 	raporKriteriaCukup?: number | null;
 	raporKriteriaBaik?: number | null;
+} | null;
+
+export type MapelBobotConfig = {
+	bobotFormatif?: number | null;
+	bobotSumatif?: number | null;
+	bobotAs?: number | null;
 } | null;
 
 export function konfigurasiNilaiDariSekolah(sekolah: SekolahConfig): KonfigurasiNilai {
@@ -57,6 +72,73 @@ export function konfigurasiNilaiDariSekolah(sekolah: SekolahConfig): Konfigurasi
 		kriteriaCukup: Number(sekolah?.raporKriteriaCukup ?? DEFAULT_KRITERIA_CUKUP),
 		kriteriaBaik: Number(sekolah?.raporKriteriaBaik ?? DEFAULT_KRITERIA_BAIK)
 	};
+}
+
+/**
+ * Gabungkan bobot per mapel (jika diatur guru) dengan default sekolah.
+ */
+export function bobotMapelEfektif(
+	mapel: MapelBobotConfig | undefined,
+	sekolah: KonfigurasiNilai
+): {
+	bobotAkhir: BobotSumatif;
+	bobotRts: BobotSumatifRts;
+	isCustom: boolean;
+} {
+	const hasOverride =
+		mapel != null &&
+		(mapel.bobotFormatif != null || mapel.bobotSumatif != null || mapel.bobotAs != null);
+	if (!hasOverride) {
+		return {
+			bobotAkhir: sekolah.bobotAkhir,
+			bobotRts: sekolah.bobotRts,
+			isCustom: false
+		};
+	}
+
+	const lingkup = Number(mapel.bobotFormatif ?? sekolah.bobotAkhir.lingkup);
+	const sts = Number(mapel.bobotSumatif ?? sekolah.bobotAkhir.sts);
+	const sas = Number(mapel.bobotAs ?? sekolah.bobotAkhir.sas);
+	const bobotAkhir: BobotSumatif = { lingkup, sts, sas };
+	const bobotRts: BobotSumatifRts = lingkup + sts > 0 ? { lingkup, sts } : sekolah.bobotRts;
+
+	return { bobotAkhir, bobotRts, isCustom: true };
+}
+
+/** Bobot per kolom asesmen: nilai <= 0 diperlakukan sebagai 1 agar TP lama tetap setara. */
+export function effectiveColumnBobot(bobot: number | null | undefined): number {
+	const num = Number(bobot ?? 0);
+	return Number.isFinite(num) && num > 0 ? num : 1;
+}
+
+/** Hitung rata-rata berbobot untuk kolom asesmen di dalam satu kelompok (F / S / AS). */
+export function hitungRataBerbobot(
+	entries: Array<{ nilai: number | null | undefined; bobot?: number | null }>
+): number | null {
+	let weightedSum = 0;
+	let totalWeight = 0;
+	for (const entry of entries) {
+		if (entry.nilai == null || !Number.isFinite(entry.nilai)) continue;
+		const weight = effectiveColumnBobot(entry.bobot);
+		weightedSum += entry.nilai * weight;
+		totalWeight += weight;
+	}
+	if (totalWeight <= 0) return null;
+	return bulatkan(weightedSum / totalWeight);
+}
+
+/** Jika kolom REVISI diisi, nilai tersebut dipakai sebagai nilai akhir efektif. */
+export function nilaiEfektifAkhir(
+	nilaiAkhirAsli: number | null | undefined,
+	nilaiRevisi: number | null | undefined
+): number | null {
+	if (nilaiRevisi != null && Number.isFinite(nilaiRevisi)) {
+		return bulatkan(nilaiRevisi);
+	}
+	if (nilaiAkhirAsli != null && Number.isFinite(nilaiAkhirAsli)) {
+		return bulatkan(nilaiAkhirAsli);
+	}
+	return null;
 }
 
 /** Ambil konfigurasi nilai sekolah langsung dari database. */
@@ -81,48 +163,204 @@ function bulatkan(nilai: number) {
 }
 
 /**
- * Nilai akhir sumatif dari komponen lingkup/STS/SAS memakai bobot sekolah.
- * Bila STS belum diisi, dipakai pembagian cadangan lingkup 70% + SAS 30%
- * (sama seperti halaman formulir asesmen sumatif).
+ * Nilai akhir dari komponen Formatif (naLingkup), Sumatif (sts), dan Sumatif AS (sas)
+ * menggunakan bobot terkonfigurasi dengan normalisasi proporsional terhadap komponen terisi.
  */
 export function hitungNilaiAkhirSumatif(
 	komponen: { naLingkup: number | null; sts: number | null; sas: number | null },
 	bobot: BobotSumatif = DEFAULT_BOBOT_SUMATIF
 ): number | null {
-	const bobotEfektif = komponen.sts == null ? { lingkup: 70, sts: 0, sas: 30 } : bobot;
 	let jumlah = 0;
 	let bobotTerpakai = 0;
-	if (komponen.naLingkup != null) {
-		jumlah += komponen.naLingkup * bobotEfektif.lingkup;
-		bobotTerpakai += bobotEfektif.lingkup;
+	if (komponen.naLingkup != null && bobot.lingkup > 0) {
+		jumlah += komponen.naLingkup * bobot.lingkup;
+		bobotTerpakai += bobot.lingkup;
 	}
-	if (komponen.sts != null) {
-		jumlah += komponen.sts * bobotEfektif.sts;
-		bobotTerpakai += bobotEfektif.sts;
+	if (komponen.sts != null && bobot.sts > 0) {
+		jumlah += komponen.sts * bobot.sts;
+		bobotTerpakai += bobot.sts;
 	}
-	if (komponen.sas != null) {
-		jumlah += komponen.sas * bobotEfektif.sas;
-		bobotTerpakai += bobotEfektif.sas;
+	if (komponen.sas != null && bobot.sas > 0) {
+		jumlah += komponen.sas * bobot.sas;
+		bobotTerpakai += bobot.sas;
 	}
 	if (bobotTerpakai <= 0) return null;
 	return bulatkan(jumlah / bobotTerpakai);
 }
 
-/** Nilai akhir RTS: lingkup + STS saja, tanpa SAS. */
+/** Nilai akhir RTS: Formatif (F) + Sumatif (S) saja, tanpa AS. */
 export function hitungNilaiAkhirRts(
 	komponen: { naLingkup: number | null; sts: number | null },
 	bobot: BobotSumatifRts = DEFAULT_BOBOT_SUMATIF_RTS
 ): number | null {
 	let jumlah = 0;
 	let bobotTerpakai = 0;
-	if (komponen.naLingkup != null) {
+	if (komponen.naLingkup != null && bobot.lingkup > 0) {
 		jumlah += komponen.naLingkup * bobot.lingkup;
 		bobotTerpakai += bobot.lingkup;
 	}
-	if (komponen.sts != null) {
+	if (komponen.sts != null && bobot.sts > 0) {
 		jumlah += komponen.sts * bobot.sts;
 		bobotTerpakai += bobot.sts;
 	}
 	if (bobotTerpakai <= 0) return null;
 	return bulatkan(jumlah / bobotTerpakai);
+}
+
+/**
+ * Hitung ulang seluruh agregat `asesmen_sumatif` (NA F, NA S, NA AS, AKHIR,
+ * nilaiAkhir efektif dengan REVISI, dan RTS) untuk satu atau beberapa mapel.
+ */
+export async function recalcMapelSumatifScores(
+	mapelIds: number[],
+	sekolah: SekolahConfig
+): Promise<void> {
+	const uniqueIds = Array.from(new Set(mapelIds.filter((id) => Number.isInteger(id) && id > 0)));
+	if (!uniqueIds.length) return;
+
+	const konfigurasiSekolah = konfigurasiNilaiDariSekolah(sekolah);
+
+	const mapelRows = await queryInChunks(uniqueIds, (ids) =>
+		db
+			.select({
+				id: tableMataPelajaran.id,
+				bobotFormatif: tableMataPelajaran.bobotFormatif,
+				bobotSumatif: tableMataPelajaran.bobotSumatif,
+				bobotAs: tableMataPelajaran.bobotAs
+			})
+			.from(tableMataPelajaran)
+			.where(inArray(tableMataPelajaran.id, ids))
+	);
+	const mapelById = new Map(mapelRows.map((m) => [m.id, m]));
+
+	const tujuanRows = await queryInChunks(uniqueIds, (ids) =>
+		db
+			.select({
+				id: tableTujuanPembelajaran.id,
+				mataPelajaranId: tableTujuanPembelajaran.mataPelajaranId,
+				jenisAsesmen: tableTujuanPembelajaran.jenisAsesmen,
+				bobot: tableTujuanPembelajaran.bobot
+			})
+			.from(tableTujuanPembelajaran)
+			.where(inArray(tableTujuanPembelajaran.mataPelajaranId, ids))
+	);
+
+	const tujuanByMapel = new Map<
+		number,
+		{
+			formatif: Array<{ id: number; bobot: number }>;
+			sumatif: Array<{ id: number; bobot: number }>;
+			as: Array<{ id: number; bobot: number }>;
+		}
+	>();
+	for (const t of tujuanRows) {
+		let bucket = tujuanByMapel.get(t.mataPelajaranId);
+		if (!bucket) {
+			bucket = { formatif: [], sumatif: [], as: [] };
+			tujuanByMapel.set(t.mataPelajaranId, bucket);
+		}
+		const jenis: JenisAsesmen =
+			t.jenisAsesmen === 'sumatif' || t.jenisAsesmen === 'as' ? t.jenisAsesmen : 'formatif';
+		bucket[jenis].push({ id: t.id, bobot: t.bobot ?? 0 });
+	}
+
+	const existingRows = await queryInChunks(uniqueIds, (ids) =>
+		db
+			.select({
+				id: tableAsesmenSumatif.id,
+				muridId: tableAsesmenSumatif.muridId,
+				mataPelajaranId: tableAsesmenSumatif.mataPelajaranId,
+				naLingkup: tableAsesmenSumatif.naLingkup,
+				sts: tableAsesmenSumatif.sts,
+				sas: tableAsesmenSumatif.sas,
+				nilaiAkhirAsli: tableAsesmenSumatif.nilaiAkhirAsli,
+				nilaiRevisi: tableAsesmenSumatif.nilaiRevisi,
+				nilaiAkhir: tableAsesmenSumatif.nilaiAkhir,
+				nilaiAkhirRts: tableAsesmenSumatif.nilaiAkhirRts
+			})
+			.from(tableAsesmenSumatif)
+			.where(inArray(tableAsesmenSumatif.mataPelajaranId, ids))
+	);
+
+	const tpScoreRows = await queryInChunks(uniqueIds, (ids) =>
+		db
+			.select({
+				muridId: tableAsesmenSumatifTujuan.muridId,
+				mataPelajaranId: tableAsesmenSumatifTujuan.mataPelajaranId,
+				tujuanPembelajaranId: tableAsesmenSumatifTujuan.tujuanPembelajaranId,
+				nilai: tableAsesmenSumatifTujuan.nilai
+			})
+			.from(tableAsesmenSumatifTujuan)
+			.where(inArray(tableAsesmenSumatifTujuan.mataPelajaranId, ids))
+	);
+
+	const scoresByKey = new Map<string, Map<number, number>>();
+	for (const r of tpScoreRows) {
+		if (r.nilai == null) continue;
+		const key = `${r.muridId}|${r.mataPelajaranId}`;
+		let map = scoresByKey.get(key);
+		if (!map) {
+			map = new Map();
+			scoresByKey.set(key, map);
+		}
+		map.set(r.tujuanPembelajaranId, Number(r.nilai));
+	}
+
+	const nowIso = new Date().toISOString();
+
+	for (const rec of existingRows) {
+		const mapel = mapelById.get(rec.mataPelajaranId);
+		const bobot = bobotMapelEfektif(mapel, konfigurasiSekolah);
+		const cols = tujuanByMapel.get(rec.mataPelajaranId) ?? {
+			formatif: [],
+			sumatif: [],
+			as: []
+		};
+		const studentScores = scoresByKey.get(`${rec.muridId}|${rec.mataPelajaranId}`) ?? new Map();
+
+		const naLingkup =
+			cols.formatif.length > 0
+				? hitungRataBerbobot(
+						cols.formatif.map((c) => ({ nilai: studentScores.get(c.id), bobot: c.bobot }))
+					)
+				: (rec.naLingkup ?? null);
+		const sts =
+			cols.sumatif.length > 0
+				? hitungRataBerbobot(
+						cols.sumatif.map((c) => ({ nilai: studentScores.get(c.id), bobot: c.bobot }))
+					)
+				: (rec.sts ?? null);
+		const sas =
+			cols.as.length > 0
+				? hitungRataBerbobot(
+						cols.as.map((c) => ({ nilai: studentScores.get(c.id), bobot: c.bobot }))
+					)
+				: (rec.sas ?? null);
+
+		const nilaiAkhirAsli = hitungNilaiAkhirSumatif({ naLingkup, sts, sas }, bobot.bobotAkhir);
+		const nilaiAkhir = nilaiEfektifAkhir(nilaiAkhirAsli, rec.nilaiRevisi);
+		const nilaiAkhirRts = hitungNilaiAkhirRts({ naLingkup, sts }, bobot.bobotRts);
+
+		if (
+			naLingkup !== rec.naLingkup ||
+			sts !== rec.sts ||
+			sas !== rec.sas ||
+			nilaiAkhirAsli !== rec.nilaiAkhirAsli ||
+			nilaiAkhir !== rec.nilaiAkhir ||
+			nilaiAkhirRts !== rec.nilaiAkhirRts
+		) {
+			await db
+				.update(tableAsesmenSumatif)
+				.set({
+					naLingkup,
+					sts,
+					sas,
+					nilaiAkhirAsli,
+					nilaiAkhir,
+					nilaiAkhirRts,
+					updatedAt: nowIso
+				})
+				.where(eq(tableAsesmenSumatif.id, rec.id));
+		}
+	}
 }

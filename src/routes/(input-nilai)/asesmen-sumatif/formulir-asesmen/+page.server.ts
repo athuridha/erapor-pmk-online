@@ -21,9 +21,11 @@ import { bolehAksesMapel, getAksesMapelUser, needsMapelFilter } from '$lib/serve
 import { catatAudit } from '$lib/admin/audit.server';
 import { loadKunciNilai, pastikanNilaiTidakTerkunci } from '$lib/server/nilai-kunci';
 import {
+	bobotMapelEfektif,
 	konfigurasiNilaiDariSekolah,
 	hitungNilaiAkhirRts,
-	hitungNilaiAkhirSumatif
+	hitungNilaiAkhirSumatif,
+	nilaiEfektifAkhir
 } from '$lib/server/nilai-sumatif';
 
 const DEFAULT_LINGKUP = 'Tanpa lingkup materi';
@@ -360,7 +362,14 @@ export const actions = {
 		}
 
 		const mapel = await db.query.tableMataPelajaran.findFirst({
-			columns: { id: true, kelasId: true, nama: true },
+			columns: {
+				id: true,
+				kelasId: true,
+				nama: true,
+				bobotFormatif: true,
+				bobotSumatif: true,
+				bobotAs: true
+			},
 			where: eq(tableMataPelajaran.id, mapelId)
 		});
 		if (!mapel || mapel.kelasId !== murid.kelasId) {
@@ -401,9 +410,9 @@ export const actions = {
 		await ensureAsesmenSumatifSchema();
 		await pastikanNilaiTidakTerkunci(mapel.id, mapel.nama);
 
-		// Nilai akhir lama dicatat untuk jejak audit (siapa mengubah nilai apa).
+		// Nilai akhir lama dicatat untuk jejak audit & mempertahankan nilaiRevisi jika sudah ada.
 		const nilaiSebelum = await db.query.tableAsesmenSumatif.findFirst({
-			columns: { id: true, nilaiAkhir: true },
+			columns: { id: true, nilaiAkhir: true, nilaiRevisi: true },
 			where: and(
 				eq(tableAsesmenSumatif.muridId, murid.id),
 				eq(tableAsesmenSumatif.mataPelajaranId, mapel.id)
@@ -533,15 +542,17 @@ export const actions = {
 			sas = Math.round((sum / sasValues.length) * 100) / 100;
 		}
 
-		// Bobot & kriteria diambil dari pengaturan sekolah (database) lewat helper
-		// bersama, supaya rapor dan rekap memakai perhitungan yang sama.
+		// Bobot mengikuti per-mapel (jika diatur) atau fallback ke default sekolah.
 		const konfigurasi = konfigurasiNilaiDariSekolah(locals.sekolah ?? null);
+		const mapelBobot = bobotMapelEfektif(mapel, konfigurasi);
 
-		// Compute nilaiAkhirRTS using RTS bobot (lingkup + STS only, no SAS)
-		const nilaiAkhirRts = hitungNilaiAkhirRts({ naLingkup, sts }, konfigurasi.bobotRts);
+		// Compute nilaiAkhirRTS using RTS bobot (Formatif + Sumatif saja, tanpa AS)
+		const nilaiAkhirRts = hitungNilaiAkhirRts({ naLingkup, sts }, mapelBobot.bobotRts);
 
-		// Compute final nilaiAkhir using sekolah-level weights (fallback to 60/20/20)
-		const nilaiAkhir = hitungNilaiAkhirSumatif({ naLingkup, sts, sas }, konfigurasi.bobotAkhir);
+		// Compute final nilaiAkhir preserving any existing manual nilaiRevisi
+		const nilaiAkhirAsli = hitungNilaiAkhirSumatif({ naLingkup, sts, sas }, mapelBobot.bobotAkhir);
+		const nilaiRevisi = nilaiSebelum?.nilaiRevisi ?? null;
+		const nilaiAkhir = nilaiEfektifAkhir(nilaiAkhirAsli, nilaiRevisi);
 
 		const hasTujuanScores = Array.from(nilaiByTujuan.values()).some((value) => value != null);
 		const shouldPersistAggregate =
@@ -615,6 +626,8 @@ export const actions = {
 					sasTes,
 					sasNonTes,
 					sas,
+					nilaiAkhirAsli,
+					nilaiRevisi,
 					nilaiAkhir,
 					nilaiAkhirRts,
 					updatedAt: now
@@ -629,6 +642,7 @@ export const actions = {
 						sasTes,
 						sasNonTes,
 						sas,
+						nilaiAkhirAsli,
 						nilaiAkhir,
 						nilaiAkhirRts,
 						updatedAt: now

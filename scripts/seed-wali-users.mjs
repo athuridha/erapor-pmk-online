@@ -26,7 +26,6 @@ const WALI_KELAS_DEFAULT_PERMISSIONS = [
 	'mata_pelajaran_intrakurikuler',
 	'mata_pelajaran_kokurikuler',
 	'mata_pelajaran_ekstrakurikuler',
-	'input_nilai_asesmen_formatif',
 	'input_nilai_asesmen_sumatif',
 	'input_nilai_asesmen_kokurikuler',
 	'input_nilai_nilai_ekstrakurikuler',

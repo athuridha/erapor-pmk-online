@@ -499,10 +499,11 @@ export async function buildRekapKeseluruhan(
 		const namaMapel = namaMapelId.get(row.mataPelajaranId) ?? '';
 		if (adaFilter && !filterNamaMapel.has(namaMapel)) continue;
 		const nilai =
+			row.nilaiAkhir ??
 			hitungNilaiAkhirSumatif(
 				{ naLingkup: row.naLingkup, sts: row.sts, sas: row.sas },
 				konfigurasi.bobotAkhir
-			) ?? row.nilaiAkhir;
+			);
 		if (nilai == null) continue;
 		const mapKey = `${key}|${semesterId}`;
 		const current = akumulator.get(mapKey) ?? { sum: 0, count: 0, sumKkm: 0 };

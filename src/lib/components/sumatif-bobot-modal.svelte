@@ -109,10 +109,10 @@
 	>
 		<div class="border-b border-slate-100 pb-3 dark:border-zinc-800">
 			<h3 class="text-base font-bold text-slate-900 dark:text-zinc-100">
-				Atur Bobot Default - Sumatif
+				Atur Bobot Default Sekolah
 			</h3>
 			<p class="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
-				Atur distribusi bobot default untuk perhitungan nilai akhir sumatif.
+				Distribusi bobot default untuk kelompok Formatif (F), Sumatif (S), dan Sumatif AS (AS).
 			</p>
 		</div>
 
@@ -153,7 +153,7 @@
 						for="bobot-ras-lingkup"
 						class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
 					>
-						Lingkup Materi (%)
+						Formatif (F) (%)
 					</label>
 					<input
 						id="bobot-ras-lingkup"
@@ -170,7 +170,7 @@
 						for="bobot-ras-sts"
 						class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
 					>
-						Sumatif Tengah Semester (STS) (%)
+						Sumatif (S) (%)
 					</label>
 					<input
 						id="bobot-ras-sts"
@@ -187,7 +187,7 @@
 						for="bobot-ras-sas"
 						class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
 					>
-						Sumatif Akhir Semester (SAS) (%)
+						Sumatif AS (AS) (%)
 					</label>
 					<input
 						id="bobot-ras-sas"
@@ -205,7 +205,7 @@
 						for="bobot-rts-lingkup"
 						class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
 					>
-						Lingkup Materi (%)
+						Formatif (F) (%)
 					</label>
 					<input
 						id="bobot-rts-lingkup"
@@ -222,7 +222,7 @@
 						for="bobot-rts-sts"
 						class="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-zinc-300"
 					>
-						Sumatif Tengah Semester (STS) (%)
+						Sumatif (S) (%)
 					</label>
 					<input
 						id="bobot-rts-sts"

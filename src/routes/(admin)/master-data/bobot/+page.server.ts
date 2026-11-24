@@ -1,63 +1,9 @@
 import db from '$lib/server/db';
-import {
-	tableSekolah,
-	tableAsesmenSumatif,
-	tableMataPelajaran,
-	tableKelas
-} from '$lib/server/db/schema';
+import { tableSekolah, tableMataPelajaran, tableKelas } from '$lib/server/db/schema';
+import { recalcMapelSumatifScores } from '$lib/server/nilai-sumatif';
 import { fail, redirect } from '@sveltejs/kit';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { isAdminUser } from '../../../pengguna/permissions';
-
-function recalcNilaiAkhirRts(
-	naLingkup: number | null | undefined,
-	sts: number | null | undefined,
-	bobotLingkup: number,
-	bobotSts: number
-) {
-	let weighted = 0;
-	let totalW = 0;
-	if (naLingkup != null) {
-		weighted += naLingkup * bobotLingkup;
-		totalW += bobotLingkup;
-	}
-	if (sts != null) {
-		weighted += sts * bobotSts;
-		totalW += bobotSts;
-	}
-	if (totalW === 0) return null;
-	return Math.round((weighted / totalW) * 100) / 100;
-}
-
-function recalcNilaiAkhir(
-	naLingkup: number | null | undefined,
-	sts: number | null | undefined,
-	sas: number | null | undefined,
-	bobotLingkup: number,
-	bobotSts: number,
-	bobotSas: number
-) {
-	const eff =
-		sts == null
-			? { lingkup: 70, sts: 0, sas: 30 }
-			: { lingkup: bobotLingkup, sts: bobotSts, sas: bobotSas };
-	let weighted = 0;
-	let totalW = 0;
-	if (naLingkup != null) {
-		weighted += naLingkup * eff.lingkup;
-		totalW += eff.lingkup;
-	}
-	if (sts != null) {
-		weighted += sts * eff.sts;
-		totalW += eff.sts;
-	}
-	if (sas != null) {
-		weighted += sas * eff.sas;
-		totalW += eff.sas;
-	}
-	if (totalW === 0) return null;
-	return Math.round((weighted / totalW) * 100) / 100;
-}
 
 async function recalculateScores(
 	sekolahId: number,
@@ -74,38 +20,28 @@ async function recalculateScores(
 	const kelasIds = kelasRecords.map((r) => r.id);
 	if (kelasIds.length === 0) return;
 
+	// Hanya hitung ulang mapel yang masih mengikuti default sekolah (belum dikustom guru).
 	const mapelRecords = await db
 		.select({ id: tableMataPelajaran.id })
 		.from(tableMataPelajaran)
-		.where(inArray(tableMataPelajaran.kelasId, kelasIds));
+		.where(
+			and(
+				inArray(tableMataPelajaran.kelasId, kelasIds),
+				isNull(tableMataPelajaran.bobotFormatif),
+				isNull(tableMataPelajaran.bobotSumatif),
+				isNull(tableMataPelajaran.bobotAs)
+			)
+		);
 	const mapelIds = mapelRecords.map((r) => r.id);
 	if (mapelIds.length === 0) return;
 
-	const records = await db
-		.select({
-			id: tableAsesmenSumatif.id,
-			naLingkup: tableAsesmenSumatif.naLingkup,
-			sts: tableAsesmenSumatif.sts,
-			sas: tableAsesmenSumatif.sas,
-			nilaiAkhir: tableAsesmenSumatif.nilaiAkhir,
-			nilaiAkhirRts: tableAsesmenSumatif.nilaiAkhirRts
-		})
-		.from(tableAsesmenSumatif)
-		.where(inArray(tableAsesmenSumatif.mataPelajaranId, mapelIds));
-
-	for (const record of records) {
-		const newNa = recalcNilaiAkhir(record.naLingkup, record.sts, record.sas, lingkup, sts, sas);
-		const newNaRts = recalcNilaiAkhirRts(record.naLingkup, record.sts, lingkupRts, stsRts);
-		if (newNa !== record.nilaiAkhir || newNaRts !== record.nilaiAkhirRts) {
-			await db
-				.update(tableAsesmenSumatif)
-				.set({
-					nilaiAkhir: newNa,
-					nilaiAkhirRts: newNaRts
-				})
-				.where(eq(tableAsesmenSumatif.id, record.id));
-		}
-	}
+	await recalcMapelSumatifScores(mapelIds, {
+		sumatifBobotLingkup: lingkup,
+		sumatifBobotSts: sts,
+		sumatifBobotSas: sas,
+		sumatifBobotRtsLingkup: lingkupRts,
+		sumatifBobotRtsSts: stsRts
+	});
 }
 
 export async function load({ locals }) {

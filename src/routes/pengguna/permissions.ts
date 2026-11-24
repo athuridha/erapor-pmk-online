@@ -51,8 +51,7 @@ export const groupedUserPermissions = {
 	},
 	input_nilai: {
 		values: [
-			['asesmen_formatif', 'Formatif'],
-			['asesmen_sumatif', 'Sumatif'],
+			['asesmen_sumatif', 'Penilaian Mapel (Formatif & Sumatif)'],
 			['asesmen_kokurikuler', 'Kokurikuler'],
 			['nilai_ekstrakurikuler', 'Ekstrakurikuler'],
 			['kunci_nilai', 'Kunci & Buka Kunci Nilai'],
@@ -101,7 +100,6 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'mata_pelajaran_intrakurikuler',
 		'mata_pelajaran_kokurikuler',
 		'mata_pelajaran_ekstrakurikuler',
-		'input_nilai_asesmen_formatif',
 		'input_nilai_asesmen_sumatif',
 		'input_nilai_asesmen_kokurikuler',
 		'input_nilai_nilai_ekstrakurikuler',
@@ -125,7 +123,6 @@ export const defaultPermissionsByType: Record<AuthUser['type'], UserPermission[]
 		'mata_pelajaran_intrakurikuler',
 		'mata_pelajaran_kokurikuler',
 		'mata_pelajaran_ekstrakurikuler',
-		'input_nilai_asesmen_formatif',
 		'input_nilai_asesmen_sumatif',
 		'input_nilai_asesmen_kokurikuler',
 		'input_nilai_nilai_ekstrakurikuler',
@@ -165,7 +162,9 @@ export const removedLegacyPermissionKeys = new Set([
 	'input_nilai_asesmen_keasramaan',
 	'administrasi_sinkronisasi',
 	// Presensi guru dihapus dari produk.
-	'administrasi_presensi_guru'
+	'administrasi_presensi_guru',
+	// Asesmen Formatif ceklis dilebur ke halaman Penilaian terpadu (/asesmen-sumatif).
+	'input_nilai_asesmen_formatif'
 ]);
 
 /**
@@ -184,7 +183,7 @@ export const menuRoutePermissions: { path: string; permission: UserPermission }[
 	{ path: '/teknik-penilaian', permission: 'mata_pelajaran_intrakurikuler' },
 	{ path: '/kokurikuler', permission: 'mata_pelajaran_kokurikuler' },
 	{ path: '/ekstrakurikuler', permission: 'mata_pelajaran_ekstrakurikuler' },
-	{ path: '/asesmen-formatif', permission: 'input_nilai_asesmen_formatif' },
+	{ path: '/asesmen-formatif', permission: 'input_nilai_asesmen_sumatif' },
 	{ path: '/asesmen-sumatif', permission: 'input_nilai_asesmen_sumatif' },
 	{ path: '/asesmen-kokurikuler', permission: 'input_nilai_asesmen_kokurikuler' },
 	{ path: '/nilai-ekstrakurikuler', permission: 'input_nilai_nilai_ekstrakurikuler' },

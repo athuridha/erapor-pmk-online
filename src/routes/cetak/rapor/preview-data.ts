@@ -195,7 +195,8 @@ export async function getRaporPreviewPayload({ locals, url }: RaporContext) {
 			with: {
 				tujuanPembelajaran: {
 					columns: {
-						deskripsi: true
+						deskripsi: true,
+						jenisAsesmen: true
 					}
 				}
 			},
@@ -225,19 +226,33 @@ export async function getRaporPreviewPayload({ locals, url }: RaporContext) {
 	}
 
 	const tujuanScoresByMapel = new Map<number, TujuanScoreEntry[]>();
+	const nonAsTujuanByMapel = new Map<number, TujuanScoreEntry[]>();
 
 	for (const item of asesmenSumatifTujuan) {
 		const deskripsi = item.tujuanPembelajaran?.deskripsi?.trim();
 		if (!deskripsi) continue;
 		const nilai = typeof item.nilai === 'number' && Number.isFinite(item.nilai) ? item.nilai : null;
 		if (nilai == null) continue;
-		const list = tujuanScoresByMapel.get(item.mataPelajaranId) ?? [];
-		list.push({
+		const entry: TujuanScoreEntry = {
 			tujuanPembelajaranId: item.tujuanPembelajaranId,
 			deskripsi,
 			nilai
-		});
-		tujuanScoresByMapel.set(item.mataPelajaranId, list);
+		};
+		const allList = tujuanScoresByMapel.get(item.mataPelajaranId) ?? [];
+		allList.push(entry);
+		tujuanScoresByMapel.set(item.mataPelajaranId, allList);
+
+		if (item.tujuanPembelajaran?.jenisAsesmen !== 'as') {
+			const nonAsList = nonAsTujuanByMapel.get(item.mataPelajaranId) ?? [];
+			nonAsList.push(entry);
+			nonAsTujuanByMapel.set(item.mataPelajaranId, nonAsList);
+		}
+	}
+
+	for (const [mapelId, nonAsList] of nonAsTujuanByMapel.entries()) {
+		if (nonAsList.length > 0) {
+			tujuanScoresByMapel.set(mapelId, nonAsList);
+		}
 	}
 
 	const muridNamaTrimmed = murid.nama.trim();

@@ -1,5 +1,4 @@
-import db from '$lib/server/db';
-import { ensureSchema } from './ensure-helper';
+import { ensureColumns, ensureSchema } from './ensure-helper';
 
 export async function ensureAsesmenSumatifSchema() {
 	await ensureSchema('asesmen_sumatif', [
@@ -14,6 +13,8 @@ export async function ensureAsesmenSumatifSchema() {
 			"sas_tes" real,
 			"sas_non_tes" real,
 			"sas" real,
+			"nilai_akhir_asli" real,
+			"nilai_revisi" real,
 			"nilai_akhir" real,
 			"nilai_akhir_rts" real,
 			"created_at" text NOT NULL,
@@ -42,18 +43,20 @@ export async function ensureAsesmenSumatifSchema() {
 		`CREATE INDEX IF NOT EXISTS "asesmen_sumatif_tujuan_tp_idx" ON "asesmen_sumatif_tujuan" ("tujuan_pembelajaran_id")`
 	]);
 
-	// Kolom tambahan pada DB lama yang dibuat sebelum kolom STS/nilai_akhir_rts ada.
-	const columnFallbacks: Array<[string, string]> = [
-		['sts_tes', 'real'],
-		['sts_non_tes', 'real'],
-		['sts', 'real'],
-		['nilai_akhir_rts', 'real']
-	];
-	for (const [column, type] of columnFallbacks) {
-		try {
-			await db.$client.execute(`ALTER TABLE "asesmen_sumatif" ADD COLUMN "${column}" ${type}`);
-		} catch {
-			// column already exists
+	await ensureColumns('asesmen_sumatif_columns_v2', [
+		{ table: 'asesmen_sumatif', column: 'sts_tes', definition: 'real' },
+		{ table: 'asesmen_sumatif', column: 'sts_non_tes', definition: 'real' },
+		{ table: 'asesmen_sumatif', column: 'sts', definition: 'real' },
+		{ table: 'asesmen_sumatif', column: 'nilai_akhir_rts', definition: 'real' },
+		{ table: 'asesmen_sumatif', column: 'nilai_akhir_asli', definition: 'real' },
+		{ table: 'asesmen_sumatif', column: 'nilai_revisi', definition: 'real' },
+		{ table: 'mata_pelajaran', column: 'bobot_formatif', definition: 'integer' },
+		{ table: 'mata_pelajaran', column: 'bobot_sumatif', definition: 'integer' },
+		{ table: 'mata_pelajaran', column: 'bobot_as', definition: 'integer' },
+		{
+			table: 'tujuan_pembelajaran',
+			column: 'jenis_asesmen',
+			definition: "text NOT NULL DEFAULT 'formatif'"
 		}
-	}
+	]);
 }

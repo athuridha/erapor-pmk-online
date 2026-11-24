@@ -7,6 +7,7 @@ import {
 	tableKelas,
 	tableMataPelajaran,
 	tableMurid,
+	tableTeknikPenilaian,
 	tableTujuanPembelajaran
 } from '$lib/server/db/schema';
 import { fail, redirect } from '@sveltejs/kit';
@@ -17,9 +18,15 @@ import { agamaMapelOptions, pksMapelOptions } from '$lib/statics';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { loadKunciNilai } from '$lib/server/nilai-kunci';
 import {
-	konfigurasiNilaiDariSekolah,
+	bobotMapelEfektif,
+	effectiveColumnBobot,
 	hitungNilaiAkhirRts,
-	hitungNilaiAkhirSumatif
+	hitungNilaiAkhirSumatif,
+	hitungRataBerbobot,
+	konfigurasiNilaiDariSekolah,
+	nilaiEfektifAkhir,
+	recalcMapelSumatifScores,
+	type JenisAsesmen
 } from '$lib/server/nilai-sumatif';
 
 const AGAMA_BASE_SUBJECT = 'Pendidikan Agama dan Budi Pekerti';
@@ -41,8 +48,6 @@ function isPksSubject(name: string) {
 }
 
 function resolveAgamaVariantName(agama: string | null | undefined) {
-	// Ejaan mengikuti $lib/statics (sumber nama baris DB) agar pencocokan
-	// mapelByName selalu cocok — termasuk varian Konghuchu & Kepercayaan.
 	const key = muridAgamaKey(agama);
 	return agamaMapelOptions.find((option) => option.key === key)?.name ?? null;
 }
@@ -57,54 +62,18 @@ function formatScore(value: number | null | undefined) {
 	return Number.parseFloat(value.toFixed(2));
 }
 
-function computeNilaiAkhir(
-	naLingkup: number | null | undefined,
-	sts: number | null | undefined,
-	sas: number | null | undefined,
-	bobotLingkup: number,
-	bobotSts: number,
-	bobotSas: number
-) {
-	const eff =
-		sts == null
-			? { lingkup: 70, sts: 0, sas: 30 }
-			: { lingkup: bobotLingkup, sts: bobotSts, sas: bobotSas };
-	let weighted = 0;
-	let totalW = 0;
-	if (naLingkup != null) {
-		weighted += naLingkup * eff.lingkup;
-		totalW += eff.lingkup;
-	}
-	if (sts != null) {
-		weighted += sts * eff.sts;
-		totalW += eff.sts;
-	}
-	if (sas != null) {
-		weighted += sas * eff.sas;
-		totalW += eff.sas;
-	}
-	if (totalW === 0) return null;
-	return Math.round((weighted / totalW) * 100) / 100;
+function sanitizeScore(raw: unknown): number | null {
+	if (raw == null) return null;
+	const text = String(raw).trim().replace(',', '.');
+	if (!text) return null;
+	const num = Number(text);
+	if (!Number.isFinite(num)) return null;
+	return Math.min(100, Math.max(0, Math.round(num * 100) / 100));
 }
 
-function computeNilaiAkhirRts(
-	naLingkup: number | null | undefined,
-	sts: number | null | undefined,
-	bobotLingkup: number,
-	bobotSts: number
-) {
-	let weighted = 0;
-	let totalW = 0;
-	if (naLingkup != null) {
-		weighted += naLingkup * bobotLingkup;
-		totalW += bobotLingkup;
-	}
-	if (sts != null) {
-		weighted += sts * bobotSts;
-		totalW += bobotSts;
-	}
-	if (totalW === 0) return null;
-	return Math.round((weighted / totalW) * 100) / 100;
+function parseJenisAsesmen(raw: unknown): JenisAsesmen {
+	if (raw === 'sumatif' || raw === 'as') return raw;
+	return 'formatif';
 }
 
 type MapelOption = { value: string; nama: string };
@@ -114,9 +83,11 @@ type MuridRow = {
 	no: number;
 	nama: string;
 	agamaLabel?: string | null;
-	/** mapelId efektif baris ini (varian agama/PKS sudah di-resolve) — dipakai isi massal. */
+	/** mapelId efektif baris ini (varian agama/PKS sudah di-resolve) — dipakai isi massal & simpan. */
 	mapelId: number | null;
 	nilaiAkhirRts: number | null;
+	nilaiAkhirAsli: number | null;
+	nilaiRevisi: number | null;
 	nilaiAkhir: number | null;
 	naLingkup: number | null;
 	sts: number | null;
@@ -136,12 +107,130 @@ type PageState = {
 	perPage: number;
 };
 
+type ActionLocals = {
+	sekolah?: {
+		id: number;
+		sumatifBobotLingkup?: number | null;
+		sumatifBobotSts?: number | null;
+		sumatifBobotSas?: number | null;
+		sumatifBobotRtsLingkup?: number | null;
+		sumatifBobotRtsSts?: number | null;
+		raporKriteriaCukup?: number | null;
+		raporKriteriaBaik?: number | null;
+	} | null;
+	user?: {
+		id?: number;
+		type?: string;
+		mataPelajaranId?: number | null;
+		pegawaiId?: number | null;
+	} | null;
+};
+
+async function assertCanEditMapels(locals: ActionLocals, mapelIds: number[]) {
+	const sekolahId = locals.sekolah?.id ?? null;
+	if (!sekolahId) return { error: fail(401, { fail: 'Sekolah aktif tidak ditemukan.' }) };
+
+	const user = locals.user ?? null;
+	if (!user?.id) return { error: fail(401, { fail: 'Sesi pengguna tidak valid.' }) };
+	if (user.type === 'wali_asuh') {
+		return { error: fail(403, { fail: 'Akun wali asuh tidak dapat mengubah nilai.' }) };
+	}
+
+	const uniqueIds = Array.from(new Set(mapelIds.filter((id) => Number.isInteger(id) && id > 0)));
+	if (!uniqueIds.length) {
+		return { error: fail(400, { fail: 'Mata pelajaran tidak ditemukan.' }) };
+	}
+
+	const mapelRows = await queryInChunks(uniqueIds, (ids) =>
+		db
+			.select({
+				id: tableMataPelajaran.id,
+				nama: tableMataPelajaran.nama,
+				kelasId: tableMataPelajaran.kelasId,
+				bobotFormatif: tableMataPelajaran.bobotFormatif,
+				bobotSumatif: tableMataPelajaran.bobotSumatif,
+				bobotAs: tableMataPelajaran.bobotAs
+			})
+			.from(tableMataPelajaran)
+			.where(inArray(tableMataPelajaran.id, ids))
+	);
+	if (mapelRows.length !== uniqueIds.length) {
+		return { error: fail(404, { fail: 'Sebagian mata pelajaran tidak ditemukan.' }) };
+	}
+
+	const kelasIds = Array.from(new Set(mapelRows.map((m) => m.kelasId)));
+	const kelasRows = await queryInChunks(kelasIds, (ids) =>
+		db
+			.select({
+				id: tableKelas.id,
+				sekolahId: tableKelas.sekolahId,
+				waliKelasId: tableKelas.waliKelasId
+			})
+			.from(tableKelas)
+			.where(inArray(tableKelas.id, ids))
+	);
+	const kelasById = new Map(kelasRows.map((k) => [k.id, k]));
+
+	for (const mapel of mapelRows) {
+		const kelas = kelasById.get(mapel.kelasId);
+		if (!kelas || kelas.sekolahId !== sekolahId) {
+			return { error: fail(403, { fail: 'Mata pelajaran bukan milik sekolah aktif.' }) };
+		}
+	}
+
+	if (user.type !== 'admin' && user.type !== 'kepala_sekolah') {
+		const ownKelas =
+			user.type === 'user' || user.type === 'wali_kelas'
+				? await ownedKelasIdSet(user)
+				: new Set<number>();
+
+		for (const mapel of mapelRows) {
+			const kelas = kelasById.get(mapel.kelasId);
+			if (ownKelas.has(mapel.kelasId)) continue;
+			if (user.type === 'wali_kelas' && user.pegawaiId && kelas?.waliKelasId === user.pegawaiId) {
+				continue;
+			}
+			const allowed = await bolehAksesMapel(
+				{ id: user.id, mataPelajaranId: user.mataPelajaranId ?? null },
+				{ id: mapel.id, nama: mapel.nama }
+			);
+			if (!allowed) {
+				return {
+					error: fail(403, { fail: `Anda tidak memiliki akses ke mata pelajaran ${mapel.nama}.` })
+				};
+			}
+		}
+	}
+
+	for (const part of chunk(uniqueIds, 90)) {
+		const kunci = await loadKunciNilai(part);
+		for (const [lockedId, info] of kunci) {
+			const lockedMapel = mapelRows.find((m) => m.id === lockedId);
+			return {
+				error: fail(403, {
+					fail: `Nilai ${lockedMapel?.nama ?? 'mata pelajaran'} sudah dikunci${
+						info?.dikunciOleh ? ` oleh ${info.dikunciOleh}` : ''
+					}. Hubungi operator untuk membuka kunci.`
+				})
+			};
+		}
+	}
+
+	return {
+		error: null,
+		sekolahId,
+		mapelRows,
+		mapelById: new Map(mapelRows.map((m) => [m.id, m]))
+	};
+}
+
 export async function load({ parent, url, depends, locals }) {
 	depends('app:asesmen-sumatif');
+	await ensureAsesmenSumatifSchema();
+
 	const { kelasAktif, kelasKonten, user } = await parent();
-	// Kelas konten dari pemilih per halaman (?kelas=); fallback kelasAktif.
 	const kelasKontenAktif = kelasKonten ?? kelasAktif;
-	const meta: PageMeta = { title: 'Asesmen Sumatif' };
+	const meta: PageMeta = { title: 'Penilaian' };
 
 	const searchParam = url.searchParams.get('q');
 	const searchTrimmed = searchParam ? searchParam.trim() : '';
@@ -166,25 +255,30 @@ export async function load({ parent, url, depends, locals }) {
 			mapelList: [] as MapelOption[],
 			selectedMapelValue: null as string | null,
 			selectedMapel: null as { id: number | null; nama: string } | null,
+			relevantMapelIds: [] as number[],
 			daftarMurid: [] as MuridRow[],
+			tujuanList: [],
+			teknikList: [],
 			page: pageState
 		};
 	}
 
 	let mapelRecords = await db.query.tableMataPelajaran.findMany({
-		columns: { id: true, nama: true, namaLokal: true, kkm: true },
+		columns: {
+			id: true,
+			nama: true,
+			namaLokal: true,
+			kkm: true,
+			bobotFormatif: true,
+			bobotSumatif: true,
+			bobotAs: true
+		},
 		where: eq(tableMataPelajaran.kelasId, kelasKontenAktif.id),
 		orderBy: asc(tableMataPelajaran.nama)
 	});
 
-	// Restrict for 'user' accounts assigned to mata pelajaran.
-	// First check join table auth_user_mata_pelajaran for multi-mapel support,
-	// then fallback to legacy mataPelajaranId field if join table is empty.
-	// IMPORTANT: Match by mapel name (since same subject can exist in different classes)
 	const maybeUser = user as unknown as
 		{ id?: number; type?: string; mataPelajaranId?: number; pegawaiId?: number | null } | undefined;
-	// Guru merangkap wali kelas (type 'user'): bebas akses seluruh mapel di
-	// kelas yang diwalikan — paritas dengan akun wali kelas lama.
 	const guruOwnKelasIds =
 		maybeUser?.type === 'user' ? Array.from(await ownedKelasIdSet(maybeUser)) : null;
 	const assignedMapelIds = new Set<number>();
@@ -208,7 +302,6 @@ export async function load({ parent, url, depends, locals }) {
 			mapelRecords = mapelRecords.filter(
 				(r) => userAkses!.ids.has(r.id) || userAkses!.names.has(normalizeText(r.nama))
 			);
-			// Populate assignedMapelIds for assignedLocalMapelId detection below
 			for (const id of userAkses.ids) {
 				assignedMapelIds.add(id);
 			}
@@ -218,10 +311,8 @@ export async function load({ parent, url, depends, locals }) {
 	}
 
 	const mapelByName = new Map(mapelRecords.map((record) => [normalizeText(record.nama), record]));
+	const mapelById = new Map(mapelRecords.map((record) => [record.id, record]));
 
-	// Determine if the logged-in user is assigned to mata pelajaran.
-	// For multi-mapel: pick the first one as assignedLocalMapelId (used for display).
-	// assignedIsAgamaVariant is set if any of the assigned mapel is agama variant.
 	let assignedLocalMapelId: number | null = null;
 	let assignedIsAgamaVariant = false;
 	if (
@@ -231,9 +322,7 @@ export async function load({ parent, url, depends, locals }) {
 		) &&
 		maybeUser?.id
 	) {
-		// Check multi-mapel first
 		if (assignedMapelIds.size > 0) {
-			// Pick first assigned mapel from the filtered list
 			const firstAssignedId = Array.from(assignedMapelIds)[0];
 			const found = mapelRecords.find((r) => r.id === firstAssignedId);
 			if (found) {
@@ -244,7 +333,6 @@ export async function load({ parent, url, depends, locals }) {
 					(norm.startsWith('pendalaman kitab suci') && norm !== normalizeText(PKS_BASE_SUBJECT));
 			}
 		} else if (maybeUser.mataPelajaranId) {
-			// Fallback to legacy single mapel
 			try {
 				const assigned = await db.query.tableMataPelajaran.findFirst({
 					columns: { id: true, nama: true },
@@ -328,19 +416,14 @@ export async function load({ parent, url, depends, locals }) {
 	const requestedValue = url.searchParams.get('mapel_id');
 	let selectedMapelValue = requestedValue ?? null;
 
-	// If requestedValue is a numeric ID that matches an agama or PKS variant,
-	// convert it to the special value ('agama' or 'pks')
 	if (selectedMapelValue) {
 		const requestedId = Number(selectedMapelValue);
 		if (Number.isInteger(requestedId) && requestedId > 0) {
 			const requestedRecord = mapelRecords.find((r) => r.id === requestedId);
 			if (requestedRecord) {
-				// Check if it's an agama variant
 				if (isAgamaSubject(requestedRecord.nama)) {
-					// Use special 'agama' value for all agama variants
 					selectedMapelValue = AGAMA_MAPEL_VALUE;
 				} else if (isPksSubject(requestedRecord.nama)) {
-					// Use special 'pks' value for all PKS variants
 					selectedMapelValue = PKS_MAPEL_VALUE;
 				}
 			}
@@ -426,6 +509,8 @@ export async function load({ parent, url, depends, locals }) {
 		agamaLabel: null,
 		mapelId: null,
 		nilaiAkhirRts: null,
+		nilaiAkhirAsli: null,
+		nilaiRevisi: null,
 		nilaiAkhir: null,
 		naLingkup: null,
 		sts: null,
@@ -435,18 +520,28 @@ export async function load({ parent, url, depends, locals }) {
 		tpScores: {}
 	}));
 
+	const teknikList = locals.sekolah?.id
+		? await db.query.tableTeknikPenilaian.findMany({
+				columns: { id: true, nama: true, singkatan: true },
+				where: eq(tableTeknikPenilaian.sekolahId, locals.sekolah.id),
+				orderBy: [asc(tableTeknikPenilaian.urutan), asc(tableTeknikPenilaian.nama)]
+			})
+		: [];
+
 	if (!selectedMapelValue) {
 		return {
 			meta,
+			kelasKontenAktif,
 			mapelList: mapelOptions,
 			selectedMapelValue,
 			selectedMapel,
+			relevantMapelIds: [] as number[],
 			daftarMurid: baseList,
+			tujuanList: [],
+			teknikList,
 			page: pageState
 		};
 	}
-
-	await ensureAsesmenSumatifSchema();
 
 	const agamaMapelIds = [
 		...agamaVariantRecords.map((record) => record.id),
@@ -475,6 +570,8 @@ export async function load({ parent, url, depends, locals }) {
 						naLingkup: true,
 						sts: true,
 						sas: true,
+						nilaiAkhirAsli: true,
+						nilaiRevisi: true,
 						nilaiAkhir: true,
 						nilaiAkhirRts: true
 					},
@@ -501,7 +598,7 @@ export async function load({ parent, url, depends, locals }) {
 				with: {
 					teknikPenilaian: true
 				},
-				orderBy: [asc(tableTujuanPembelajaran.lingkupMateri), asc(tableTujuanPembelajaran.id)]
+				orderBy: [asc(tableTujuanPembelajaran.id)]
 			})
 		: [];
 
@@ -531,22 +628,22 @@ export async function load({ parent, url, depends, locals }) {
 		mataPelajaranId: t.mataPelajaranId,
 		deskripsi: t.deskripsi,
 		lingkupMateri: t.lingkupMateri,
-		bobot: t.bobot ?? 0,
+		bobot: effectiveColumnBobot(t.bobot),
+		jenisAsesmen: parseJenisAsesmen(t.jenisAsesmen),
 		teknikPenilaianId: t.teknikPenilaianId,
 		teknikNama: t.teknikPenilaian?.nama ?? null,
 		teknikSingkatan: t.teknikPenilaian?.singkatan ?? null
 	}));
 
-	const kunciNilai = selectedMapelRecord
-		? await loadKunciNilai([selectedMapelRecord.id])
-		: new Map();
-	const isTerkunci = selectedMapelRecord ? kunciNilai.has(selectedMapelRecord.id) : false;
+	const kunciNilai = relevantMapelIds.length ? await loadKunciNilai(relevantMapelIds) : new Map();
+	const isTerkunci = selectedMapelRecord
+		? kunciNilai.has(selectedMapelRecord.id)
+		: relevantMapelIds.some((id) => kunciNilai.has(id));
 
-	const bobotLingkup = Number(locals.sekolah?.sumatifBobotLingkup ?? 60);
-	const bobotSts = Number(locals.sekolah?.sumatifBobotSts ?? 20);
-	const bobotSas = Number(locals.sekolah?.sumatifBobotSas ?? 20);
-	const bobotRtsLingkup = Number(locals.sekolah?.sumatifBobotRtsLingkup ?? 70);
-	const bobotRtsSts = Number(locals.sekolah?.sumatifBobotRtsSts ?? 30);
+	const konfigurasiSekolah = konfigurasiNilaiDariSekolah(locals.sekolah ?? null);
+	const primaryMapel =
+		selectedMapelRecord ?? (relevantMapelIds.length ? mapelById.get(relevantMapelIds[0]) : null);
+	const primaryBobot = bobotMapelEfektif(primaryMapel, konfigurasiSekolah);
 
 	const pickMapelIdForMurid = (muridAgama: string | null | undefined): number | null => {
 		if (isAgamaSelected) {
@@ -584,23 +681,19 @@ export async function load({ parent, url, depends, locals }) {
 
 		const canAccess = (() => {
 			if (!maybeUser || maybeUser.type !== 'user') return true;
-			// Guru merangkap wali kelas di kelasnya sendiri: paritas wali kelas lama.
 			if (kelasKontenAktif?.id != null && guruOwnKelasIds?.includes(kelasKontenAktif.id))
 				return true;
 
 			if ((isAgamaSelected || isPksSelected) && allowedAgamaVariants.size > 0) {
-				// Hanya murid dengan agama varian yang diajar guru (termasuk sub-nya).
 				const label = labelVarianUntukMurid(selectedMapel?.nama ?? '', murid.agama);
 				return !!label && allowedAgamaVariants.has(label);
 			}
 
-			// For non-agama mapel, check standard assignment
 			if (!assignedIsAgamaVariant) return true;
 			if (!assignedLocalMapelId) return false;
 			return targetMapelId === assignedLocalMapelId;
 		})();
 
-		// Murid di luar varian/mapel guru: jangan bocorkan nilai milik guru lain.
 		if (!canAccess) {
 			return {
 				id: murid.id,
@@ -609,6 +702,8 @@ export async function load({ parent, url, depends, locals }) {
 				agamaLabel,
 				mapelId: targetMapelId,
 				nilaiAkhirRts: null,
+				nilaiAkhirAsli: null,
+				nilaiRevisi: null,
 				nilaiAkhir: null,
 				naLingkup: null,
 				sts: null,
@@ -620,25 +715,37 @@ export async function load({ parent, url, depends, locals }) {
 			};
 		}
 
+		const studentMapel = targetMapelId ? mapelById.get(targetMapelId) : primaryMapel;
+		const studentBobot = bobotMapelEfektif(studentMapel, konfigurasiSekolah);
+		const computedAsli =
+			sumatif?.nilaiAkhirAsli ??
+			hitungNilaiAkhirSumatif(
+				{
+					naLingkup: sumatif?.naLingkup ?? null,
+					sts: sumatif?.sts ?? null,
+					sas: sumatif?.sas ?? null
+				},
+				studentBobot.bobotAkhir
+			);
+		const revisi = sumatif?.nilaiRevisi ?? null;
+		const efektifAkhir = nilaiEfektifAkhir(computedAsli, revisi) ?? sumatif?.nilaiAkhir ?? null;
+		const computedRts =
+			sumatif?.nilaiAkhirRts ??
+			hitungNilaiAkhirRts(
+				{ naLingkup: sumatif?.naLingkup ?? null, sts: sumatif?.sts ?? null },
+				studentBobot.bobotRts
+			);
+
 		return {
 			id: murid.id,
 			no: offset + index + 1,
 			nama: murid.nama,
 			agamaLabel,
 			mapelId: targetMapelId,
-			nilaiAkhirRts: formatScore(
-				computeNilaiAkhirRts(sumatif?.naLingkup, sumatif?.sts, bobotRtsLingkup, bobotRtsSts)
-			),
-			nilaiAkhir: formatScore(
-				computeNilaiAkhir(
-					sumatif?.naLingkup,
-					sumatif?.sts,
-					sumatif?.sas,
-					bobotLingkup,
-					bobotSts,
-					bobotSas
-				)
-			),
+			nilaiAkhirRts: formatScore(computedRts),
+			nilaiAkhirAsli: formatScore(computedAsli),
+			nilaiRevisi: formatScore(revisi),
+			nilaiAkhir: formatScore(efektifAkhir),
 			naLingkup: formatScore(sumatif?.naLingkup),
 			sts: formatScore(sumatif?.sts),
 			sas: formatScore(sumatif?.sas),
@@ -657,14 +764,19 @@ export async function load({ parent, url, depends, locals }) {
 		mapelList: mapelOptions,
 		selectedMapelValue,
 		selectedMapel,
+		relevantMapelIds,
 		daftarMurid,
 		tujuanList,
+		teknikList,
 		kkm: selectedMapelRecord?.kkm ?? 75,
 		isTerkunci,
 		sumatifWeights: {
-			lingkup: bobotLingkup,
-			sts: bobotSts,
-			sas: bobotSas
+			lingkup: primaryBobot.bobotAkhir.lingkup,
+			sts: primaryBobot.bobotAkhir.sts,
+			sas: primaryBobot.bobotAkhir.sas,
+			isCustom: primaryBobot.isCustom,
+			sekolahDefault: konfigurasiSekolah.bobotAkhir,
+			rts: primaryBobot.bobotRts
 		},
 		allowedAgamaForUser,
 		page: pageState
@@ -698,18 +810,18 @@ function parseBulkItems(raw: FormDataEntryValue | null): BulkNilaiItem[] {
 }
 
 const BULK_KOMPONEN_LABEL: Record<'lingkup' | 'sts' | 'sas', string> = {
-	lingkup: 'Lingkup Materi',
-	sts: 'STS',
-	sas: 'SAS'
+	lingkup: 'Formatif (F)',
+	sts: 'Sumatif (S)',
+	sas: 'Sumatif AS (AS)'
 };
 
 export const actions = {
 	/**
-	 * Simpan seluruh nilai matriks spreadsheet satu kelas (TP, STS, SAS).
+	 * Simpan seluruh nilai matriks terpadu satu kelas (Formatif F, Sumatif S,
+	 * Sumatif AS, dan kolom Revisi).
 	 */
 	simpanMatriks: async ({ request, locals }) => {
-		const sekolahId = locals.sekolah?.id ?? null;
-		if (!sekolahId) return fail(401, { fail: 'Sekolah aktif tidak ditemukan.' });
+		await ensureAsesmenSumatifSchema();
 
 		const formData = await request.formData();
 		const payloadRaw = formData.get('payload');
@@ -718,9 +830,12 @@ export const actions = {
 		let rows: Array<{
 			muridId: number;
 			mapelId: number;
-			tpScores: Record<string, number | null>;
-			sts: number | null;
-			sas: number | null;
+			tpScores?: Record<string, number | null>;
+			legacySts?: number | null;
+			legacySas?: number | null;
+			sts?: number | null;
+			sas?: number | null;
+			nilaiRevisi?: number | null;
 		}>;
 		try {
 			rows = JSON.parse(String(payloadRaw));
@@ -732,43 +847,114 @@ export const actions = {
 			return fail(400, { fail: 'Pilih minimal satu murid untuk disimpan.' });
 		}
 
-		await ensureAsesmenSumatifSchema();
-
-		// Check locks
 		const uniqueMapelIds = [...new Set(rows.map((r) => r.mapelId).filter(Boolean))];
-		for (const part of chunk(uniqueMapelIds, 90)) {
-			const kunci = await loadKunciNilai(part);
-			for (const [mapelId, info] of kunci) {
-				return fail(403, {
-					fail: `Nilai mata pelajaran sudah dikunci${info?.dikunciOleh ? ` oleh ${info.dikunciOleh}` : ''}. Hubungi operator untuk membuka kunci.`
-				});
+		const auth = await assertCanEditMapels(locals as ActionLocals, uniqueMapelIds);
+		if (auth.error) return auth.error;
+
+		const konfigurasiSekolah = konfigurasiNilaiDariSekolah(locals.sekolah ?? null);
+
+		const tujuanRows = await queryInChunks(uniqueMapelIds, (ids) =>
+			db
+				.select({
+					id: tableTujuanPembelajaran.id,
+					mataPelajaranId: tableTujuanPembelajaran.mataPelajaranId,
+					jenisAsesmen: tableTujuanPembelajaran.jenisAsesmen,
+					bobot: tableTujuanPembelajaran.bobot
+				})
+				.from(tableTujuanPembelajaran)
+				.where(inArray(tableTujuanPembelajaran.mataPelajaranId, ids))
+		);
+
+		const tujuanByMapel = new Map<
+			number,
+			{
+				allIds: Set<number>;
+				formatif: Array<{ id: number; bobot: number }>;
+				sumatif: Array<{ id: number; bobot: number }>;
+				as: Array<{ id: number; bobot: number }>;
 			}
+		>();
+		for (const t of tujuanRows) {
+			let bucket = tujuanByMapel.get(t.mataPelajaranId);
+			if (!bucket) {
+				bucket = { allIds: new Set(), formatif: [], sumatif: [], as: [] };
+				tujuanByMapel.set(t.mataPelajaranId, bucket);
+			}
+			bucket.allIds.add(t.id);
+			const jenis = parseJenisAsesmen(t.jenisAsesmen);
+			bucket[jenis].push({ id: t.id, bobot: t.bobot ?? 0 });
 		}
 
-		const bobotLingkup = Number(locals.sekolah?.sumatifBobotLingkup ?? 60);
-		const bobotSts = Number(locals.sekolah?.sumatifBobotSts ?? 20);
-		const bobotSas = Number(locals.sekolah?.sumatifBobotSas ?? 20);
-		const bobotRtsLingkup = Number(locals.sekolah?.sumatifBobotRtsLingkup ?? 70);
-		const bobotRtsSts = Number(locals.sekolah?.sumatifBobotRtsSts ?? 30);
+		const uniqueMuridIds = [...new Set(rows.map((r) => r.muridId).filter(Boolean))];
+		const validMuridRows = uniqueMuridIds.length
+			? await queryInChunks(uniqueMuridIds, (mIds) =>
+					db
+						.select({ id: tableMurid.id, kelasId: tableMurid.kelasId })
+						.from(tableMurid)
+						.where(and(eq(tableMurid.sekolahId, auth.sekolahId), inArray(tableMurid.id, mIds)))
+				)
+			: [];
+		const muridKelasById = new Map(validMuridRows.map((m) => [m.id, m.kelasId]));
+
+		const existingSumatifRows =
+			uniqueMuridIds.length && uniqueMapelIds.length
+				? await queryInChunks(uniqueMuridIds, (mIds) =>
+						db
+							.select({
+								muridId: tableAsesmenSumatif.muridId,
+								mataPelajaranId: tableAsesmenSumatif.mataPelajaranId,
+								naLingkup: tableAsesmenSumatif.naLingkup,
+								sts: tableAsesmenSumatif.sts,
+								sas: tableAsesmenSumatif.sas
+							})
+							.from(tableAsesmenSumatif)
+							.where(
+								and(
+									inArray(tableAsesmenSumatif.muridId, mIds),
+									inArray(tableAsesmenSumatif.mataPelajaranId, uniqueMapelIds)
+								)
+							)
+					)
+				: [];
+		const existingByKey = new Map(
+			existingSumatifRows.map((r) => [`${r.muridId}|${r.mataPelajaranId}`, r])
+		);
+
 		const nowIso = new Date().toISOString();
 
 		for (const row of rows) {
-			const muridId = row.muridId;
-			const mapelId = row.mapelId;
-			if (!muridId || !mapelId) continue;
+			const muridId = Number(row.muridId);
+			const mapelId = Number(row.mapelId);
+			if (
+				!Number.isInteger(muridId) ||
+				!Number.isInteger(mapelId) ||
+				muridId <= 0 ||
+				mapelId <= 0
+			) {
+				continue;
+			}
 
-			const validTpValues: number[] = [];
+			const mapel = auth.mapelById.get(mapelId);
+			if (!mapel) continue;
+			if (muridKelasById.get(muridId) !== mapel.kelasId) continue;
+
+			const cols = tujuanByMapel.get(mapelId) ?? {
+				allIds: new Set<number>(),
+				formatif: [],
+				sumatif: [],
+				as: []
+			};
+			const existing = existingByKey.get(`${muridId}|${mapelId}`);
+			const parsedScores = new Map<number, number>();
+
 			if (row.tpScores && typeof row.tpScores === 'object') {
 				for (const [tpIdStr, scoreRaw] of Object.entries(row.tpScores)) {
 					const tpId = Number(tpIdStr);
-					if (!Number.isInteger(tpId) || tpId <= 0) continue;
-					const score =
-						scoreRaw != null && !Number.isNaN(Number(scoreRaw)) && String(scoreRaw).trim() !== ''
-							? Math.min(100, Math.max(0, Math.round(Number(scoreRaw) * 100) / 100))
-							: null;
+					if (!Number.isInteger(tpId) || !cols.allIds.has(tpId)) continue;
+					const score = sanitizeScore(scoreRaw);
 
 					if (score != null) {
-						validTpValues.push(score);
+						parsedScores.set(tpId, score);
 						await db
 							.insert(tableAsesmenSumatifTujuan)
 							.values({
@@ -804,21 +990,34 @@ export const actions = {
 			}
 
 			const naLingkup =
-				validTpValues.length > 0
-					? Math.round((validTpValues.reduce((a, b) => a + b, 0) / validTpValues.length) * 100) / 100
-					: null;
+				cols.formatif.length > 0
+					? hitungRataBerbobot(
+							cols.formatif.map((c) => ({ nilai: parsedScores.get(c.id), bobot: c.bobot }))
+						)
+					: (existing?.naLingkup ?? null);
 
 			const sts =
-				row.sts != null && !Number.isNaN(Number(row.sts)) && String(row.sts).trim() !== ''
-					? Math.min(100, Math.max(0, Math.round(Number(row.sts) * 100) / 100))
-					: null;
-			const sas =
-				row.sas != null && !Number.isNaN(Number(row.sas)) && String(row.sas).trim() !== ''
-					? Math.min(100, Math.max(0, Math.round(Number(row.sas) * 100) / 100))
-					: null;
+				cols.sumatif.length > 0
+					? hitungRataBerbobot(
+							cols.sumatif.map((c) => ({ nilai: parsedScores.get(c.id), bobot: c.bobot }))
+						)
+					: sanitizeScore(row.legacySts !== undefined ? row.legacySts : row.sts);
 
-			const nilaiAkhir = computeNilaiAkhir(naLingkup, sts, sas, bobotLingkup, bobotSts, bobotSas);
-			const nilaiAkhirRts = computeNilaiAkhirRts(naLingkup, sts, bobotRtsLingkup, bobotRtsSts);
+			const sas =
+				cols.as.length > 0
+					? hitungRataBerbobot(
+							cols.as.map((c) => ({ nilai: parsedScores.get(c.id), bobot: c.bobot }))
+						)
+					: sanitizeScore(row.legacySas !== undefined ? row.legacySas : row.sas);
+
+			const mapelBobot = bobotMapelEfektif(mapel, konfigurasiSekolah);
+			const nilaiAkhirAsli = hitungNilaiAkhirSumatif(
+				{ naLingkup, sts, sas },
+				mapelBobot.bobotAkhir
+			);
+			const nilaiRevisi = sanitizeScore(row.nilaiRevisi);
+			const nilaiAkhir = nilaiEfektifAkhir(nilaiAkhirAsli, nilaiRevisi);
+			const nilaiAkhirRts = hitungNilaiAkhirRts({ naLingkup, sts }, mapelBobot.bobotRts);
 
 			await db
 				.insert(tableAsesmenSumatif)
@@ -828,6 +1027,8 @@ export const actions = {
 					naLingkup,
 					sts,
 					sas,
+					nilaiAkhirAsli,
+					nilaiRevisi,
 					nilaiAkhir,
 					nilaiAkhirRts,
 					createdAt: nowIso,
@@ -839,6 +1040,8 @@ export const actions = {
 						naLingkup,
 						sts,
 						sas,
+						nilaiAkhirAsli,
+						nilaiRevisi,
 						nilaiAkhir,
 						nilaiAkhirRts,
 						updatedAt: nowIso
@@ -851,14 +1054,396 @@ export const actions = {
 			message: `Berhasil menyimpan nilai untuk ${rows.length} murid.`
 		};
 	},
+
+	/**
+	 * Tambah kolom asesmen baru pada kelompok Formatif (F), Sumatif (S), atau Sumatif AS (AS).
+	 * Jika kelompok S/AS baru pertama kali punya kolom dinamis namun sebelumnya sudah ada nilai
+	 * legacy `sts`/`sas`, nilai lama otomatis dipindahkan agar tidak hilang.
+	 */
+	tambahKolom: async ({ request, locals }) => {
+		await ensureAsesmenSumatifSchema();
+		const formData = await request.formData();
+
+		const mapelId = Number(formData.get('mapelId'));
+		const jenisAsesmen = parseJenisAsesmen(formData.get('jenisAsesmen'));
+		const lingkupMateri = String(formData.get('lingkupMateri') ?? '').trim();
+		const deskripsi = String(formData.get('deskripsi') ?? '').trim();
+		const bobotRaw = Number(String(formData.get('bobot') ?? '1').replace(',', '.'));
+		const teknikRaw = formData.get('teknikPenilaianId');
+		const teknikPenilaianId =
+			teknikRaw && Number.isInteger(Number(teknikRaw)) && Number(teknikRaw) > 0
+				? Number(teknikRaw)
+				: null;
+		const materializeLegacy = String(formData.get('materializeLegacy') ?? '') === '1';
+
+		if (!Number.isInteger(mapelId) || mapelId <= 0) {
+			return fail(400, { fail: 'Pilih mata pelajaran terlebih dahulu.' });
+		}
+		if (!deskripsi) {
+			return fail(400, { fail: 'Deskripsi tujuan pembelajaran / keterangan wajib diisi.' });
+		}
+		if (!Number.isFinite(bobotRaw) || bobotRaw <= 0 || bobotRaw > 100) {
+			return fail(400, { fail: 'Bobot kolom harus lebih dari 0 (maksimal 100).' });
+		}
+
+		const auth = await assertCanEditMapels(locals as ActionLocals, [mapelId]);
+		if (auth.error) return auth.error;
+
+		const bobot = Math.round(bobotRaw * 100) / 100;
+		const defaultLabel =
+			jenisAsesmen === 'sumatif' ? 'Sumatif' : jenisAsesmen === 'as' ? 'AS' : 'Formatif';
+		const finalLabel = lingkupMateri || defaultLabel;
+		const nowIso = new Date().toISOString();
+
+		// Cek migrasi nilai legacy STS / SAS bila kolom S / AS masih 0 di tujuan_pembelajaran.
+		if (jenisAsesmen === 'sumatif' || jenisAsesmen === 'as') {
+			const existingGroupCols = await db
+				.select({ id: tableTujuanPembelajaran.id })
+				.from(tableTujuanPembelajaran)
+				.where(
+					and(
+						eq(tableTujuanPembelajaran.mataPelajaranId, mapelId),
+						eq(tableTujuanPembelajaran.jenisAsesmen, jenisAsesmen)
+					)
+				);
+
+			if (existingGroupCols.length === 0) {
+				const legacyRows = await db
+					.select({
+						muridId: tableAsesmenSumatif.muridId,
+						sts: tableAsesmenSumatif.sts,
+						sas: tableAsesmenSumatif.sas
+					})
+					.from(tableAsesmenSumatif)
+					.where(eq(tableAsesmenSumatif.mataPelajaranId, mapelId));
+
+				const populatedLegacy = legacyRows
+					.map((r) => ({
+						muridId: r.muridId,
+						score: jenisAsesmen === 'sumatif' ? r.sts : r.sas
+					}))
+					.filter((r): r is { muridId: number; score: number } => r.score != null);
+
+				if (materializeLegacy) {
+					const [inserted] = await db
+						.insert(tableTujuanPembelajaran)
+						.values({
+							mataPelajaranId: mapelId,
+							lingkupMateri: finalLabel,
+							deskripsi,
+							bobot,
+							jenisAsesmen,
+							teknikPenilaianId,
+							createdAt: nowIso,
+							updatedAt: nowIso
+						})
+						.returning({ id: tableTujuanPembelajaran.id });
+
+					if (inserted && populatedLegacy.length > 0) {
+						for (const item of populatedLegacy) {
+							await db
+								.insert(tableAsesmenSumatifTujuan)
+								.values({
+									muridId: item.muridId,
+									mataPelajaranId: mapelId,
+									tujuanPembelajaranId: inserted.id,
+									nilai: item.score,
+									createdAt: nowIso,
+									updatedAt: nowIso
+								})
+								.onConflictDoUpdate({
+									target: [
+										tableAsesmenSumatifTujuan.muridId,
+										tableAsesmenSumatifTujuan.tujuanPembelajaranId
+									],
+									set: { nilai: item.score, updatedAt: nowIso }
+								});
+						}
+					}
+
+					await recalcMapelSumatifScores([mapelId], locals.sekolah ?? null);
+					return {
+						success: true,
+						id: inserted?.id ?? null,
+						message: 'Kolom penilaian berhasil diperbarui.'
+					};
+				}
+
+				// Tambah kolom baru ketika sudah ada nilai legacy: amankan nilai legacy di kolom 1 dulu.
+				if (populatedLegacy.length > 0) {
+					const [preserved] = await db
+						.insert(tableTujuanPembelajaran)
+						.values({
+							mataPelajaranId: mapelId,
+							lingkupMateri: jenisAsesmen === 'sumatif' ? 'Sumatif 1' : 'AS 1',
+							deskripsi:
+								jenisAsesmen === 'sumatif'
+									? 'Sumatif Tengah Semester / Lingkup'
+									: 'Sumatif Akhir Semester',
+							bobot: 1,
+							jenisAsesmen,
+							createdAt: nowIso,
+							updatedAt: nowIso
+						})
+						.returning({ id: tableTujuanPembelajaran.id });
+
+					if (preserved) {
+						for (const item of populatedLegacy) {
+							await db.insert(tableAsesmenSumatifTujuan).values({
+								muridId: item.muridId,
+								mataPelajaranId: mapelId,
+								tujuanPembelajaranId: preserved.id,
+								nilai: item.score,
+								createdAt: nowIso,
+								updatedAt: nowIso
+							});
+						}
+					}
+				}
+			}
+		}
+
+		const [created] = await db
+			.insert(tableTujuanPembelajaran)
+			.values({
+				mataPelajaranId: mapelId,
+				lingkupMateri: finalLabel,
+				deskripsi,
+				bobot,
+				jenisAsesmen,
+				teknikPenilaianId,
+				createdAt: nowIso,
+				updatedAt: nowIso
+			})
+			.returning({ id: tableTujuanPembelajaran.id });
+
+		await recalcMapelSumatifScores([mapelId], locals.sekolah ?? null);
+
+		return {
+			success: true,
+			id: created?.id ?? null,
+			message: 'Kolom penilaian berhasil ditambahkan.'
+		};
+	},
+
+	/**
+	 * Ubah detail atau bobot satu kolom penilaian langsung dari header matriks.
+	 */
+	ubahKolom: async ({ request, locals }) => {
+		await ensureAsesmenSumatifSchema();
+		const formData = await request.formData();
+
+		const id = Number(formData.get('id'));
+		if (!Number.isInteger(id) || id <= 0) {
+			return fail(400, { fail: 'Kolom penilaian tidak valid.' });
+		}
+
+		const existing = await db.query.tableTujuanPembelajaran.findFirst({
+			where: eq(tableTujuanPembelajaran.id, id)
+		});
+		if (!existing) {
+			return fail(404, { fail: 'Kolom penilaian tidak ditemukan.' });
+		}
+
+		const auth = await assertCanEditMapels(locals as ActionLocals, [existing.mataPelajaranId]);
+		if (auth.error) return auth.error;
+
+		const bobotRaw = Number(
+			String(formData.get('bobot') ?? effectiveColumnBobot(existing.bobot)).replace(',', '.')
+		);
+		if (!Number.isFinite(bobotRaw) || bobotRaw <= 0 || bobotRaw > 100) {
+			return fail(400, { fail: 'Bobot kolom harus lebih dari 0 (maksimal 100).' });
+		}
+
+		const lingkupRaw = formData.get('lingkupMateri');
+		const deskripsiRaw = formData.get('deskripsi');
+		const teknikRaw = formData.get('teknikPenilaianId');
+
+		const lingkupMateri =
+			lingkupRaw != null
+				? String(lingkupRaw).trim() || existing.lingkupMateri
+				: existing.lingkupMateri;
+		const deskripsi = deskripsiRaw != null ? String(deskripsiRaw).trim() : existing.deskripsi;
+		if (!deskripsi) {
+			return fail(400, { fail: 'Deskripsi tujuan pembelajaran wajib diisi.' });
+		}
+
+		const teknikPenilaianId =
+			teknikRaw !== null
+				? Number.isInteger(Number(teknikRaw)) && Number(teknikRaw) > 0
+					? Number(teknikRaw)
+					: null
+				: existing.teknikPenilaianId;
+
+		await db
+			.update(tableTujuanPembelajaran)
+			.set({
+				lingkupMateri,
+				deskripsi,
+				bobot: Math.round(bobotRaw * 100) / 100,
+				teknikPenilaianId,
+				updatedAt: new Date().toISOString()
+			})
+			.where(eq(tableTujuanPembelajaran.id, id));
+
+		await recalcMapelSumatifScores([existing.mataPelajaranId], locals.sekolah ?? null);
+
+		return {
+			success: true,
+			message: 'Kolom penilaian berhasil diperbarui.'
+		};
+	},
+
+	/**
+	 * Hapus satu kolom penilaian beserta seluruh nilainya, lalu hitung ulang NA dan AKHIR.
+	 */
+	hapusKolom: async ({ request, locals }) => {
+		await ensureAsesmenSumatifSchema();
+		const formData = await request.formData();
+
+		const id = Number(formData.get('id'));
+		if (!Number.isInteger(id) || id <= 0) {
+			return fail(400, { fail: 'Kolom penilaian tidak valid.' });
+		}
+
+		const existing = await db.query.tableTujuanPembelajaran.findFirst({
+			where: eq(tableTujuanPembelajaran.id, id)
+		});
+		if (!existing) {
+			return fail(404, { fail: 'Kolom penilaian tidak ditemukan.' });
+		}
+
+		const auth = await assertCanEditMapels(locals as ActionLocals, [existing.mataPelajaranId]);
+		if (auth.error) return auth.error;
+
+		const jenis = parseJenisAsesmen(existing.jenisAsesmen);
+
+		await db
+			.delete(tableAsesmenSumatifTujuan)
+			.where(eq(tableAsesmenSumatifTujuan.tujuanPembelajaranId, id));
+		await db.delete(tableTujuanPembelajaran).where(eq(tableTujuanPembelajaran.id, id));
+
+		// Jika kolom terakhir di kelompok ini baru dihapus, bersihkan agregat kelompoknya.
+		const remaining = await db
+			.select({ id: tableTujuanPembelajaran.id })
+			.from(tableTujuanPembelajaran)
+			.where(
+				and(
+					eq(tableTujuanPembelajaran.mataPelajaranId, existing.mataPelajaranId),
+					eq(tableTujuanPembelajaran.jenisAsesmen, jenis)
+				)
+			);
+
+		if (remaining.length === 0) {
+			const resetPatch =
+				jenis === 'sumatif' ? { sts: null } : jenis === 'as' ? { sas: null } : { naLingkup: null };
+			await db
+				.update(tableAsesmenSumatif)
+				.set(resetPatch)
+				.where(eq(tableAsesmenSumatif.mataPelajaranId, existing.mataPelajaranId));
+		}
+
+		await recalcMapelSumatifScores([existing.mataPelajaranId], locals.sekolah ?? null);
+
+		return {
+			success: true,
+			message: 'Kolom penilaian berhasil dihapus.'
+		};
+	},
+
+	/**
+	 * Simpan bobot kelompok Formatif (F) / Sumatif (S) / Sumatif AS (AS) khusus mapel ini,
+	 * atau reset ke default sekolah.
+	 */
+	simpanBobotMapel: async ({ request, locals }) => {
+		await ensureAsesmenSumatifSchema();
+		const formData = await request.formData();
+
+		let mapelIds: number[] = [];
+		const mapelIdsRaw = formData.get('mapelIds');
+		if (mapelIdsRaw) {
+			try {
+				const parsed = JSON.parse(String(mapelIdsRaw));
+				if (Array.isArray(parsed)) {
+					mapelIds = parsed.map(Number).filter((n) => Number.isInteger(n) && n > 0);
+				}
+			} catch {
+				// fall back to single mapelId
+			}
+		}
+		if (!mapelIds.length) {
+			const single = Number(formData.get('mapelId'));
+			if (Number.isInteger(single) && single > 0) mapelIds = [single];
+		}
+
+		const auth = await assertCanEditMapels(locals as ActionLocals, mapelIds);
+		if (auth.error) return auth.error;
+
+		const reset = String(formData.get('reset') ?? '') === '1';
+		const nowIso = new Date().toISOString();
+
+		if (reset) {
+			await db
+				.update(tableMataPelajaran)
+				.set({
+					bobotFormatif: null,
+					bobotSumatif: null,
+					bobotAs: null,
+					updatedAt: nowIso
+				})
+				.where(inArray(tableMataPelajaran.id, mapelIds));
+
+			await recalcMapelSumatifScores(mapelIds, locals.sekolah ?? null);
+			return {
+				success: true,
+				message: 'Bobot mapel dikembalikan mengikuti default sekolah.'
+			};
+		}
+
+		const bobotFormatif = Math.round(Number(formData.get('bobotFormatif')));
+		const bobotSumatif = Math.round(Number(formData.get('bobotSumatif')));
+		const bobotAs = Math.round(Number(formData.get('bobotAs')));
+
+		if (
+			!Number.isFinite(bobotFormatif) ||
+			!Number.isFinite(bobotSumatif) ||
+			!Number.isFinite(bobotAs) ||
+			bobotFormatif < 0 ||
+			bobotSumatif < 0 ||
+			bobotAs < 0
+		) {
+			return fail(400, { fail: 'Semua nilai bobot harus angka 0 sampai 100.' });
+		}
+
+		if (bobotFormatif + bobotSumatif + bobotAs !== 100) {
+			return fail(400, {
+				fail: `Jumlah bobot F + S + AS harus 100% (saat ini ${bobotFormatif + bobotSumatif + bobotAs}%).`
+			});
+		}
+
+		await db
+			.update(tableMataPelajaran)
+			.set({
+				bobotFormatif,
+				bobotSumatif,
+				bobotAs,
+				updatedAt: nowIso
+			})
+			.where(inArray(tableMataPelajaran.id, mapelIds));
+
+		await recalcMapelSumatifScores(mapelIds, locals.sekolah ?? null);
+
+		return {
+			success: true,
+			message: `Bobot mapel diperbarui (${bobotFormatif}% F / ${bobotSumatif}% S / ${bobotAs}% AS).`
+		};
+	},
+
 	/**
 	 * Isi satu komponen nilai untuk banyak murid sekaligus ("Isi Sekaligus").
-	 * `items` berisi pasangan muridId+mapelId (mapel sudah di-resolve per murid
-	 * oleh halaman, termasuk varian agama/PKS), jadi server tidak perlu menebak.
 	 */
 	simpanMassal: async ({ request, locals }) => {
-		const sekolahId = locals.sekolah?.id ?? null;
-		if (!sekolahId) return fail(401, { fail: 'Sekolah aktif tidak ditemukan.' });
+		await ensureAsesmenSumatifSchema();
 
 		const formData = await request.formData();
 		const items = parseBulkItems(formData.get('items'));
@@ -884,89 +1469,47 @@ export const actions = {
 		const muridIds = [...new Set(items.map((item) => item.muridId))];
 		const mapelIds = [...new Set(items.map((item) => item.mapelId))];
 
+		const auth = await assertCanEditMapels(locals as ActionLocals, mapelIds);
+		if (auth.error) return auth.error;
+
 		const muridRows = await queryInChunks(muridIds, (ids) =>
 			db
 				.select({ id: tableMurid.id, kelasId: tableMurid.kelasId })
 				.from(tableMurid)
-				.where(and(eq(tableMurid.sekolahId, sekolahId), inArray(tableMurid.id, ids)))
+				.where(and(eq(tableMurid.sekolahId, auth.sekolahId), inArray(tableMurid.id, ids)))
 		);
 		const muridKelas = new Map(muridRows.map((row) => [row.id, row.kelasId]));
 
-		const mapelRows = await queryInChunks(mapelIds, (ids) =>
-			db
-				.select({
-					id: tableMataPelajaran.id,
-					nama: tableMataPelajaran.nama,
-					kelasId: tableMataPelajaran.kelasId
-				})
-				.from(tableMataPelajaran)
-				.where(inArray(tableMataPelajaran.id, ids))
-		);
-		const mapelById = new Map(mapelRows.map((row) => [row.id, row]));
-
 		const valid = items.filter((item) => {
 			const kelasId = muridKelas.get(item.muridId);
-			const mapel = mapelById.get(item.mapelId);
+			const mapel = auth.mapelById.get(item.mapelId);
 			return kelasId != null && mapel != null && mapel.kelasId === kelasId;
 		});
 		if (!valid.length) {
 			return fail(400, { fail: 'Tidak ada pasangan murid dan mata pelajaran yang valid.' });
 		}
 
-		// Izin: guru mapel hanya mapel yang diampu; wali kelas boleh kelas
-		// binaannya, selain itu tetap dicek per mapel (paritas formulir).
-		const user = locals.user as {
-			id?: number;
-			type?: string;
-			mataPelajaranId?: number | null;
-			pegawaiId?: number | null;
-		} | null;
 		const uniqueMapelIds = [...new Set(valid.map((item) => item.mapelId))];
-		if (user?.id && user.type !== 'admin' && user.type !== 'kepala_sekolah') {
-			for (const mapelId of uniqueMapelIds) {
-				const mapel = mapelById.get(mapelId);
-				if (!mapel) continue;
-				if (user.type === 'wali_kelas' && user.pegawaiId) {
-					const ownKelas = await db.query.tableKelas.findFirst({
-						columns: { id: true },
-						where: and(eq(tableKelas.id, mapel.kelasId), eq(tableKelas.waliKelasId, user.pegawaiId))
-					});
-					if (ownKelas) continue;
-				}
-				const allowed = await bolehAksesMapel(
-					{ id: user.id, mataPelajaranId: user.mataPelajaranId ?? null },
-					{ id: mapel.id, nama: mapel.nama }
-				);
-				if (!allowed) {
-					return fail(403, { fail: `Anda tidak memiliki akses ke mata pelajaran ${mapel.nama}.` });
-				}
-			}
-		}
-
-		await ensureAsesmenSumatifSchema();
-
-		// Kunci nilai membatasi edit; periksa per potongan id.
-		for (const part of chunk(uniqueMapelIds, 90)) {
-			const kunci = await loadKunciNilai(part);
-			for (const [mapelId, info] of kunci) {
-				return fail(403, {
-					fail: `Nilai ${mapelById.get(mapelId)?.nama ?? ''} sudah dikunci${
-						info?.dikunciOleh ? ` oleh ${info.dikunciOleh}` : ''
-					}. Hubungi operator sekolah untuk membuka kunci.`
-				});
-			}
-		}
-
-		// Ambil nilai lama untuk komponen lain (lingkup/STS/SAS tidak ikut diubah).
 		const nilaiLama = new Map<
 			string,
-			{ naLingkup: number | null; sts: number | null; sas: number | null }
+			{
+				naLingkup: number | null;
+				sts: number | null;
+				sas: number | null;
+				nilaiRevisi: number | null;
+			}
 		>();
 		for (const mapelId of uniqueMapelIds) {
 			const ids = valid.filter((item) => item.mapelId === mapelId).map((item) => item.muridId);
 			await queryInChunks(ids, async (part) => {
 				const rows = await db.query.tableAsesmenSumatif.findMany({
-					columns: { muridId: true, naLingkup: true, sts: true, sas: true },
+					columns: {
+						muridId: true,
+						naLingkup: true,
+						sts: true,
+						sas: true,
+						nilaiRevisi: true
+					},
 					where: and(
 						eq(tableAsesmenSumatif.mataPelajaranId, mapelId),
 						inArray(tableAsesmenSumatif.muridId, part)
@@ -976,7 +1519,8 @@ export const actions = {
 					nilaiLama.set(`${row.muridId}|${mapelId}`, {
 						naLingkup: row.naLingkup,
 						sts: row.sts,
-						sas: row.sas
+						sas: row.sas,
+						nilaiRevisi: row.nilaiRevisi
 					});
 				}
 				return rows;
@@ -987,23 +1531,31 @@ export const actions = {
 		const now = new Date().toISOString();
 		const values = valid.map((item) => {
 			const lama = nilaiLama.get(`${item.muridId}|${item.mapelId}`);
+			const mapel = auth.mapelById.get(item.mapelId);
+			const mapelBobot = bobotMapelEfektif(mapel, konfigurasi);
 			const naLingkup = komponen === 'lingkup' ? nilai : (lama?.naLingkup ?? null);
 			const sts = komponen === 'sts' ? nilai : (lama?.sts ?? null);
 			const sas = komponen === 'sas' ? nilai : (lama?.sas ?? null);
+			const nilaiAkhirAsli = hitungNilaiAkhirSumatif(
+				{ naLingkup, sts, sas },
+				mapelBobot.bobotAkhir
+			);
+			const nilaiRevisi = lama?.nilaiRevisi ?? null;
 			return {
 				muridId: item.muridId,
 				mataPelajaranId: item.mapelId,
 				naLingkup,
 				sts,
 				sas,
-				nilaiAkhir: hitungNilaiAkhirSumatif({ naLingkup, sts, sas }, konfigurasi.bobotAkhir),
-				nilaiAkhirRts: hitungNilaiAkhirRts({ naLingkup, sts }, konfigurasi.bobotRts),
+				nilaiAkhirAsli,
+				nilaiRevisi,
+				nilaiAkhir: nilaiEfektifAkhir(nilaiAkhirAsli, nilaiRevisi),
+				nilaiAkhirRts: hitungNilaiAkhirRts({ naLingkup, sts }, mapelBobot.bobotRts),
 				updatedAt: now
 			};
 		});
 
-		// Satu statement upsert per potongan kecil (D1 maks 100 parameter).
-		for (const part of chunk(values, 10)) {
+		for (const part of chunk(values, 8)) {
 			await db
 				.insert(tableAsesmenSumatif)
 				.values(part)
@@ -1013,6 +1565,7 @@ export const actions = {
 						naLingkup: sql`excluded.na_lingkup`,
 						sts: sql`excluded.sts`,
 						sas: sql`excluded.sas`,
+						nilaiAkhirAsli: sql`excluded.nilai_akhir_asli`,
 						nilaiAkhir: sql`excluded.nilai_akhir`,
 						nilaiAkhirRts: sql`excluded.nilai_akhir_rts`,
 						updatedAt: now

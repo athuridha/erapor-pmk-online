@@ -116,7 +116,7 @@
 					<div class="space-y-4">
 						<label class="flex flex-col gap-1.5">
 							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
-								>Bobot Lingkup Materi / TP (%)</span
+								>Bobot Formatif (F) (%)</span
 							>
 							<input
 								type="number"
@@ -128,13 +128,13 @@
 								required
 							/>
 							<span class="text-xs text-slate-500 dark:text-zinc-400"
-								>Rata-rata asesmen sumatif per materi pokok</span
+								>Nilai rata-rata berbobot kolom asesmen Formatif (F)</span
 							>
 						</label>
 
 						<label class="flex flex-col gap-1.5">
 							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
-								>Bobot Sumatif Tengah Semester (STS) (%)</span
+								>Bobot Sumatif (S) (%)</span
 							>
 							<input
 								type="number"
@@ -146,13 +146,13 @@
 								required
 							/>
 							<span class="text-xs text-slate-500 dark:text-zinc-400"
-								>Ujian / Asesmen pertengahan semester</span
+								>Nilai rata-rata berbobot kolom Sumatif (S) / Tengah Semester</span
 							>
 						</label>
 
 						<label class="flex flex-col gap-1.5">
 							<span class="text-xs font-semibold text-slate-700 dark:text-zinc-300"
-								>Bobot Sumatif Akhir Semester (SAS) (%)</span
+								>Bobot Sumatif AS (AS) (%)</span
 							>
 							<input
 								type="number"
