@@ -1,5 +1,5 @@
 import { ensureAsesmenSumatifSchema } from '$lib/server/db/ensure-asesmen-sumatif';
-import { kelasKontenSet, resolveKelasKonten } from '$lib/server/kelas-akses';
+import { kelasKontenSet, ownedKelasIdSet, resolveKelasKonten } from '$lib/server/kelas-akses';
 import {
 	buildLeggerKelas,
 	buildLeggerMurid,
@@ -47,14 +47,24 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 	const sekolahId = locals.sekolah?.id ?? null;
 	if (!sekolahId) return empty;
 
-	const { kelasAktif, academicContext } = await parent();
+	const { kelasAktif, academicContext, activeModul } = await parent();
 	const user = locals.user;
 	const semesterId = academicContext?.activeSemesterId ?? null;
 
 	const rawKelasParam = url.searchParams.get('kelas') ?? url.searchParams.get('kelas_id');
 	const paramKelasId = Number(rawKelasParam) || null;
 
-	const allowedSet = isAdminUser(user) ? null : await kelasKontenSet(user, sekolahId, null);
+	let allowedSet: Set<number> | null = null;
+	if (!isAdminUser(user)) {
+		if (activeModul === 'wali_kelas') {
+			allowedSet = await ownedKelasIdSet(user);
+			if (allowedSet.size === 0 && user?.type === 'wali_kelas' && user.kelasId) {
+				allowedSet.add(Number(user.kelasId));
+			}
+		} else {
+			allowedSet = await kelasKontenSet(user, sekolahId, null);
+		}
+	}
 	if (allowedSet && kelasAktif?.id) {
 		allowedSet.add(kelasAktif.id);
 	}

@@ -209,9 +209,15 @@
 		return Number.isFinite(n) && n > 0 ? n : 1;
 	}
 
+	const faseLabel = $derived.by(() => {
+		const trimmed = kelasFase?.trim();
+		if (!trimmed) return null;
+		return /^fase\b/i.test(trimmed) ? trimmed : `Fase ${trimmed}`;
+	});
+
 	function formatBobot(bobot: number | null | undefined): string {
-		const w = colWeight(bobot);
-		return Number.isInteger(w) ? String(w) : w.toFixed(1).replace(/\.0$/, '');
+		const rounded = Math.round(colWeight(bobot) * 100) / 100;
+		return String(rounded);
 	}
 
 	function formatScore(val: number | null): string {
@@ -304,7 +310,7 @@
 			return raw.startsWith(pref) ? raw : `${pref} ${raw}`;
 		}
 		if (col.jenisAsesmen === 'as') return '(AS)';
-		if (kelasFase) return `${pref} Fase ${kelasFase}`;
+		if (faseLabel) return `${pref} ${faseLabel}`;
 		return `${pref} #${idx + 1}`;
 	}
 
@@ -357,7 +363,7 @@
 				key: 'legacySts',
 				kind: 'legacySts',
 				group: 'sumatif',
-				label: kelasFase ? `(S) Fase ${kelasFase}` : '(S) Sumatif',
+				label: faseLabel ? `(S) ${faseLabel}` : '(S) Sumatif',
 				sub: 'Bobot 1',
 				bobotLabel: '1',
 				deskripsi: 'Sumatif Tengah Semester / Lingkup Materi'
@@ -703,7 +709,7 @@
 		detailModal = {
 			kind: jenis === 'sumatif' ? 'legacySts' : 'legacySas',
 			jenis,
-			label: jenis === 'sumatif' ? (kelasFase ? `(S) Fase ${kelasFase}` : '(S) Sumatif') : '(AS)',
+			label: jenis === 'sumatif' ? (faseLabel ? `(S) ${faseLabel}` : '(S) Sumatif') : '(AS)',
 			deskripsi:
 				jenis === 'sumatif'
 					? 'Sumatif Tengah Semester / Lingkup Materi (kolom bawaan)'
@@ -777,8 +783,8 @@
 				? nextNo > 1
 					? `AS ${nextNo}`
 					: 'AS'
-				: kelasFase
-					? `Fase ${kelasFase}`
+				: faseLabel
+					? faseLabel
 					: jenis === 'sumatif'
 						? `Sumatif ${nextNo}`
 						: `Formatif ${nextNo}`;
@@ -786,7 +792,7 @@
 			jenis === 'as'
 				? 'Sumatif Akhir Semester'
 				: jenis === 'sumatif'
-					? `Sumatif ${kelasFase ? `Fase ${kelasFase}` : nextNo}`
+					? `Sumatif ${faseLabel ?? nextNo}`
 					: '';
 		colFormModal = {
 			mode: 'create',
@@ -819,7 +825,7 @@
 		colFormModal = {
 			mode: 'materialize',
 			jenisAsesmen: jenis,
-			lingkupMateri: jenis === 'sumatif' ? (kelasFase ? `Fase ${kelasFase}` : 'Sumatif 1') : 'AS',
+			lingkupMateri: jenis === 'sumatif' ? (faseLabel ?? 'Sumatif 1') : 'AS',
 			deskripsi: jenis === 'sumatif' ? 'Sumatif Tengah Semester' : 'Sumatif Akhir Semester',
 			bobot: '1',
 			teknikPenilaianId: '',
@@ -1657,7 +1663,7 @@
 									{/if}
 								</div>
 								<span class="text-[11px] font-semibold text-slate-800 dark:text-zinc-100">
-									{kelasFase ? `(S) Fase ${kelasFase}` : '(S) Sumatif'}
+									{faseLabel ? `(S) ${faseLabel}` : '(S) Sumatif'}
 								</span>
 								<button
 									type="button"
@@ -2315,16 +2321,20 @@
 						</label>
 						<input
 							id="col-bobot-input"
-							type="number"
-							min="0.1"
-							max="100"
-							step="0.5"
+							type="text"
+							inputmode="decimal"
+							placeholder="1"
 							bind:value={colFormModal.bobot}
+							onfocus={(e) => e.currentTarget.select()}
 							required
 							class="h-11 w-full rounded-xl border border-[#7e8b9b] bg-white px-3 text-center font-mono text-sm font-bold text-slate-900 focus:border-blue-600 focus:outline-none sm:h-9 sm:text-xs dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
 						/>
 					</div>
 				</div>
+				<p class="-mt-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
+					Bobot kolom adalah angka pengali untuk rata-rata kelompok ini (mis. 1, 2, atau 25; angka
+					sama berarti rata-rata biasa).
+				</p>
 
 				{#if teknikList.length > 0}
 					<div>

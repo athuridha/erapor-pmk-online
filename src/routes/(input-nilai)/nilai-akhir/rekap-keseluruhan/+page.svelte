@@ -216,7 +216,9 @@
 					onchange={(event) =>
 						setFilter('kelas_id', (event.currentTarget as HTMLSelectElement).value || null)}
 				>
-					<option value="">Semua Kelas</option>
+					{#if data.bolehSemuaKelas}
+						<option value="">Semua Kelas</option>
+					{/if}
 					{#each daftarKelas as kelas (kelas.id)}
 						<option value={kelas.id}>{kelas.nama} - {kelas.semesterLabel}</option>
 					{/each}

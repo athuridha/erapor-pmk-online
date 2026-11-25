@@ -1,6 +1,6 @@
 ﻿import { buildRekapKeseluruhan, daftarKelasSekolah } from '$lib/admin/rekap.server';
 import { pindahkanMuridKelas } from '$lib/server/murid-pindah-kelas';
-import { canAccessKelas } from '$lib/server/kelas-akses';
+import { canAccessKelas, kelasDiampuSet, ownedKelasIdSet } from '$lib/server/kelas-akses';
 import { normalisasiBarisPerHalaman } from '$lib/utils/pagination';
 import { fail } from '@sveltejs/kit';
 import { isAdminUser } from '../../../pengguna/permissions';
@@ -14,7 +14,7 @@ const PER_PAGE = 50;
 export const load = async ({ parent, locals, url, depends }) => {
 	depends('app:rekap-keseluruhan');
 	const meta: PageMeta = { title: 'Rekap Nilai Keseluruhan' };
-	const { kelasAktif } = await parent();
+	const { kelasAktif, activeModul } = await parent();
 	const sekolahId = locals.sekolah?.id ?? null;
 	const user = locals.user;
 
@@ -23,6 +23,7 @@ export const load = async ({ parent, locals, url, depends }) => {
 			meta,
 			rekap: null,
 			daftarKelas: [],
+			bolehSemuaKelas: false,
 			statistik: null,
 			filter: { kelasId: null, mapel: null, pengampuId: null },
 			page: { q: null, currentPage: 1, totalPages: 1, totalItems: 0, perPage: PER_PAGE }
@@ -32,18 +33,51 @@ export const load = async ({ parent, locals, url, depends }) => {
 	const paramKelasId = Number(url.searchParams.get('kelas_id') ?? '');
 	let kelasId = Number.isInteger(paramKelasId) && paramKelasId > 0 ? paramKelasId : null;
 	const adminScope = isAdminUser(user);
+	const semuaDaftarKelas = await daftarKelasSekolah(sekolahId);
+	let daftarKelas = semuaDaftarKelas;
 
-	// Non admin hanya boleh melihat kelas yang menjadi haknya.
+	// Non admin hanya boleh melihat kelas sesuai hak dan modul aktifnya.
 	if (!adminScope) {
-		if (kelasId && !(await canAccessKelas(user, sekolahId, kelasId))) {
+		let allowedSet: Set<number>;
+		if (activeModul === 'wali_kelas') {
+			allowedSet = await ownedKelasIdSet(user);
+			if (allowedSet.size === 0 && user?.type === 'wali_kelas' && user.kelasId) {
+				allowedSet.add(Number(user.kelasId));
+			}
+		} else {
+			allowedSet = await kelasDiampuSet(user, sekolahId, null);
+		}
+		if (kelasAktif?.id && (activeModul !== 'wali_kelas' || allowedSet.size === 0)) {
+			if (await canAccessKelas(user, sekolahId, kelasAktif.id)) {
+				allowedSet.add(kelasAktif.id);
+			}
+		}
+
+		daftarKelas = semuaDaftarKelas.filter((k) => allowedSet.has(k.id));
+
+		if (kelasId && !allowedSet.has(kelasId)) {
 			kelasId = null;
 		}
 		if (!kelasId) {
 			const fallback = Number(kelasAktif?.id ?? 0);
-			if (fallback > 0 && (await canAccessKelas(user, sekolahId, fallback))) {
+			if (fallback > 0 && allowedSet.has(fallback)) {
 				kelasId = fallback;
+			} else if (daftarKelas.length > 0) {
+				kelasId = daftarKelas[0].id;
 			}
 		}
+	}
+
+	if (!adminScope && !kelasId) {
+		return {
+			meta,
+			rekap: null,
+			daftarKelas: [],
+			bolehSemuaKelas: false,
+			statistik: null,
+			filter: { kelasId: null, mapel: null, pengampuId: null },
+			page: { q: null, currentPage: 1, totalPages: 1, totalItems: 0, perPage: PER_PAGE }
+		};
 	}
 
 	const filterMapel = url.searchParams.get('mapel')?.trim() || null;
@@ -56,7 +90,6 @@ export const load = async ({ parent, locals, url, depends }) => {
 		Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
 
 	const rekap = await buildRekapKeseluruhan(sekolahId, { kelasId, filterMapel, pengampuId });
-	const daftarKelas = await daftarKelasSekolah(sekolahId);
 
 	let baris = rekap.baris;
 	if (search) {
@@ -95,6 +128,7 @@ export const load = async ({ parent, locals, url, depends }) => {
 		meta,
 		rekap: { ...rekap, baris: baris.slice(offset, offset + perHalaman) },
 		daftarKelas,
+		bolehSemuaKelas: adminScope,
 		statistik,
 		filter: { kelasId, mapel: filterMapel, pengampuId },
 		page: { q: search, currentPage, totalPages, totalItems, perPage: perHalaman }

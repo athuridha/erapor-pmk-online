@@ -89,7 +89,8 @@ export function sanitizeBobotValue(value: number) {
 }
 
 export function formatBobotValue(value: number) {
-	return sanitizeBobotValue(value).toFixed(2);
+	const rounded = Math.round(sanitizeBobotValue(value) * 100) / 100;
+	return String(rounded);
 }
 
 export type ApplyBobotResult = { state: Record<string, GroupBobotState>; manualSum: number };

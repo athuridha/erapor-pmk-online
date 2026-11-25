@@ -260,7 +260,26 @@
 			) {
 				await goto('/', { invalidateAll: true });
 			} else {
-				await invalidateAll();
+				const params = new URLSearchParams(window.location.search);
+				const hadClassParam =
+					params.has('kelas_id') ||
+					params.has('kelas') ||
+					params.has('murid_id') ||
+					params.has('mapel_id');
+				if (hadClassParam) {
+					params.delete('kelas_id');
+					params.delete('kelas');
+					params.delete('murid_id');
+					params.delete('mapel_id');
+					params.delete('page');
+					const query = params.toString();
+					await goto(`${pathname}${query ? `?${query}` : ''}`, {
+						replaceState: true,
+						invalidateAll: true
+					});
+				} else {
+					await invalidateAll();
+				}
 			}
 		} finally {
 			isSwitchingModul = false;

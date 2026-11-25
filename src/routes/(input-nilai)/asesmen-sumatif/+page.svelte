@@ -540,7 +540,8 @@
 
 	function formatScore(value: number | null) {
 		if (value == null || Number.isNaN(value)) return '-';
-		return value.toFixed(2);
+		const rounded = Math.round(value * 100) / 100;
+		return String(rounded);
 	}
 
 	function alasanTidakBisaNilai(murid: MuridRow): string {

@@ -65,30 +65,20 @@
 	// svelte-ignore state_referenced_locally
 	let entries = $state(data.entries.map(toDraft));
 	// svelte-ignore state_referenced_locally
-	let sasTesText = $state(
-		data.initialScores.sasTes != null ? data.initialScores.sasTes.toFixed(2) : ''
-	);
+	let sasTesText = $state(toInputText(data.initialScores.sasTes));
 	// svelte-ignore state_referenced_locally
-	let sasNonTesText = $state(
-		data.initialScores.sasNonTes != null ? data.initialScores.sasNonTes.toFixed(2) : ''
-	);
-	// Sumatif Tengah Semester (STS) - new inputs, initially empty (backend doesn't persist yet)
+	let sasNonTesText = $state(toInputText(data.initialScores.sasNonTes));
+	// Sumatif Tengah Semester (STS)
 	// svelte-ignore state_referenced_locally
-	let stsTesText = $state(
-		data.initialScores.stsTes != null ? data.initialScores.stsTes.toFixed(2) : ''
-	);
+	let stsTesText = $state(toInputText(data.initialScores.stsTes));
 	// svelte-ignore state_referenced_locally
-	let stsNonTesText = $state(
-		data.initialScores.stsNonTes != null ? data.initialScores.stsNonTes.toFixed(2) : ''
-	);
+	let stsNonTesText = $state(toInputText(data.initialScores.stsNonTes));
 	$effect(() => {
 		entries = data.entries.map(toDraft);
-		sasTesText = data.initialScores.sasTes != null ? data.initialScores.sasTes.toFixed(2) : '';
-		sasNonTesText =
-			data.initialScores.sasNonTes != null ? data.initialScores.sasNonTes.toFixed(2) : '';
-		stsTesText = data.initialScores.stsTes != null ? data.initialScores.stsTes.toFixed(2) : '';
-		stsNonTesText =
-			data.initialScores.stsNonTes != null ? data.initialScores.stsNonTes.toFixed(2) : '';
+		sasTesText = toInputText(data.initialScores.sasTes);
+		sasNonTesText = toInputText(data.initialScores.sasNonTes);
+		stsTesText = toInputText(data.initialScores.stsTes);
+		stsNonTesText = toInputText(data.initialScores.stsNonTes);
 	});
 
 	// Pemilih murid & mapel — isDirty dipakai untuk konfirmasi sebelum pindah

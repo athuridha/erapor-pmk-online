@@ -2,11 +2,14 @@ import type { EntryDraft, TujuanEntry } from './types';
 
 export function formatScore(value: number | null): string {
 	if (value == null || Number.isNaN(value)) return '-';
-	return value.toFixed(2);
+	const rounded = Math.round(value * 100) / 100;
+	return String(rounded);
 }
 
 export function toInputText(value: number | null): string {
-	return value != null ? value.toFixed(2) : '';
+	if (value == null || Number.isNaN(value)) return '';
+	const rounded = Math.round(value * 100) / 100;
+	return String(rounded);
 }
 
 export function toDraft(entry: TujuanEntry): EntryDraft {

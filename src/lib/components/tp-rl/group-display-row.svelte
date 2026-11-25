@@ -57,12 +57,11 @@
 	<td class="align-top">
 		{#if isEditingBobot}
 			<input
-				type="number"
+				type="text"
+				inputmode="decimal"
 				class="h-8 w-full rounded-lg border border-[#7e8b9b] bg-white px-2.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-				min="0"
-				max="100"
-				step="0.01"
 				value={bobotDraftValue}
+				onfocus={(e) => e.currentTarget.select()}
 				oninput={handleBobotChange}
 			/>
 		{:else}

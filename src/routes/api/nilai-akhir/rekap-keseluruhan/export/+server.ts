@@ -1,8 +1,8 @@
 ﻿import { buildRekapKeseluruhan } from '$lib/admin/rekap.server';
 import { rekapKeExcel } from '$lib/server/rekap-export';
-import { canAccessKelas } from '$lib/server/kelas-akses';
+import { canAccessKelas, ownedKelasIdSet } from '$lib/server/kelas-akses';
 import { cookieNames } from '$lib/utils.js';
-import { isAuthorizedUser } from '../../../../pengguna/permissions';
+import { isAdminUser, isAuthorizedUser } from '../../../../pengguna/permissions';
 import { error } from '@sveltejs/kit';
 
 export async function GET({ cookies, locals, url }) {
@@ -26,6 +26,15 @@ export async function GET({ cookies, locals, url }) {
 	}
 	if (!(await canAccessKelas(locals.user, sekolahId, kelasAktifId))) {
 		throw error(403, 'Anda tidak memiliki akses ke kelas ini.');
+	}
+	if (!isAdminUser(locals.user) && cookies.get(cookieNames.ACTIVE_MODUL) === 'wali_kelas') {
+		const ownSet = await ownedKelasIdSet(locals.user);
+		if (ownSet.size === 0 && locals.user.type === 'wali_kelas' && locals.user.kelasId) {
+			ownSet.add(Number(locals.user.kelasId));
+		}
+		if (ownSet.size > 0 && !ownSet.has(kelasAktifId)) {
+			throw error(403, 'Kelas ini bukan kelas perwalian Anda.');
+		}
 	}
 
 	const filterMapel = url.searchParams.get('mapel')?.trim() || null;
