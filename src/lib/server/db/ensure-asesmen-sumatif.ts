@@ -1,4 +1,102 @@
+import { eq, isNotNull, or } from 'drizzle-orm';
+import db from '$lib/server/db';
+import { tableAppMeta, tableAsesmenSumatif } from '$lib/server/db/schema';
+import { konfigurasiNilaiDariSekolah, nilaiSumatifEfektif } from '$lib/server/nilai-sumatif';
 import { ensureColumns, ensureSchema } from './ensure-helper';
+
+const WEIGHTED_SYNC_META_KEY = 'sumatif.weighted_contribution_v1';
+let weightedSyncChecked = false;
+
+async function ensureWeightedSumatifBackfill() {
+	if (weightedSyncChecked) return;
+	weightedSyncChecked = true;
+	try {
+		const marker = await db.query.tableAppMeta.findFirst({
+			columns: { value: true },
+			where: eq(tableAppMeta.key, WEIGHTED_SYNC_META_KEY)
+		});
+		if (marker?.value === '1') return;
+
+		const [sekolahRows, mapelRows, sumatifRows] = await Promise.all([
+			db.query.tableSekolah.findMany({
+				columns: {
+					id: true,
+					sumatifBobotLingkup: true,
+					sumatifBobotSts: true,
+					sumatifBobotSas: true,
+					sumatifBobotRtsLingkup: true,
+					sumatifBobotRtsSts: true
+				}
+			}),
+			db.query.tableMataPelajaran.findMany({
+				columns: {
+					id: true,
+					bobotFormatif: true,
+					bobotSumatif: true,
+					bobotAs: true
+				},
+				with: { kelas: { columns: { sekolahId: true } } }
+			}),
+			db.query.tableAsesmenSumatif.findMany({
+				columns: {
+					id: true,
+					mataPelajaranId: true,
+					naLingkup: true,
+					sts: true,
+					sas: true,
+					nilaiAkhirAsli: true,
+					nilaiRevisi: true,
+					nilaiAkhir: true,
+					nilaiAkhirRts: true
+				},
+				where: or(
+					isNotNull(tableAsesmenSumatif.naLingkup),
+					isNotNull(tableAsesmenSumatif.sts),
+					isNotNull(tableAsesmenSumatif.sas)
+				)
+			})
+		]);
+
+		const configBySekolah = new Map(sekolahRows.map((s) => [s.id, konfigurasiNilaiDariSekolah(s)]));
+		const mapelById = new Map(mapelRows.map((m) => [m.id, m]));
+		const fallbackConfig = konfigurasiNilaiDariSekolah(sekolahRows[0] ?? null);
+		const now = new Date().toISOString();
+
+		for (const row of sumatifRows) {
+			const mapel = mapelById.get(row.mataPelajaranId);
+			const config =
+				(mapel?.kelas?.sekolahId ? configBySekolah.get(mapel.kelas.sekolahId) : null) ??
+				fallbackConfig;
+			const computed = nilaiSumatifEfektif(row, mapel, config);
+			if (
+				computed.nilaiAkhirAsli !== (row.nilaiAkhirAsli ?? null) ||
+				computed.nilaiAkhir !== (row.nilaiAkhir ?? null) ||
+				computed.nilaiAkhirRts !== (row.nilaiAkhirRts ?? null)
+			) {
+				await db
+					.update(tableAsesmenSumatif)
+					.set({
+						nilaiAkhirAsli: computed.nilaiAkhirAsli,
+						nilaiAkhir: computed.nilaiAkhir,
+						nilaiAkhirRts: computed.nilaiAkhirRts,
+						updatedAt: now
+					})
+					.where(eq(tableAsesmenSumatif.id, row.id));
+			}
+		}
+
+		await db
+			.insert(tableAppMeta)
+			.values({ key: WEIGHTED_SYNC_META_KEY, value: '1', updatedAt: now })
+			.onConflictDoUpdate({
+				target: tableAppMeta.key,
+				set: { value: '1', updatedAt: now }
+			});
+	} catch (err) {
+		weightedSyncChecked = false;
+		console.warn('[ensure-asesmen-sumatif] weighted backfill skipped', err);
+	}
+}
 
 export async function ensureAsesmenSumatifSchema() {
 	await ensureSchema('asesmen_sumatif', [
@@ -59,4 +157,5 @@ export async function ensureAsesmenSumatifSchema() {
 			definition: "text NOT NULL DEFAULT 'formatif'"
 		}
 	]);
+	await ensureWeightedSumatifBackfill();
 }

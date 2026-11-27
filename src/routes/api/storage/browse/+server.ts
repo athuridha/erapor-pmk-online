@@ -50,7 +50,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		error(400, 'Path yang dipilih bukan folder.');
 	}
 
-	const root = path.parse(dir).root;
 	if (process.platform === 'win32' && path.dirname(dir) === dir) {
 		parent = null;
 		drives = await listRootDrives();

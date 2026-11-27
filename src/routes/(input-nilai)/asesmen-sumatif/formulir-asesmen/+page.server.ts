@@ -10,7 +10,7 @@ import {
 } from '$lib/server/db/schema';
 import { unflattenFormData } from '$lib/utils';
 import { fail, error, redirect } from '@sveltejs/kit';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { authority } from '../../../pengguna/utils.server';
 import {
 	buildGuruMapelPicker,
@@ -23,12 +23,44 @@ import { loadKunciNilai, pastikanNilaiTidakTerkunci } from '$lib/server/nilai-ku
 import {
 	bobotMapelEfektif,
 	konfigurasiNilaiDariSekolah,
+	effectiveColumnBobot,
+	hitungRataBerbobot,
 	hitungNilaiAkhirRts,
 	hitungNilaiAkhirSumatif,
-	nilaiEfektifAkhir
+	nilaiEfektifAkhir,
+	type JenisAsesmen
 } from '$lib/server/nilai-sumatif';
 
 const DEFAULT_LINGKUP = 'Tanpa lingkup materi';
+
+function parseJenisAsesmen(value: unknown): JenisAsesmen {
+	if (value === 'sumatif' || value === 'as') return value;
+	return 'formatif';
+}
+
+function weightedAverageFromTujuan(
+	rows: Array<{ lingkupMateri: string | null; bobot: number | null; nilai: number | null }>
+): number | null {
+	const groups = new Map<string, { bobot: number; values: number[] }>();
+	for (const row of rows) {
+		if (row.nilai == null) continue;
+		const key = (row.lingkupMateri ?? '').trim().toLowerCase() || `tp-${groups.size}`;
+		const existing = groups.get(key);
+		const bobot = effectiveColumnBobot(row.bobot);
+		if (existing) {
+			existing.values.push(row.nilai);
+			if (existing.bobot <= 0 && bobot > 0) existing.bobot = bobot;
+		} else {
+			groups.set(key, { bobot, values: [row.nilai] });
+		}
+	}
+	if (!groups.size) return null;
+	const entries = Array.from(groups.values()).map((g) => ({
+		nilai: g.values.reduce((sum, v) => sum + v, 0) / g.values.length,
+		bobot: g.bobot
+	}));
+	return hitungRataBerbobot(entries);
+}
 
 function normalize(value: string | null | undefined) {
 	return value?.trim().toLowerCase() ?? '';
@@ -149,7 +181,15 @@ export async function load({ url, locals, depends, parent }) {
 	}
 
 	const mapel = await db.query.tableMataPelajaran.findFirst({
-		columns: { id: true, nama: true, kelasId: true, kkm: true },
+		columns: {
+			id: true,
+			nama: true,
+			kelasId: true,
+			kkm: true,
+			bobotFormatif: true,
+			bobotSumatif: true,
+			bobotAs: true
+		},
 		where: eq(tableMataPelajaran.id, mapelId)
 	});
 
@@ -224,14 +264,21 @@ export async function load({ url, locals, depends, parent }) {
 			deskripsi: true,
 			lingkupMateri: true,
 			bobot: true,
-			teknikPenilaianId: true
+			teknikPenilaianId: true,
+			jenisAsesmen: true
 		},
 		with: {
 			teknikPenilaian: {
 				columns: { id: true, nama: true, singkatan: true, keterangan: true }
 			}
 		},
-		where: eq(tableTujuanPembelajaran.mataPelajaranId, mapel.id),
+		where: and(
+			eq(tableTujuanPembelajaran.mataPelajaranId, mapel.id),
+			or(
+				eq(tableTujuanPembelajaran.jenisAsesmen, 'formatif'),
+				isNull(tableTujuanPembelajaran.jenisAsesmen)
+			)
+		),
 		orderBy: [asc(tableTujuanPembelajaran.lingkupMateri), asc(tableTujuanPembelajaran.id)]
 	});
 
@@ -293,6 +340,8 @@ export async function load({ url, locals, depends, parent }) {
 	const infoKunci = kunciNilai.get(mapel.id) ?? null;
 
 	const meta: PageMeta = { title: `Form Asesmen Sumatif - ${mapel.nama}` };
+	const konfigurasiSekolah = konfigurasiNilaiDariSekolah(locals.sekolah ?? null);
+	const mapelBobot = bobotMapelEfektif(mapel, konfigurasiSekolah);
 
 	return {
 		meta,
@@ -307,13 +356,13 @@ export async function load({ url, locals, depends, parent }) {
 		hasLingkupComplete,
 		entries,
 		sumatifWeights: {
-			lingkup: Number(locals.sekolah?.sumatifBobotLingkup ?? 60),
-			sts: Number(locals.sekolah?.sumatifBobotSts ?? 20),
-			sas: Number(locals.sekolah?.sumatifBobotSas ?? 20)
+			lingkup: mapelBobot.bobotAkhir.lingkup,
+			sts: mapelBobot.bobotAkhir.sts,
+			sas: mapelBobot.bobotAkhir.sas
 		},
 		sumatifWeightsRts: {
-			lingkup: Number(locals.sekolah?.sumatifBobotRtsLingkup ?? 70),
-			sts: Number(locals.sekolah?.sumatifBobotRtsSts ?? 30)
+			lingkup: mapelBobot.bobotRts.lingkup,
+			sts: mapelBobot.bobotRts.sts
 		},
 		initialScores: {
 			naLingkup: normalizeScore(sumatifRecord?.naLingkup ?? null),
@@ -419,11 +468,18 @@ export const actions = {
 			)
 		});
 
-		const tujuanList = await db.query.tableTujuanPembelajaran.findMany({
-			columns: { id: true, lingkupMateri: true, bobot: true },
+		const allTujuanList = await db.query.tableTujuanPembelajaran.findMany({
+			columns: { id: true, lingkupMateri: true, bobot: true, jenisAsesmen: true },
 			where: eq(tableTujuanPembelajaran.mataPelajaranId, mapel.id),
 			orderBy: [asc(tableTujuanPembelajaran.lingkupMateri), asc(tableTujuanPembelajaran.id)]
 		});
+		const tujuanList = allTujuanList.filter(
+			(t) => parseJenisAsesmen(t.jenisAsesmen) === 'formatif'
+		);
+		const customSumatifList = allTujuanList.filter(
+			(t) => parseJenisAsesmen(t.jenisAsesmen) === 'sumatif'
+		);
+		const customAsList = allTujuanList.filter((t) => parseJenisAsesmen(t.jenisAsesmen) === 'as');
 
 		if (!tujuanList.length) {
 			return fail(400, { fail: 'Belum ada tujuan pembelajaran untuk mata pelajaran ini.' });
@@ -533,6 +589,23 @@ export const actions = {
 		if (stsValues.length) {
 			const sum = stsValues.reduce((total, value) => total + value, 0);
 			sts = Math.round((sum / stsValues.length) * 100) / 100;
+		} else if (customSumatifList.length > 0) {
+			const customIds = customSumatifList.map((t) => t.id);
+			const customScores = await db.query.tableAsesmenSumatifTujuan.findMany({
+				columns: { tujuanPembelajaranId: true, nilai: true },
+				where: and(
+					eq(tableAsesmenSumatifTujuan.muridId, murid.id),
+					inArray(tableAsesmenSumatifTujuan.tujuanPembelajaranId, customIds)
+				)
+			});
+			const scoreById = new Map(customScores.map((s) => [s.tujuanPembelajaranId, s.nilai]));
+			sts = weightedAverageFromTujuan(
+				customSumatifList.map((t) => ({
+					lingkupMateri: t.lingkupMateri,
+					bobot: t.bobot,
+					nilai: scoreById.get(t.id) ?? null
+				}))
+			);
 		}
 
 		const sasValues = [sasTes, sasNonTes].filter((value): value is number => value != null);
@@ -540,6 +613,23 @@ export const actions = {
 		if (sasValues.length) {
 			const sum = sasValues.reduce((total, value) => total + value, 0);
 			sas = Math.round((sum / sasValues.length) * 100) / 100;
+		} else if (customAsList.length > 0) {
+			const customIds = customAsList.map((t) => t.id);
+			const customScores = await db.query.tableAsesmenSumatifTujuan.findMany({
+				columns: { tujuanPembelajaranId: true, nilai: true },
+				where: and(
+					eq(tableAsesmenSumatifTujuan.muridId, murid.id),
+					inArray(tableAsesmenSumatifTujuan.tujuanPembelajaranId, customIds)
+				)
+			});
+			const scoreById = new Map(customScores.map((s) => [s.tujuanPembelajaranId, s.nilai]));
+			sas = weightedAverageFromTujuan(
+				customAsList.map((t) => ({
+					lingkupMateri: t.lingkupMateri,
+					bobot: t.bobot,
+					nilai: scoreById.get(t.id) ?? null
+				}))
+			);
 		}
 
 		// Bobot mengikuti per-mapel (jika diatur) atau fallback ke default sekolah.
@@ -557,6 +647,9 @@ export const actions = {
 		const hasTujuanScores = Array.from(nilaiByTujuan.values()).some((value) => value != null);
 		const shouldPersistAggregate =
 			hasTujuanScores ||
+			stsTes != null ||
+			stsNonTes != null ||
+			sts != null ||
 			sasTes != null ||
 			sasNonTes != null ||
 			sas != null ||

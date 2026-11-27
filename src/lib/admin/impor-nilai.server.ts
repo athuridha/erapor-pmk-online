@@ -10,6 +10,7 @@ import {
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { readBufferToAoA, writeAoaToBuffer } from '$lib/utils/excel.js';
 import { catatAudit } from '$lib/admin/audit.server';
+import { loadKunciNilai } from '$lib/server/nilai-kunci';
 
 export type JenisImpor = 'sumatif' | 'formatif';
 
@@ -339,6 +340,9 @@ export async function simpanImporNilai(
 	const now = new Date().toISOString();
 	let tersimpan = 0;
 	let dilewati = 0;
+	const kunciMapel = hasil.mapel.length
+		? await loadKunciNilai(hasil.mapel.map((m) => m.id))
+		: new Map();
 
 	const tujuanPerMapel = new Map<number, number[]>();
 	if (jenis === 'formatif') {
@@ -365,6 +369,10 @@ export async function simpanImporNilai(
 		if (jenis === 'sumatif') {
 			for (const [mapelId, nilai] of baris.nilai) {
 				if (typeof nilai !== 'number') continue;
+				if (kunciMapel.has(mapelId)) {
+					dilewati += 1;
+					continue;
+				}
 				const sebelumnya = await db.query.tableAsesmenSumatif.findFirst({
 					columns: { id: true, nilaiAkhir: true },
 					where: and(
@@ -377,12 +385,13 @@ export async function simpanImporNilai(
 					.values({
 						muridId: baris.muridId,
 						mataPelajaranId: mapelId,
+						nilaiAkhirAsli: nilai,
 						nilaiAkhir: nilai,
 						updatedAt: now
 					})
 					.onConflictDoUpdate({
 						target: [tableAsesmenSumatif.muridId, tableAsesmenSumatif.mataPelajaranId],
-						set: { nilaiAkhir: nilai, updatedAt: now }
+						set: { nilaiAkhirAsli: nilai, nilaiAkhir: nilai, updatedAt: now }
 					});
 				tersimpan += 1;
 				if (sebelumnya && sebelumnya.nilaiAkhir !== nilai) {
@@ -408,6 +417,10 @@ export async function simpanImporNilai(
 		} else {
 			for (const [mapelId, nilai] of baris.nilai) {
 				if (typeof nilai !== 'boolean') continue;
+				if (kunciMapel.has(mapelId)) {
+					dilewati += 1;
+					continue;
+				}
 				const tujuanIds = tujuanPerMapel.get(mapelId) ?? [];
 				for (const tujuanId of tujuanIds) {
 					await db

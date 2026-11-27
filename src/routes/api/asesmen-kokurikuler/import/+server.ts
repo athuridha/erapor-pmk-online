@@ -1,13 +1,27 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import db from '$lib/server/db';
-import { tableAsesmenKokurikuler, tableKokurikuler, tableMurid } from '$lib/server/db/schema';
+import {
+	tableAsesmenKokurikuler,
+	tableKelas,
+	tableKokurikuler,
+	tableMurid
+} from '$lib/server/db/schema';
+import { canAccessKelas } from '$lib/server/kelas-akses';
 import { type NilaiKategori, sanitizeDimensionList } from '$lib/kokurikuler';
 import { profilPelajarPancasilaDimensionLabelByKey } from '$lib/statics';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
+import { isAuthorizedUser } from '../../../pengguna/permissions';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
+		if (!locals.user) {
+			return json({ success: false, message: 'Silakan login terlebih dahulu' }, { status: 401 });
+		}
+		if (!isAuthorizedUser(['input_nilai_asesmen_kokurikuler'], locals.user)) {
+			return json({ success: false, message: 'Anda tidak memiliki izin' }, { status: 403 });
+		}
+
 		const formData = await request.formData();
 		const kokurikulerIdRaw = formData.get('kokurikulerId')?.toString();
 		const kelasIdRaw = formData.get('kelasId')?.toString();
@@ -21,6 +35,20 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const kelasId = Number(kelasIdRaw);
 		if (!Number.isInteger(kokurikulerId) || !Number.isInteger(kelasId)) {
 			return json({ success: false, message: 'ID tidak valid' }, { status: 400 });
+		}
+
+		const kelas = await db.query.tableKelas.findFirst({
+			where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, locals.sekolah.id)),
+			columns: { id: true }
+		});
+		if (!kelas) {
+			return json({ success: false, message: 'Kelas tidak ditemukan' }, { status: 404 });
+		}
+		if (!(await canAccessKelas(locals.user, locals.sekolah.id, kelasId))) {
+			return json(
+				{ success: false, message: 'Anda tidak memiliki akses ke kelas ini' },
+				{ status: 403 }
+			);
 		}
 
 		const kokurikuler = await db.query.tableKokurikuler.findFirst({

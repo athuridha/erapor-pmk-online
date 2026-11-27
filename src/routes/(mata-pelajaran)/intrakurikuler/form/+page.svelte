@@ -70,8 +70,8 @@
 	const formAction = $derived(mode === 'edit' ? '?/update' : '?/add');
 	const invalidateTargets = $derived(
 		mode === 'edit'
-			? ['app:mapel', 'app:mapel_tp-rl', 'app:asesmen-formatif']
-			: ['app:mapel', 'app:asesmen-formatif']
+			? ['app:mapel', 'app:mapel_tp-rl', 'app:asesmen-sumatif']
+			: ['app:mapel', 'app:asesmen-sumatif']
 	);
 	const formInit = $derived(
 		mode === 'edit' && mapel

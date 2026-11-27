@@ -3,13 +3,18 @@ import db from '$lib/server/db';
 import {
 	tableAsesmenSumatif,
 	tableAsesmenSumatifTujuan,
+	tableKelas,
 	tableTujuanPembelajaran,
 	tableMataPelajaran,
 	tableMurid,
 	tableSekolah
 } from '$lib/server/db/schema';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, or, isNull } from 'drizzle-orm';
+import { canAccessKelas } from '$lib/server/kelas-akses';
+import { bolehAksesMapel, needsMapelFilter } from '$lib/server/mapel-access';
 import { muridAgamaKey } from '$lib/server/mapel-picker';
+import { loadKunciNilai } from '$lib/server/nilai-kunci';
+import { isAuthorizedUser } from '../../../pengguna/permissions';
 import {
 	bobotMapelEfektif,
 	hitungNilaiAkhirRts,
@@ -108,6 +113,18 @@ function deriveLingkupBobot(
 }
 
 export const POST: RequestHandler = async ({ request, locals }) => {
+	const currentUser = locals.user;
+	if (!currentUser) {
+		return new Response(JSON.stringify({ error: 'Silakan login terlebih dahulu.' }), {
+			status: 401
+		});
+	}
+	if (!isAuthorizedUser(['input_nilai_asesmen_sumatif'], currentUser)) {
+		return new Response(JSON.stringify({ error: 'Anda tidak memiliki izin mengimpor nilai.' }), {
+			status: 403
+		});
+	}
+
 	const contentType = request.headers.get('content-type') || '';
 	if (!contentType.toLowerCase().includes('multipart/form-data')) {
 		return new Response(JSON.stringify({ error: 'Content-Type harus multipart/form-data' }), {
@@ -134,6 +151,19 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!sekolahId) {
 		return new Response(JSON.stringify({ error: 'Sekolah aktif tidak ditemukan.' }), {
 			status: 401
+		});
+	}
+
+	const kelasRow = await db.query.tableKelas.findFirst({
+		columns: { id: true },
+		where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
+	});
+	if (!kelasRow) {
+		return new Response(JSON.stringify({ error: 'Kelas tidak ditemukan.' }), { status: 404 });
+	}
+	if (!(await canAccessKelas(currentUser, sekolahId, kelasId))) {
+		return new Response(JSON.stringify({ error: 'Anda tidak memiliki akses ke kelas ini.' }), {
+			status: 403
 		});
 	}
 
@@ -241,12 +271,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		});
 	}
 
-	// Load kelas mapel list (needed for agama resolution)
+	// Load kelas mapel list (needed for agama resolution & permission/lock validation)
 	const kelasMapels = await db.query.tableMataPelajaran.findMany({
 		columns: { id: true, nama: true },
 		where: and(eq(tableMataPelajaran.kelasId, kelasId)),
 		orderBy: [asc(tableMataPelajaran.nama)]
 	});
+	const kelasMapelById = new Map(kelasMapels.map((m) => [m.id, m]));
+	const kunciNilaiMap = kelasMapels.length
+		? await loadKunciNilai(kelasMapels.map((m) => m.id))
+		: new Map();
+	const filterByMapelAccess = needsMapelFilter(currentUser);
+	const aksesCache = new Map<number, boolean>();
 
 	// Find agama base and variants in kelas
 	const agamaBase =
@@ -330,6 +366,34 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				continue;
 			}
 
+			const targetMapelObj = kelasMapelById.get(targetMapelId);
+			if (!targetMapelObj) {
+				results.skipped += 1;
+				results.errors.push(
+					`Mata pelajaran (ID ${targetMapelId}) tidak ditemukan di kelas ini untuk murid ${s.name}`
+				);
+				continue;
+			}
+			if (kunciNilaiMap.has(targetMapelId)) {
+				results.skipped += 1;
+				results.errors.push(`Nilai ${targetMapelObj.nama} sudah dikunci (baris ${s.rowIndex})`);
+				continue;
+			}
+			if (filterByMapelAccess) {
+				let allowed = aksesCache.get(targetMapelId);
+				if (allowed === undefined) {
+					allowed = await bolehAksesMapel(currentUser, targetMapelObj);
+					aksesCache.set(targetMapelId, allowed);
+				}
+				if (!allowed) {
+					results.skipped += 1;
+					results.errors.push(
+						`Anda tidak memiliki akses ke mata pelajaran ${targetMapelObj.nama} (baris ${s.rowIndex})`
+					);
+					continue;
+				}
+			}
+
 			// (naLingkup will be computed later using tujuan metadata and bobot)
 
 			// STS group
@@ -378,7 +442,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			if (!tujuanList) {
 				const raw = await tx.query.tableTujuanPembelajaran.findMany({
 					columns: { id: true, lingkupMateri: true, bobot: true },
-					where: eq(tableTujuanPembelajaran.mataPelajaranId, targetMapelId),
+					where: and(
+						eq(tableTujuanPembelajaran.mataPelajaranId, targetMapelId),
+						or(
+							eq(tableTujuanPembelajaran.jenisAsesmen, 'formatif'),
+							isNull(tableTujuanPembelajaran.jenisAsesmen)
+						)
+					),
 					orderBy: [asc(tableTujuanPembelajaran.lingkupMateri), asc(tableTujuanPembelajaran.id)]
 				});
 				tujuanList = raw.map((t) => ({ id: t.id, lingkupMateri: t.lingkupMateri, bobot: t.bobot }));

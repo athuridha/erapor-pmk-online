@@ -184,24 +184,7 @@ export async function ensureSmkPratamaMulya() {
 		});
 	}
 
-	// 6. Guru Wali Kelas & Kelas X RPL 1
-	let guruWali = await db.query.tablePegawai.findFirst({
-		where: eq(tablePegawai.nama, 'Amara Thuridha, S.Kom')
-	});
-
-	if (!guruWali) {
-		const [createdGuru] = await db
-			.insert(tablePegawai)
-			.values({
-				nama: 'Amara Thuridha, S.Kom',
-				nip: '',
-				sekolahId: sekolah.id,
-				createdAt: nowIso
-			})
-			.returning();
-		guruWali = createdGuru;
-	}
-
+	// 6. Kelas awal (hanya dibuat bila sekolah sama sekali belum punya kelas)
 	const kelas = await db.query.tableKelas.findFirst({
 		where: eq(tableKelas.sekolahId, sekolah.id)
 	});
@@ -213,7 +196,6 @@ export async function ensureSmkPratamaMulya() {
 			semesterId: semesterGanjil.id,
 			nama: 'X RPL 1',
 			fase: 'Fase E',
-			waliKelasId: guruWali.id,
 			createdAt: nowIso
 		});
 	}

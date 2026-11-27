@@ -7,8 +7,9 @@ import {
 	tableEkstrakurikulerTujuan
 } from '$lib/server/db/schema';
 import { error } from '@sveltejs/kit';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
+import { canAccessKelas } from '$lib/server/kelas-akses';
 import { isAdminUser, isAuthorizedUser } from '../../../pengguna/permissions';
 
 export async function POST({ request, locals }) {
@@ -51,8 +52,20 @@ export async function POST({ request, locals }) {
 			if (ekstrakurikuler.pembinaUserId !== user.id) {
 				throw error(403, 'Ekstrakurikuler ini bukan binaan Anda');
 			}
-		} else if (ekstrakurikuler.kelasId !== kelasId && ekstrakurikuler.semuaKelas !== 1) {
-			throw error(404, 'Ekstrakurikuler tidak ditemukan');
+		} else {
+			const kelasRow = await db.query.tableKelas.findFirst({
+				columns: { id: true },
+				where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, locals.sekolah.id))
+			});
+			if (!kelasRow) {
+				throw error(404, 'Kelas tidak ditemukan');
+			}
+			if (!(await canAccessKelas(user, locals.sekolah.id, kelasId))) {
+				throw error(403, 'Anda tidak memiliki akses ke kelas ini');
+			}
+			if (ekstrakurikuler.kelasId !== kelasId && ekstrakurikuler.semuaKelas !== 1) {
+				throw error(404, 'Ekstrakurikuler tidak ditemukan');
+			}
 		}
 
 		const tujuanList = await db.query.tableEkstrakurikulerTujuan.findMany({

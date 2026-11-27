@@ -12,7 +12,7 @@
 
 	let { data } = $props();
 	let confirmDelete = $state(false);
-	const invalidateTargets = ['app:mapel', 'app:mapel_tp-rl', 'app:asesmen-formatif'];
+	const invalidateTargets = ['app:mapel', 'app:mapel_tp-rl', 'app:asesmen-sumatif'];
 	const AGAMA_MAPEL_NAME_SET = new Set<string>(agamaMapelNames);
 	// svelte-ignore state_referenced_locally
 	const isAgamaMapel = AGAMA_MAPEL_NAME_SET.has(data.mapel.nama);
@@ -58,7 +58,9 @@
 			</div>
 			<div class="flex justify-between gap-2">
 				<dt class="text-slate-500 dark:text-zinc-400">KKM</dt>
-				<dd class="font-semibold text-slate-900 tabular-nums dark:text-zinc-100">{data.mapel.kkm}</dd>
+				<dd class="font-semibold text-slate-900 tabular-nums dark:text-zinc-100">
+					{data.mapel.kkm}
+				</dd>
 			</div>
 			<div class="flex justify-between gap-2">
 				<dt class="text-slate-500 dark:text-zinc-400">Jenis</dt>
@@ -105,7 +107,9 @@
 			</span>
 		</label>
 
-		<div class="mt-5 flex items-center justify-between gap-2 border-t border-slate-200 pt-3 dark:border-zinc-800">
+		<div
+			class="mt-5 flex items-center justify-between gap-2 border-t border-slate-200 pt-3 dark:border-zinc-800"
+		>
 			<button
 				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-slate-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 				type="button"

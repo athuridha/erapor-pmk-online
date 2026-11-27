@@ -215,6 +215,44 @@ export function hitungNilaiAkhirRts(
  * Hitung ulang seluruh agregat `asesmen_sumatif` (NA F, NA S, NA AS, AKHIR,
  * nilaiAkhir efektif dengan REVISI, dan RTS) untuk satu atau beberapa mapel.
  */
+export function nilaiSumatifEfektif(
+	row: {
+		naLingkup?: number | null;
+		sts?: number | null;
+		sas?: number | null;
+		nilaiAkhir?: number | null;
+		nilaiAkhirRts?: number | null;
+		nilaiRevisi?: number | null;
+	},
+	mapel: MapelBobotConfig | null | undefined,
+	konfigurasiSekolah: KonfigurasiNilai
+): { nilaiAkhirAsli: number | null; nilaiAkhir: number | null; nilaiAkhirRts: number | null } {
+	const hasKomponen = row.naLingkup != null || row.sts != null || row.sas != null;
+	if (!hasKomponen) {
+		const nilaiAkhirAsli = row.nilaiAkhir ?? null;
+		return {
+			nilaiAkhirAsli,
+			nilaiAkhir: nilaiEfektifAkhir(nilaiAkhirAsli, row.nilaiRevisi),
+			nilaiAkhirRts: row.nilaiAkhirRts ?? null
+		};
+	}
+
+	const bobot = bobotMapelEfektif(mapel ?? {}, konfigurasiSekolah);
+	const nilaiAkhirAsli = hitungNilaiAkhirSumatif(
+		{ naLingkup: row.naLingkup ?? null, sts: row.sts ?? null, sas: row.sas ?? null },
+		bobot.bobotAkhir
+	);
+	const nilaiAkhirRts = hitungNilaiAkhirRts(
+		{ naLingkup: row.naLingkup ?? null, sts: row.sts ?? null },
+		bobot.bobotRts
+	);
+	return {
+		nilaiAkhirAsli,
+		nilaiAkhir: nilaiEfektifAkhir(nilaiAkhirAsli, row.nilaiRevisi),
+		nilaiAkhirRts
+	};
+}
+
 export async function recalcMapelSumatifScores(
 	mapelIds: number[],
 	sekolah: SekolahConfig

@@ -15,6 +15,7 @@ import { and, asc, eq, inArray } from 'drizzle-orm';
 import { readBufferToAoA } from '$lib/utils/excel.js';
 import { redirect } from '@sveltejs/kit';
 import { getKelasDiampuLainForMapel, syncTujuanPembelajaran } from '$lib/server/mapel-tp';
+import { recalcMapelSumatifScores } from '$lib/server/nilai-sumatif';
 import { authority } from '../../../../pengguna/utils.server';
 
 const MAX_IMPORT_FILE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -591,6 +592,10 @@ export const actions = {
 			}
 		});
 
+		if ((toUpdate.length > 0 || toDeleteIds.length > 0) && locals.sekolah) {
+			await recalcMapelSumatifScores([mataPelajaranId], locals.sekolah);
+		}
+
 		return { message: `Tujuan pembelajaran berhasil diperbarui` };
 	},
 
@@ -763,7 +768,16 @@ export const actions = {
 			return fail(400, { fail: `Data tujuan pembelajaran tidak ditemukan.` });
 		}
 
+		const targets = await db.query.tableTujuanPembelajaran.findMany({
+			columns: { mataPelajaranId: true },
+			where: inArray(tableTujuanPembelajaran.id, ids)
+		});
+		const affectedMapelIds = [...new Set(targets.map((t) => t.mataPelajaranId))];
+
 		await db.delete(tableTujuanPembelajaran).where(inArray(tableTujuanPembelajaran.id, ids));
+		if (affectedMapelIds.length > 0 && locals.sekolah) {
+			await recalcMapelSumatifScores(affectedMapelIds, locals.sekolah);
+		}
 		return { message: `Lingkup materi dan tujuan pembelajaran telah dihapus.` };
 	},
 
@@ -854,6 +868,10 @@ export const actions = {
 				}
 			}
 		});
+
+		if (updateCount > 0 && locals.sekolah) {
+			await recalcMapelSumatifScores([mataPelajaranId], locals.sekolah);
+		}
 
 		return {
 			message: updateCount > 0 ? 'Bobot berhasil disimpan.' : 'Tidak ada perubahan pada bobot.'

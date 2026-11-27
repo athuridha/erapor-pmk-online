@@ -1,23 +1,10 @@
-import { json, redirect } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
+import { assertCanPreviewMuridPdf } from '$lib/server/route-utils';
 import { getRaporPreviewPayload } from '../rapor/preview-data';
-import { getKelasContextForUser } from '$lib/server/route-utils';
 import type { RequestHandler } from './$types';
-import { isAdminUser } from '../../pengguna/permissions';
 
 export const GET = (async ({ locals, url }) => {
-	if (!locals.user) {
-		throw redirect(303, '/login');
-	}
-
-	if (!isAdminUser(locals.user)) {
-		const muridIdParam = url.searchParams.get('murid_id');
-		if (muridIdParam) {
-			const { hasAccess } = await getKelasContextForUser(locals, url, muridIdParam);
-			if (!hasAccess) {
-				throw redirect(303, '/forbidden?required=kelas_id');
-			}
-		}
-	}
+	await assertCanPreviewMuridPdf(locals, url);
 
 	const payload = await getRaporPreviewPayload({ locals, url });
 	return json(payload);

@@ -1,8 +1,10 @@
 import db from '$lib/server/db';
 import { tableKokurikuler, tableMurid, tableKelas } from '$lib/server/db/schema';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
+import { canAccessKelas } from '$lib/server/kelas-akses';
 import { sanitizeDimensionList } from '$lib/kokurikuler';
 import { profilPelajarPancasilaDimensionLabelByKey } from '$lib/statics';
+import { isAuthorizedUser } from '../../../pengguna/permissions';
 import ExcelJS from 'exceljs';
 
 function jsonError(message: string, status: number) {
@@ -14,6 +16,13 @@ function jsonError(message: string, status: number) {
 
 export async function POST({ request, locals }) {
 	try {
+		if (!locals.user) {
+			return jsonError('Silakan login terlebih dahulu', 401);
+		}
+		if (!isAuthorizedUser(['input_nilai_asesmen_kokurikuler'], locals.user)) {
+			return jsonError('Anda tidak memiliki izin mengunduh template ini', 403);
+		}
+
 		const formData = await request.formData();
 		const kokurikulerIdRaw = formData.get('kokurikulerId')?.toString();
 		const kelasIdRaw = formData.get('kelasId')?.toString();
@@ -26,6 +35,17 @@ export async function POST({ request, locals }) {
 		const kelasId = Number(kelasIdRaw);
 		if (!Number.isInteger(kokurikulerId) || !Number.isInteger(kelasId)) {
 			return jsonError('ID tidak valid', 400);
+		}
+
+		const kelas = await db.query.tableKelas.findFirst({
+			where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, locals.sekolah.id)),
+			columns: { id: true, nama: true }
+		});
+		if (!kelas) {
+			return jsonError('Kelas tidak ditemukan', 404);
+		}
+		if (!(await canAccessKelas(locals.user, locals.sekolah.id, kelasId))) {
+			return jsonError('Anda tidak memiliki akses ke kelas ini', 403);
 		}
 
 		const kokurikuler = await db.query.tableKokurikuler.findFirst({
@@ -45,11 +65,6 @@ export async function POST({ request, locals }) {
 			columns: { id: true, nama: true },
 			where: eq(tableMurid.kelasId, kelasId),
 			orderBy: asc(tableMurid.nama)
-		});
-
-		const kelas = await db.query.tableKelas.findFirst({
-			where: eq(tableKelas.id, kelasId),
-			columns: { nama: true }
 		});
 
 		const workbook = new ExcelJS.Workbook();

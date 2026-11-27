@@ -4,8 +4,15 @@ import { resolveSekolahAcademicContext } from '$lib/server/db/academic';
 import { writeAoaToBuffer } from '$lib/utils/excel.js';
 import { and, asc, eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
+import { isAuthorizedUser } from '../../../pengguna/permissions';
 
 export async function GET({ locals }) {
+	if (!locals.user) {
+		throw error(401, 'Silakan login terlebih dahulu.');
+	}
+	if (!isAuthorizedUser(['informasi_umum_murid'], locals.user)) {
+		throw error(403, 'Anda tidak memiliki izin mengunduh data murid.');
+	}
 	const sekolahId = locals.sekolah?.id;
 	if (!sekolahId) {
 		throw error(401, 'Sekolah tidak ditemukan');

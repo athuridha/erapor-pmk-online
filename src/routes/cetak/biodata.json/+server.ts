@@ -1,10 +1,10 @@
-import { json, redirect } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
+import { assertCanPreviewMuridPdf } from '$lib/server/route-utils';
 import { getBiodataPreviewPayload } from '../biodata/preview-data';
 import type { RequestHandler } from './$types';
 
 export const GET = (async ({ locals, url }) => {
-	// Permission 'cetak_biodata' removed — require authenticated user only
-	if (!locals.user) throw redirect(303, '/login');
+	await assertCanPreviewMuridPdf(locals, url);
 
 	const payload = await getBiodataPreviewPayload({ locals, url });
 	return json(payload);

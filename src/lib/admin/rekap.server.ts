@@ -12,8 +12,8 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { queryInChunks } from '$lib/server/db/chunk';
 import { relevanMapelUntukMurid } from '$lib/server/mapel-picker';
 import {
-	hitungNilaiAkhirSumatif,
 	loadKonfigurasiNilai,
+	nilaiSumatifEfektif,
 	type KonfigurasiNilai
 } from '$lib/server/nilai-sumatif';
 import { determinePredikat } from '$lib/rapor-modes';
@@ -363,7 +363,10 @@ export async function buildRekapKeseluruhan(
 				nama: true,
 				urutan: true,
 				kkm: true,
-				pengampuId: true
+				pengampuId: true,
+				bobotFormatif: true,
+				bobotSumatif: true,
+				bobotAs: true
 			},
 			where: inArray(tableMataPelajaran.kelasId, ids)
 		})
@@ -476,7 +479,8 @@ export async function buildRekapKeseluruhan(
 								naLingkup: true,
 								sts: true,
 								sas: true,
-								nilaiAkhir: true
+								nilaiAkhir: true,
+								nilaiRevisi: true
 							},
 							where: inArray(tableAsesmenSumatif.muridId, ids)
 						})
@@ -485,6 +489,7 @@ export async function buildRekapKeseluruhan(
 			: [];
 
 	const namaMapelId = new Map(semuaMapel.map((row) => [row.id, row.nama ?? '']));
+	const mapelById = new Map(semuaMapel.map((row) => [row.id, row]));
 	const pengampuMapelId = new Map(semuaMapel.map((row) => [row.id, row.pengampuId ?? null]));
 	const kelasMapelId = new Map(semuaMapel.map((row) => [row.id, row.kelasId]));
 	const akumulator = new Map<string, Akumulator>();
@@ -498,12 +503,11 @@ export async function buildRekapKeseluruhan(
 		if (!semesterId) continue;
 		const namaMapel = namaMapelId.get(row.mataPelajaranId) ?? '';
 		if (adaFilter && !filterNamaMapel.has(namaMapel)) continue;
-		const nilai =
-			row.nilaiAkhir ??
-			hitungNilaiAkhirSumatif(
-				{ naLingkup: row.naLingkup, sts: row.sts, sas: row.sas },
-				konfigurasi.bobotAkhir
-			);
+		const nilai = nilaiSumatifEfektif(
+			row,
+			mapelById.get(row.mataPelajaranId),
+			konfigurasi
+		).nilaiAkhir;
 		if (nilai == null) continue;
 		const mapKey = `${key}|${semesterId}`;
 		const current = akumulator.get(mapKey) ?? { sum: 0, count: 0, sumKkm: 0 };

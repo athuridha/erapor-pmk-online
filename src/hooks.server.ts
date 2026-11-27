@@ -234,7 +234,12 @@ const authGuard: Handle = async ({ event, resolve }) => {
 			const kelasIdNumber = Number(kelasIdParam);
 			if (Number.isInteger(kelasIdNumber)) {
 				const u = event.locals.user as { type?: string; kelasId?: number; permissions?: string[] };
-				if (u.type === 'wali_kelas' && Number.isInteger(Number(u.kelasId))) {
+				const activeModulCookie = event.cookies.get(cookieNames.ACTIVE_MODUL);
+				if (
+					u.type === 'wali_kelas' &&
+					activeModulCookie !== 'guru' &&
+					Number.isInteger(Number(u.kelasId))
+				) {
 					const allowed = Number(u.kelasId);
 					if (kelasIdNumber !== allowed) {
 						const hasAccessOther = Array.isArray(u.permissions)

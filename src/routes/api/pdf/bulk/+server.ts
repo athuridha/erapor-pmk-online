@@ -1,5 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { generateBulkPDF, type DocumentType } from '$lib/server/pdf/generate';
+import { assertCanPreviewMuridPdf } from '$lib/server/route-utils';
+import { isAuthorizedUser } from '../../../pengguna/permissions';
 import { getRaporPreviewPayload } from '../../../cetak/rapor/preview-data';
 import { getCoverPreviewPayload } from '../../../cetak/cover/preview-data';
 import { getBiodataPreviewPayload } from '../../../cetak/biodata/preview-data';
@@ -36,6 +38,8 @@ async function fetchStudentData(
 	if (body.bgLogo) url.searchParams.set('bg_logo', '1');
 	if (body.raporPeriode) url.searchParams.set('rapor_periode', body.raporPeriode);
 
+	await assertCanPreviewMuridPdf(locals, url);
+
 	switch (body.docType) {
 		case 'rapor': {
 			const p = await getRaporPreviewPayload({ locals, url });
@@ -59,6 +63,13 @@ async function fetchStudentData(
 }
 
 export const POST = (async ({ locals, request }) => {
+	if (!locals.user) {
+		throw error(401, 'Silakan login terlebih dahulu.');
+	}
+	if (!isAuthorizedUser(['cetak_dokumen'], locals.user)) {
+		throw error(403, 'Anda tidak memiliki izin mencetak dokumen.');
+	}
+
 	const body: BulkRequest = await request.json();
 
 	if (!body.docType || !body.muridIds?.length) {

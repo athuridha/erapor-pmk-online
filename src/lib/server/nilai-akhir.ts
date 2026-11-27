@@ -1,6 +1,7 @@
 import db from '$lib/server/db';
 import { ensureAsesmenSumatifSchema } from '$lib/server/db/ensure-asesmen-sumatif';
 import { tableAsesmenSumatif, tableMataPelajaran, tableMurid } from '$lib/server/db/schema';
+import { loadKonfigurasiNilai, nilaiSumatifEfektif } from '$lib/server/nilai-sumatif';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 
 function formatScore(value: number | null | undefined) {
@@ -159,12 +160,20 @@ export async function computeNilaiAkhirRekap({
 	});
 
 	const rawMapelRecords = await db.query.tableMataPelajaran.findMany({
-		columns: { id: true, nama: true },
+		columns: {
+			id: true,
+			nama: true,
+			bobotFormatif: true,
+			bobotSumatif: true,
+			bobotAs: true
+		},
 		where: and(
 			eq(tableMataPelajaran.kelasId, kelasId),
 			eq(tableMataPelajaran.kategori, 'intrakurikuler')
 		)
 	});
+	const mapelById = new Map(rawMapelRecords.map((m) => [m.id, m]));
+	const konfigurasiSekolah = await loadKonfigurasiNilai(sekolahId);
 
 	await ensureAsesmenSumatifSchema();
 
@@ -177,7 +186,11 @@ export async function computeNilaiAkhirRekap({
 					columns: {
 						muridId: true,
 						mataPelajaranId: true,
-						nilaiAkhir: true
+						naLingkup: true,
+						sts: true,
+						sas: true,
+						nilaiAkhir: true,
+						nilaiRevisi: true
 					},
 					where: and(
 						inArray(tableAsesmenSumatif.muridId, muridIds),
@@ -193,7 +206,12 @@ export async function computeNilaiAkhirRekap({
 			map = new Map();
 			sumatifByMurid.set(record.muridId, map);
 		}
-		map.set(record.mataPelajaranId, record.nilaiAkhir);
+		const efektif = nilaiSumatifEfektif(
+			record,
+			mapelById.get(record.mataPelajaranId),
+			konfigurasiSekolah
+		).nilaiAkhir;
+		map.set(record.mataPelajaranId, efektif);
 	}
 
 	const rows = muridRecords.map((murid) => {

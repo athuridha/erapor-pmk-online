@@ -2,6 +2,7 @@ import db from '$lib/server/db';
 import { ensureAsesmenSumatifSchema } from '$lib/server/db/ensure-asesmen-sumatif';
 import { tableAsesmenSumatif, tableMataPelajaran, tableMurid } from '$lib/server/db/schema';
 import { relevanMapelUntukMurid } from '$lib/server/mapel-picker';
+import { loadKonfigurasiNilai, nilaiSumatifEfektif } from '$lib/server/nilai-sumatif';
 import { error } from '@sveltejs/kit';
 import { and, eq, inArray } from 'drizzle-orm';
 
@@ -88,7 +89,14 @@ export async function load({ parent, url, locals, depends }) {
 	}
 
 	const rawMapelRecords = await db.query.tableMataPelajaran.findMany({
-		columns: { id: true, nama: true, urutan: true },
+		columns: {
+			id: true,
+			nama: true,
+			urutan: true,
+			bobotFormatif: true,
+			bobotSumatif: true,
+			bobotAs: true
+		},
 		where: and(
 			eq(tableMataPelajaran.kelasId, kelasAktif.id),
 			eq(tableMataPelajaran.kategori, 'intrakurikuler')
@@ -98,6 +106,8 @@ export async function load({ parent, url, locals, depends }) {
 	// Guru mapel can see all subjects on this page (read-only view)
 
 	const mapelRecords = relevanMapelUntukMurid(rawMapelRecords, murid.agama);
+	const mapelById = new Map(rawMapelRecords.map((m) => [m.id, m]));
+	const konfigurasiSekolah = await loadKonfigurasiNilai(sekolahId);
 
 	const mapelIds = mapelRecords.map((mapel) => mapel.id);
 
@@ -107,7 +117,11 @@ export async function load({ parent, url, locals, depends }) {
 		? await db.query.tableAsesmenSumatif.findMany({
 				columns: {
 					mataPelajaranId: true,
-					nilaiAkhir: true
+					naLingkup: true,
+					sts: true,
+					sas: true,
+					nilaiAkhir: true,
+					nilaiRevisi: true
 				},
 				where: and(
 					eq(tableAsesmenSumatif.muridId, murid.id),
@@ -118,7 +132,12 @@ export async function load({ parent, url, locals, depends }) {
 
 	const nilaiByMapel = new Map<number, { nilaiAkhir: number | null }>();
 	for (const record of sumatifRecords) {
-		nilaiByMapel.set(record.mataPelajaranId, { nilaiAkhir: record.nilaiAkhir });
+		const efektif = nilaiSumatifEfektif(
+			record,
+			mapelById.get(record.mataPelajaranId),
+			konfigurasiSekolah
+		).nilaiAkhir;
+		nilaiByMapel.set(record.mataPelajaranId, { nilaiAkhir: efektif });
 	}
 
 	const daftarNilai: NilaiDetail[] = mapelRecords.map((mapel, index) => {

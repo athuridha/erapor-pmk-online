@@ -168,19 +168,27 @@
 				} else {
 					for (let i = 0; i < subjectCols.length; i++) rataRow.push('');
 				}
-				// for kok columns, leave rata cells empty (kok are categorical)
+				// for kok and ekstrak columns, leave rata cells empty (categorical)
 				for (let i = 0; i < kokRows.length; i++) rataRow.push('');
+				for (let i = 0; i < ekstrakRows.length; i++) rataRow.push('');
 				rataRow.push('');
 				rataRow.push('');
 				rataRow.push('');
 				rows.push(rataRow);
 			} else {
 				// fallback to 30 empty student rows
+				const trailingEmptyCount = kokRows.length + ekstrakRows.length;
 				for (let i = 1; i <= 30; i++) {
-					const r = [i, ...Array(subjectCols.length).fill(''), '', '', ''];
+					const r = [i, ...Array(subjectCols.length + trailingEmptyCount).fill(''), '', '', ''];
 					rows.push(r);
 				}
-				const rata = ['RATA-RATA', ...Array(subjectCols.length).fill(''), '', '', ''];
+				const rata = [
+					'RATA-RATA',
+					...Array(subjectCols.length + trailingEmptyCount).fill(''),
+					'',
+					'',
+					''
+				];
 				rows.push(rata);
 			}
 

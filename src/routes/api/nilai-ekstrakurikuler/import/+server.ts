@@ -4,11 +4,13 @@ import {
 	tableAsesmenEkstrakurikuler,
 	tableEkstrakurikuler,
 	tableEkstrakurikulerTujuan,
+	tableKelas,
 	tableMurid,
 	tableMuridEkstrakurikuler
 } from '$lib/server/db/schema';
+import { canAccessKelas } from '$lib/server/kelas-akses';
 import { type EkstrakurikulerNilaiKategori } from '$lib/ekstrakurikuler';
-import { eq, asc } from 'drizzle-orm';
+import { and, eq, asc } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
 import { isAdminUser, isAuthorizedUser } from '../../../pengguna/permissions';
 
@@ -58,8 +60,26 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					{ status: 403 }
 				);
 			}
-		} else if (ekstrakurikuler.kelasId !== kelasId && ekstrakurikuler.semuaKelas !== 1) {
-			return json({ success: false, message: 'Ekstrakurikuler tidak ditemukan' }, { status: 404 });
+		} else {
+			const kelasRow = await db.query.tableKelas.findFirst({
+				columns: { id: true },
+				where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, locals.sekolah.id))
+			});
+			if (!kelasRow) {
+				return json({ success: false, message: 'Kelas tidak ditemukan' }, { status: 404 });
+			}
+			if (!(await canAccessKelas(user, locals.sekolah.id, kelasId))) {
+				return json(
+					{ success: false, message: 'Anda tidak memiliki akses ke kelas ini' },
+					{ status: 403 }
+				);
+			}
+			if (ekstrakurikuler.kelasId !== kelasId && ekstrakurikuler.semuaKelas !== 1) {
+				return json(
+					{ success: false, message: 'Ekstrakurikuler tidak ditemukan' },
+					{ status: 404 }
+				);
+			}
 		}
 
 		const tujuanList = await db.query.tableEkstrakurikulerTujuan.findMany({

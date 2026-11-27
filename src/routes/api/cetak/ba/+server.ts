@@ -1,8 +1,10 @@
 import { json } from '@sveltejs/kit';
 import ExcelJS from 'exceljs';
-import { eq, asc } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import db from '$lib/server/db';
 import { tableMurid, tableKelas, tableSemester, tablePegawai } from '$lib/server/db/schema';
+import { canAccessKelas } from '$lib/server/kelas-akses';
+import { isAuthorizedUser } from '../../../pengguna/permissions';
 
 const { Workbook } = ExcelJS;
 
@@ -21,6 +23,12 @@ function formatTanggal(dateStr: string | null | undefined): string {
 }
 
 export async function POST({ request, locals }) {
+	if (!locals.user) {
+		return json({ error: 'Silakan login terlebih dahulu.' }, { status: 401 });
+	}
+	if (!isAuthorizedUser(['cetak_dokumen'], locals.user)) {
+		return json({ error: 'Anda tidak memiliki izin mencetak dokumen.' }, { status: 403 });
+	}
 	const sekolah = locals.sekolah ?? null;
 	if (!sekolah) return json({ error: 'Sekolah tidak ditemukan.' }, { status: 401 });
 
@@ -41,11 +49,15 @@ export async function POST({ request, locals }) {
 	try {
 		// Fetch kelas data
 		const kelas = await db.query.tableKelas.findFirst({
-			where: eq(tableKelas.id, kelasId)
+			where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolah.id))
 		});
 
 		if (!kelas) {
 			return json({ error: 'Kelas tidak ditemukan.' }, { status: 404 });
+		}
+
+		if (!(await canAccessKelas(locals.user, sekolah.id, kelasId))) {
+			return json({ error: 'Anda tidak memiliki akses ke kelas ini.' }, { status: 403 });
 		}
 
 		// Fetch semester data for tanggalBagiRaport

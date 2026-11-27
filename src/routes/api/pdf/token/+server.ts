@@ -1,5 +1,6 @@
-import { json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import { storePdfParams } from '$lib/server/pdf/token-store';
+import { assertCanPreviewMuridPdf } from '$lib/server/route-utils';
 import { getCoverPreviewPayload } from '../../../cetak/cover/preview-data';
 import { getRaporPreviewPayload } from '../../../cetak/rapor/preview-data';
 import { getBiodataPreviewPayload } from '../../../cetak/biodata/preview-data';
@@ -51,6 +52,10 @@ async function resolveNama(docType: string, locals: App.Locals, url: URL): Promi
 }
 
 export const POST = (async ({ locals, request }) => {
+	if (!locals.user) {
+		throw error(401, 'Silakan login terlebih dahulu.');
+	}
+
 	const body = await request.json();
 	const { docType, muridId, kelasId, tpMode, kriteria, template, bgLogo, raporPeriode } = body;
 
@@ -65,6 +70,8 @@ export const POST = (async ({ locals, request }) => {
 	if (template) url.searchParams.set('template', template);
 	if (bgLogo) url.searchParams.set('bg_logo', '1');
 	if (raporPeriode) url.searchParams.set('rapor_periode', raporPeriode);
+
+	await assertCanPreviewMuridPdf(locals, url);
 
 	const docLabel = body.docLabel || docType;
 	const nama = await resolveNama(docType, locals, url);

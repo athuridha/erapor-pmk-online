@@ -502,7 +502,7 @@
 										if (result.type === 'success') {
 											await Promise.all([
 												invalidate('app:mapel'),
-												invalidate('app:asesmen-formatif')
+												invalidate('app:asesmen-sumatif')
 											]);
 											const data = result.data as { success?: string } | undefined;
 											toast({
@@ -541,7 +541,7 @@
 										if (result.type === 'success') {
 											await Promise.all([
 												invalidate('app:mapel'),
-												invalidate('app:asesmen-formatif')
+												invalidate('app:asesmen-sumatif')
 											]);
 											const data = result.data as { success?: string } | undefined;
 											toast({
@@ -580,7 +580,7 @@
 										if (result.type === 'success') {
 											await Promise.all([
 												invalidate('app:mapel'),
-												invalidate('app:asesmen-formatif'),
+												invalidate('app:asesmen-sumatif'),
 												invalidate('app:asesmen-sumatif')
 											]);
 											const data = result.data as { success?: string } | undefined;

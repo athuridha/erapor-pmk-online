@@ -81,8 +81,6 @@ export async function load({ locals, url, depends, parent }) {
 	let mataPelajaranList: Array<{ id: number; nama: string; kode: string | null }> = [];
 	let mapelIds: number[] = [];
 
-	let hasAnyMapel = false;
-
 	if (isAdminUser(user) || userType === 'wali_kelas') {
 		const dayNames = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
 		const dateObj = tanggal ? new Date(tanggal + 'T00:00:00') : new Date();
@@ -98,8 +96,6 @@ export async function load({ locals, url, depends, parent }) {
 			.from(tableMataPelajaran)
 			.where(inArray(tableMataPelajaran.kelasId, effectiveKelasIds))
 			.orderBy(asc(tableMataPelajaran.nama));
-
-		hasAnyMapel = allMapelForClass.length > 0;
 
 		const jadwalEntries = await db.query.tableJadwalPelajaran.findMany({
 			columns: { kodeKegiatan: true },
@@ -173,8 +169,6 @@ export async function load({ locals, url, depends, parent }) {
 						.where(inArray(tableMataPelajaran.id, userMpIds))
 						.orderBy(asc(tableMataPelajaran.nama))
 				: [];
-
-		hasAnyMapel = userMapels.length > 0;
 
 		if (userMapels.length > 0) {
 			const dayNames = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
@@ -266,7 +260,7 @@ export async function load({ locals, url, depends, parent }) {
 
 	// Daftar mapel final (hasil jadwal atau fallback) menentukan apakah form bisa
 	// dibuka; guru yang tidak mengampu mapel di kelas aktif tetap melihat pesan.
-	hasAnyMapel = mataPelajaranList.length > 0;
+	const hasAnyMapel = mataPelajaranList.length > 0;
 
 	// Get mapelId from URL param or default to first
 	const mapelIdParam = url.searchParams.get('mapel_id');

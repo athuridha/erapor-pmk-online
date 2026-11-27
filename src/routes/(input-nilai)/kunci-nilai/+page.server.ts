@@ -1,5 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import db from '$lib/server/db';
 import { tableKelas, tableMataPelajaran } from '$lib/server/db/schema';
 import { authority } from '../../pengguna/utils.server';
@@ -137,7 +137,7 @@ export const actions = {
 		const kelasId = Number(formData.get('kelasId') ?? 0);
 		const kelas = await db.query.tableKelas.findFirst({
 			columns: { id: true },
-			where: eq(tableKelas.id, kelasId)
+			where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
 		});
 		if (!kelas) return fail(404, { fail: 'Kelas tidak ditemukan.' });
 
@@ -165,7 +165,7 @@ export const actions = {
 		const kelasId = Number(formData.get('kelasId') ?? 0);
 		const kelas = await db.query.tableKelas.findFirst({
 			columns: { id: true },
-			where: eq(tableKelas.id, kelasId)
+			where: and(eq(tableKelas.id, kelasId), eq(tableKelas.sekolahId, sekolahId))
 		});
 		if (!kelas) return fail(404, { fail: 'Kelas tidak ditemukan.' });
 

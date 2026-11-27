@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { error } from '@sveltejs/kit';
 import { uploadsDir } from '$lib/server/data-dirs';
 import {
 	bgCertificateDataUri,

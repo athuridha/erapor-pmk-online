@@ -165,13 +165,15 @@
 		<div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 			<LegerDownload kelasId={kelasAktif?.id ?? null} />
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-				<a
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 max-sm:w-full dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-					href="/nilai-akhir/impor-nilai"
-				>
-					<Icon name="import" class="h-4 w-4" />
-					Impor Nilai
-				</a>
+				{#if isAdmin}
+					<a
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 max-sm:w-full dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+						href="/nilai-akhir/impor-nilai"
+					>
+						<Icon name="import" class="h-4 w-4" />
+						Impor Nilai
+					</a>
+				{/if}
 				<a
 					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[#7e8b9b] bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 max-sm:w-full dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 					href="/nilai-akhir/rekap-keseluruhan"

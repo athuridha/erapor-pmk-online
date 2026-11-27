@@ -18,9 +18,11 @@ import {
 } from '$lib/server/db/schema';
 import { isKeluargaAgama, isKeluargaPks, namaVarianUntukMurid } from '$lib/server/mapel-picker';
 import {
-	hitungNilaiAkhirSumatif,
 	loadKonfigurasiNilai,
-	type BobotSumatif
+	nilaiSumatifEfektif,
+	type BobotSumatif,
+	type KonfigurasiNilai,
+	type MapelBobotConfig
 } from '$lib/server/nilai-sumatif';
 import { agamaParentName, pksParentName } from '$lib/statics';
 import { and, asc, eq, inArray } from 'drizzle-orm';
@@ -56,6 +58,7 @@ export type SumatifLeggerRow = {
 	sts: number | null;
 	sas: number | null;
 	nilaiAkhir: number | null;
+	nilaiRevisi: number | null;
 };
 
 export type NilaiDetail = {
@@ -308,7 +311,8 @@ export async function muatSumatifKelas(
 						naLingkup: true,
 						sts: true,
 						sas: true,
-						nilaiAkhir: true
+						nilaiAkhir: true,
+						nilaiRevisi: true
 					},
 					where: and(
 						inArray(tableAsesmenSumatif.muridId, muridPart),
@@ -323,13 +327,25 @@ export async function muatSumatifKelas(
 
 export function buildNilaiMap(
 	rows: SumatifLeggerRow[],
-	bobot: BobotSumatif
+	bobot: BobotSumatif | KonfigurasiNilai,
+	mapelById?: Map<number, MapelBobotConfig>
 ): Map<string, NilaiDetail> {
+	const konfigurasi: KonfigurasiNilai =
+		'bobotAkhir' in bobot
+			? bobot
+			: {
+					bobotAkhir: bobot,
+					bobotRts: { lingkup: 70, sts: 30 },
+					kriteriaCukup: 85,
+					kriteriaBaik: 95
+				};
 	const map = new Map<string, NilaiDetail>();
 	for (const row of rows) {
-		const nilaiAkhir =
-			row.nilaiAkhir ??
-			hitungNilaiAkhirSumatif({ naLingkup: row.naLingkup, sts: row.sts, sas: row.sas }, bobot);
+		const nilaiAkhir = nilaiSumatifEfektif(
+			row,
+			mapelById?.get(row.mataPelajaranId),
+			konfigurasi
+		).nilaiAkhir;
 		map.set(`${row.muridId}|${row.mataPelajaranId}`, {
 			nilaiAkhir: nilaiAkhir != null ? round2(nilaiAkhir) : null,
 			naLingkup: row.naLingkup != null ? round2(row.naLingkup) : null,
@@ -440,7 +456,15 @@ export async function buildLeggerMurid(params: {
 	bobot: BobotSumatif;
 }> {
 	const { sekolahId, kelasId, muridId, waktuParam } = params;
-	const bobot = params.bobot ?? (await loadKonfigurasiNilai(sekolahId)).bobotAkhir;
+	const konfigurasi: KonfigurasiNilai = params.bobot
+		? {
+				bobotAkhir: params.bobot,
+				bobotRts: { lingkup: 70, sts: 30 },
+				kriteriaCukup: 85,
+				kriteriaBaik: 95
+			}
+		: await loadKonfigurasiNilai(sekolahId);
+	const bobot = konfigurasi.bobotAkhir;
 
 	const muridKelasRows = await db.query.tableMurid.findMany({
 		columns: {
@@ -513,7 +537,10 @@ export async function buildLeggerMurid(params: {
 						kkm: true,
 						jenis: true,
 						kategori: true,
-						urutan: true
+						urutan: true,
+						bobotFormatif: true,
+						bobotSumatif: true,
+						bobotAs: true
 					},
 					where: inArray(tableMataPelajaran.kelasId, historyKelasIds)
 				})
@@ -558,7 +585,8 @@ export async function buildLeggerMurid(params: {
 		historyMuridIds.length && allIntraMapelIds.length
 			? await muatSumatifKelas(historyMuridIds, allIntraMapelIds)
 			: [];
-	const nilaiMap = buildNilaiMap(sumatifRows, bobot);
+	const mapelById = new Map(mapelRows.map((m) => [m.id, m]));
+	const nilaiMap = buildNilaiMap(sumatifRows, konfigurasi, mapelById);
 
 	// Order student records chronologically from Kelas X to Kelas XII.
 	const orderedHistory = historyRows
@@ -870,7 +898,14 @@ export async function buildLeggerKelas(params: {
 	bobot?: BobotSumatif;
 }) {
 	const { sekolahId, kelasId } = params;
-	const bobot = params.bobot ?? (await loadKonfigurasiNilai(sekolahId)).bobotAkhir;
+	const konfigurasi: KonfigurasiNilai = params.bobot
+		? {
+				bobotAkhir: params.bobot,
+				bobotRts: { lingkup: 70, sts: 30 },
+				kriteriaCukup: 85,
+				kriteriaBaik: 95
+			}
+		: await loadKonfigurasiNilai(sekolahId);
 
 	const [muridRows, mapelRows] = await Promise.all([
 		db.query.tableMurid.findMany({
@@ -898,7 +933,10 @@ export async function buildLeggerKelas(params: {
 				kkm: true,
 				jenis: true,
 				kategori: true,
-				urutan: true
+				urutan: true,
+				bobotFormatif: true,
+				bobotSumatif: true,
+				bobotAs: true
 			},
 			where: eq(tableMataPelajaran.kelasId, kelasId)
 		})
@@ -908,7 +946,8 @@ export async function buildLeggerKelas(params: {
 	const mapelIds = mapelRows.filter((r) => r.kategori !== 'kokurikuler').map((m) => m.id);
 	const sumatifRows =
 		muridIds.length && mapelIds.length ? await muatSumatifKelas(muridIds, mapelIds) : [];
-	const nilaiMap = buildNilaiMap(sumatifRows, bobot);
+	const mapelById = new Map(mapelRows.map((m) => [m.id, m]));
+	const nilaiMap = buildNilaiMap(sumatifRows, konfigurasi, mapelById);
 	const kolom = kolomMapelKelas(mapelRows);
 	const baris = buildBarisLeggerKelas(muridRows, kolom, mapelRows, nilaiMap);
 	const rekap = hitungKelengkapan(baris, kolom);

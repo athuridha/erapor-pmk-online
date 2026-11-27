@@ -1,5 +1,6 @@
 import db from '$lib/server/db';
 import { ensureAsesmenSumatifSchema } from '$lib/server/db/ensure-asesmen-sumatif';
+import { loadKonfigurasiNilai, nilaiSumatifEfektif } from '$lib/server/nilai-sumatif';
 import {
 	tableAsesmenSumatif,
 	tableMataPelajaran,
@@ -105,12 +106,21 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 	const muridIds = muridRecords.map((murid) => murid.id);
 
 	const rawMapelRecords = await db.query.tableMataPelajaran.findMany({
-		columns: { id: true, nama: true, urutan: true },
+		columns: {
+			id: true,
+			nama: true,
+			urutan: true,
+			bobotFormatif: true,
+			bobotSumatif: true,
+			bobotAs: true
+		},
 		where: and(
 			eq(tableMataPelajaran.kelasId, kelasAktif.id),
 			eq(tableMataPelajaran.kategori, 'intrakurikuler')
 		)
 	});
+	const mapelById = new Map(rawMapelRecords.map((m) => [m.id, m]));
+	const konfigurasiSekolah = await loadKonfigurasiNilai(sekolahId);
 
 	// Guru mapel can see all subjects on this page (read-only view)
 
@@ -124,7 +134,11 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 					columns: {
 						muridId: true,
 						mataPelajaranId: true,
-						nilaiAkhir: true
+						naLingkup: true,
+						sts: true,
+						sas: true,
+						nilaiAkhir: true,
+						nilaiRevisi: true
 					},
 					where: and(
 						inArray(tableAsesmenSumatif.muridId, muridIds),
@@ -140,7 +154,12 @@ export const load: PageServerLoad = async ({ parent, locals, url, depends }) => 
 			map = new Map();
 			sumatifByMurid.set(record.muridId, map);
 		}
-		map.set(record.mataPelajaranId, record.nilaiAkhir);
+		const efektif = nilaiSumatifEfektif(
+			record,
+			mapelById.get(record.mataPelajaranId),
+			konfigurasiSekolah
+		).nilaiAkhir;
+		map.set(record.mataPelajaranId, efektif);
 	}
 
 	const rows = muridRecords.map((murid) => {

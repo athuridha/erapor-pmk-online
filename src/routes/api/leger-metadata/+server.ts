@@ -10,7 +10,11 @@ import {
 	tableEkstrakurikuler,
 	tableAsesmenEkstrakurikuler
 } from '$lib/server/db/schema';
+import { canAccessKelas } from '$lib/server/kelas-akses';
+import { isKeluargaAgama, isKeluargaPks } from '$lib/server/mapel-picker';
+import { konfigurasiNilaiDariSekolah, nilaiSumatifEfektif } from '$lib/server/nilai-sumatif';
 import { sanitizeDimensionList } from '$lib/kokurikuler';
+import { isAdminUser, isAuthorizedUser } from '../../pengguna/permissions';
 
 type Person = { nama?: string; nip?: string };
 type SekolahLike = { nama?: string; kepalaSekolah?: Person };
@@ -22,90 +26,142 @@ function normalizeText(value: string | null | undefined) {
 
 function isAgamaSubject(name: string) {
 	// Mencakup varian "Pendidikan Kepercayaan terhadap Tuhan YME dan Budi Pekerti".
-	return /^pendidikan (agama|kepercayaan)/i.test(normalizeText(name));
+	return isKeluargaAgama(name) || /^pendidikan (agama|kepercayaan)/i.test(normalizeText(name));
+}
+
+function isPksSubject(name: string) {
+	return isKeluargaPks(name);
 }
 
 export const GET: RequestHandler = async ({ url, locals }) => {
+	if (!locals.user) {
+		return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401 });
+	}
+	if (!isAuthorizedUser(['administrasi_rekap_nilai', 'administrasi_legger'], locals.user)) {
+		return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
+	}
 	// event.locals.sekolah is set by hooks.server.ts
-	const sekolah = (locals as { sekolah?: unknown }).sekolah ?? null;
+	const sekolah = locals.sekolah ?? null;
+	if (!sekolah?.id) {
+		return new Response(JSON.stringify({ error: 'Sekolah tidak ditemukan.' }), { status: 401 });
+	}
+	const konfigurasiSekolah = konfigurasiNilaiDariSekolah(sekolah);
+
 	const kelasIdParam = url.searchParams.get('kelas_id');
+	let kelasIdNum: number | null = null;
 	let waliKelas = null;
 	let kelasNama: string | null = null;
 
-	try {
-		if (kelasIdParam) {
-			const id = Number(kelasIdParam);
-			if (Number.isInteger(id)) {
-				const kelas = await db.query.tableKelas.findFirst({
-					where: eq(tableKelas.id, id),
-					with: { waliKelas: true }
-				});
-				if (kelas?.waliKelas) {
-					const wk = kelas.waliKelas as { nama?: string; nip?: string };
-					waliKelas = { nama: wk.nama || '', nip: wk.nip || '' };
-				}
-				// capture kelas name for client use
-				kelasNama = kelas?.nama ?? null;
-			}
+	if (kelasIdParam) {
+		const id = Number(kelasIdParam);
+		if (!Number.isInteger(id) || id <= 0) {
+			return new Response(JSON.stringify({ error: 'kelas_id tidak valid' }), { status: 400 });
 		}
-	} catch (err) {
-		console.warn('[api/leger-metadata] failed to load wali kelas', err);
+		const kelas = await db.query.tableKelas.findFirst({
+			where: and(eq(tableKelas.id, id), eq(tableKelas.sekolahId, sekolah.id)),
+			with: { waliKelas: true }
+		});
+		if (!kelas) {
+			return new Response(JSON.stringify({ error: 'Kelas tidak ditemukan' }), { status: 404 });
+		}
+		if (!(await canAccessKelas(locals.user, sekolah.id, id))) {
+			return new Response(JSON.stringify({ error: 'Akses kelas ditolak' }), { status: 403 });
+		}
+		kelasIdNum = id;
+		if (kelas.waliKelas) {
+			const wk = kelas.waliKelas as { nama?: string; nip?: string };
+			waliKelas = { nama: wk.nama || '', nip: wk.nip || '' };
+		}
+		// capture kelas name for client use
+		kelasNama = kelas.nama ?? null;
+	} else if (!isAdminUser(locals.user)) {
+		return new Response(JSON.stringify({ error: 'kelas_id wajib diisi' }), { status: 400 });
 	}
 
-	// fetch mata pelajaran for kelas (if kelas provided)
-	let mapel: Array<{ id: number; nama: string; jenis?: string; kode?: string }> = [];
+	// fetch intrakurikuler mata pelajaran for kelas (if kelas provided)
+	let mapel: Array<{
+		id: number;
+		nama: string;
+		jenis?: string;
+		kode?: string;
+		bobotFormatif?: number | null;
+		bobotSumatif?: number | null;
+		bobotAs?: number | null;
+	}> = [];
 	try {
-		if (kelasIdParam) {
-			const id = Number(kelasIdParam);
-			if (Number.isInteger(id)) {
-				const m = await db.query.tableMataPelajaran.findMany({
-					where: eq(tableMataPelajaran.kelasId, id),
-					columns: { id: true, nama: true, jenis: true, kode: true }
-				});
-				mapel = m.map((x) => ({
-					id: x.id,
-					nama: x.nama,
-					jenis: x.jenis,
-					kode: x.kode ?? undefined
-				}));
-			}
+		if (kelasIdNum) {
+			const m = await db.query.tableMataPelajaran.findMany({
+				where: and(
+					eq(tableMataPelajaran.kelasId, kelasIdNum),
+					eq(tableMataPelajaran.kategori, 'intrakurikuler')
+				),
+				columns: {
+					id: true,
+					nama: true,
+					jenis: true,
+					kode: true,
+					bobotFormatif: true,
+					bobotSumatif: true,
+					bobotAs: true
+				}
+			});
+			mapel = m.map((x) => ({
+				id: x.id,
+				nama: x.nama,
+				jenis: x.jenis,
+				kode: x.kode ?? undefined,
+				bobotFormatif: x.bobotFormatif,
+				bobotSumatif: x.bobotSumatif,
+				bobotAs: x.bobotAs
+			}));
 		}
 	} catch (err) {
 		console.warn('[api/leger-metadata] failed to load mata pelajaran', err);
 	}
+	const mapelById = new Map(mapel.map((m) => [m.id, m]));
 
 	// fetch murid for kelas and their nilai
 	let muridList: Array<{ id: number; nama: string; agama?: string }> = [];
 	const nilaiByMurid = new Map<number, Map<number, number | null>>();
 	try {
-		if (kelasIdParam) {
-			const id = Number(kelasIdParam);
-			if (Number.isInteger(id)) {
-				const mrd = await db.query.tableMurid.findMany({
-					where: eq(tableMurid.kelasId, id),
-					columns: { id: true, nama: true, agama: true },
-					orderBy: [asc(tableMurid.nama)]
-				});
-				muridList = mrd.map((r) => ({ id: r.id, nama: r.nama, agama: r.agama }));
+		if (kelasIdNum) {
+			const mrd = await db.query.tableMurid.findMany({
+				where: eq(tableMurid.kelasId, kelasIdNum),
+				columns: { id: true, nama: true, agama: true },
+				orderBy: [asc(tableMurid.nama)]
+			});
+			muridList = mrd.map((r) => ({ id: r.id, nama: r.nama, agama: r.agama }));
 
-				const muridIds = muridList.map((m) => m.id);
-				const mapelIds = mapel.map((m) => m.id);
-				if (muridIds.length && mapelIds.length) {
-					const sumatif = await db.query.tableAsesmenSumatif.findMany({
-						columns: { muridId: true, mataPelajaranId: true, nilaiAkhir: true },
-						where: and(
-							inArray(tableAsesmenSumatif.muridId, muridIds),
-							inArray(tableAsesmenSumatif.mataPelajaranId, mapelIds)
-						)
-					});
-					for (const s of sumatif) {
-						let m = nilaiByMurid.get(s.muridId);
-						if (!m) {
-							m = new Map();
-							nilaiByMurid.set(s.muridId, m);
-						}
-						m.set(s.mataPelajaranId, s.nilaiAkhir ?? null);
+			const muridIds = muridList.map((m) => m.id);
+			const mapelIds = mapel.map((m) => m.id);
+			if (muridIds.length && mapelIds.length) {
+				const sumatif = await db.query.tableAsesmenSumatif.findMany({
+					columns: {
+						muridId: true,
+						mataPelajaranId: true,
+						naLingkup: true,
+						sts: true,
+						sas: true,
+						nilaiAkhir: true,
+						nilaiRevisi: true
+					},
+					where: and(
+						inArray(tableAsesmenSumatif.muridId, muridIds),
+						inArray(tableAsesmenSumatif.mataPelajaranId, mapelIds)
+					)
+				});
+				for (const s of sumatif) {
+					let m = nilaiByMurid.get(s.muridId);
+					if (!m) {
+						m = new Map();
+						nilaiByMurid.set(s.muridId, m);
 					}
+					const efektif = nilaiSumatifEfektif(
+						s,
+						mapelById.get(s.mataPelajaranId),
+						konfigurasiSekolah
+					).nilaiAkhir;
+					m.set(s.mataPelajaranId, efektif);
 				}
 			}
 		}
@@ -113,16 +169,17 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		console.warn('[api/leger-metadata] failed to load murid/values', err);
 	}
 
-	// Build header list: collapse agama variants into single AGAMA_BASE
+	// Build header list: collapse agama & PKS variants into single columns
 	const AGAMA_BASE = 'Pendidikan Agama dan Budi Pekerti';
+	const PKS_BASE = 'Pendalaman Kitab Suci';
 	const headerMap: Array<{
 		id: string | number;
 		nama: string;
 		kode?: string;
 		sourceIds?: number[];
 	}> = [];
-	const nonAgama = mapel.filter((m) => !isAgamaSubject(m.nama));
-	for (const m of nonAgama)
+	const nonVariant = mapel.filter((m) => !isAgamaSubject(m.nama) && !isPksSubject(m.nama));
+	for (const m of nonVariant)
 		headerMap.push({ id: m.id, nama: m.nama, kode: m.kode ?? undefined, sourceIds: [m.id] });
 	const agamaEntries = mapel.filter((m) => isAgamaSubject(m.nama));
 	if (agamaEntries.length) {
@@ -134,6 +191,15 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			sourceIds: agamaEntries.map((x) => x.id)
 		});
 	}
+	const pksEntries = mapel.filter((m) => isPksSubject(m.nama));
+	if (pksEntries.length) {
+		headerMap.push({
+			id: 'pks',
+			nama: PKS_BASE,
+			kode: 'PKS',
+			sourceIds: pksEntries.map((x) => x.id)
+		});
+	}
 	// sort headers by name (id order might be acceptable too)
 	headerMap.sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
 
@@ -141,8 +207,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const muridRows = muridList.map((m) => {
 		const nilaiRecord: Record<string, number | null> = {};
 		for (const h of headerMap) {
-			if (h.id === 'agama') {
-				// choose any agama source id that has a value for this murid
+			if (h.id === 'agama' || h.id === 'pks') {
 				let found: number | null = null;
 				for (const sid of h.sourceIds || []) {
 					const v = nilaiByMurid.get(m.id)?.get(sid);

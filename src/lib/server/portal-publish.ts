@@ -17,6 +17,7 @@ import {
 	tableTahunAjaran
 } from '$lib/server/db/schema';
 import { personSignatureDataUrl } from '$lib/server/ttd';
+import { konfigurasiNilaiDariSekolah, nilaiSumatifEfektif } from '$lib/server/nilai-sumatif';
 
 /** D1 khusus portal; jangan pakai database pusat e-Rapor. */
 export const PORTAL_D1_DATABASE_ID =
@@ -118,7 +119,11 @@ export interface PortalPublishResult {
 	subjects: number;
 }
 
-async function d1(config: PortalD1Config, sql: string, params: unknown[] = []): Promise<D1QueryResult[]> {
+async function d1(
+	config: PortalD1Config,
+	sql: string,
+	params: unknown[] = []
+): Promise<D1QueryResult[]> {
 	const result = await executeD1Query(config, sql, params);
 	if (!result.success) {
 		throw new Error(result.error || 'Kueri D1 portal gagal.');
@@ -483,14 +488,24 @@ export async function publishPortalToD1(sekolahId: number): Promise<PortalPublis
 		}))
 	);
 
-	const gradePayload = gradeRows.map((row) => ({
-		murid_id: row.muridId,
-		mapel_id: row.mataPelajaranId,
-		semester_id: activeSemester.id,
-		nilai: row.nilaiAkhir,
-		nilai_rts: row.nilaiAkhirRts,
-		deskripsi: null
-	}));
+	const konfigurasiSekolah = konfigurasiNilaiDariSekolah(school);
+	const subjectById = new Map(subjectRows.map((row) => [row.id, row]));
+
+	const gradePayload = gradeRows.map((row) => {
+		const efektif = nilaiSumatifEfektif(
+			row,
+			subjectById.get(row.mataPelajaranId),
+			konfigurasiSekolah
+		);
+		return {
+			murid_id: row.muridId,
+			mapel_id: row.mataPelajaranId,
+			semester_id: activeSemester.id,
+			nilai: efektif.nilaiAkhir,
+			nilai_rts: efektif.nilaiAkhirRts,
+			deskripsi: null
+		};
+	});
 	await insertRows(
 		config,
 		'portal_nilai',

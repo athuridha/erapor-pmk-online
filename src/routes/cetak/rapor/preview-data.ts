@@ -34,6 +34,7 @@ import {
 	type EkstrakurikulerNilaiKategori
 } from '$lib/ekstrakurikuler';
 import { buildCapaianKompetensi, type TujuanScoreEntry } from '$lib/rapor-modes';
+import { konfigurasiNilaiDariSekolah, nilaiSumatifEfektif } from '$lib/server/nilai-sumatif';
 import {
 	requireInteger,
 	optionalInteger,
@@ -336,6 +337,8 @@ export async function getRaporPreviewPayload({ locals, url }: RaporContext) {
 		return { order: Number.POSITIVE_INFINITY, core: normalized };
 	};
 
+	const konfigurasiSekolah = konfigurasiNilaiDariSekolah(sekolah);
+
 	const nilaiIntrakurikuler = asesmenSumatif
 		.filter((item) => {
 			// Filter basic requirement
@@ -382,13 +385,14 @@ export async function getRaporPreviewPayload({ locals, url }: RaporContext) {
 				displayName = muridPksSubjectDisplayName;
 			}
 
+			const efektif = nilaiSumatifEfektif(item, mapel, konfigurasiSekolah);
 			return {
 				mapel,
 				priority,
 				normalizedName,
 				displayName,
 				kelompok: jenisMapel[mapel.jenis] ?? null,
-				nilaiAkhir: formatNilai(isRTS ? (item.nilaiAkhirRts ?? null) : (item.nilaiAkhir ?? null)),
+				nilaiAkhir: formatNilai(isRTS ? efektif.nilaiAkhirRts : efektif.nilaiAkhir),
 				deskripsi: buildCapaianKompetensi(
 					muridNama,
 					tujuanScores,

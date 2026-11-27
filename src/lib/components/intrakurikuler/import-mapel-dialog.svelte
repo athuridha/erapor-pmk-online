@@ -149,7 +149,7 @@
 				showToast={true}
 				submitStateChange={(v) => (submitting = v)}
 				onsuccess={async ({ form }) => {
-					await Promise.all([invalidate('app:mapel'), invalidate('app:asesmen-formatif')]);
+					await Promise.all([invalidate('app:mapel'), invalidate('app:asesmen-sumatif')]);
 					onSuccess?.();
 					resetForm(form);
 					open = false;

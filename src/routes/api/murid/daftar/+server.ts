@@ -1,6 +1,7 @@
 import db from '$lib/server/db';
 import { getAksesMapelUser } from '$lib/server/mapel-access';
 import { isKeluargaAgama, isKeluargaPks, muridAgamaKey } from '$lib/server/mapel-picker';
+import { canAccessKelas } from '$lib/server/kelas-akses';
 import { agamaMapelOptions, pksMapelOptions } from '$lib/statics';
 import { tableKelas, tableMataPelajaran, tableMurid } from '$lib/server/db/schema';
 import { error, json } from '@sveltejs/kit';
@@ -8,7 +9,7 @@ import { asc, eq } from 'drizzle-orm';
 
 export async function GET({ url, locals }) {
 	const sekolahId = locals.sekolah?.id;
-	if (!sekolahId) {
+	if (!locals.user || !sekolahId) {
 		throw error(401, 'Unauthorized');
 	}
 
@@ -28,6 +29,10 @@ export async function GET({ url, locals }) {
 
 	if (!kelas || kelas.sekolahId !== sekolahId) {
 		throw error(404, 'Kelas tidak ditemukan');
+	}
+
+	if (!(await canAccessKelas(locals.user, sekolahId, kelasId))) {
+		throw error(403, 'Akses kelas ditolak');
 	}
 
 	const muridRows = await db.query.tableMurid.findMany({

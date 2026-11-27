@@ -194,19 +194,29 @@ export async function syncTujuanPembelajaran({
 				deskripsi: string;
 				bobot: number;
 				teknikPenilaianId: number | null;
+				jenisAsesmen: 'formatif' | 'sumatif' | 'as';
 			}> = [];
 
 			for (const src of sourceTPs) {
+				const srcJenis =
+					src.jenisAsesmen === 'sumatif' || src.jenisAsesmen === 'as'
+						? src.jenisAsesmen
+						: 'formatif';
 				const key = `${src.lingkupMateri.trim().toLowerCase()}::${src.deskripsi.trim().toLowerCase()}`;
 				const existing = targetByKey.get(key);
 				if (existing) {
 					matchedTargetIds.add(existing.id);
-					// Perbarui bobot dan teknik penilaian agar sinkron
+					const existingJenis =
+						existing.jenisAsesmen === 'sumatif' || existing.jenisAsesmen === 'as'
+							? existing.jenisAsesmen
+							: 'formatif';
+					// Perbarui bobot, teknik penilaian, dan jenis asesmen agar sinkron
 					if (
 						existing.bobot !== src.bobot ||
 						existing.teknikPenilaianId !== src.teknikPenilaianId ||
 						existing.lingkupMateri !== src.lingkupMateri ||
-						existing.deskripsi !== src.deskripsi
+						existing.deskripsi !== src.deskripsi ||
+						existingJenis !== srcJenis
 					) {
 						await tx
 							.update(tableTujuanPembelajaran)
@@ -214,7 +224,8 @@ export async function syncTujuanPembelajaran({
 								bobot: src.bobot,
 								teknikPenilaianId: src.teknikPenilaianId,
 								lingkupMateri: src.lingkupMateri,
-								deskripsi: src.deskripsi
+								deskripsi: src.deskripsi,
+								jenisAsesmen: srcJenis
 							})
 							.where(eq(tableTujuanPembelajaran.id, existing.id));
 					}
@@ -224,7 +235,8 @@ export async function syncTujuanPembelajaran({
 						lingkupMateri: src.lingkupMateri,
 						deskripsi: src.deskripsi,
 						bobot: src.bobot,
-						teknikPenilaianId: src.teknikPenilaianId
+						teknikPenilaianId: src.teknikPenilaianId,
+						jenisAsesmen: srcJenis
 					});
 				}
 			}
