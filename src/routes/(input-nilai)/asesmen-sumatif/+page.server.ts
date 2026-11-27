@@ -718,7 +718,6 @@ export async function load({ parent, url, depends, locals }) {
 		const studentMapel = targetMapelId ? mapelById.get(targetMapelId) : primaryMapel;
 		const studentBobot = bobotMapelEfektif(studentMapel, konfigurasiSekolah);
 		const computedAsli =
-			sumatif?.nilaiAkhirAsli ??
 			hitungNilaiAkhirSumatif(
 				{
 					naLingkup: sumatif?.naLingkup ?? null,
@@ -726,15 +725,18 @@ export async function load({ parent, url, depends, locals }) {
 					sas: sumatif?.sas ?? null
 				},
 				studentBobot.bobotAkhir
-			);
+			) ??
+			sumatif?.nilaiAkhirAsli ??
+			null;
 		const revisi = sumatif?.nilaiRevisi ?? null;
 		const efektifAkhir = nilaiEfektifAkhir(computedAsli, revisi) ?? sumatif?.nilaiAkhir ?? null;
 		const computedRts =
-			sumatif?.nilaiAkhirRts ??
 			hitungNilaiAkhirRts(
 				{ naLingkup: sumatif?.naLingkup ?? null, sts: sumatif?.sts ?? null },
 				studentBobot.bobotRts
-			);
+			) ??
+			sumatif?.nilaiAkhirRts ??
+			null;
 
 		return {
 			id: murid.id,

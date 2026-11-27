@@ -65,11 +65,10 @@
 		<p class="mt-0.5 text-xl font-bold">{formatScore(nilaiAkhir)}</p>
 		<p class="mt-0.5 text-xs opacity-85">
 			{#if sumatifWeights}
-				Pembobotan dipakai: Lingkup Materi {sumatifWeights.lingkup}%{#if sumatifWeights.sts > 0},
-					STS {sumatifWeights.sts}%{/if}{#if sumatifWeights.sas != null && sumatifWeights.sas > 0},
-					SAS
-					{sumatifWeights.sas}%{/if}
-				(komponen kosong diabaikan, bobot dinormalisasi)
+				Pembobotan dipakai: Formatif {sumatifWeights.lingkup}%{#if sumatifWeights.sts > 0}, Sumatif
+					{sumatifWeights.sts}%{/if}{#if sumatifWeights.sas != null && sumatifWeights.sas > 0},
+					Sumatif AS {sumatifWeights.sas}%{/if}
+				(nilai akhir = jumlah kontribusi tiap komponen; komponen kosong dihitung 0)
 			{:else}
 				Rata-rata dari NA Sumatif Lingkup Materi dan NA Sumatif Akhir Semester
 			{/if}

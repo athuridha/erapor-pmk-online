@@ -10,6 +10,12 @@ import {
 } from '$lib/server/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { muridAgamaKey } from '$lib/server/mapel-picker';
+import {
+	bobotMapelEfektif,
+	hitungNilaiAkhirRts,
+	hitungNilaiAkhirSumatif,
+	konfigurasiNilaiDariSekolah
+} from '$lib/server/nilai-sumatif';
 import { agamaMapelOptions, pksMapelOptions } from '$lib/statics';
 
 const AGAMA_BASE_SUBJECT = 'Pendidikan Agama dan Budi Pekerti';
@@ -474,34 +480,31 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				naLingkup = Math.round((averageSum / averageCount) * 100) / 100;
 			}
 
-			// Compute final nilaiAkhir using sekolah-level weights (after naLingkup)
-			const sekolah = await tx.query.tableSekolah.findFirst({
-				columns: { sumatifBobotLingkup: true, sumatifBobotSts: true, sumatifBobotSas: true },
-				where: eq(tableSekolah.id, sekolahId)
-			});
-			const baseWeights = {
-				lingkup: Number(sekolah?.sumatifBobotLingkup ?? 60),
-				sts: Number(sekolah?.sumatifBobotSts ?? 20),
-				sas: Number(sekolah?.sumatifBobotSas ?? 20)
-			};
-			const effectiveWeights = sts == null ? { lingkup: 70, sts: 0, sas: 30 } : baseWeights;
-
-			let weightedSumFinal = 0;
-			let usedWeightFinal = 0;
-			if (naLingkup != null) {
-				weightedSumFinal += naLingkup * effectiveWeights.lingkup;
-				usedWeightFinal += effectiveWeights.lingkup;
-			}
-			if (sts != null) {
-				weightedSumFinal += sts * effectiveWeights.sts;
-				usedWeightFinal += effectiveWeights.sts;
-			}
-			if (sas != null) {
-				weightedSumFinal += sas * effectiveWeights.sas;
-				usedWeightFinal += effectiveWeights.sas;
-			}
-			const nilaiAkhir =
-				usedWeightFinal > 0 ? Math.round((weightedSumFinal / usedWeightFinal) * 100) / 100 : null;
+			// Compute final nilaiAkhir using per-mapel or sekolah-level weights (after naLingkup)
+			const [sekolah, targetMapelRow] = await Promise.all([
+				tx.query.tableSekolah.findFirst({
+					columns: {
+						sumatifBobotLingkup: true,
+						sumatifBobotSts: true,
+						sumatifBobotSas: true,
+						sumatifBobotRtsLingkup: true,
+						sumatifBobotRtsSts: true
+					},
+					where: eq(tableSekolah.id, sekolahId)
+				}),
+				tx.query.tableMataPelajaran.findFirst({
+					columns: { bobotFormatif: true, bobotSumatif: true, bobotAs: true },
+					where: eq(tableMataPelajaran.id, targetMapelId)
+				})
+			]);
+			const konfigurasi = konfigurasiNilaiDariSekolah(sekolah ?? null);
+			const mapelBobot = bobotMapelEfektif(targetMapelRow, konfigurasi);
+			const nilaiAkhirAsli = hitungNilaiAkhirSumatif(
+				{ naLingkup, sts, sas },
+				mapelBobot.bobotAkhir
+			);
+			const nilaiAkhir = nilaiAkhirAsli;
+			const nilaiAkhirRts = hitungNilaiAkhirRts({ naLingkup, sts }, mapelBobot.bobotRts);
 
 			// Upsert into asesmen_sumatif
 			await tx
@@ -516,7 +519,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					sasTes,
 					sasNonTes,
 					sas,
+					nilaiAkhirAsli,
 					nilaiAkhir,
+					nilaiAkhirRts,
 					updatedAt: now
 				})
 				.onConflictDoUpdate({
@@ -529,7 +534,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 						sasTes,
 						sasNonTes,
 						sas,
+						nilaiAkhirAsli,
 						nilaiAkhir,
+						nilaiAkhirRts,
 						updatedAt: now
 					}
 				});

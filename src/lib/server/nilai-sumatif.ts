@@ -163,48 +163,52 @@ function bulatkan(nilai: number) {
 }
 
 /**
- * Nilai akhir dari komponen Formatif (naLingkup), Sumatif (sts), dan Sumatif AS (sas)
- * menggunakan bobot terkonfigurasi dengan normalisasi proporsional terhadap komponen terisi.
+ * Kontribusi berbobot satu komponen (NA F, NA S, atau NA AS) terhadap nilai akhir,
+ * misalnya rata-rata 86 dengan bobot 50 dari total 100 menghasilkan 43.
+ */
+export function hitungKontribusiKomponen(
+	nilai: number | null | undefined,
+	bobotKomponen: number,
+	totalBobot: number
+): number | null {
+	if (nilai == null || !Number.isFinite(nilai) || totalBobot <= 0) return null;
+	const bobotPositif = Math.max(0, bobotKomponen);
+	return bulatkan((nilai * bobotPositif) / totalBobot);
+}
+
+/**
+ * Nilai akhir dari komponen Formatif (naLingkup), Sumatif (sts), dan Sumatif AS (sas):
+ * langsung menjumlahkan kontribusi berbobot NA (F) + NA (S) + NA (AS).
+ * Komponen yang belum diisi dihitung 0 selama minimal satu komponen terisi.
  */
 export function hitungNilaiAkhirSumatif(
 	komponen: { naLingkup: number | null; sts: number | null; sas: number | null },
 	bobot: BobotSumatif = DEFAULT_BOBOT_SUMATIF
 ): number | null {
-	let jumlah = 0;
-	let bobotTerpakai = 0;
-	if (komponen.naLingkup != null && bobot.lingkup > 0) {
-		jumlah += komponen.naLingkup * bobot.lingkup;
-		bobotTerpakai += bobot.lingkup;
-	}
-	if (komponen.sts != null && bobot.sts > 0) {
-		jumlah += komponen.sts * bobot.sts;
-		bobotTerpakai += bobot.sts;
-	}
-	if (komponen.sas != null && bobot.sas > 0) {
-		jumlah += komponen.sas * bobot.sas;
-		bobotTerpakai += bobot.sas;
-	}
-	if (bobotTerpakai <= 0) return null;
-	return bulatkan(jumlah / bobotTerpakai);
+	const totalBobot = Math.max(0, bobot.lingkup) + Math.max(0, bobot.sts) + Math.max(0, bobot.sas);
+	if (totalBobot <= 0) return null;
+	const hasAny = komponen.naLingkup != null || komponen.sts != null || komponen.sas != null;
+	if (!hasAny) return null;
+
+	const cF = hitungKontribusiKomponen(komponen.naLingkup, bobot.lingkup, totalBobot) ?? 0;
+	const cS = hitungKontribusiKomponen(komponen.sts, bobot.sts, totalBobot) ?? 0;
+	const cAs = hitungKontribusiKomponen(komponen.sas, bobot.sas, totalBobot) ?? 0;
+	return bulatkan(cF + cS + cAs);
 }
 
-/** Nilai akhir RTS: Formatif (F) + Sumatif (S) saja, tanpa AS. */
+/** Nilai akhir RTS: kontribusi Formatif (F) + Sumatif (S) saja, tanpa AS. */
 export function hitungNilaiAkhirRts(
 	komponen: { naLingkup: number | null; sts: number | null },
 	bobot: BobotSumatifRts = DEFAULT_BOBOT_SUMATIF_RTS
 ): number | null {
-	let jumlah = 0;
-	let bobotTerpakai = 0;
-	if (komponen.naLingkup != null && bobot.lingkup > 0) {
-		jumlah += komponen.naLingkup * bobot.lingkup;
-		bobotTerpakai += bobot.lingkup;
-	}
-	if (komponen.sts != null && bobot.sts > 0) {
-		jumlah += komponen.sts * bobot.sts;
-		bobotTerpakai += bobot.sts;
-	}
-	if (bobotTerpakai <= 0) return null;
-	return bulatkan(jumlah / bobotTerpakai);
+	const totalBobot = Math.max(0, bobot.lingkup) + Math.max(0, bobot.sts);
+	if (totalBobot <= 0) return null;
+	const hasAny = komponen.naLingkup != null || komponen.sts != null;
+	if (!hasAny) return null;
+
+	const cF = hitungKontribusiKomponen(komponen.naLingkup, bobot.lingkup, totalBobot) ?? 0;
+	const cS = hitungKontribusiKomponen(komponen.sts, bobot.sts, totalBobot) ?? 0;
+	return bulatkan(cF + cS);
 }
 
 /**

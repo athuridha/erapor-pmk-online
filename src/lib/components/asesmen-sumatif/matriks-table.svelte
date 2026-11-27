@@ -222,7 +222,25 @@
 
 	function formatScore(val: number | null): string {
 		if (val == null || Number.isNaN(val)) return '-';
-		return Number.isInteger(val) ? String(val) : val.toFixed(2);
+		const rounded = Math.round(val * 100) / 100;
+		return String(rounded);
+	}
+
+	const totalGroupWeight = $derived(
+		Math.max(0, sumatifWeights.lingkup) +
+			Math.max(0, sumatifWeights.sts) +
+			Math.max(0, sumatifWeights.sas)
+	);
+
+	function groupPct(bobot: number): string {
+		if (totalGroupWeight <= 0) return '0';
+		const pct = Math.round((Math.max(0, bobot) / totalGroupWeight) * 100 * 100) / 100;
+		return String(pct);
+	}
+
+	function calcKontribusi(raw: number | null, bobot: number): number | null {
+		if (raw == null || totalGroupWeight <= 0) return null;
+		return Math.round(((raw * Math.max(0, bobot)) / totalGroupWeight) * 100) / 100;
 	}
 
 	function canEditTpForRow(r: RowState, t: MatriksTp): boolean {
@@ -246,43 +264,42 @@
 		return Math.round((weightedSum / totalWeight) * 100) / 100;
 	}
 
-	function calcNaF(r: RowState): number | null {
+	function calcRawNaF(r: RowState): number | null {
 		if (formatifCols.length > 0) return calcGroupAverage(r, formatifCols);
 		return r.legacyNaF;
 	}
 
-	function calcNaS(r: RowState): number | null {
+	function calcRawNaS(r: RowState): number | null {
 		if (!usesLegacySts) return calcGroupAverage(r, sumatifCols);
 		const num = parseNum(r.legacySts);
 		return num != null && num >= 0 && num <= 100 ? num : null;
 	}
 
-	function calcNaAs(r: RowState): number | null {
+	function calcRawNaAs(r: RowState): number | null {
 		if (!usesLegacySas) return calcGroupAverage(r, asCols);
 		const num = parseNum(r.legacySas);
 		return num != null && num >= 0 && num <= 100 ? num : null;
 	}
 
+	function calcNaF(r: RowState): number | null {
+		return calcKontribusi(calcRawNaF(r), sumatifWeights.lingkup);
+	}
+
+	function calcNaS(r: RowState): number | null {
+		return calcKontribusi(calcRawNaS(r), sumatifWeights.sts);
+	}
+
+	function calcNaAs(r: RowState): number | null {
+		return calcKontribusi(calcRawNaAs(r), sumatifWeights.sas);
+	}
+
 	function calcNilaiAkhirAsli(r: RowState): number | null {
+		if (totalGroupWeight <= 0) return null;
 		const f = calcNaF(r);
 		const s = calcNaS(r);
 		const a = calcNaAs(r);
-		let weighted = 0;
-		let totalW = 0;
-		if (f != null && sumatifWeights.lingkup > 0) {
-			weighted += f * sumatifWeights.lingkup;
-			totalW += sumatifWeights.lingkup;
-		}
-		if (s != null && sumatifWeights.sts > 0) {
-			weighted += s * sumatifWeights.sts;
-			totalW += sumatifWeights.sts;
-		}
-		if (a != null && sumatifWeights.sas > 0) {
-			weighted += a * sumatifWeights.sas;
-			totalW += sumatifWeights.sas;
-		}
-		if (totalW <= 0) return null;
-		return Math.round((weighted / totalW) * 100) / 100;
+		if (f == null && s == null && a == null) return null;
+		return Math.round(((f ?? 0) + (s ?? 0) + (a ?? 0)) * 100) / 100;
 	}
 
 	function calcNilaiEfektif(r: RowState): number | null {
@@ -1629,9 +1646,12 @@
 					<!-- NA (F) -->
 					<th
 						class="min-w-18 border-r border-b border-teal-200/90 bg-teal-600 px-2 py-2 text-center text-[11px] font-bold text-white dark:border-teal-800 dark:bg-teal-700"
+						title="Kontribusi Formatif = Rata-rata Formatif × {groupPct(sumatifWeights.lingkup)}%"
 					>
-						<div>NA</div>
-						<div>(F)</div>
+						<div>NA (F)</div>
+						<div class="text-[10px] font-semibold text-teal-100">
+							{groupPct(sumatifWeights.lingkup)}%
+						</div>
 					</th>
 
 					<!-- Sumatif (S) columns -->
@@ -1737,9 +1757,12 @@
 					<!-- NA (S) -->
 					<th
 						class="min-w-18 border-r border-b border-teal-200/90 bg-teal-600 px-2 py-2 text-center text-[11px] font-bold text-white dark:border-teal-800 dark:bg-teal-700"
+						title="Kontribusi Sumatif = Rata-rata Sumatif × {groupPct(sumatifWeights.sts)}%"
 					>
-						<div>NA</div>
-						<div>(S)</div>
+						<div>NA (S)</div>
+						<div class="text-[10px] font-semibold text-teal-100">
+							{groupPct(sumatifWeights.sts)}%
+						</div>
 					</th>
 
 					<!-- Sumatif AS (AS) columns -->
@@ -1845,9 +1868,12 @@
 					<!-- NA (AS) -->
 					<th
 						class="min-w-18 border-r border-b border-teal-200/90 bg-teal-600 px-2 py-2 text-center text-[11px] font-bold text-white dark:border-teal-800 dark:bg-teal-700"
+						title="Kontribusi Sumatif AS = Rata-rata AS × {groupPct(sumatifWeights.sas)}%"
 					>
-						<div>NA</div>
-						<div>(AS)</div>
+						<div>NA (AS)</div>
+						<div class="text-[10px] font-semibold text-teal-100">
+							{groupPct(sumatifWeights.sas)}%
+						</div>
 					</th>
 				</tr>
 			</thead>
@@ -1866,6 +1892,9 @@
 					</tr>
 				{:else}
 					{#each filteredRows as r, rowIndex (r.id)}
+						{@const rawNaF = calcRawNaF(r)}
+						{@const rawNaS = calcRawNaS(r)}
+						{@const rawNaAs = calcRawNaAs(r)}
 						{@const naF = calcNaF(r)}
 						{@const naS = calcNaS(r)}
 						{@const naAs = calcNaAs(r)}
@@ -1940,6 +1969,9 @@
 							<!-- NA (F) -->
 							<td
 								class="border-r border-b border-teal-200/70 bg-teal-50/80 px-2 font-mono text-xs font-bold text-teal-900 tabular-nums dark:border-teal-900/50 dark:bg-teal-950/35 dark:text-teal-200"
+								title={rawNaF != null
+									? `Rata-rata Formatif: ${formatScore(rawNaF)} × ${groupPct(sumatifWeights.lingkup)}% = ${formatScore(naF)}`
+									: undefined}
 							>
 								{formatScore(naF)}
 							</td>
@@ -1995,6 +2027,9 @@
 							<!-- NA (S) -->
 							<td
 								class="border-r border-b border-teal-200/70 bg-teal-50/80 px-2 font-mono text-xs font-bold text-teal-900 tabular-nums dark:border-teal-900/50 dark:bg-teal-950/35 dark:text-teal-200"
+								title={rawNaS != null
+									? `Rata-rata Sumatif: ${formatScore(rawNaS)} × ${groupPct(sumatifWeights.sts)}% = ${formatScore(naS)}`
+									: undefined}
 							>
 								{formatScore(naS)}
 							</td>
@@ -2050,6 +2085,9 @@
 							<!-- NA (AS) -->
 							<td
 								class="border-r border-b border-teal-200/70 bg-teal-50/80 px-2 font-mono text-xs font-bold text-teal-900 tabular-nums dark:border-teal-900/50 dark:bg-teal-950/35 dark:text-teal-200"
+								title={rawNaAs != null
+									? `Rata-rata Sumatif AS: ${formatScore(rawNaAs)} × ${groupPct(sumatifWeights.sas)}% = ${formatScore(naAs)}`
+									: undefined}
 							>
 								{formatScore(naAs)}
 							</td>

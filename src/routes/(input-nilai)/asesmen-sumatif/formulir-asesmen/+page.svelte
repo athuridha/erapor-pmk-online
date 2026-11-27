@@ -191,43 +191,24 @@
 		return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 100) / 100;
 	});
 
-	const nilaiAkhir = $derived.by(() => {
-		// Determine effective weights using rules:
-		// - All present: base weights
-		// - STS missing only: lingkup 70 / sas 30
-		const base = {
-			lingkup: data.sumatifWeights?.lingkup ?? 60,
-			sts: data.sumatifWeights?.sts ?? 20,
-			sas: data.sumatifWeights?.sas ?? 20
-		};
-		let eff = nilaiSts == null ? { lingkup: 70, sts: 0, sas: 30 } : base;
-		let weighted = 0;
-		let totalW = 0;
-		if (naSumatifLingkup != null) {
-			weighted += naSumatifLingkup * eff.lingkup;
-			totalW += eff.lingkup;
-		}
-		if (nilaiSts != null) {
-			weighted += nilaiSts * eff.sts;
-			totalW += eff.sts;
-		}
-		if (nilaiSas != null) {
-			weighted += nilaiSas * eff.sas;
-			totalW += eff.sas;
-		}
-		if (totalW === 0) return null;
-		return Math.round((weighted / totalW) * 100) / 100;
-	});
+	const effectiveSumatifWeights = $derived.by(() => ({
+		lingkup: Math.max(0, data.sumatifWeights?.lingkup ?? 60),
+		sts: Math.max(0, data.sumatifWeights?.sts ?? 20),
+		sas: Math.max(0, data.sumatifWeights?.sas ?? 20)
+	}));
 
-	// Effective weights used by the UI: if STS not provided, use 70/0/30
-	const effectiveSumatifWeights = $derived.by(() => {
-		const base = {
-			lingkup: data.sumatifWeights?.lingkup ?? 60,
-			sts: data.sumatifWeights?.sts ?? 20,
-			sas: data.sumatifWeights?.sas ?? 20
-		};
-		if (nilaiSts == null) return { lingkup: 70, sts: 0, sas: 30 };
-		return base;
+	const nilaiAkhir = $derived.by(() => {
+		const eff = effectiveSumatifWeights;
+		const totalW = eff.lingkup + eff.sts + eff.sas;
+		if (totalW <= 0) return null;
+		if (naSumatifLingkup == null && nilaiSts == null && nilaiSas == null) return null;
+		const cF =
+			naSumatifLingkup != null
+				? Math.round(((naSumatifLingkup * eff.lingkup) / totalW) * 100) / 100
+				: 0;
+		const cS = nilaiSts != null ? Math.round(((nilaiSts * eff.sts) / totalW) * 100) / 100 : 0;
+		const cAs = nilaiSas != null ? Math.round(((nilaiSas * eff.sas) / totalW) * 100) / 100 : 0;
+		return Math.round((cF + cS + cAs) * 100) / 100;
 	});
 	const kkm = $derived.by(() => Math.max(0, data.mapel.kkm ?? 0));
 
@@ -251,21 +232,18 @@
 
 	const nilaiAkhirRts = $derived.by(() => {
 		const bobot = {
-			lingkup: data.sumatifWeightsRts?.lingkup ?? 70,
-			sts: data.sumatifWeightsRts?.sts ?? 30
+			lingkup: Math.max(0, data.sumatifWeightsRts?.lingkup ?? 70),
+			sts: Math.max(0, data.sumatifWeightsRts?.sts ?? 30)
 		};
-		let weighted = 0;
-		let totalW = 0;
-		if (naSumatifLingkup != null) {
-			weighted += naSumatifLingkup * bobot.lingkup;
-			totalW += bobot.lingkup;
-		}
-		if (nilaiSts != null) {
-			weighted += nilaiSts * bobot.sts;
-			totalW += bobot.sts;
-		}
-		if (totalW === 0) return null;
-		return Math.round((weighted / totalW) * 100) / 100;
+		const totalW = bobot.lingkup + bobot.sts;
+		if (totalW <= 0) return null;
+		if (naSumatifLingkup == null && nilaiSts == null) return null;
+		const cF =
+			naSumatifLingkup != null
+				? Math.round(((naSumatifLingkup * bobot.lingkup) / totalW) * 100) / 100
+				: 0;
+		const cS = nilaiSts != null ? Math.round(((nilaiSts * bobot.sts) / totalW) * 100) / 100 : 0;
+		return Math.round((cF + cS) * 100) / 100;
 	});
 
 	const nilaiAkhirCategory = $derived.by((): NilaiAkhirCategory | null => {

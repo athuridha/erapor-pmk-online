@@ -294,21 +294,16 @@
 			<ul class="list-disc space-y-0.5 pl-4">
 				<li>
 					<strong>Rapor Akhir Semester (RAS):</strong>
-					<code
-						>(Lingkup × bobotLingkup + STS × bobotSTS + SAS × bobotSAS) / total bobot komponen yang
-						terisi</code
-					>
+					<code>NA (F) + NA (S) + NA (AS)</code>, dengan masing-masing
+					<code>NA = rata-rata komponen × persentase bobot</code>.
 				</li>
 				<li>
 					<strong>Rapor Tengah Semester (RTS):</strong>
-					<code
-						>(Lingkup × bobotLingkupRTS + STS × bobotSTS RTS) / total bobot komponen yang terisi</code
-					>
+					<code>NA (F) + NA (S)</code> menggunakan persentase bobot RTS.
 				</li>
 				<li>
-					Komponen yang belum diisi (mis. STS belum diadakan) diabaikan, lalu bobot komponen yang
-					terisi dinormalisasi agar totalnya tetap 100%. Mapel tanpa STS dihitung Lingkup 70% dan
-					SAS 30%; komposisi inilah yang tampil pada kartu Nilai Rapor di halaman Asesmen Sumatif.
+					Komponen yang belum diisi dihitung <code>0</code> sampai nilainya diinput, selama minimal satu
+					komponen sudah terisi (bila semua kosong, nilai akhir tetap kosong).
 				</li>
 			</ul>
 		</div>

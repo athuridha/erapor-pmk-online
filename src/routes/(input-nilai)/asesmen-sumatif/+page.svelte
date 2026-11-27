@@ -544,6 +544,20 @@
 		return String(rounded);
 	}
 
+	const bobotAkhir = $derived(data.sumatifWeights ?? { lingkup: 60, sts: 20, sas: 20 });
+	const totalBobotAkhir = $derived(
+		Math.max(0, bobotAkhir.lingkup) + Math.max(0, bobotAkhir.sts) + Math.max(0, bobotAkhir.sas)
+	);
+	const bobotRts = $derived(
+		data.sumatifWeights?.rts ?? { lingkup: bobotAkhir.lingkup, sts: bobotAkhir.sts }
+	);
+	const totalBobotRts = $derived(Math.max(0, bobotRts.lingkup) + Math.max(0, bobotRts.sts));
+
+	function kontribusi(val: number | null, bobot: number, total: number): number | null {
+		if (val == null || Number.isNaN(val) || total <= 0) return null;
+		return Math.round(((val * Math.max(0, bobot)) / total) * 100) / 100;
+	}
+
 	function alasanTidakBisaNilai(murid: MuridRow): string {
 		if (!canEdit) return 'Anda tidak memiliki izin untuk menilai';
 		if (murid.canNilai) return 'Pilih mata pelajaran';
@@ -1009,9 +1023,11 @@
 									{formatScore(murid.nilaiAkhirRts)}
 								</p>
 								<p class="text-[10px] text-slate-500 tabular-nums dark:text-zinc-400">
-									{#if murid.naLingkup != null}F {formatScore(murid.naLingkup)}{/if}
+									{#if murid.naLingkup != null}F {formatScore(
+											kontribusi(murid.naLingkup, bobotRts.lingkup, totalBobotRts)
+										)}{/if}
 									{#if murid.sts != null}
-										· S {formatScore(murid.sts)}{/if}
+										· S {formatScore(kontribusi(murid.sts, bobotRts.sts, totalBobotRts))}{/if}
 								</p>
 							{:else}
 								<p class="mt-0.5 text-[11px] text-slate-500 italic dark:text-zinc-400">
@@ -1044,14 +1060,16 @@
 								</p>
 								<p class="text-[10px] text-slate-500 tabular-nums dark:text-zinc-400">
 									{#if murid.naLingkup != null}F {formatScore(
-											murid.naLingkup
+											kontribusi(murid.naLingkup, bobotAkhir.lingkup, totalBobotAkhir)
 										)}{/if}{#if murid.sts != null}{#if murid.naLingkup != null}
 											·
 										{/if}S {formatScore(
-											murid.sts
+											kontribusi(murid.sts, bobotAkhir.sts, totalBobotAkhir)
 										)}{/if}{#if murid.sas != null}{#if murid.naLingkup != null || murid.sts != null}
 											·
-										{/if}AS {formatScore(murid.sas)}{/if}
+										{/if}AS {formatScore(
+											kontribusi(murid.sas, bobotAkhir.sas, totalBobotAkhir)
+										)}{/if}
 								</p>
 							{:else}
 								<p class="mt-0.5 text-[11px] text-slate-500 italic dark:text-zinc-400">
@@ -1129,10 +1147,18 @@
 										class="mt-1 space-y-0.5 text-[11px] text-slate-500 tabular-nums dark:text-zinc-400"
 									>
 										{#if murid.naLingkup != null}
-											<p>Formatif (F): {formatScore(murid.naLingkup)}</p>
+											<p>
+												Formatif (F): {formatScore(
+													kontribusi(murid.naLingkup, bobotRts.lingkup, totalBobotRts)
+												)}
+											</p>
 										{/if}
 										{#if murid.sts != null}
-											<p>Sumatif (S): {formatScore(murid.sts)}</p>
+											<p>
+												Sumatif (S): {formatScore(
+													kontribusi(murid.sts, bobotRts.sts, totalBobotRts)
+												)}
+											</p>
 										{/if}
 									</div>
 								{:else}
@@ -1162,13 +1188,25 @@
 										class="mt-1 space-y-0.5 text-[11px] text-slate-500 tabular-nums dark:text-zinc-400"
 									>
 										{#if murid.naLingkup != null}
-											<p>Formatif (F): {formatScore(murid.naLingkup)}</p>
+											<p>
+												Formatif (F): {formatScore(
+													kontribusi(murid.naLingkup, bobotAkhir.lingkup, totalBobotAkhir)
+												)}
+											</p>
 										{/if}
 										{#if murid.sts != null}
-											<p>Sumatif (S): {formatScore(murid.sts)}</p>
+											<p>
+												Sumatif (S): {formatScore(
+													kontribusi(murid.sts, bobotAkhir.sts, totalBobotAkhir)
+												)}
+											</p>
 										{/if}
 										{#if murid.sas != null}
-											<p>Sumatif AS (AS): {formatScore(murid.sas)}</p>
+											<p>
+												Sumatif AS (AS): {formatScore(
+													kontribusi(murid.sas, bobotAkhir.sas, totalBobotAkhir)
+												)}
+											</p>
 										{/if}
 									</div>
 
